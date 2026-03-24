@@ -109,8 +109,8 @@ export const GET: APIRoute = async ({ url }) => {
       },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load cards';
-    return new Response(JSON.stringify({ error: message }), {
+    console.error('[api/cards]', error);
+    return new Response(JSON.stringify({ error: '카드 목록을 불러오는 중 오류가 발생했습니다' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

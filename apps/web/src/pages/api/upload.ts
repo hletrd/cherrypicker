@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { writeFile, mkdir, readdir, stat, unlink } from 'fs/promises';
+import { writeFile, mkdir, readdir, lstat, unlink } from 'node:fs/promises';
 import { join, extname, basename, resolve } from 'path';
 import { detectFormat } from '@cherrypicker/parser';
 
@@ -15,8 +15,8 @@ async function cleanupOldUploads(): Promise<void> {
     await Promise.all(
       files.map(async (file) => {
         const filePath = join(UPLOAD_DIR, file);
-        const fileStat = await stat(filePath);
-        if (now - fileStat.mtimeMs > ONE_HOUR_MS) {
+        const fileStat = await lstat(filePath);
+        if (fileStat.isFile() && now - fileStat.mtimeMs > ONE_HOUR_MS) {
           await unlink(filePath);
         }
       }),
@@ -24,6 +24,14 @@ async function cleanupOldUploads(): Promise<void> {
   } catch {
     // Non-blocking: ignore cleanup errors
   }
+}
+
+function validateMagicBytes(buffer: Buffer, ext: string): boolean {
+  if (ext === '.pdf') return buffer.length >= 4 && buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46; // %PDF
+  if (ext === '.xlsx') return buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4b; // PK (ZIP)
+  if (ext === '.xls') return buffer.length >= 2 && buffer[0] === 0xd0 && buffer[1] === 0xcf; // OLE
+  if (ext === '.csv') return buffer.length > 0 && !buffer.subarray(0, 1024).includes(0x00); // text, no null bytes
+  return false;
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -77,6 +85,13 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    if (!validateMagicBytes(buffer, ext)) {
+      return new Response(JSON.stringify({ error: '파일 내용이 확장자와 일치하지 않습니다' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     await writeFile(filePath, buffer);
 
     // Auto-detect format and bank after writing
@@ -105,8 +120,8 @@ export const POST: APIRoute = async ({ request }) => {
       },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Upload failed';
-    return new Response(JSON.stringify({ error: message }), {
+    console.error('[api/upload]', error);
+    return new Response(JSON.stringify({ error: '파일 업로드 중 오류가 발생했습니다' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

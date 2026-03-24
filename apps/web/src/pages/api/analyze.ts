@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { join, resolve } from 'path';
+import { join, resolve, basename } from 'node:path';
 import { access } from 'fs/promises';
 import { parseStatement } from '@cherrypicker/parser';
 import { MerchantMatcher, buildConstraints, greedyOptimize } from '@cherrypicker/core';
@@ -78,9 +78,16 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    const safeFileName = basename(fileName);
+    if (!safeFileName || safeFileName === '.' || safeFileName === '..') {
+      return new Response(JSON.stringify({ error: '잘못된 파일 이름입니다' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // C1 - Path traversal prevention: reconstruct path from filename only
-    const resolvedPath = resolve(join(UPLOAD_DIR, fileName));
-    if (!resolvedPath.startsWith(UPLOAD_DIR + '/') && resolvedPath !== UPLOAD_DIR) {
+    const resolvedPath = resolve(join(UPLOAD_DIR, safeFileName));
+    if (!resolvedPath.startsWith(UPLOAD_DIR + '/')) {
       return new Response(JSON.stringify({ error: '잘못된 파일 경로입니다' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -189,8 +196,8 @@ export const POST: APIRoute = async ({ request }) => {
       },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Analysis failed';
-    return new Response(JSON.stringify({ error: message }), {
+    console.error('[api/analyze]', error);
+    return new Response(JSON.stringify({ error: '분석 중 오류가 발생했습니다' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
