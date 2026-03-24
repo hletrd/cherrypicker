@@ -53,6 +53,7 @@ const BANK_SIGNATURES: BankSignature[] = [
 export function detectBank(content: string): { bank: BankId | null; confidence: number } {
   let bestMatch: BankId | null = null;
   let bestScore = 0;
+  let bestBank: BankSignature | null = null;
 
   for (const sig of BANK_SIGNATURES) {
     let score = 0;
@@ -64,11 +65,12 @@ export function detectBank(content: string): { bank: BankId | null; confidence: 
     if (score > bestScore) {
       bestScore = score;
       bestMatch = sig.bankId;
+      bestBank = sig;
     }
   }
 
-  const maxPatterns = Math.max(...BANK_SIGNATURES.map((s) => s.patterns.length));
-  const confidence = bestScore > 0 ? bestScore / maxPatterns : 0;
+  const bestBankPatterns = bestBank ? bestBank.patterns.length : 1;
+  const confidence = bestScore > 0 ? bestScore / bestBankPatterns : 0;
 
   return { bank: bestMatch, confidence };
 }

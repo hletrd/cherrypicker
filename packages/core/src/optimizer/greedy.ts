@@ -4,6 +4,51 @@ import type { OptimizationResult, CardAssignment, CardRewardResult, CategoryRewa
 import type { OptimizationConstraints } from './constraints.js';
 import { calculateRewards } from '../calculator/reward.js';
 
+const CATEGORY_NAMES_KO: Record<string, string> = {
+  dining: '외식',
+  restaurant: '음식점',
+  cafe: '카페',
+  fast_food: '패스트푸드',
+  delivery: '배달',
+  grocery: '식료품',
+  supermarket: '대형마트',
+  traditional_market: '전통시장',
+  online_grocery: '온라인장보기',
+  convenience_store: '편의점',
+  online_shopping: '온라인쇼핑',
+  offline_shopping: '오프라인쇼핑',
+  department_store: '백화점',
+  fashion: '패션',
+  public_transit: '대중교통',
+  subway: '지하철',
+  bus: '버스',
+  taxi: '택시',
+  transportation: '교통',
+  fuel: '주유',
+  parking: '주차',
+  toll: '통행료',
+  telecom: '통신',
+  insurance: '보험',
+  medical: '의료',
+  hospital: '병원',
+  pharmacy: '약국',
+  education: '교육',
+  academy: '학원',
+  books: '도서',
+  entertainment: '엔터테인먼트',
+  movie: '영화',
+  streaming: '스트리밍',
+  subscription: '구독',
+  travel: '여행',
+  hotel: '숙박',
+  airline: '항공',
+  utilities: '공과금',
+  electricity: '전기',
+  gas: '가스',
+  water: '수도',
+  uncategorized: '미분류',
+};
+
 interface CategoryCardScore {
   cardId: string;
   cardName: string;
@@ -102,7 +147,7 @@ export function greedyOptimize(
 
     assignments.push({
       category,
-      categoryNameKo: category,
+      categoryNameKo: CATEGORY_NAMES_KO[category] ?? category,
       assignedCardId: best.cardId,
       assignedCardName: best.cardName,
       spending,

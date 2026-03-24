@@ -31,9 +31,17 @@ async function collectYamlFiles(dir: string): Promise<string[]> {
 
 export async function loadAllCardRules(baseDir: string): Promise<CardRuleSet[]> {
   const yamlFiles = await collectYamlFiles(baseDir);
-  const results = await Promise.all(
+  const settled = await Promise.allSettled(
     yamlFiles.map((filePath) => loadCardRule(filePath)),
   );
+  const results = [];
+  for (const outcome of settled) {
+    if (outcome.status === 'fulfilled') {
+      results.push(outcome.value);
+    } else {
+      console.warn(`[rules] Failed to load card rule: ${outcome.reason}`);
+    }
+  }
   return results;
 }
 

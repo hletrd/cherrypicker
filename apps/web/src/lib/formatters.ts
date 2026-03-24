@@ -3,6 +3,7 @@
  * Example: 1234567 → "1,234,567원"
  */
 export function formatWon(amount: number): string {
+  if (!Number.isFinite(amount)) return '0원';
   return amount.toLocaleString('ko-KR') + '원';
 }
 
@@ -11,6 +12,7 @@ export function formatWon(amount: number): string {
  * Example: 0.015 → "1.5%"
  */
 export function formatRate(rate: number): string {
+  if (!Number.isFinite(rate)) return '0.0%';
   return (rate * 100).toFixed(1) + '%';
 }
 
@@ -19,6 +21,7 @@ export function formatRate(rate: number): string {
  * Example: 0.015 → "1.5%"
  */
 export function formatPercent(rate: number): string {
+  if (!Number.isFinite(rate)) return '0.0%';
   return (rate * 100).toFixed(1) + '%';
 }
 
@@ -27,6 +30,7 @@ export function formatPercent(rate: number): string {
  * Example: 1234 → "1,234"
  */
 export function formatCount(n: number): string {
+  if (!Number.isFinite(n)) return '0';
   return n.toLocaleString('ko-KR');
 }
 
@@ -120,6 +124,7 @@ export function getIssuerColor(issuer: string): string {
  */
 export function formatDateKo(dateStr: string): string {
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '-';
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
 }
 
@@ -129,6 +134,7 @@ export function formatDateKo(dateStr: string): string {
  */
 export function formatDateShort(dateStr: string): string {
   const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '-';
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
