@@ -75,10 +75,40 @@ export interface AnalyzeOptions {
   cardIds?: string[];
 }
 
+// --- SessionStorage persistence ---
+
+const STORAGE_KEY = 'cherrypicker:analysis';
+
+function persistToStorage(data: AnalysisResult): void {
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+  } catch { /* quota exceeded or SSR */ }
+}
+
+function loadFromStorage(): AnalysisResult | null {
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw) as AnalysisResult;
+    }
+  } catch { /* SSR or corrupted data */ }
+  return null;
+}
+
+function clearStorage(): void {
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  } catch { /* SSR */ }
+}
+
 // --- Store ---
 
 function createAnalysisStore() {
-  let result = $state<AnalysisResult | null>(null);
+  let result = $state<AnalysisResult | null>(loadFromStorage());
   let loading = $state(false);
   let error = $state<string | null>(null);
 
@@ -116,9 +146,10 @@ function createAnalysisStore() {
     setResult(r: AnalysisResult): void {
       result = r;
       error = null;
+      persistToStorage(r);
     },
 
-    async analyze(filePath: string, options?: AnalyzeOptions): Promise<void> {
+    async analyze(fileName: string, options?: AnalyzeOptions): Promise<void> {
       loading = true;
       error = null;
 
@@ -126,15 +157,20 @@ function createAnalysisStore() {
         const res = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filePath, ...options }),
+          body: JSON.stringify({ fileName, ...options }),
         });
 
         if (!res.ok) {
-          const err = (await res.json()) as { error?: string };
-          throw new Error(err.error ?? '분석 실패');
+          let message = res.statusText || '분석 실패';
+          try {
+            const err = (await res.json()) as { error?: string };
+            if (err.error) message = err.error;
+          } catch { /* non-JSON response */ }
+          throw new Error(message);
         }
 
         result = (await res.json()) as AnalysisResult;
+        persistToStorage(result);
       } catch (e) {
         error = e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다';
         result = null;
@@ -147,6 +183,7 @@ function createAnalysisStore() {
       result = null;
       error = null;
       loading = false;
+      clearStorage();
     },
   };
 }

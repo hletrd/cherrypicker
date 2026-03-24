@@ -7,6 +7,7 @@
   let uploadStatus = $state<'idle' | 'uploading' | 'success' | 'error'>('idle');
   let errorMessage = $state('');
   let bank = $state('');
+  let abortController: AbortController | null = null;
 
   // Step 1=파일선택, 2=카드사선택, 3=분석중, 4=완료
   let currentStep = $derived.by(() => {
@@ -76,15 +77,21 @@
   function handleFileInput(e: Event) {
     const target = e.target as HTMLInputElement;
     const file = target.files?.[0];
-    if (file) {
+    if (file && isValidFile(file)) {
       uploadedFile = file;
       uploadStatus = 'idle';
       errorMessage = '';
+    } else if (file) {
+      errorMessage = 'CSV, Excel, PDF 파일만 지원합니다';
+      uploadStatus = 'error';
     }
   }
 
   async function handleUpload() {
     if (!uploadedFile) return;
+    abortController?.abort();
+    abortController = new AbortController();
+    const signal = abortController.signal;
     uploadStatus = 'uploading';
     errorMessage = '';
 
@@ -92,8 +99,8 @@
       const formData = new FormData();
       formData.append('file', uploadedFile);
 
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await res.json() as { filePath?: string; error?: string };
+      const res = await fetch('/api/upload', { method: 'POST', body: formData, signal });
+      const data = await res.json() as { fileName?: string; error?: string };
 
       if (!res.ok) throw new Error(data.error ?? '업로드 실패');
 
@@ -101,9 +108,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          filePath: data.filePath,
+          fileName: data.fileName,
           bank: bank || undefined,
         }),
+        signal,
       });
 
       const analyzeData = await analyzeRes.json();
@@ -204,7 +212,7 @@
         <p class="text-sm text-[var(--color-text-muted)]">{formatFileSize(uploadedFile.size)}</p>
         <button
           class="mt-1 text-sm text-[var(--color-primary)] hover:underline"
-          onclick={() => { uploadedFile = null; uploadStatus = 'idle'; errorMessage = ''; }}
+          onclick={() => { abortController?.abort(); uploadedFile = null; uploadStatus = 'idle'; errorMessage = ''; }}
         >
           다른 파일 선택
         </button>

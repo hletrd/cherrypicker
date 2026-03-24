@@ -5,7 +5,6 @@ const BASE = '';
 export interface UploadResult {
   success: boolean;
   fileName: string;
-  filePath: string;
   size: number;
   type: string;
   detection: {
@@ -68,24 +67,32 @@ export async function uploadStatement(file: File): Promise<UploadResult> {
   formData.append('file', file);
   const res = await fetch(`${BASE}/api/upload`, { method: 'POST', body: formData });
   if (!res.ok) {
-    const err = (await res.json()) as { error?: string };
-    throw new Error(err.error ?? '업로드 실패');
+    let message = res.statusText || '업로드 실패';
+    try {
+      const err = (await res.json()) as { error?: string };
+      if (err.error) message = err.error;
+    } catch { /* non-JSON response */ }
+    throw new Error(message);
   }
   return res.json() as Promise<UploadResult>;
 }
 
 export async function analyzeStatement(
-  filePath: string,
+  fileName: string,
   options?: AnalyzeOptions,
 ): Promise<AnalysisResult> {
   const res = await fetch(`${BASE}/api/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filePath, ...options }),
+    body: JSON.stringify({ fileName, ...options }),
   });
   if (!res.ok) {
-    const err = (await res.json()) as { error?: string };
-    throw new Error(err.error ?? '분석 실패');
+    let message = res.statusText || '분석 실패';
+    try {
+      const err = (await res.json()) as { error?: string };
+      if (err.error) message = err.error;
+    } catch { /* non-JSON response */ }
+    throw new Error(message);
   }
   return res.json() as Promise<AnalysisResult>;
 }
@@ -99,7 +106,14 @@ export async function getCards(filters?: {
   if (filters?.type) params.set('type', filters.type);
   const query = params.size > 0 ? `?${params.toString()}` : '';
   const res = await fetch(`${BASE}/api/cards${query}`);
-  if (!res.ok) throw new Error('카드 목록 로드 실패');
+  if (!res.ok) {
+    let message = res.statusText || '카드 목록 로드 실패';
+    try {
+      const err = (await res.json()) as { error?: string };
+      if (err.error) message = err.error;
+    } catch { /* non-JSON response */ }
+    throw new Error(message);
+  }
   const data = (await res.json()) as { cards: CardSummary[] };
   return data.cards;
 }
@@ -108,7 +122,12 @@ export async function getCardDetail(cardId: string): Promise<CardDetail> {
   const res = await fetch(`${BASE}/api/cards/${encodeURIComponent(cardId)}`);
   if (!res.ok) {
     if (res.status === 404) throw new Error('카드를 찾을 수 없습니다');
-    throw new Error('카드 정보 로드 실패');
+    let message = res.statusText || '카드 정보 로드 실패';
+    try {
+      const err = (await res.json()) as { error?: string };
+      if (err.error) message = err.error;
+    } catch { /* non-JSON response */ }
+    throw new Error(message);
   }
   return res.json() as Promise<CardDetail>;
 }
