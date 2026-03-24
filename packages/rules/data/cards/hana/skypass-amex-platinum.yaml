@@ -1,0 +1,63 @@
+card:
+  id: hana-skypass-amex-platinum
+  issuer: hana
+  name: SKYPASS Amex Platinum
+  nameKo: 하나 스카이패스 아멕스 플래티늄
+  type: credit
+  annualFee:
+    domestic: 45000
+    international: 45000
+  url: https://www.hanacard.co.kr/OPI41000000D.web?CD_PD_SEQ=13912
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+
+rewards:
+  - category: travel
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      minTransaction: 1000
+      excludeOnline: false
+      specificMerchants: []
+
+  - category: uncategorized
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      minTransaction: 1000
+      excludeOnline: false
+      specificMerchants: []
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

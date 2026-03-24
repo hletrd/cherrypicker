@@ -1,0 +1,187 @@
+card:
+  id: "shinhan-hey-young-check"
+  issuer: "shinhan"
+  name: "Hey Young 체크"
+  nameKo: "헤이영 체크"
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: "https://www.shinhancard.com/pconts/html/card/apply/check/1196867_2206.html"
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 199999
+  - id: tier1
+    label: "전월 20만원 이상"
+    minSpending: 200000
+    maxSpending: 499999
+  - id: tier2
+    label: "전월 50만원 이상"
+    minSpending: 500000
+    maxSpending: 799999
+  - id: tier3
+    label: "전월 80만원 이상"
+    minSpending: 800000
+    maxSpending: 999999
+  - id: tier4
+    label: "전월 100만원 이상"
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "public_transit"
+    label: "대중교통 5% 캐시백"
+    type: cashback
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier4
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+  - category: "telecom"
+    label: "통신요금 자동이체 캐시백 (5만원 이상)"
+    type: cashback
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 2000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 2000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 2000
+        perTransactionCap: null
+      - performanceTier: tier4
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 2000
+        perTransactionCap: null
+  - category: "convenience_store"
+    label: "GS25 1천원 캐시백 (1만원 결제, 하루 1회, 월 5회)"
+    type: cashback
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+      - performanceTier: tier3
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+      - performanceTier: tier4
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+  - category: "online_shopping"
+    label: "쿠팡 1천원 캐시백 (2만원 결제, 하루 1회, 월 5회)"
+    type: cashback
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+      - performanceTier: tier3
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+      - performanceTier: tier4
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+  - category: "dining"
+    label: "스타벅스 1천원 캐시백 (하루 1회, 월 5회)"
+    type: cashback
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+      - performanceTier: tier3
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+      - performanceTier: tier4
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+  - category: "entertainment"
+    label: "CGV 5천원 캐시백 (2만원 결제, 월 1회)"
+    type: cashback
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: 5000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: 5000
+      - performanceTier: tier3
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: 5000
+      - performanceTier: tier4
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: 5000
+
+globalConstraints:
+  monthlyTotalDiscountCap: 30000
+  minimumAnnualSpending: null

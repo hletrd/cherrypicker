@@ -1,0 +1,146 @@
+card:
+  id: bc-baro-quattro-plus
+  issuer: bc
+  name: Shinsegae Baro Quattro Plus Card
+  nameKo: 신세계 BC 바로 콰트로 플러스
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 5000
+  url: https://m.bccard.com/app/mobileweb/CardDetail.do?exec=cardDetail&cardGdsNo=101922
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: 1199999
+
+  - id: tier3
+    label: 전월 120만원 이상
+    minSpending: 1200000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - public_transit
+  - telecom
+
+rewards:
+  - category: offline_shopping
+    subcategory: department_store
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 30000
+        perTransactionCap: null
+    conditions:
+      note: "쇼핑 5% 할인. 신세계백화점, 이마트 등"
+      specificMerchants:
+        - 신세계백화점
+        - 이마트
+
+  - category: public_transit
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 4.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 4.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 4.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "교통 4% 할인. 주유소, 전기차 충전, 대중교통, 택시"
+
+  - category: online_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 30000
+        perTransactionCap: null
+    conditions:
+      note: "온라인몰 7% 할인. SSG, 쿠팡, G마켓, 옥션, 11번가"
+      specificMerchants:
+        - SSG닷컴
+        - 쿠팡
+        - G마켓
+        - 옥션
+        - 11번가
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "커피/외식 10% 할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 55000
+  minimumAnnualSpending: null

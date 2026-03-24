@@ -1,0 +1,180 @@
+card:
+  id: ibk-kapick
+  issuer: ibk
+  name: KaPick Card
+  nameKo: IBK 카픽카드
+  type: credit
+  annualFee:
+    domestic: 14000
+    international: 15000
+  url: https://cardapplication.ibk.co.kr/card/index.jsp?card_prdc_id=103220
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "전 가맹점 카카오페이 포인트 적립. 무실적 무한도"
+
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+
+  - category: dining
+    subcategory: delivery
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+
+  - category: grocery
+    subcategory: supermarket
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+
+  - category: dining
+    subcategory: cafe
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+
+  - category: convenience_store
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+
+  - category: public_transit
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+
+  - category: transportation
+    subcategory: fuel
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+
+  - category: telecom
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+
+  - category: entertainment
+    subcategory: streaming
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "카카오페이 포인트 적립. 멤버십 영역. 리빙·멤버십 통합 월 4만원 한도"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 40000
+  minimumAnnualSpending: null

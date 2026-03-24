@@ -1,0 +1,81 @@
+card:
+  id: hyundai-energy-plus
+  issuer: hyundai
+  name: Energy Plus
+  nameKo: 에너지플러스 현대카드
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: https://www.hyundaicard.com/crd/crd01/crd0101/H100000191.hdc
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 699999
+
+  - id: tier2
+    label: 전월 70만원 이상
+    minSpending: 700000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+
+rewards:
+  - category: transportation
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - GS칼텍스
+        - 바로주유
+
+  - category: transportation
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 주차
+        - 세차
+        - 정비
+
+globalConstraints:
+  monthlyTotalDiscountCap: 40000
+  minimumAnnualSpending: null

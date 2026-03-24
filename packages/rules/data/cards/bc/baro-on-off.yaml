@@ -1,0 +1,93 @@
+card:
+  id: bc-baro-on-off
+  issuer: bc
+  name: Baro On&Off Card
+  nameKo: BC 바로 On&Off 카드
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 10000
+  url: https://m.bccard.com/app/mobileweb/CardDetail.do?exec=cardDetail&cardGdsNo=103203
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - public_transit
+  - telecom
+
+rewards:
+  - category: online_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: 1000
+    conditions:
+      note: "온라인/간편결제 10% 할인. 건당 최대 1천원. 영역별 5천원, 통합 월 1만원 한도"
+
+  - category: dining
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: 1000
+    conditions:
+      note: "음식점/커피 10% 할인. 건당 최대 1천원. 영역별 5천원, 통합 월 1만원 한도"
+
+  - category: public_transit
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "버스/지하철/택시 10% 할인. 버스·지하철 각 월 최대 2천원. 영역별 5천원, 통합 월 1만원 한도"
+
+  - category: travel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: 1000
+    conditions:
+      note: "해외 이용금액 10% 할인. 건당 최대 1천원. 영역별 5천원, 통합 월 1만원 한도"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 10000
+  minimumAnnualSpending: null

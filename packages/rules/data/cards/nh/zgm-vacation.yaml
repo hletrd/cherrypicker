@@ -1,0 +1,60 @@
+card:
+  id: nh-zgm-vacation
+  issuer: nh
+  name: zgm Vacation Card
+  nameKo: NH농협 zgm.휴가중 카드
+  type: credit
+  annualFee:
+    domestic: 25000
+    international: 25000
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier2
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - insurance
+  - public_transit
+
+rewards:
+  - category: travel
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "해외 가맹점 NH포인트 적립. 무실적 기본 2%, 실적 충족 시 추가 적립. 월 이용액 100만원까지 추가적립 대상"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

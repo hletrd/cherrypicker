@@ -1,0 +1,84 @@
+card:
+  id: "shinhan-point-plan-plus"
+  issuer: "shinhan"
+  name: "Point Plan+"
+  nameKo: "포인트플랜 플러스"
+  type: credit
+  annualFee:
+    domestic: 30000
+    international: 33000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1228407_2207.html"
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 399999
+  - id: tier1
+    label: "전월 40만원 이상"
+    minSpending: 400000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "uncategorized"
+    label: "건당 3만원 미만 0.7% 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 0.7
+        monthlyCap: 50000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "건당 3만~10만원 1.0% 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 50000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "건당 10만~30만원 1.5% 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 50000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "건당 30만~100만원 2.0% 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 50000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "건당 100만원 이상 3.0% 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 50000
+        perTransactionCap: null
+  - category: "subscription"
+    label: "OTT 구독 (7천원 이상) 최대 2천 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 2000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 50000
+  minimumAnnualSpending: null

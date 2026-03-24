@@ -1,0 +1,107 @@
+card:
+  id: nh-zgm-living
+  issuer: nh
+  name: zgm Living Card
+  nameKo: NH농협 zgm living 카드
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: https://www.banksalad.com/product/cards/CARD004287
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - insurance
+
+rewards:
+  - category: transportation
+    subcategory: fuel
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 15.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "주유소 최대 15% NH포인트 적립"
+
+  - category: utilities
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 15.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "공과금 최대 15% NH포인트 적립"
+
+  - category: education
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 15.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "교육업종 최대 15% NH포인트 적립"
+
+  - category: telecom
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 15.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "통신요금 최대 15% NH포인트 적립"
+
+  - category: insurance
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 15.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "보험 최대 15% NH포인트 적립"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 50000
+  minimumAnnualSpending: null

@@ -1,0 +1,58 @@
+card:
+  id: hana-1q-card
+  issuer: hana
+  name: 1Q Card
+  nameKo: 하나카드 원큐카드
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: https://www.hanacard.co.kr/OPI41000000D.web?CD_PD_SEQ=12942
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.8
+        monthlyCap: 100000
+        perTransactionCap: null
+    conditions:
+      minTransaction: null
+      excludeOnline: false
+      specificMerchants:
+        - 하나원큐페이
+
+  - category: travel
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.8
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      minTransaction: null
+      excludeOnline: false
+      specificMerchants: []
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.8
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

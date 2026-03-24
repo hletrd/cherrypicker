@@ -1,0 +1,103 @@
+card:
+  id: "samsung-id-move"
+  issuer: "samsung"
+  name: "iD MOVE"
+  nameKo: "아이디 무브"
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: "https://www.samsungcard.com/home/card/cardinfo/PGHPPCCCardCardinfoDetails001?code=AAP1762"
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 399999
+  - id: tier1
+    label: "전월 40만원 이상"
+    minSpending: 400000
+    maxSpending: 799999
+  - id: tier2
+    label: "전월 80만원 이상"
+    minSpending: 800000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "public_transit"
+    label: "대중교통·택시 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 6000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 12000
+        perTransactionCap: null
+  - category: "telecom"
+    label: "이동통신·스트리밍 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 6000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 12000
+        perTransactionCap: null
+  - category: "dining"
+    label: "커피전문점 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 6000
+        perTransactionCap: null
+  - category: "convenience_store"
+    label: "편의점 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 6000
+        perTransactionCap: null
+  - category: "travel"
+    label: "해외·항공·철도 할인 (무실적)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 1.5
+        monthlyCap: 500000
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 500000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.5
+        monthlyCap: 500000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

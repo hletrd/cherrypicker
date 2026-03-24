@@ -1,0 +1,97 @@
+card:
+  id: "samsung-daiso"
+  issuer: "samsung"
+  name: "다이소 삼성카드"
+  nameKo: "다이소 삼성카드"
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: "https://www.samsungcard.com/personal/card/cardfinder/UHPPCA0102M0.jsp?code=AAP1653"
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: 599999
+  - id: tier2
+    label: "전월 60만원 이상"
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "offline_shopping"
+    label: "다이소 1만원 이상 결제 시 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 10000
+        perTransactionCap: 2000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 4000
+        monthlyCap: 20000
+        perTransactionCap: 4000
+  - category: "dining"
+    label: "배달앱 할인 (월 5회)"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 10000
+        perTransactionCap: 2000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 10000
+        perTransactionCap: 2000
+  - category: "dining"
+    label: "커피전문점 할인 (월 5회)"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 10000
+        perTransactionCap: 2000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 10000
+        perTransactionCap: 2000
+  - category: "uncategorized"
+    label: "다이소몰·대형마트·온라인쇼핑·편의점·병원·약국 1% 할인 (무실적, 무한도)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

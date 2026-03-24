@@ -1,0 +1,161 @@
+card:
+  id: bc-shinsegae-seven-flex
+  issuer: bc
+  name: Shinsegae Baro SEVEN FLEX Card
+  nameKo: 신세계 BC 바로 세븐 플렉스
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: https://m.bccard.com/app/mobileweb/CardDetail.do?exec=cardDetail&cardGdsNo=101883
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: 1199999
+
+  - id: tier3
+    label: 전월 120만원 이상
+    minSpending: 1200000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - public_transit
+  - telecom
+
+rewards:
+  - category: offline_shopping
+    subcategory: department_store
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 25000
+        perTransactionCap: null
+    conditions:
+      note: "FLEX 카테고리 - 신세계백화점 7% 할인"
+      specificMerchants:
+        - 신세계백화점
+
+  - category: online_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 25000
+        perTransactionCap: null
+    conditions:
+      note: "PAY 카테고리 - 간편결제 7% 할인"
+
+  - category: medical
+    subcategory: pharmacy
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 25000
+        perTransactionCap: null
+    conditions:
+      note: "HEALTH & BEAUTY 카테고리 - 올리브영 등 H&B 7% 할인"
+
+  - category: dining
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 25000
+        perTransactionCap: null
+    conditions:
+      note: "YUMMY 카테고리 - 외식/카페 7% 할인"
+
+  - category: convenience_store
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 25000
+        perTransactionCap: null
+    conditions:
+      note: "DAILY 카테고리 - 편의점/생활 7% 할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 75000
+  minimumAnnualSpending: null

@@ -1,0 +1,91 @@
+card:
+  id: "samsung-id-plug-in"
+  issuer: "samsung"
+  name: "iD PLUG-IN"
+  nameKo: "아이디 플러그인"
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: "https://www.samsungcard.com/home/card/cardinfo/PGHPPCCCardCardinfoDetails001?code=AAP1825"
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 399999
+  - id: tier1
+    label: "전월 40만원 이상"
+    minSpending: 400000
+    maxSpending: 799999
+  - id: tier2
+    label: "전월 80만원 이상"
+    minSpending: 800000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "transportation"
+    label: "전기차 충전요금 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 40.0
+        monthlyCap: 20000
+        perTransactionCap: null
+  - category: "transportation"
+    label: "주차장·대리운전 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+  - category: "subscription"
+    label: "디지털구독 (넷플릭스/디즈니+/웨이브/유튜브 프리미엄/티빙/멜론/FLO) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "해외 이용 할인 (무실적)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

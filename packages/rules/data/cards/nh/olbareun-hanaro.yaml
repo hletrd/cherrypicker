@@ -1,0 +1,100 @@
+card:
+  id: nh-olbareun-hanaro
+  issuer: nh
+  name: Olbareun Hanaro Card
+  nameKo: NH농협 올바른 하나로카드
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 20000
+  url: https://www.banksalad.com/product/cards/CARD004127
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - insurance
+
+rewards:
+  - category: grocery
+    subcategory: supermarket
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "농협판매장(하나로마트, 하나로클럽, 농협몰 등) 채움포인트 적립"
+      specificMerchants:
+        - 하나로마트
+        - 하나로클럽
+        - 농협몰
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 3.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "생활편의업종 3% 적립"
+
+  - category: medical
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "병원, 약국"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 30000
+  minimumAnnualSpending: null

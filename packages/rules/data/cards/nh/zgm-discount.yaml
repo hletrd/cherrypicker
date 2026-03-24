@@ -1,0 +1,139 @@
+card:
+  id: nh-zgm-discount
+  issuer: nh
+  name: zgm Discount Card
+  nameKo: NH농협 zgm 할인카드
+  type: credit
+  annualFee:
+    domestic: 27000
+    international: 30000
+  url: https://card.nonghyup.com/content/html/bridge/zgm/
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - insurance
+
+rewards:
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 40000
+        perTransactionCap: 10000
+    conditions:
+      note: "국내 전 가맹점 1% 청구할인. 일 1만원, 월 4만원 한도"
+
+  - category: travel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 40000
+        perTransactionCap: 10000
+    conditions:
+      note: "해외 전 가맹점 및 NH페이 온라인결제 2% 청구할인. 일 1만원, 월 4만원 한도"
+
+  - category: entertainment
+    subcategory: streaming
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 30.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "디지털 구독(유튜브프리미엄, 넷플릭스 등). 영역당 5천원, 추가할인 통합 월 2만원 한도"
+      specificMerchants:
+        - 유튜브프리미엄
+        - 넷플릭스
+
+  - category: utilities
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "아파트 관리비 포함 공과금. 영역당 5천원, 추가할인 통합 월 2만원 한도"
+
+  - category: telecom
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "이동통신. 영역당 5천원, 추가할인 통합 월 2만원 한도"
+
+  - category: grocery
+    subcategory: supermarket
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "대형마트. 영역당 5천원, 추가할인 통합 월 2만원 한도"
+
+  - category: insurance
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "보험. 영역당 5천원, 추가할인 통합 월 2만원 한도"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 60000
+  minimumAnnualSpending: null

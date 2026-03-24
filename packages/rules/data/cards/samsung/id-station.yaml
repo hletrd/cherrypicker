@@ -1,0 +1,87 @@
+card:
+  id: "samsung-id-station"
+  issuer: "samsung"
+  name: "iD STATION (GS칼텍스)"
+  nameKo: "아이디 스테이션"
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: "https://www.samsungcard.com/home/card/cardinfo/PGHPPCCCardCardinfoDetails001?code=AAP1856"
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 399999
+  - id: tier1
+    label: "전월 40만원 이상"
+    minSpending: 400000
+    maxSpending: 799999
+  - id: tier2
+    label: "전월 80만원 이상"
+    minSpending: 800000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "transportation"
+    label: "GS칼텍스 주유 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 35000
+        perTransactionCap: null
+  - category: "telecom"
+    label: "이동통신 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+  - category: "convenience_store"
+    label: "편의점 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+  - category: "online_shopping"
+    label: "온라인쇼핑 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 35000
+  minimumAnnualSpending: null

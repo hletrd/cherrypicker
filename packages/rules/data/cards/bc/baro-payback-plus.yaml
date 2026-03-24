@@ -1,0 +1,108 @@
+card:
+  id: bc-baro-payback-plus
+  issuer: bc
+  name: Baro Payback Plus Card
+  nameKo: BC 바로 페이백 플러스
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: https://m.bccard.com/app/mobileweb/CardDetail.do?exec=cardDetail&cardGdsNo=101923
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - public_transit
+  - telecom
+
+rewards:
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "전 가맹점 0.7% 기본 할인. 전월실적/할인한도 없음. 무실적 무한도"
+
+  - category: dining
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "음식점/카페 추가 할인 (기본 0.7% 포함)"
+
+  - category: convenience_store
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "편의점 추가 할인 (기본 0.7% 포함)"
+
+  - category: online_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "온라인쇼핑 추가 할인 (기본 0.7% 포함)"
+
+  - category: transportation
+    subcategory: fuel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "주유 추가 할인 (기본 0.7% 포함)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

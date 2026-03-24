@@ -1,0 +1,47 @@
+card:
+  id: "shinhan-simple-plan"
+  issuer: "shinhan"
+  name: "Simple Plan"
+  nameKo: "심플플랜"
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 18000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1237252_2207.html"
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "uncategorized"
+    label: "국내 전 가맹점 1% 할인 (무실적, 무제한)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "해외 전 가맹점 2% 할인 (무실적, 무제한)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

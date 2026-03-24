@@ -1,0 +1,94 @@
+card:
+  id: "shinhan-cheoeum"
+  issuer: "shinhan"
+  name: "처음 (ANNIVERSE)"
+  nameKo: "처음"
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 18000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1229296_2207.html"
+  lastUpdated: "2026-03-24"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: 499999
+  - id: tier2
+    label: "전월 50만원 이상"
+    minSpending: 500000
+    maxSpending: 999999
+  - id: tier3
+    label: "전월 100만원 이상"
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "dining"
+    label: "음식·생활·패션 5% 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+  - category: "subscription"
+    label: "통신·구독·멤버십 최대 20% 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 20.0
+        monthlyCap: 20000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "소비관리 보너스 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 3000
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 6000
+        monthlyCap: 6000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: null
+        fixedAmount: 10000
+        monthlyCap: 10000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 50000
+  minimumAnnualSpending: null
