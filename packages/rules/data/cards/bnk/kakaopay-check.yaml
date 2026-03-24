@@ -1,0 +1,54 @@
+card:
+  id: bnk-kakaopay-check
+  issuer: bnk
+  name: Kakaopay Check
+  nameKo: 카카오페이 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+
+rewards:
+  - category: online_shopping
+    label: 카카오 파트너 15% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier1
+        rate: 15.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 카카오쇼핑
+        - 카카오택시
+        - 카카오T
+
+  - category: dining
+    label: 카카오 파트너 카페/외식 15% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier1
+        rate: 15.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 10000
+  minimumAnnualSpending: null

@@ -1,0 +1,44 @@
+card:
+  id: toss-k-pass-check
+  issuer: toss
+  name: K-Pass Check
+  nameKo: K-패스 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: public_transit
+    label: K-Pass 대중교통 환급 (일반 20%, 청년 30%, 저소득 53%)
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 20.0
+        monthlyCap: 60000
+        perTransactionCap: null
+
+  - category: public_transit
+    label: 대중교통 추가 2,000원 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 2000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

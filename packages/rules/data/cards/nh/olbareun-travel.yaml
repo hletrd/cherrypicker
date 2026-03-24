@@ -1,0 +1,86 @@
+card:
+  id: nh-olbareun-travel
+  issuer: nh
+  name: Olbareun TRAVEL Card
+  nameKo: NH농협 올바른TRAVEL
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - insurance
+
+rewards:
+  - category: travel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "해외 가맹점(해외사이트 포함) 7% 청구할인. 일본/중국 특화"
+
+  - category: offline_shopping
+    subcategory: department_store
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "백화점(롯데/신세계/현대/AK/갤러리아) 5% 할인"
+      specificMerchants:
+        - 롯데백화점
+        - 신세계백화점
+        - 현대백화점
+        - AK플라자
+        - 갤러리아백화점
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "커피전문점 10% 할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 20000
+  minimumAnnualSpending: null

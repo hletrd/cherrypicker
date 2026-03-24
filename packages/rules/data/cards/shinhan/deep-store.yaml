@@ -1,0 +1,103 @@
+card:
+  id: "shinhan-deep-store"
+  issuer: "shinhan"
+  name: "Deep Store"
+  nameKo: "딥스토어"
+  type: credit
+  annualFee:
+    domestic: 13000
+    international: 16000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1188279_2207.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: 599999
+  - id: tier2
+    label: "전월 60만원 이상"
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "online_shopping"
+    label: "생활쇼핑 (온라인쇼핑몰) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 20000
+        perTransactionCap: null
+  - category: "online_shopping"
+    label: "생활쇼핑 5만원 이상 결제 시 추가 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      minTransaction: 50000
+  - category: "cafe"
+    label: "커피전문점/제과점 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+  - category: "grocery"
+    label: "주말 3대 할인점/복합쇼핑몰 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+  - category: "entertainment"
+    label: "주말 롯데시네마 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

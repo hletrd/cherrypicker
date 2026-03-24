@@ -1,0 +1,69 @@
+card:
+  id: kwangju-edu-plus
+  issuer: kwangju
+  name: Edu Plus
+  nameKo: 에듀플러스카드
+  type: credit
+  annualFee:
+    domestic: 14000
+    international: 14000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+
+rewards:
+  - category: education
+    label: 학원/교습소 20% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 20000
+        perTransactionCap: null
+
+  - category: education
+    label: 도서/교재 20% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 교보문고
+        - 영풍문고
+        - 알라딘
+        - YES24
+
+globalConstraints:
+  monthlyTotalDiscountCap: 30000
+  minimumAnnualSpending: null

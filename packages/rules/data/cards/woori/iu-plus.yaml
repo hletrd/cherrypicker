@@ -1,0 +1,114 @@
+card:
+  id: woori-iu-plus
+  issuer: woori
+  name: Card of Rules I&U+
+  nameKo: 우리카드 카드의정석 I&U+
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 999999
+
+  - id: tier2
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: transportation
+    subcategory: fuel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 60
+        monthlyCap: 7000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 100
+        monthlyCap: 7000
+        perTransactionCap: null
+    conditions:
+      note: "S-OIL, HD현대오일뱅크 주유 시 리터당 60~100원 할인. 통합 월 7천원 한도"
+      specificMerchants:
+        - S-OIL
+        - HD현대오일뱅크
+
+  - category: public_transit
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      note: "대중교통 10% 청구할인. 통합 월 3천원 한도"
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      note: "커피전문점 10% 청구할인. 통합 월 3천원 한도"
+
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내 전 가맹점 0.7% 기본할인, 100만원 이상 시 1%"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

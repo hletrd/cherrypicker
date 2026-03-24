@@ -1,0 +1,97 @@
+card:
+  id: kb-easy-link
+  issuer: kb
+  name: Easy Link Titanium Card
+  nameKo: KB국민 이지링크 티타늄카드
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 499999
+
+  - id: tier2
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: utilities
+    label: "자동납부 캐시백 (2건 이상 자동납부 등록 시)"
+    type: discount
+    tiers:
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: utilities
+    label: "자동납부 캐시백 (4건 이상 자동납부 등록 시)"
+    type: discount
+    tiers:
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 10000
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: "선택형 패키지 (패밀리팩/사업자팩/직장인팩 택1) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: telecom
+    label: "통신 자동납부 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: entertainment
+    label: "영화관 할인 (월 1회)"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 3000
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 3000
+        monthlyCap: 3000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

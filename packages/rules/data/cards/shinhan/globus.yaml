@@ -1,0 +1,55 @@
+card:
+  id: "shinhan-globus"
+  issuer: "shinhan"
+  name: "Globus"
+  nameKo: "글로버스"
+  type: credit
+  annualFee:
+    domestic: 22000
+    international: 25000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1221213_2207.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "travel"
+    label: "해외 이용금액 포인트 적립 (수수료 1.18% 면제 포함)"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 1.7
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "국내 전 가맹점 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

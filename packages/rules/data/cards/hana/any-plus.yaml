@@ -1,0 +1,52 @@
+card:
+  id: hana-any-plus
+  issuer: hana
+  name: Any Plus
+  nameKo: 하나카드 Any Plus
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: online_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 1.7
+        monthlyCap: 100000
+        perTransactionCap: null
+
+  - category: travel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 1.7
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 해외가맹점
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

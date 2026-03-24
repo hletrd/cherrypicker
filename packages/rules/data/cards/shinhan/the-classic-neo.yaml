@@ -1,0 +1,52 @@
+card:
+  id: "shinhan-the-classic-neo"
+  issuer: "shinhan"
+  name: "The CLASSIC NEO"
+  nameKo: "더 클래식 네오"
+  type: credit
+  annualFee:
+    domestic: 117000
+    international: 120000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/premium/1236160_2205.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 399999
+  - id: tier1
+    label: "전월 40만원 이상"
+    minSpending: 400000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "dining"
+    label: "평일 점심 (11시~14시) 요식업종 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "연간 마이신한포인트 기프트 (연회비 납부 + 100만원 이상 이용 시)"
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 70000
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 20000
+  minimumAnnualSpending: null

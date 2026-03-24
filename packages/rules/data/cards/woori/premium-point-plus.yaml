@@ -1,0 +1,55 @@
+card:
+  id: woori-premium-point-plus
+  issuer: woori
+  name: Card of Rules PREMIUM POINT+
+  nameKo: 우리카드 카드의정석 PREMIUM POINT+
+  type: credit
+  annualFee:
+    domestic: 110000
+    international: 110000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier2
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.8
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.2
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내외 전 가맹점 0.8~2% 모아포인트 적립. 연간 600만원 이상 시 2만점 보너스"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

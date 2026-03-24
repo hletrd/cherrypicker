@@ -1,0 +1,44 @@
+card:
+  id: hana-tossbank-wide
+  issuer: hana
+  name: Tossbank Hana Card Wide
+  nameKo: 토스뱅크 하나카드 Wide
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: https://www.tossbank.com/product-service/card/wide-card
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 당월 40만원 이상
+    minSpending: 400000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: 100000
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 100000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 100000
+  minimumAnnualSpending: null

@@ -1,0 +1,78 @@
+card:
+  id: nh-olbareun-new-have
+  issuer: nh
+  name: Olbareun NEW HAVE+ Card
+  nameKo: NH농협 올바른NEW HAVE+
+  type: credit
+  annualFee:
+    domestic: 23000
+    international: 25000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - insurance
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내외 전 가맹점 0.7% NH포인트 기본 적립 (무한도)"
+
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.5
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "당월 이용금액 1위 영역 3.5% 적립 (6개 영역: 온라인쇼핑/배달앱, 오프라인쇼핑/잡화, 이동통신/구독, 대중교통/택시, 커피/편의점, 해외이용). 월 1만원 한도"
+
+  - category: dining
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.1
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "당월 이용금액 2위 영역 2.1% 적립. 월 1만원 한도"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

@@ -1,0 +1,76 @@
+card:
+  id: ibk-ilnyeon-seollem
+  issuer: ibk
+  name: Annual Excitement Card
+  nameKo: IBK 일년의 설렘
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 12000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier2
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      note: "연간 사용액 구간별 정액 캐시백. 전월 50만원 이상 시 월 최대 3만원, 100만원 이상 시 월 최대 5만원"
+
+  - category: entertainment
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 50.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "놀이공원(에버랜드, 롯데월드) 50% 할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 50000
+  minimumAnnualSpending: null

@@ -1,0 +1,52 @@
+card:
+  id: suhyup-s2-check
+  issuer: suhyup
+  name: S2 Check
+  nameKo: S2 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    label: 평일 0.2% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: uncategorized
+    label: 주말 0.3% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0.3
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: uncategorized
+    label: 수요일 0.7% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

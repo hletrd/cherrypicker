@@ -1,0 +1,107 @@
+card:
+  id: "shinhan-yolo"
+  issuer: "shinhan"
+  name: "YOLO i"
+  nameKo: "욜로"
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 18000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1187924_2207.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: 699999
+  - id: tier2
+    label: "전월 70만원 이상"
+    minSpending: 700000
+    maxSpending: 999999
+  - id: tier3
+    label: "전월 100만원 이상"
+    minSpending: 1000000
+    maxSpending: 1499999
+  - id: tier4
+    label: "전월 150만원 이상"
+    minSpending: 1500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "cafe"
+    label: "커피 선택 시 (스타벅스/커피빈 등) 할인 (20%/15%/10% 중 선택)"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 7000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 20.0
+        monthlyCap: 25000
+        perTransactionCap: null
+      - performanceTier: tier4
+        rate: 20.0
+        monthlyCap: 40000
+        perTransactionCap: null
+  - category: "convenience_store"
+    label: "편의점 선택 시 (GS25/CU/세븐일레븐) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 7000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 10.0
+        monthlyCap: 25000
+        perTransactionCap: null
+      - performanceTier: tier4
+        rate: 10.0
+        monthlyCap: 40000
+        perTransactionCap: null
+  - category: "entertainment"
+    label: "영화 선택 시 (CGV/롯데시네마) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 7000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 10.0
+        monthlyCap: 25000
+        perTransactionCap: null
+      - performanceTier: tier4
+        rate: 10.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 40000
+  minimumAnnualSpending: null

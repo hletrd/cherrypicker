@@ -1,0 +1,41 @@
+card:
+  id: sc-daily-samsung
+  issuer: sc
+  name: Daily Samsung Card
+  nameKo: 데일리 삼성카드
+  type: credit
+  annualFee:
+    domestic: 9900
+    international: 9900
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+
+rewards:
+  - category: uncategorized
+    label: 전 가맹점 0.5% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

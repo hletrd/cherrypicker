@@ -1,0 +1,67 @@
+card:
+  id: "samsung-id-global"
+  issuer: "samsung"
+  name: "iD GLOBAL"
+  nameKo: "아이디 글로벌"
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 499999
+  - id: tier1
+    label: "전월 50만원 이상"
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "travel"
+    label: "해외 가맹점 결제 할인 (수수료 면제 포함)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 2.0
+        monthlyCap: 300000
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 300000
+        perTransactionCap: null
+  - category: "travel"
+    label: "삼성페이 해외 오프라인 추가 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "국내 일상 영역 (편의점/커피/주유/쇼핑/항공/면세점 등) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

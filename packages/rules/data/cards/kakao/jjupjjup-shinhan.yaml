@@ -1,0 +1,45 @@
+card:
+  id: kakao-jjupjjup-shinhan
+  issuer: kakao
+  name: Jjupjjup Shinhan Card
+  nameKo: 줍줍 신한카드
+  type: credit
+  annualFee:
+    domestic: 18000
+    international: 18000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+
+rewards:
+  - category: uncategorized
+    label: 전 가맹점 1% 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: uncategorized
+    label: 빠른정산 추가 1% 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

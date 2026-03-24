@@ -1,0 +1,83 @@
+card:
+  id: "shinhan-bom"
+  issuer: "shinhan"
+  name: "Bom"
+  nameKo: "봄"
+  type: credit
+  annualFee:
+    domestic: 17000
+    international: 20000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1221135_2207.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: 499999
+  - id: tier2
+    label: "전월 50만원 이상"
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "uncategorized"
+    label: "전 가맹점 캐시백"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "public_transit"
+    label: "버스/지하철 후불교통 캐시백"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 100
+        unit: "won_per_day"
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 200
+        unit: "won_per_day"
+        monthlyCap: 6000
+        perTransactionCap: null
+  - category: "subscription"
+    label: "디지털 구독 (넷플릭스/유튜브프리미엄) 캐시백"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 50.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

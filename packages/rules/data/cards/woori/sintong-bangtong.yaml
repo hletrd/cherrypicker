@@ -1,0 +1,64 @@
+card:
+  id: woori-sintong-bangtong
+  issuer: woori
+  name: Card of Rules Sintong Bangtong
+  nameKo: 우리카드 카드의정석 신통방통
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 199999
+
+  - id: tier1
+    label: 전월 20만원 이상
+    minSpending: 200000
+    maxSpending: 499999
+
+  - id: tier2
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier3
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: telecom
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: 5000
+        perTransactionCap: 5000
+      - performanceTier: tier2
+        rate: 0
+        monthlyCap: 10000
+        perTransactionCap: 10000
+      - performanceTier: tier3
+        rate: 0
+        monthlyCap: 13000
+        perTransactionCap: 13000
+    conditions:
+      note: "통신요금 자동납부 시 전월실적에 따라 월 5,000~13,000원 청구할인. KT/LGU+/SKT 등 통신3사"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 13000
+  minimumAnnualSpending: null

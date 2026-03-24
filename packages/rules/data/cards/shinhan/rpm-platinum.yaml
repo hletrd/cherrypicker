@@ -1,0 +1,79 @@
+card:
+  id: "shinhan-rpm-platinum"
+  issuer: "shinhan"
+  name: "RPM+ Platinum#"
+  nameKo: "알피엠 플러스 플래티넘"
+  type: credit
+  annualFee:
+    domestic: 32000
+    international: 35000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1187945_2207.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: 599999
+  - id: tier2
+    label: "전월 60만원 이상"
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "fuel"
+    label: "전 주유소 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 40
+        unit: "won_per_liter"
+        monthlyCap: 300000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 150
+        unit: "won_per_liter"
+        monthlyCap: 300000
+        perTransactionCap: null
+  - category: "convenience_store"
+    label: "편의점 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 50000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 50000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "일반 가맹점 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 0.2
+        monthlyCap: 50000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 2.0
+        monthlyCap: 50000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 50000
+  minimumAnnualSpending: null

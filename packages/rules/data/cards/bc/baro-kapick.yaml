@@ -1,0 +1,141 @@
+card:
+  id: bc-baro-kapick
+  issuer: bc
+  name: Baro KaPick Card
+  nameKo: BC 바로카드 KaPick
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 149999
+
+  - id: tier1
+    label: 전월 15만원 이상
+    minSpending: 150000
+    maxSpending: 299999
+
+  - id: tier2
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 499999
+
+  - id: tier3
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "쇼픽(쿠팡, G마켓, 올리브영, 오늘의집 등) 7% 카카오페이포인트 적립"
+      specificMerchants:
+        - 쿠팡
+        - G마켓
+        - 올리브영
+        - 오늘의집
+
+  - category: dining
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "먹픽(스타벅스, 이디야, 메가커피, CU, GS25, 배달의민족 등) 7% 카카오페이포인트 적립"
+      specificMerchants:
+        - 스타벅스
+        - 이디야
+        - 메가MGC커피
+        - 빽다방
+        - 컴포즈커피
+
+  - category: telecom
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "생픽(SKT, KT, LGU+ 자동이체, 버스, 지하철, 카카오T, CGV 등) 7% 카카오페이포인트 적립"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "바로카드 Pick 가맹점 외 카카오페이 결제 시 1% 적립 (전월실적/한도 무관)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

@@ -1,0 +1,96 @@
+card:
+  id: ibk-k22-mileage
+  issuer: ibk
+  name: K-22 Mileage Card
+  nameKo: IBK K-22 Mileage
+  type: credit
+  annualFee:
+    domestic: 219000
+    international: 220000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.067
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내 가맹점 1,500원당 대한항공 1마일 적립. 월 10만 포인트 한도"
+
+  - category: travel
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.133
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "해외/항공/호텔/면세점 1,500원당 2마일 적립. 월 10만 포인트 한도"
+
+  - category: offline_shopping
+    subcategory: department_store
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      note: "백화점/대형마트/고속철도 10% 할인"
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "스타벅스, 커피빈, 아티제, 폴바셋, 투썸플레이스 20% 결제일 할인"
+      specificMerchants:
+        - 스타벅스
+        - 커피빈
+        - 아티제
+        - 폴바셋
+        - 투썸플레이스
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: 6000000

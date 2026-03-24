@@ -1,0 +1,75 @@
+card:
+  id: kb-the-cj
+  issuer: kb
+  name: The CJ KB Card
+  nameKo: The CJ KB국민카드
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 5000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: offline_shopping
+    label: "올리브영 할인 (무실적/무한도)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: dining
+    label: "뚜레쥬르/투썸플레이스 할인 (무실적/무한도)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: dining
+    label: "CJ푸드빌 (빕스/제일제면소 등) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 20.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: "CJ온스타일 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: entertainment
+    label: "CGV 영화 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 6000
+        monthlyCap: null
+        perTransactionCap: 6000
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

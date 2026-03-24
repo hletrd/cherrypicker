@@ -1,0 +1,113 @@
+card:
+  id: ibk-i-gihoo-donghaeng
+  issuer: ibk
+  name: I-Climate Companion Card
+  nameKo: IBK I-기후동행카드
+  type: credit
+  annualFee:
+    domestic: 14000
+    international: 14000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내 전 가맹점 0.5% 할인 (전월실적 무관, 무한도)"
+
+  - category: online_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "온라인쇼핑, 홈쇼핑, 배달앱 1% 할인"
+
+  - category: entertainment
+    subcategory: streaming
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "OTT(넷플릭스, 유튜브프리미엄, 디즈니+, 티빙) 및 멤버십(쿠팡와우, 네이버멤버십) 5% 할인"
+      specificMerchants:
+        - 넷플릭스
+        - 유튜브프리미엄
+        - 디즈니+
+        - 티빙
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      note: "커피, 편의점 1% 할인"
+
+  - category: transportation
+    subcategory: fuel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      note: "주유/충전 1% 할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

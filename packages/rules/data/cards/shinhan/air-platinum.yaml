@@ -1,0 +1,67 @@
+card:
+  id: "shinhan-air-platinum"
+  issuer: "shinhan"
+  name: "Air Platinum#"
+  nameKo: "에어 플래티넘"
+  type: credit
+  annualFee:
+    domestic: 37000
+    international: 40000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1187946_2207.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "airline"
+    label: "대한항공/아시아나 마일리지 적립 (택1, 1500원당 1마일)"
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 1
+        unit: "mile_per_1500won"
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 1
+        unit: "mile_per_1500won"
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "fuel"
+    label: "주유 마이신한포인트 추가 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+  - category: "travel"
+    label: "해외 일시불 마이신한포인트 추가 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

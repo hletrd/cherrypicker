@@ -1,0 +1,65 @@
+card:
+  id: kwangju-kia-champions
+  issuer: kwangju
+  name: Kia Champions Card
+  nameKo: 기아 챔피언스카드
+  type: credit
+  annualFee:
+    domestic: 14000
+    international: 14000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+
+rewards:
+  - category: transportation
+    label: 주유 리터당 120원 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 120
+        monthlyCap: 6000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 120
+        monthlyCap: 12000
+        perTransactionCap: null
+
+  - category: entertainment
+    label: 기아타이거즈 경기장 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 22000
+  minimumAnnualSpending: null

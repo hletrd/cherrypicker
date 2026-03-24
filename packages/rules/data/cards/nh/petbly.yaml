@@ -1,0 +1,70 @@
+card:
+  id: nh-petbly
+  issuer: nh
+  name: PETvely Card
+  nameKo: NH농협 PETvely 펫블리
+  type: credit
+  annualFee:
+    domestic: 23000
+    international: 25000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+  - insurance
+
+rewards:
+  - category: medical
+    subcategory: hospital
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "동물병원 및 반려동물 관련업종 7% NH포인트 적립"
+
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "G마켓, 옥션, 11번가, 인터파크 5% NH포인트 적립"
+      specificMerchants:
+        - G마켓
+        - 옥션
+        - 11번가
+        - 인터파크
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

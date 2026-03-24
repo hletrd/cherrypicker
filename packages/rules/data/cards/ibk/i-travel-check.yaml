@@ -1,0 +1,63 @@
+card:
+  id: ibk-i-travel-check
+  issuer: ibk
+  name: I-Travel Check Card
+  nameKo: IBK I-Travel 체크
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.033
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내 가맹점 건당 3만원 이상 결제 시 3,000원당 대한항공 1마일 적립"
+
+  - category: travel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "해외 결제 시 국제브랜드수수료 1% 및 환가료 0.18% 면제. 우대환율(매매기준율) 적용. 해외ATM 출금수수료 월 3회 면제"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

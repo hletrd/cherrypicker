@@ -1,0 +1,60 @@
+card:
+  id: "shinhan-the-classic-plus"
+  issuer: "shinhan"
+  name: "The CLASSIC+"
+  nameKo: "더 클래식 플러스"
+  type: credit
+  annualFee:
+    domestic: 120000
+    international: 120000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/premium/1187949_2205.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 1999999
+  - id: tier1
+    label: "전월 200만원 이상"
+    minSpending: 2000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "airline"
+    label: "대한항공/아시아나 마일리지 적립 (택1)"
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 1
+        unit: "mile_per_1500won"
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 1.5
+        unit: "mile_per_1500won"
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "연간 기프트 (LG전자/신세계상품권/레스토랑/호텔/포인트 중 택1)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 120000
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

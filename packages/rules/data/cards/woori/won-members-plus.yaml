@@ -1,0 +1,94 @@
+card:
+  id: woori-won-members-plus
+  issuer: woori
+  name: Card of Rules WON Members+
+  nameKo: 우리카드 카드의정석 우리WON멤버스+
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 12000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 2.0
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      note: "우리WON마켓 2.0% 꿀머니 적립"
+      specificMerchants:
+        - 우리WON마켓
+
+  - category: offline_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.5
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      note: "주요 리테일 1.5% 꿀머니 적립"
+
+  - category: entertainment
+    subcategory: movie
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: 3000
+      - performanceTier: tier2
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: 3000
+    conditions:
+      note: "영화관 3,000원 할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

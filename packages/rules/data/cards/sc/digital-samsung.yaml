@@ -1,0 +1,57 @@
+card:
+  id: sc-digital-samsung
+  issuer: sc
+  name: Digital Samsung Card
+  nameKo: 디지털 삼성카드
+  type: credit
+  annualFee:
+    domestic: 9900
+    international: 9900
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+
+rewards:
+  - category: online_shopping
+    label: 해외/온라인 결제 7% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: entertainment
+    label: 스트리밍 7% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 넷플릭스
+        - 유튜브
+        - 디즈니플러스
+        - 티빙
+        - 웨이브
+
+globalConstraints:
+  monthlyTotalDiscountCap: 15000
+  minimumAnnualSpending: null

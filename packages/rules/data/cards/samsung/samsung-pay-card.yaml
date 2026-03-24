@@ -1,0 +1,51 @@
+card:
+  id: "samsung-samsung-pay-card"
+  issuer: "samsung"
+  name: "Samsung Pay Card"
+  nameKo: "삼성페이카드"
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "uncategorized"
+    label: "삼성페이 국내 결제 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: 300000
+        perTransactionCap: null
+  - category: "travel"
+    label: "삼성페이 해외 결제 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 50000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 300000
+  minimumAnnualSpending: null

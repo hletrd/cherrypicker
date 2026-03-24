@@ -1,0 +1,113 @@
+card:
+  id: nh-soho-dasaroi
+  issuer: nh
+  name: SOHO Dasaroi+ Card
+  nameKo: NH농협 SOHO 다사로이+
+  type: credit
+  annualFee:
+    domestic: 23000
+    international: 25000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 1499999
+
+  - id: tier2
+    label: 전월 150만원 이상
+    minSpending: 1500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내외 전 가맹점 0.5% 기본할인 (전월실적 무관, 무한도)"
+
+  - category: utilities
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "4대 사회보험/전기요금 자동납부 5% 특별할인. 월 1만원 한도"
+
+  - category: subscription
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 30.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "PLUS등급(150만원+): 스타벅스, 넷플릭스, 멜론 30% 할인"
+      specificMerchants:
+        - 스타벅스
+        - 넷플릭스
+        - 멜론
+
+  - category: travel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.5
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "PLUS등급(150만원+): 해외이용액 1.5% 추가할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

@@ -1,0 +1,83 @@
+card:
+  id: "samsung-samsung-5-v2-se"
+  issuer: "samsung"
+  name: "Samsung Card 5 V2 SE"
+  nameKo: "삼성카드 5 V2 SE"
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: 599999
+  - id: tier2
+    label: "전월 60만원 이상"
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "uncategorized"
+    label: "전 가맹점 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "fuel"
+    label: "S-OIL 주유 보너스포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 40
+        unit: "won_per_liter"
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 40
+        unit: "won_per_liter"
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "entertainment"
+    label: "놀이공원/프로스포츠 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 30.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 30.0
+        monthlyCap: 15000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

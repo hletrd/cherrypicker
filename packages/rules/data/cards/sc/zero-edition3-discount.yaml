@@ -1,0 +1,34 @@
+card:
+  id: sc-zero-edition3-discount
+  issuer: sc
+  name: Hyundai ZERO Edition3 Discount SC
+  nameKo: 현대카드 ZERO Edition3 할인형 SC
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    label: 전 가맹점 0.8% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.8
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

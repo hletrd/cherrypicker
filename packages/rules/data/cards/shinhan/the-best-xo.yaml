@@ -1,0 +1,56 @@
+card:
+  id: "shinhan-the-best-xo"
+  issuer: "shinhan"
+  name: "The BEST-XO"
+  nameKo: "더 베스트 엑스오"
+  type: credit
+  annualFee:
+    domestic: 297000
+    international: 300000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/premium/1231479_2205.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 499999
+  - id: tier1
+    label: "전월 50만원 이상"
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "uncategorized"
+    label: "국내외 전 가맹점 마이신한포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "연간 기프트 (호텔/골프/패션/면세점/상품권 중 택1)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 250000
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

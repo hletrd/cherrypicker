@@ -1,0 +1,86 @@
+card:
+  id: kb-heritage-reserve
+  issuer: kb
+  name: HERITAGE Reserve
+  nameKo: KB국민 헤리티지 리저브
+  type: credit
+  annualFee:
+    domestic: 800000
+    international: 800000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 999999
+
+  - id: tier1
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: 2999999
+
+  - id: tier2
+    label: 전월 300만원 이상
+    minSpending: 3000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    label: "국내 전 가맹점 포인트리 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 200000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.2
+        monthlyCap: 300000
+        perTransactionCap: null
+
+  - category: travel
+    label: "해외 전 가맹점 포인트리 적립 (무실적/무한도)"
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: department_store
+    label: "백화점/골프장/골프연습장 특별 적립 (100만원 이상 시 연 2회)"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 50000
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 50000
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      minTransaction: 1000000
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

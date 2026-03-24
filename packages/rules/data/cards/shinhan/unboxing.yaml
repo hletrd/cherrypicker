@@ -1,0 +1,79 @@
+card:
+  id: "shinhan-unboxing"
+  issuer: "shinhan"
+  name: "Unboxing"
+  nameKo: "언박싱"
+  type: credit
+  annualFee:
+    domestic: 32000
+    international: 35000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1198302_2207.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: 599999
+  - id: tier2
+    label: "전월 60만원 이상"
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "offline_shopping"
+    label: "백화점/홈쇼핑/아울렛 쇼핑 캐시백 (3만원 이상 결제 시)"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 50000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 70000
+        perTransactionCap: null
+    conditions:
+      minTransaction: 30000
+  - category: "online_shopping"
+    label: "언박싱 스페셜 (트렌드샵/온라인몰 월회비/배송비) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 2500
+        monthlyCap: 15000
+        perTransactionCap: 2500
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 2500
+        monthlyCap: 15000
+        perTransactionCap: 2500
+  - category: "travel"
+    label: "해외 이용 추가 캐시백 (전월 해외 20만원 이상 시)"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 20000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

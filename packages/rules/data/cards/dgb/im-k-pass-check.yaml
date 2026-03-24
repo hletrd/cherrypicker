@@ -1,0 +1,79 @@
+card:
+  id: dgb-im-k-pass-check
+  issuer: dgb
+  name: iM K-Pass Check
+  nameKo: iM K-패스 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+
+rewards:
+  - category: public_transit
+    label: 대중교통 10% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: dining
+    label: 배달앱 2% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 배달의민족
+        - 요기요
+        - 쿠팡이츠
+
+  - category: telecom
+    label: 통신요금 2% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 3000
+        perTransactionCap: null
+
+  - category: dining
+    label: 커피 2% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 스타벅스
+        - 투썸플레이스
+        - 이디야
+        - 메가커피
+        - 컴포즈커피
+
+globalConstraints:
+  monthlyTotalDiscountCap: 19000
+  minimumAnnualSpending: null

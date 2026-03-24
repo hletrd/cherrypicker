@@ -1,0 +1,88 @@
+card:
+  id: kb-bev-v
+  issuer: kb
+  name: BeV V Card
+  nameKo: KB국민 베브 V 카드
+  type: credit
+  annualFee:
+    domestic: 295000
+    international: 295000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 999999
+
+  - id: tier1
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: 1999999
+
+  - id: tier2
+    label: 전월 200만원 이상
+    minSpending: 2000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    label: "주중 (월~목) 전 가맹점 포인트리 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 1.2
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: uncategorized
+    label: "주말 (금~일) 전 가맹점 포인트리 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: department_store
+    label: "주중 일상쇼핑 (백화점/대형마트) 포인트리 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 1.3
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: uncategorized
+    label: "연간 쿠폰 (신세계상품권/롯데상품권/포인트리/호텔뷔페 중 택1)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 150000
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

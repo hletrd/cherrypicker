@@ -1,0 +1,65 @@
+card:
+  id: woori-every-direct
+  issuer: woori
+  name: Card of Rules EVERY DIRECT
+  nameKo: 우리카드 카드의정석 EVERY DIRECT
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: subscription
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 6000
+        perTransactionCap: null
+    conditions:
+      note: "OTT/멤버십/라이프스타일 20% 청구할인. 월 6천원 한도"
+      specificMerchants:
+        - 넷플릭스
+        - 티빙
+        - 쿠팡
+        - 스타벅스
+
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내외 전 가맹점 0.5% 기본 청구할인 (무실적, 무한도)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

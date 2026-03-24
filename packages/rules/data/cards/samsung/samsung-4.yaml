@@ -1,0 +1,63 @@
+card:
+  id: "samsung-samsung-4"
+  issuer: "samsung"
+  name: "Samsung Card 4"
+  nameKo: "삼성카드 4"
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 5000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "uncategorized"
+    label: "전 가맹점 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "dining"
+    label: "음식점/병원/해외 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "grocery"
+    label: "할인점/주유 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

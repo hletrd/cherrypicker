@@ -1,0 +1,111 @@
+card:
+  id: "shinhan-everywhere-ev"
+  issuer: "shinhan"
+  name: "EVerywhere"
+  nameKo: "이브리웨어"
+  type: credit
+  annualFee:
+    domestic: 19000
+    international: 22000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1219683_2207.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 399999
+  - id: tier1
+    label: "전월 40만원 이상"
+    minSpending: 400000
+    maxSpending: 799999
+  - id: tier2
+    label: "전월 80만원 이상"
+    minSpending: 800000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "fuel"
+    label: "전기차 충전요금 캐시백"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 30.0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 50.0
+        monthlyCap: 50000
+        perTransactionCap: null
+  - category: "subscription"
+    label: "디지털 구독 캐시백"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+  - category: "telecom"
+    label: "이동통신 캐시백"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+  - category: "convenience_store"
+    label: "편의점 캐시백"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+  - category: "cafe"
+    label: "커피전문점/베이커리 캐시백"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+  - category: "parking"
+    label: "주차 캐시백"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

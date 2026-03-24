@@ -1,0 +1,89 @@
+card:
+  id: "samsung-taptap-i"
+  issuer: "samsung"
+  name: "taptap I"
+  nameKo: "탭탭아이"
+  type: credit
+  annualFee:
+    domestic: 49000
+    international: 49000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 499999
+  - id: tier1
+    label: "전월 50만원 이상"
+    minSpending: 500000
+    maxSpending: 999999
+  - id: tier2
+    label: "전월 100만원 이상"
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "cafe"
+    label: "커피전문점 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 30.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 30.0
+        monthlyCap: 15000
+        perTransactionCap: null
+  - category: "online_shopping"
+    label: "마켓컬리 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 15000
+        perTransactionCap: null
+  - category: "travel"
+    label: "KTX/SRT 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 10000
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "최다이용 상위 3개 업종 5% 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 50000
+  minimumAnnualSpending: null

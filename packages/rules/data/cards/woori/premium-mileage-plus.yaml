@@ -1,0 +1,60 @@
+card:
+  id: woori-premium-mileage-plus
+  issuer: woori
+  name: Card of Rules PREMIUM MILEAGE+
+  nameKo: 우리카드 카드의정석 PREMIUM MILEAGE+
+  type: credit
+  annualFee:
+    domestic: 135000
+    international: 135000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0.1
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.1
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내 가맹점 1,000원당 아시아나 1마일 기본 적립"
+
+  - category: travel
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.15
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "해외/면세점 1,000원당 1.5마일 적립"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

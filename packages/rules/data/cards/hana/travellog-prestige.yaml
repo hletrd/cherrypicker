@@ -1,0 +1,114 @@
+card:
+  id: hana-travellog-prestige
+  issuer: hana
+  name: Travellog PRESTIGE
+  nameKo: 하나카드 트래블로그 PRESTIGE
+  type: credit
+  annualFee:
+    domestic: 150000
+    international: 150000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0.67
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.67
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      minTransaction: 1500
+
+  - category: online_shopping
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0.67
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      minTransaction: 1500
+      specificMerchants:
+        - 쿠팡
+        - G마켓
+        - 옥션
+
+  - category: dining
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0.67
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      minTransaction: 1500
+      specificMerchants:
+        - 스타벅스
+        - 커피빈
+
+  - category: convenience_store
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0.67
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      minTransaction: 1500
+      specificMerchants:
+        - CU
+        - GS25
+
+  - category: travel
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0.67
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      minTransaction: 1500
+      specificMerchants:
+        - 해외가맹점
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

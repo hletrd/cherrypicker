@@ -1,0 +1,33 @@
+card:
+  id: lotte-loca-lite
+  issuer: lotte
+  name: LOCA Lite
+  nameKo: 롯데카드 LOCA Lite
+  type: credit
+  annualFee:
+    domestic: 1000
+    international: 1000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

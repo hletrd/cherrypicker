@@ -1,0 +1,63 @@
+card:
+  id: jeju-simple-on
+  issuer: jeju
+  name: SIMPLE ON
+  nameKo: SIMPLE ON 신용카드
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 5000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+
+rewards:
+  - category: entertainment
+    label: 스트리밍 20% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 넷플릭스
+        - 웨이브
+        - 티빙
+        - 쿠팡플레이
+        - 디즈니플러스
+        - 왓챠
+
+  - category: dining
+    label: 배달앱 20% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 배달의민족
+        - 요기요
+        - 쿠팡이츠
+
+globalConstraints:
+  monthlyTotalDiscountCap: 10000
+  minimumAnnualSpending: null

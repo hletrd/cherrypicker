@@ -1,0 +1,99 @@
+card:
+  id: "shinhan-my-car"
+  issuer: "shinhan"
+  name: "MY CAR"
+  nameKo: "마이카"
+  type: credit
+  annualFee:
+    domestic: 27000
+    international: 30000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1197177_2207.html"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: "전월 30만원 이상"
+    minSpending: 300000
+    maxSpending: 599999
+  - id: tier2
+    label: "전월 60만원 이상"
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: "fuel"
+    label: "국내 주유소 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 80
+        unit: "won_per_liter"
+        monthlyCap: 12000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 80
+        unit: "won_per_liter"
+        monthlyCap: 15000
+        perTransactionCap: null
+  - category: "fuel"
+    label: "국내 충전소 (LPG) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 40
+        unit: "won_per_liter"
+        monthlyCap: 12000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 40
+        unit: "won_per_liter"
+        monthlyCap: 15000
+        perTransactionCap: null
+  - category: "transportation"
+    label: "정비소 (스피드메이트/오토오아시스/블루핸즈/오토큐) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 20000
+        monthlyCap: 20000
+        perTransactionCap: 20000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 20000
+        monthlyCap: 40000
+        perTransactionCap: 20000
+  - category: "parking"
+    label: "국내 주차장 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 4000
+        perTransactionCap: 2000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 4000
+        perTransactionCap: 2000
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

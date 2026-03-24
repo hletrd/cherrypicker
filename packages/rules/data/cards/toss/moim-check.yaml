@@ -1,0 +1,52 @@
+card:
+  id: toss-moim-check
+  issuer: toss
+  name: Moim Card
+  nameKo: 모임카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: dining
+    label: 외식 캐시백 (3개 카테고리 중 선택)
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: 2500
+        perTransactionCap: null
+
+  - category: convenience_store
+    label: 편의점 캐시백 (3개 카테고리 중 선택)
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: 2500
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: 온라인쇼핑 캐시백 (3개 카테고리 중 선택)
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: 2500
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 7500
+  minimumAnnualSpending: null

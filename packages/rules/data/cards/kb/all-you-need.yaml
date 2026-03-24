@@ -1,0 +1,79 @@
+card:
+  id: kb-all-you-need
+  issuer: kb
+  name: ALL Card
+  nameKo: KB국민 ALL 카드
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    label: "국내 전 가맹점 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: travel
+    label: "해외 전 가맹점 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 20000
+        perTransactionCap: null
+
+  - category: subscription
+    label: "쇼핑멤버십 (쿠팡로켓와우/네이버플러스/SSG) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 3000
+        perTransactionCap: null
+
+  - category: subscription
+    label: "OTT (넷플릭스/티빙/웨이브/쿠팡플레이/디즈니+) 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+
+  - category: telecom
+    label: "이동통신 할인"
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

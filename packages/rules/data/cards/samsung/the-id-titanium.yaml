@@ -1,0 +1,48 @@
+card:
+  id: "samsung-the-id-titanium"
+  issuer: "samsung"
+  name: "THE iD. TITANIUM"
+  nameKo: "디 아이디 티타늄"
+  type: credit
+  annualFee:
+    domestic: 695000
+    international: 695000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: "uncategorized"
+    label: "국내 전 가맹점 포인트 적립"
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.2
+        monthlyCap: null
+        perTransactionCap: null
+  - category: "uncategorized"
+    label: "라이프스타일 할인 (호텔/골프/패션/면세점/상품권 중 택1)"
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 150000
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

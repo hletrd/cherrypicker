@@ -88,3 +88,13 @@ issuers:
     nameKo: 광주은행
     nameEn: Kwangju Bank
     website: https://www.kjbank.com
+
+  - id: jeju
+    nameKo: 제주은행
+    nameEn: Jeju Bank
+    website: https://www.e-jejubank.com
+
+  - id: sc
+    nameKo: SC제일은행
+    nameEn: Standard Chartered Korea
+    website: https://www.standardchartered.co.kr
