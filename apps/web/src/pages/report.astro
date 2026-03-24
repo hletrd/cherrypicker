@@ -4,17 +4,54 @@ import Layout from '../layouts/Layout.astro';
 
 <Layout title="리포트">
   <div class="print:p-0">
+    <!-- Toolbar (hidden on print) -->
     <div class="mb-6 flex items-center justify-between print:hidden">
-      <h1 class="text-2xl font-bold">분석 리포트</h1>
-      <button
-        onclick="window.print()"
-        class="rounded-lg bg-[var(--color-primary)] px-4 py-2 text-sm text-white hover:bg-[var(--color-primary-dark)]"
-      >
-        인쇄 / PDF 저장
-      </button>
+      <div>
+        <a
+          href="/results"
+          class="mb-2 inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+        >
+          ← 결과로 돌아가기
+        </a>
+        <h1 class="text-2xl font-bold">분석 리포트</h1>
+      </div>
+      <div class="flex gap-3">
+        <button
+          onclick="window.print()"
+          class="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--color-primary-dark)]"
+        >
+          🖨️ 인쇄 / PDF 저장
+        </button>
+      </div>
     </div>
-    <div id="report-content" class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8">
+
+    <!-- Report content -->
+    <div
+      id="report-content"
+      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-[var(--shadow-card)] print:rounded-none print:border-0 print:p-0 print:shadow-none"
+    >
       <p class="text-[var(--color-text-muted)]">명세서를 먼저 업로드하세요.</p>
     </div>
   </div>
 </Layout>
+
+<style>
+  @media print {
+    :global(nav),
+    :global(footer) {
+      display: none !important;
+    }
+    :global(main) {
+      padding: 0 !important;
+    }
+    :global(body) {
+      background: #fff !important;
+      color: #000 !important;
+    }
+    #report-content {
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+  }
+</style>

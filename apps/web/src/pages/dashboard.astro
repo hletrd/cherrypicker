@@ -7,27 +7,63 @@ import SavingsComparison from '../components/dashboard/SavingsComparison.svelte'
 ---
 
 <Layout title="대시보드">
-  <h1 class="text-2xl font-bold">지출 분석 대시보드</h1>
-  <p class="mt-2 text-[var(--color-text-muted)]">명세서 분석 결과를 확인하세요</p>
+  <!-- Back link -->
+  <div class="mb-6">
+    <a
+      href="/"
+      class="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+    >
+      ← 명세서 업로드로 돌아가기
+    </a>
+  </div>
 
-  <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-    <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-      <h2 class="text-lg font-semibold">지출 요약</h2>
+  <!-- Page header -->
+  <div class="mb-8 animate-[slideUp_0.4s_ease_both]">
+    <h1 class="text-3xl font-extrabold tracking-tight">지출 분석 대시보드</h1>
+    <p class="mt-2 text-[var(--color-text-muted)]">명세서 분석 결과를 확인하세요</p>
+  </div>
+
+  <!-- Top row: summary + breakdown -->
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div
+      class="card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] animate-[slideUp_0.4s_0.05s_ease_both]"
+      style="opacity:0;animation-fill-mode:forwards;"
+    >
+      <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">
+        <span>📊</span> 지출 요약
+      </h2>
       <SpendingSummary client:load />
     </div>
 
-    <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-      <h2 class="text-lg font-semibold">카테고리별 지출</h2>
+    <div
+      class="card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] animate-[slideUp_0.4s_0.1s_ease_both]"
+      style="opacity:0;animation-fill-mode:forwards;"
+    >
+      <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">
+        <span>📈</span> 카테고리별 지출
+      </h2>
       <CategoryBreakdown client:load />
     </div>
 
-    <div class="col-span-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-      <h2 class="text-lg font-semibold">절약 비교</h2>
+    <!-- Savings comparison: full width -->
+    <div
+      class="col-span-full card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] animate-[slideUp_0.4s_0.15s_ease_both]"
+      style="opacity:0;animation-fill-mode:forwards;"
+    >
+      <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">
+        <span>💰</span> 절약 비교
+      </h2>
       <SavingsComparison client:load />
     </div>
 
-    <div class="col-span-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-      <h2 class="text-lg font-semibold">카테고리별 최적 카드</h2>
+    <!-- Optimal card map: full width -->
+    <div
+      class="col-span-full card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] animate-[slideUp_0.4s_0.2s_ease_both]"
+      style="opacity:0;animation-fill-mode:forwards;"
+    >
+      <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">
+        <span>🏆</span> 카테고리별 최적 카드
+      </h2>
       <OptimalCardMap client:load />
     </div>
   </div>

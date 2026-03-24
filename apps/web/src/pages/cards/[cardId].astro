@@ -6,8 +6,25 @@ const { cardId } = Astro.params;
 ---
 
 <Layout title="카드 상세">
-  <a href="/cards" class="text-sm text-[var(--color-primary)] hover:underline">&larr; 카드 목록</a>
-  <div class="mt-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-6">
+    <ol class="flex flex-wrap items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
+      <li>
+        <a href="/" class="transition-colors hover:text-[var(--color-primary)]">홈</a>
+      </li>
+      <li class="select-none text-[var(--color-border)]">/</li>
+      <li>
+        <a href="/cards" class="transition-colors hover:text-[var(--color-primary)]">카드 목록</a>
+      </li>
+      <li class="select-none text-[var(--color-border)]">/</li>
+      <li class="font-medium text-[var(--color-text)]" aria-current="page" id="breadcrumb-card-name">
+        {cardId}
+      </li>
+    </ol>
+  </nav>
+
+  <!-- Card detail -->
+  <div class="animate-[slideUp_0.4s_ease_both]">
     <CardDetail cardId={cardId} client:load />
   </div>
 </Layout>

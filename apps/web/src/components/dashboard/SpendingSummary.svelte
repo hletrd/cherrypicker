@@ -22,36 +22,75 @@
 </script>
 
 {#if analysisStore.loading}
-  <div class="flex h-48 items-center justify-center text-[var(--color-text-muted)]">로딩 중...</div>
+  <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+    {#each Array(5) as _}
+      <div class="animate-pulse rounded-xl bg-gray-100 p-4">
+        <div class="mb-2 h-4 w-16 rounded bg-gray-200"></div>
+        <div class="h-7 w-24 rounded bg-gray-300"></div>
+      </div>
+    {/each}
+  </div>
 {:else if analysisStore.result}
-  <div class="mt-4 grid grid-cols-2 gap-4">
-    <div class="rounded-lg bg-blue-50 p-4">
-      <div class="text-sm text-[var(--color-text-muted)]">총 지출</div>
+  <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+    <!-- 총 지출 -->
+    <div class="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
+      <div class="flex items-center gap-1.5 text-sm text-blue-500">
+        <span>💳</span>
+        <span>총 지출</span>
+      </div>
       <div class="mt-1 text-2xl font-bold text-[var(--color-primary)]">
         {formatWon(analysisStore.optimization?.totalSpending ?? 0)}
       </div>
     </div>
-    <div class="rounded-lg bg-amber-50 p-4">
-      <div class="text-sm text-[var(--color-text-muted)]">거래 건수</div>
+
+    <!-- 거래 건수 -->
+    <div class="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 p-4 shadow-sm">
+      <div class="flex items-center gap-1.5 text-sm text-amber-500">
+        <span>📋</span>
+        <span>거래 건수</span>
+      </div>
       <div class="mt-1 text-2xl font-bold text-amber-600">
         {analysisStore.transactionCount}건
       </div>
     </div>
-    <div class="rounded-lg bg-gray-50 p-4">
-      <div class="text-sm text-[var(--color-text-muted)]">분석 기간</div>
-      <div class="mt-1 text-lg font-semibold">
+
+    <!-- 분석 기간 -->
+    <div class="rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 p-4 shadow-sm">
+      <div class="flex items-center gap-1.5 text-sm text-gray-500">
+        <span>📅</span>
+        <span>분석 기간</span>
+      </div>
+      <div class="mt-1 text-lg font-semibold text-gray-800">
         {formatPeriod(analysisStore.statementPeriod)}
       </div>
     </div>
-    <div class="rounded-lg bg-green-50 p-4">
-      <div class="text-sm text-[var(--color-text-muted)]">최다 지출 카테고리</div>
+
+    <!-- 최다 지출 카테고리 -->
+    <div class="rounded-xl bg-gradient-to-br from-green-50 to-green-100 p-4 shadow-sm">
+      <div class="flex items-center gap-1.5 text-sm text-green-600">
+        <span>🏷️</span>
+        <span>최다 지출 카테고리</span>
+      </div>
       <div class="mt-1 text-lg font-semibold text-green-700">
         {getTopCategory(analysisStore.assignments)}
       </div>
     </div>
+
+    <!-- 실효 혜택률 -->
+    <div class="rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 p-4 shadow-sm">
+      <div class="flex items-center gap-1.5 text-sm text-purple-500">
+        <span>💰</span>
+        <span>실효 혜택률</span>
+      </div>
+      <div class="mt-1 text-2xl font-bold text-purple-700">
+        {analysisStore.optimization ? (analysisStore.optimization.effectiveRate * 100).toFixed(2) + '%' : '-'}
+      </div>
+    </div>
   </div>
 {:else}
-  <div class="flex h-48 items-center justify-center text-[var(--color-text-muted)]">
-    명세서를 먼저 업로드하세요
+  <div class="mt-4 flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-border)] text-center">
+    <div class="text-4xl opacity-40">📂</div>
+    <div class="text-sm font-medium text-[var(--color-text-muted)]">분석 결과가 없습니다</div>
+    <div class="text-xs text-[var(--color-text-muted)]">명세서를 업로드하면 지출 요약이 표시됩니다</div>
   </div>
 {/if}

@@ -4,10 +4,20 @@ import CardGrid from '../../components/cards/CardGrid.svelte';
 ---
 
 <Layout title="카드 목록">
-  <h1 class="text-2xl font-bold">카드 목록</h1>
-  <p class="mt-2 text-[var(--color-text-muted)]">등록된 카드 혜택 정보를 확인하세요</p>
+  <!-- Page header -->
+  <div class="mb-8 animate-[slideUp_0.4s_ease_both]">
+    <h1 class="text-3xl font-extrabold tracking-tight">카드 목록</h1>
+    <p class="mt-2 text-[var(--color-text-muted)]">
+      등록된 카드 혜택 정보를 확인하세요
+      <span class="ml-2 inline-flex items-center rounded-full bg-[var(--color-primary-light)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]" id="card-count-badge">172+ 카드</span>
+    </p>
+  </div>
 
-  <div class="mt-8">
+  <!-- Card grid -->
+  <div
+    class="animate-[slideUp_0.4s_0.05s_ease_both]"
+    style="opacity:0;animation-fill-mode:forwards;"
+  >
     <CardGrid client:load />
   </div>
 </Layout>
