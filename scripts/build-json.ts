@@ -30,14 +30,14 @@ const rewardConditionsSchema = z.object({
   minTransaction: z.union([z.number(), z.null()]).optional().transform((v) => v ?? undefined),
   excludeOnline: z.boolean().optional(),
   specificMerchants: z.array(z.string()).optional(),
-}).passthrough();
+}).strip();
 
 const rewardRuleSchema = z.object({
   category: z.string(),
   type: z.enum(['discount', 'points', 'cashback', 'mileage']),
   tiers: z.array(rewardTierRateSchema).min(1),
   conditions: rewardConditionsSchema.optional(),
-}).passthrough();
+}).strip();
 
 const performanceTierSchema = z.object({
   id: z.string(),
@@ -59,12 +59,12 @@ const cardMetaSchema = z.object({
   url: z.string().optional().default(''),
   lastUpdated: z.string().default('2026-03-24'),
   source: z.enum(['manual', 'llm-scrape']).default('manual'),
-}).passthrough();
+}).strip();
 
 const globalConstraintsSchema = z.object({
   monthlyTotalDiscountCap: z.number().nullable().optional().default(null),
   minimumAnnualSpending: z.number().nullable().optional().default(null),
-}).passthrough();
+}).strip();
 
 const cardRuleSetSchema = z.object({
   card: cardMetaSchema,
@@ -72,7 +72,7 @@ const cardRuleSetSchema = z.object({
   performanceExclusions: z.array(z.string()).optional().default([]),
   rewards: z.array(rewardRuleSchema).min(1),
   globalConstraints: globalConstraintsSchema.optional().default({}),
-}).passthrough();
+}).strip();
 
 // ── Types ──
 

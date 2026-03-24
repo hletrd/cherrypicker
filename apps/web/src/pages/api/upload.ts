@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { writeFile, mkdir, readdir, lstat, unlink } from 'node:fs/promises';
 import { join, extname, basename, resolve } from 'path';
+import { randomBytes } from 'node:crypto';
 import { detectFormat } from '@cherrypicker/parser';
 
 const UPLOAD_DIR = resolve(join(process.cwd(), 'uploads'));
@@ -72,7 +73,8 @@ export const POST: APIRoute = async ({ request }) => {
     await mkdir(UPLOAD_DIR, { recursive: true });
 
     const timestamp = Date.now();
-    const fileName = `${timestamp}-${safeName}`;
+    const randomSuffix = randomBytes(16).toString('hex');
+    const fileName = `${timestamp}-${randomSuffix}-${safeName}`;
     const filePath = join(UPLOAD_DIR, fileName);
 
     // C1 - Path traversal guard

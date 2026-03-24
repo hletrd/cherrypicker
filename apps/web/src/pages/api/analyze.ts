@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { join, resolve, basename } from 'node:path';
-import { access } from 'fs/promises';
+import { access, unlink } from 'fs/promises';
 import { parseStatement } from '@cherrypicker/parser';
 import { MerchantMatcher, buildConstraints, greedyOptimize } from '@cherrypicker/core';
 import { loadCategories, loadAllCardRules } from '@cherrypicker/rules';
@@ -63,7 +63,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // H1 - Validate cardIds
     if (cardIds !== undefined) {
-      if (!Array.isArray(cardIds) || !cardIds.every((id: unknown) => typeof id === 'string')) {
+      if (!Array.isArray(cardIds) || cardIds.length > 500 || !cardIds.every((id: unknown) => typeof id === 'string')) {
         return new Response(JSON.stringify({ error: '유효하지 않은 카드 ID 목록입니다' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
@@ -179,6 +179,9 @@ export const POST: APIRoute = async ({ request }) => {
 
     // 6. Run greedy optimizer
     const optimizationResult = greedyOptimize(constraints, cardRules);
+
+    // H3 - Delete uploaded file after successful analysis (PII retention)
+    try { await unlink(resolvedPath); } catch { /* non-blocking */ }
 
     return new Response(
       JSON.stringify({

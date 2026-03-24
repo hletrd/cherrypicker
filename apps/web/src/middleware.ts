@@ -5,12 +5,24 @@ const RATE_LIMITS = new Map<string, { count: number; resetAt: number }>();
 const MAX_UPLOAD_REQUESTS = 10;
 const MAX_ANALYZE_REQUESTS = 20;
 const WINDOW_MS = 60_000;
+const MAX_RATE_LIMIT_ENTRIES = 50_000;
+
+function extractClientIp(request: Request, clientAddress: string | undefined): string {
+  if (clientAddress) return clientAddress;
+  const xff = request.headers.get('x-forwarded-for');
+  if (xff) {
+    const first = xff.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  return 'unknown';
+}
 
 function checkRateLimit(ip: string, limit: number): boolean {
   const now = Date.now();
   const key = `${ip}:${limit}`;
   const entry = RATE_LIMITS.get(key);
   if (!entry || now > entry.resetAt) {
+    if (RATE_LIMITS.size >= MAX_RATE_LIMIT_ENTRIES) return false;
     RATE_LIMITS.set(key, { count: 1, resetAt: now + WINDOW_MS });
     return true;
   }
@@ -28,7 +40,7 @@ setInterval(() => {
 }, 5 * 60_000);
 
 export const onRequest = defineMiddleware(async ({ request, url, clientAddress }, next) => {
-  const ip = clientAddress ?? request.headers.get('x-forwarded-for') ?? 'unknown';
+  const ip = extractClientIp(request, clientAddress);
 
   // Rate limiting for upload and analyze
   if (url.pathname === '/api/upload' && request.method === 'POST') {
@@ -52,7 +64,7 @@ export const onRequest = defineMiddleware(async ({ request, url, clientAddress }
   if (request.method === 'POST' && url.pathname.startsWith('/api/')) {
     const origin = request.headers.get('origin');
     const expectedOrigin = url.origin;
-    if (origin && origin !== expectedOrigin) {
+    if (!origin || origin !== expectedOrigin) {
       return new Response(JSON.stringify({ error: 'CSRF 검증 실패' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
@@ -67,10 +79,17 @@ export const onRequest = defineMiddleware(async ({ request, url, clientAddress }
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   response.headers.set(
     'Content-Security-Policy',
     "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';"
   );
+
+  // Prevent caching of API responses (sensitive financial data)
+  if (url.pathname.startsWith('/api/')) {
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    response.headers.set('Pragma', 'no-cache');
+  }
 
   return response;
 });
