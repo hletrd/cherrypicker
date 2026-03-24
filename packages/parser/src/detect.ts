@@ -74,13 +74,21 @@ export function detectBank(content: string): { bank: BankId | null; confidence: 
 }
 
 export function detectCSVDelimiter(content: string): string {
-  const firstLine = content.split('\n')[0] ?? '';
-  const commaCount = (firstLine.match(/,/g) ?? []).length;
-  const tabCount = (firstLine.match(/\t/g) ?? []).length;
-  const pipeCount = (firstLine.match(/\|/g) ?? []).length;
+  const lines = content.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
 
-  if (tabCount >= commaCount && tabCount >= pipeCount) return '\t';
-  if (pipeCount > commaCount) return '|';
+  let totalComma = 0;
+  let totalTab = 0;
+  let totalPipe = 0;
+
+  for (const line of lines) {
+    totalComma += (line.match(/,/g) ?? []).length;
+    totalTab += (line.match(/\t/g) ?? []).length;
+    totalPipe += (line.match(/\|/g) ?? []).length;
+  }
+
+  if (totalComma === 0 && totalTab === 0 && totalPipe === 0) return ',';
+  if (totalTab > totalComma && totalTab >= totalPipe) return '\t';
+  if (totalPipe > totalComma) return '|';
   return ',';
 }
 

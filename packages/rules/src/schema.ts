@@ -13,13 +13,13 @@ export const performanceTierSchema = z.object({
 
 export const rewardTierRateSchema = z.object({
   performanceTier: z.string(),
-  rate: z.number().nonnegative(),
-  monthlyCap: z.number().int().nonnegative().nullable(),
-  perTransactionCap: z.number().int().nonnegative().nullable(),
+  rate: z.number().nonnegative().nullable().transform((v) => v ?? 0),
+  monthlyCap: z.number().int().nonnegative().nullable().optional(),
+  perTransactionCap: z.number().int().nonnegative().nullable().optional(),
 });
 
 export const rewardConditionsSchema = z.object({
-  minTransaction: z.number().int().nonnegative().optional(),
+  minTransaction: z.number().int().nonnegative().nullable().optional().transform((v) => v ?? undefined),
   excludeOnline: z.boolean().optional(),
   specificMerchants: z.array(z.string()).optional(),
 });
