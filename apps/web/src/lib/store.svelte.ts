@@ -91,9 +91,16 @@ function loadFromStorage(): AnalysisResult | null {
   try {
     if (typeof sessionStorage !== 'undefined') {
       const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw) as AnalysisResult;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && parsed.optimization && Array.isArray(parsed.optimization.assignments)) {
+        return parsed as AnalysisResult;
+      }
+      sessionStorage.removeItem(STORAGE_KEY);
     }
-  } catch { /* SSR or corrupted data */ }
+  } catch {
+    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch {}
+  }
   return null;
 }
 

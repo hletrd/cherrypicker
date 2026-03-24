@@ -50,7 +50,7 @@
   let globalLimit = $derived.by(() => {
     if (!card?.globalConstraints) return null;
     const gc = card.globalConstraints as Record<string, unknown>;
-    if (typeof gc.monthlyCapTotal === 'number') return gc.monthlyCapTotal as number;
+    if (typeof gc.monthlyTotalDiscountCap === 'number') return gc.monthlyTotalDiscountCap as number;
     return null;
   });
 

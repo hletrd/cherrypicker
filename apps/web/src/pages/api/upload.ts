@@ -1,9 +1,9 @@
 import type { APIRoute } from 'astro';
 import { writeFile, mkdir, readdir, stat, unlink } from 'fs/promises';
-import { join, extname } from 'path';
+import { join, extname, basename, resolve } from 'path';
 import { detectFormat } from '@cherrypicker/parser';
 
-const UPLOAD_DIR = join(process.cwd(), 'uploads');
+const UPLOAD_DIR = resolve(join(process.cwd(), 'uploads'));
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXTENSIONS = ['.csv', '.xlsx', '.xls', '.pdf'];
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -46,8 +46,11 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
+    // C1 - Sanitize filename: strip path separators and disallowed characters
+    const safeName = basename(file.name).replace(/[^a-zA-Z0-9._-]/g, '_');
+
     // H5 - Server-side extension validation
-    const ext = extname(file.name).toLowerCase();
+    const ext = extname(safeName).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return new Response(
         JSON.stringify({ error: '지원하지 않는 파일 형식입니다. CSV, XLSX, XLS, PDF 파일만 허용됩니다' }),
@@ -61,8 +64,17 @@ export const POST: APIRoute = async ({ request }) => {
     await mkdir(UPLOAD_DIR, { recursive: true });
 
     const timestamp = Date.now();
-    const fileName = `${timestamp}-${file.name}`;
+    const fileName = `${timestamp}-${safeName}`;
     const filePath = join(UPLOAD_DIR, fileName);
+
+    // C1 - Path traversal guard
+    const resolvedPath = resolve(filePath);
+    if (!resolvedPath.startsWith(resolve(UPLOAD_DIR) + '/')) {
+      return new Response(JSON.stringify({ error: 'Invalid file name' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);

@@ -138,7 +138,8 @@ export function greedyOptimize(
     const best = scores[0];
     if (!best) continue;
 
-    const alternatives = scores.slice(1).map((s) => ({
+    const MAX_ALTERNATIVES = 5;
+    const alternatives = scores.slice(1, 1 + MAX_ALTERNATIVES).map((s) => ({
       cardId: s.cardId,
       cardName: s.cardName,
       reward: s.reward,

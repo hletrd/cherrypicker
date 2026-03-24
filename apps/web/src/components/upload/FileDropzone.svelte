@@ -127,6 +127,7 @@
         window.location.href = '/dashboard';
       }, 1200);
     } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
       errorMessage = e instanceof Error ? e.message : '업로드 실패';
       uploadStatus = 'error';
     }

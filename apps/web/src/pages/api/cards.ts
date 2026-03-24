@@ -44,15 +44,17 @@ interface CardsJson {
   issuers: IssuerEntry[];
 }
 
-// H8 - Module-level cache so cards.json is only read once
-let cardsDataCache: CardsJson | null = null;
+// H3 - Promise-based cache to prevent race conditions
+let cardsDataPromise: Promise<CardsJson> | null = null;
 
-async function getCardsData(): Promise<CardsJson> {
-  if (!cardsDataCache) {
-    const raw = await readFile(CARDS_JSON, 'utf-8');
-    cardsDataCache = JSON.parse(raw) as CardsJson;
+function getCardsData(): Promise<CardsJson> {
+  if (!cardsDataPromise) {
+    cardsDataPromise = readFile(CARDS_JSON, 'utf-8').then(raw => JSON.parse(raw) as CardsJson).catch(err => {
+      cardsDataPromise = null;
+      throw err;
+    });
   }
-  return cardsDataCache;
+  return cardsDataPromise;
 }
 
 export const GET: APIRoute = async ({ url }) => {

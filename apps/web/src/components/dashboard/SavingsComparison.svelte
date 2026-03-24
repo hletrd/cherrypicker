@@ -51,29 +51,22 @@
 
   $effect(() => {
     const target = opt?.savingsVsSingleCard ?? 0;
-    if (target === 0) {
-      displayedSavings = 0;
-      return;
-    }
+    if (target === 0) { displayedSavings = 0; return; }
+    let cancelled = false;
+    const start = performance.now();
     const duration = 800;
-    const steps = 40;
-    const increment = target / steps;
-    let current = 0;
-    let step = 0;
-    const timer = setInterval(() => {
-      step++;
-      current = Math.min(current + increment, target);
-      displayedSavings = Math.round(current);
-      if (step >= steps) {
-        displayedSavings = target;
-        clearInterval(timer);
-      }
-    }, duration / steps);
-    return () => clearInterval(timer);
+    function tick(now: number) {
+      if (cancelled) return;
+      const progress = Math.min((now - start) / duration, 1);
+      displayedSavings = Math.round(target * progress);
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    return () => { cancelled = true; };
   });
 
   let savingsPct = $derived.by(() => {
-    if (!opt || !opt.bestSingleCard || opt.bestSingleCard.totalReward === 0) return 0;
+    if (!opt || !opt.bestSingleCard || !opt.bestSingleCard.totalReward) return 0;
     return Math.round((opt.savingsVsSingleCard / opt.bestSingleCard.totalReward) * 100);
   });
 

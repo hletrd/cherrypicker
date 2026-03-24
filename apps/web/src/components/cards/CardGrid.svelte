@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { getCards } from '../../lib/api.js';
   import type { CardSummary } from '../../lib/api.js';
   import { formatWon, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
@@ -45,10 +46,7 @@
     return result;
   });
 
-  let hasFetched = false;
-  $effect(() => {
-    if (hasFetched) return;
-    hasFetched = true;
+  onMount(() => {
     getCards()
       .then((result) => { cards = result; })
       .catch((e) => { error = e instanceof Error ? e.message : '카드 목록 로드 실패'; })

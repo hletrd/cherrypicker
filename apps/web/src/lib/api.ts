@@ -59,7 +59,10 @@ export interface CardDetail extends CardSummary {
   performanceTiers: PerformanceTier[];
   performanceExclusions: string[];
   rewards: RewardEntry[];
-  globalConstraints?: unknown;
+  globalConstraints?: {
+    monthlyTotalDiscountCap: number | null;
+    minimumAnnualSpending: number | null;
+  };
 }
 
 export async function uploadStatement(file: File): Promise<UploadResult> {

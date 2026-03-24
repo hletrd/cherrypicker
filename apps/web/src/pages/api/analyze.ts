@@ -19,34 +19,57 @@ const VALID_BANK_IDS = new Set([
   'suhyup', 'jb', 'kwangju',
 ]);
 
-// Cache card rules and categories so we don't reload on every request
-let cardRulesCache: Awaited<ReturnType<typeof loadAllCardRules>> | null = null;
-let categoryNodesCache: Awaited<ReturnType<typeof loadCategories>> | null = null;
+// H3 - Promise-based cache to prevent race conditions
+let cardRulesPromise: Promise<Awaited<ReturnType<typeof loadAllCardRules>>> | null = null;
+let categoryNodesPromise: Promise<Awaited<ReturnType<typeof loadCategories>>> | null = null;
 
-async function getCardRules() {
-  if (!cardRulesCache) {
-    cardRulesCache = await loadAllCardRules(CARDS_DIR);
+function getCardRules() {
+  if (!cardRulesPromise) {
+    cardRulesPromise = loadAllCardRules(CARDS_DIR).catch((err) => {
+      cardRulesPromise = null;
+      throw err;
+    });
   }
-  return cardRulesCache;
+  return cardRulesPromise;
 }
 
-async function getCategoryNodes() {
-  if (!categoryNodesCache) {
-    categoryNodesCache = await loadCategories(CATEGORIES_FILE);
+function getCategoryNodes() {
+  if (!categoryNodesPromise) {
+    categoryNodesPromise = loadCategories(CATEGORIES_FILE).catch((err) => {
+      categoryNodesPromise = null;
+      throw err;
+    });
   }
-  return categoryNodesCache;
+  return categoryNodesPromise;
 }
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const body = await request.json() as {
-      fileName?: string;
-      bank?: string;
-      previousMonthSpending?: number;
-      cardIds?: string[];
-    };
+    let body: { fileName?: string; bank?: string; previousMonthSpending?: number; cardIds?: string[] };
+    try {
+      body = await request.json();
+    } catch {
+      return new Response(JSON.stringify({ error: '잘못된 요청 형식입니다' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-    const { fileName, bank, previousMonthSpending = 500000, cardIds } = body;
+    const { fileName, bank, cardIds } = body;
+
+    // H2 - Validate previousMonthSpending
+    const rawSpending = body.previousMonthSpending;
+    const previousMonthSpending = typeof rawSpending === 'number' && Number.isFinite(rawSpending) && rawSpending >= 0 ? rawSpending : 500000;
+
+    // H1 - Validate cardIds
+    if (cardIds !== undefined) {
+      if (!Array.isArray(cardIds) || !cardIds.every((id: unknown) => typeof id === 'string')) {
+        return new Response(JSON.stringify({ error: '유효하지 않은 카드 ID 목록입니다' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     if (!fileName) {
       return new Response(JSON.stringify({ error: '파일 이름이 필요합니다' }), {

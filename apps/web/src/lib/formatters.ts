@@ -18,11 +18,10 @@ export function formatRate(rate: number): string {
 
 /**
  * Format a decimal rate as percentage with 1 decimal place.
- * Example: 0.015 → "1.5%"
+ * Alias for formatRate.
  */
 export function formatPercent(rate: number): string {
-  if (!Number.isFinite(rate)) return '0.0%';
-  return (rate * 100).toFixed(1) + '%';
+  return formatRate(rate);
 }
 
 /**
