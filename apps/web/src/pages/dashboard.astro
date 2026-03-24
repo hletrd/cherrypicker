@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import SpendingSummary from '../components/dashboard/SpendingSummary.svelte';
 import CategoryBreakdown from '../components/dashboard/CategoryBreakdown.svelte';
 import OptimalCardMap from '../components/dashboard/OptimalCardMap.svelte';
+import SavingsComparison from '../components/dashboard/SavingsComparison.svelte';
 ---
 
 <Layout title="대시보드">
@@ -18,6 +19,11 @@ import OptimalCardMap from '../components/dashboard/OptimalCardMap.svelte';
     <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
       <h2 class="text-lg font-semibold">카테고리별 지출</h2>
       <CategoryBreakdown client:load />
+    </div>
+
+    <div class="col-span-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+      <h2 class="text-lg font-semibold">절약 비교</h2>
+      <SavingsComparison client:load />
     </div>
 
     <div class="col-span-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">

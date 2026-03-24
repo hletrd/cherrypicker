@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { analysisStore } from '../../lib/store.svelte.js';
+
   let isDragOver = $state(false);
   let uploadedFile = $state<File | null>(null);
   let uploadStatus = $state<'idle' | 'uploading' | 'success' | 'error'>('idle');
@@ -49,9 +51,9 @@
       formData.append('file', uploadedFile);
 
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await res.json();
+      const data = await res.json() as { filePath?: string; error?: string };
 
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error ?? '업로드 실패');
 
       const analyzeRes = await fetch('/api/analyze', {
         method: 'POST',
@@ -62,12 +64,19 @@
         }),
       });
 
+      const analyzeData = await analyzeRes.json();
+
       if (!analyzeRes.ok) {
-        const err = await analyzeRes.json();
-        throw new Error(err.error);
+        throw new Error((analyzeData as { error?: string }).error ?? '분석 실패');
       }
 
+      // Store the result in the shared store
+      analysisStore.setResult(analyzeData);
+
       uploadStatus = 'success';
+
+      // Redirect to dashboard
+      window.location.href = '/dashboard';
     } catch (e) {
       errorMessage = e instanceof Error ? e.message : '업로드 실패';
       uploadStatus = 'error';
@@ -152,7 +161,7 @@
 
   {#if uploadStatus === 'success'}
     <div class="rounded-lg bg-green-50 p-3 text-sm text-green-700">
-      분석이 완료되었습니다! <a href="/dashboard" class="font-medium underline">대시보드에서 결과 보기</a>
+      분석이 완료되었습니다! 대시보드로 이동합니다...
     </div>
   {/if}
 </div>

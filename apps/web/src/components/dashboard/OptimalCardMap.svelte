@@ -1,15 +1,5 @@
 <script lang="ts">
-  interface Assignment {
-    category: string;
-    categoryNameKo: string;
-    cardName: string;
-    cardIssuer: string;
-    rate: number;
-    monthlyReward: number;
-  }
-
-  let assignments = $state<Assignment[]>([]);
-  let loading = $state(true);
+  import { analysisStore } from '../../lib/store.svelte.js';
 
   function formatWon(amount: number): string {
     return amount.toLocaleString('ko-KR') + '원';
@@ -32,22 +22,16 @@
     bc: '#f04e3e',
   };
 
-  $effect(() => {
-    // TODO: fetch from optimizer API
-    loading = false;
-    assignments = [
-      { category: 'dining', categoryNameKo: '외식', cardName: 'the Green Edition2', cardIssuer: 'hyundai', rate: 0.01, monthlyReward: 5200 },
-      { category: 'grocery', categoryNameKo: '식료품', cardName: 'KB Pay', cardIssuer: 'kb', rate: 0.015, monthlyReward: 5700 },
-      { category: 'online_shopping', categoryNameKo: '온라인쇼핑', cardName: 'taptap O', cardIssuer: 'samsung', rate: 0.02, monthlyReward: 6200 },
-      { category: 'public_transit', categoryNameKo: '대중교통', cardName: 'the Green Edition2', cardIssuer: 'hyundai', rate: 0.10, monthlyReward: 5000 },
-      { category: 'convenience_store', categoryNameKo: '편의점', cardName: 'Deep Dream', cardIssuer: 'shinhan', rate: 0.01, monthlyReward: 1200 },
-    ];
-  });
+  function getIssuerFromCardId(cardId: string): string {
+    return cardId.split('-')[0] ?? 'unknown';
+  }
+
+  let assignments = $derived(analysisStore.assignments);
 </script>
 
-{#if loading}
+{#if analysisStore.loading}
   <div class="flex h-48 items-center justify-center text-[var(--color-text-muted)]">로딩 중...</div>
-{:else}
+{:else if assignments.length > 0}
   <div class="mt-4 overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
@@ -60,21 +44,26 @@
       </thead>
       <tbody>
         {#each assignments as a}
+          {@const issuer = getIssuerFromCardId(a.assignedCardId)}
           <tr class="border-b border-[var(--color-border)] last:border-0">
             <td class="py-3 font-medium">{a.categoryNameKo}</td>
             <td class="py-3">
               <span
                 class="inline-block rounded-full px-2 py-0.5 text-xs text-white"
-                style="background-color: {issuerColors[a.cardIssuer] ?? '#6b7280'}"
+                style="background-color: {issuerColors[issuer] ?? '#6b7280'}"
               >
-                {a.cardName}
+                {a.assignedCardName}
               </span>
             </td>
             <td class="py-3 text-right font-mono text-[var(--color-primary)]">{formatRate(a.rate)}</td>
-            <td class="py-3 text-right font-mono">{formatWon(a.monthlyReward)}</td>
+            <td class="py-3 text-right font-mono">{formatWon(a.reward)}</td>
           </tr>
         {/each}
       </tbody>
     </table>
+  </div>
+{:else}
+  <div class="flex h-48 items-center justify-center text-[var(--color-text-muted)]">
+    명세서를 업로드하세요
   </div>
 {/if}

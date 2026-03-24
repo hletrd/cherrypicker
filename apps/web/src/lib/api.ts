@@ -1,4 +1,4 @@
-import type { AnalysisResult, AnalyzeOptions } from './store.js';
+import type { AnalysisResult, AnalyzeOptions } from './store.svelte.js';
 
 const BASE = '';
 
@@ -29,6 +29,38 @@ export interface CardSummary {
   lastUpdated: string;
   source: string;
   rewardCategories: string[];
+}
+
+export interface PerformanceTier {
+  id: string;
+  label: string;
+  minSpending: number;
+  maxSpending: number | null;
+}
+
+export interface RewardTier {
+  performanceTier: string;
+  rate: number;
+  monthlyCap: number | null;
+  perTransactionCap: number | null;
+}
+
+export interface RewardEntry {
+  category: string;
+  type: string;
+  tiers: RewardTier[];
+  conditions?: {
+    excludeOnline?: boolean;
+    specificMerchants?: string[];
+    minAmount?: number;
+  };
+}
+
+export interface CardDetail extends CardSummary {
+  performanceTiers: PerformanceTier[];
+  performanceExclusions: string[];
+  rewards: RewardEntry[];
+  globalConstraints?: unknown;
 }
 
 export async function uploadStatement(file: File): Promise<UploadResult> {
@@ -70,4 +102,13 @@ export async function getCards(filters?: {
   if (!res.ok) throw new Error('카드 목록 로드 실패');
   const data = (await res.json()) as { cards: CardSummary[] };
   return data.cards;
+}
+
+export async function getCardDetail(cardId: string): Promise<CardDetail> {
+  const res = await fetch(`${BASE}/api/cards/${encodeURIComponent(cardId)}`);
+  if (!res.ok) {
+    if (res.status === 404) throw new Error('카드를 찾을 수 없습니다');
+    throw new Error('카드 정보 로드 실패');
+  }
+  return res.json() as Promise<CardDetail>;
 }
