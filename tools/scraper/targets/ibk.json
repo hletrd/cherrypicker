@@ -1,0 +1,6 @@
+{
+  "issuer": "ibk",
+  "baseUrl": "https://www.ibkcard.com/front/index/indexMain.ibk",
+  "cardListUrl": "https://www.ibkcard.com/front/prd/creditcardList.ibk",
+  "notes": "IBK기업은행 카드. 카드 상세 페이지는 개별 상품 페이지에서 확인. 일부 페이지 EUC-KR 인코딩."
+}

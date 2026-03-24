@@ -1,0 +1,6 @@
+{
+  "issuer": "samsung",
+  "baseUrl": "https://www.samsungcard.com/home/card/cardinfo/PGHPCDCardInfoList0100.do?tab=card&code=",
+  "cardListUrl": "https://www.samsungcard.com/home/card/cardinfo/PGHPCDCardInfoList0100.do",
+  "notes": "삼성카드 공식 홈페이지. 카드 상세 페이지 URL은 code 파라미터로 구분됨. 혜택 정보는 '혜택안내' 탭에 있음."
+}

@@ -1,0 +1,44 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = '신용카드 혜택 최적화 도구' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title} | CherryPicker</title>
+  </head>
+  <body class="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+    <nav class="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+      <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <a href="/" class="text-xl font-bold text-[var(--color-primary)]">
+          🍒 CherryPicker
+        </a>
+        <div class="flex gap-6 text-sm">
+          <a href="/" class="hover:text-[var(--color-primary)]">홈</a>
+          <a href="/dashboard" class="hover:text-[var(--color-primary)]">대시보드</a>
+          <a href="/cards" class="hover:text-[var(--color-primary)]">카드 목록</a>
+          <a href="/results" class="hover:text-[var(--color-primary)]">최적화 결과</a>
+        </div>
+      </div>
+    </nav>
+    <main class="mx-auto max-w-7xl px-6 py-8">
+      <slot />
+    </main>
+    <footer class="border-t border-[var(--color-border)] py-6 text-center text-sm text-[var(--color-text-muted)]">
+      CherryPicker — 카드 혜택 체리피킹 최적화
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  @import "../app.css";
+</style>

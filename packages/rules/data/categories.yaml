@@ -1,0 +1,476 @@
+categories:
+  - id: dining
+    labelKo: 외식
+    labelEn: Dining
+    keywords:
+      - 식당
+      - 음식점
+      - 레스토랑
+      - 외식
+    subcategories:
+      - id: restaurant
+        labelKo: 일반음식점
+        labelEn: Restaurant
+        keywords:
+          - 식당
+          - 음식점
+          - 레스토랑
+          - 한식
+          - 중식
+          - 일식
+          - 양식
+          - 분식
+      - id: cafe
+        labelKo: 카페
+        labelEn: Cafe
+        keywords:
+          - 카페
+          - 커피
+          - 스타벅스
+          - 투썸플레이스
+          - 이디야
+          - 빽다방
+          - 할리스
+          - 폴바셋
+          - 커피빈
+          - 엔제리너스
+          - 메가커피
+          - 컴포즈커피
+      - id: fast_food
+        labelKo: 패스트푸드
+        labelEn: Fast Food
+        keywords:
+          - 맥도날드
+          - 버거킹
+          - KFC
+          - 롯데리아
+          - 맘스터치
+          - 파파이스
+          - 웬디스
+          - 써브웨이
+          - 도미노피자
+          - 피자헛
+          - 파리바게뜨
+          - 뚜레쥬르
+      - id: delivery
+        labelKo: 배달
+        labelEn: Delivery
+        keywords:
+          - 배달의민족
+          - 배민
+          - 요기요
+          - 쿠팡이츠
+          - 배달
+
+  - id: grocery
+    labelKo: 식료품/마트
+    labelEn: Grocery
+    keywords:
+      - 마트
+      - 슈퍼
+      - 식료품
+    subcategories:
+      - id: supermarket
+        labelKo: 대형마트
+        labelEn: Supermarket
+        keywords:
+          - 이마트
+          - 홈플러스
+          - 롯데마트
+          - 코스트코
+          - 트레이더스
+          - 이마트에브리데이
+          - 하나로마트
+      - id: traditional_market
+        labelKo: 전통시장
+        labelEn: Traditional Market
+        keywords:
+          - 시장
+          - 재래시장
+          - 전통시장
+          - 장터
+      - id: online_grocery
+        labelKo: 온라인식품
+        labelEn: Online Grocery
+        keywords:
+          - 마켓컬리
+          - 컬리
+          - 쿠팡 로켓프레시
+          - 로켓프레시
+          - SSG
+          - 쓱닷컴
+          - 오아시스마켓
+          - 헬로네이처
+
+  - id: convenience_store
+    labelKo: 편의점
+    labelEn: Convenience Store
+    keywords:
+      - CU
+      - GS25
+      - 세븐일레븐
+      - 7-ELEVEN
+      - 이마트24
+      - 미니스톱
+      - 씨유
+      - 지에스25
+      - 편의점
+
+  - id: public_transit
+    labelKo: 대중교통
+    labelEn: Public Transit
+    keywords:
+      - 대중교통
+      - 교통카드
+    subcategories:
+      - id: bus
+        labelKo: 버스
+        labelEn: Bus
+        keywords:
+          - 버스
+          - 시내버스
+          - 광역버스
+          - 마을버스
+      - id: subway
+        labelKo: 지하철
+        labelEn: Subway
+        keywords:
+          - 지하철
+          - 전철
+          - 도시철도
+          - 코레일
+          - 서울메트로
+      - id: taxi
+        labelKo: 택시
+        labelEn: Taxi
+        keywords:
+          - 택시
+          - 카카오택시
+          - 카카오T
+          - 타다
+          - 우버
+          - 티머니고
+
+  - id: transportation
+    labelKo: 교통/주유
+    labelEn: Transportation & Fuel
+    keywords:
+      - 주유
+      - 교통
+      - 자동차
+    subcategories:
+      - id: fuel
+        labelKo: 주유
+        labelEn: Fuel
+        keywords:
+          - SK에너지
+          - SK주유소
+          - GS칼텍스
+          - S-OIL
+          - 에쓰오일
+          - 현대오일뱅크
+          - 알뜰주유소
+          - 주유소
+          - 주유
+      - id: parking
+        labelKo: 주차
+        labelEn: Parking
+        keywords:
+          - 주차
+          - 주차장
+          - 파킹
+      - id: toll
+        labelKo: 고속도로통행료
+        labelEn: Toll
+        keywords:
+          - 하이패스
+          - 통행료
+          - 고속도로
+          - 한국도로공사
+
+  - id: online_shopping
+    labelKo: 온라인쇼핑
+    labelEn: Online Shopping
+    keywords:
+      - 온라인쇼핑
+      - 인터넷쇼핑
+    subcategories:
+      - id: general
+        labelKo: 종합쇼핑몰
+        labelEn: General Online Shopping
+        keywords:
+          - 쿠팡
+          - 11번가
+          - G마켓
+          - 지마켓
+          - 옥션
+          - 위메프
+          - 티몬
+          - 인터파크
+          - SSG닷컴
+          - 롯데온
+          - 카카오쇼핑
+          - 네이버쇼핑
+      - id: fashion
+        labelKo: 패션
+        labelEn: Fashion
+        keywords:
+          - 무신사
+          - 지그재그
+          - 에이블리
+          - W컨셉
+          - 29CM
+          - 마이무스
+          - 브랜디
+          - 하고
+
+  - id: offline_shopping
+    labelKo: 오프라인쇼핑
+    labelEn: Offline Shopping
+    keywords:
+      - 백화점
+      - 아울렛
+      - 쇼핑몰
+    subcategories:
+      - id: department_store
+        labelKo: 백화점
+        labelEn: Department Store
+        keywords:
+          - 신세계백화점
+          - 신세계
+          - 롯데백화점
+          - 현대백화점
+          - 갤러리아백화점
+          - 갤러리아
+          - AK플라자
+          - NC백화점
+
+  - id: telecom
+    labelKo: 통신
+    labelEn: Telecom
+    keywords:
+      - SKT
+      - SK텔레콤
+      - KT
+      - LG유플러스
+      - LGU+
+      - 알뜰폰
+      - 통신요금
+      - 핸드폰요금
+      - 휴대폰요금
+
+  - id: insurance
+    labelKo: 보험
+    labelEn: Insurance
+    keywords:
+      - 보험
+      - 생명보험
+      - 손해보험
+      - 자동차보험
+      - 실손보험
+      - 삼성생명
+      - 한화생명
+      - 교보생명
+      - 현대해상
+      - DB손해보험
+      - KB손해보험
+
+  - id: medical
+    labelKo: 의료
+    labelEn: Medical
+    keywords:
+      - 병원
+      - 의원
+      - 약국
+      - 의료
+    subcategories:
+      - id: hospital
+        labelKo: 병원
+        labelEn: Hospital
+        keywords:
+          - 병원
+          - 의원
+          - 클리닉
+          - 한의원
+          - 치과
+          - 안과
+          - 피부과
+          - 산부인과
+          - 소아과
+          - 정형외과
+      - id: pharmacy
+        labelKo: 약국
+        labelEn: Pharmacy
+        keywords:
+          - 약국
+          - 드럭스토어
+          - 올리브영
+          - CJ올리브영
+          - 롭스
+
+  - id: education
+    labelKo: 교육
+    labelEn: Education
+    keywords:
+      - 학원
+      - 교육
+      - 학습
+    subcategories:
+      - id: academy
+        labelKo: 학원
+        labelEn: Academy
+        keywords:
+          - 학원
+          - 교습소
+          - 유치원
+          - 어린이집
+          - 보습학원
+          - 영어학원
+          - 수학학원
+          - 태권도
+          - 피아노학원
+      - id: books
+        labelKo: 도서
+        labelEn: Books
+        keywords:
+          - 교보문고
+          - 영풍문고
+          - 알라딘
+          - YES24
+          - 예스24
+          - 반디앤루니스
+          - 도서
+          - 서점
+
+  - id: entertainment
+    labelKo: 여가/문화
+    labelEn: Entertainment & Culture
+    keywords:
+      - 영화
+      - 문화
+      - 여가
+      - 스트리밍
+    subcategories:
+      - id: movie
+        labelKo: 영화
+        labelEn: Movie
+        keywords:
+          - CGV
+          - 메가박스
+          - 롯데시네마
+          - 씨지브이
+          - 영화관
+          - 영화
+      - id: streaming
+        labelKo: 스트리밍
+        labelEn: Streaming
+        keywords:
+          - 넷플릭스
+          - 웨이브
+          - 티빙
+          - 쿠팡플레이
+          - 디즈니플러스
+          - 디즈니+
+          - 왓챠
+          - 시즌
+          - 스포티파이
+          - 멜론
+          - 지니뮤직
+
+  - id: travel
+    labelKo: 여행
+    labelEn: Travel
+    keywords:
+      - 여행
+      - 항공
+      - 호텔
+    subcategories:
+      - id: airline
+        labelKo: 항공
+        labelEn: Airline
+        keywords:
+          - 대한항공
+          - 아시아나항공
+          - 제주항공
+          - 진에어
+          - 티웨이항공
+          - 에어부산
+          - 에어서울
+          - 항공권
+      - id: hotel
+        labelKo: 호텔/숙박
+        labelEn: Hotel
+        keywords:
+          - 호텔
+          - 숙박
+          - 에어비앤비
+          - 야놀자
+          - 여기어때
+          - 호텔스닷컴
+          - 부킹닷컴
+          - 익스피디아
+      - id: travel_agency
+        labelKo: 여행사
+        labelEn: Travel Agency
+        keywords:
+          - 하나투어
+          - 모두투어
+          - 노랑풍선
+          - 여행사
+          - 패키지여행
+
+  - id: subscription
+    labelKo: 구독
+    labelEn: Subscription
+    keywords:
+      - 정기결제
+      - 구독
+      - 월정액
+      - 자동결제
+
+  - id: utilities
+    labelKo: 공과금
+    labelEn: Utilities
+    keywords:
+      - 공과금
+      - 관리비
+      - 전기
+      - 가스
+      - 수도
+    subcategories:
+      - id: electricity
+        labelKo: 전기요금
+        labelEn: Electricity
+        keywords:
+          - 한국전력
+          - 한전
+          - 전기요금
+          - 전기세
+      - id: gas
+        labelKo: 가스요금
+        labelEn: Gas
+        keywords:
+          - 도시가스
+          - 가스요금
+          - 가스비
+          - 한국가스공사
+      - id: water
+        labelKo: 수도요금
+        labelEn: Water
+        keywords:
+          - 수도요금
+          - 수도세
+          - 상수도
+      - id: apartment_mgmt
+        labelKo: 관리비
+        labelEn: Apartment Management Fee
+        keywords:
+          - 관리비
+          - 아파트관리비
+          - 공동관리비
+
+  - id: uncategorized
+    labelKo: 기타
+    labelEn: Uncategorized
+    keywords:
+      - 기타

@@ -1,0 +1,13 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import CardGrid from '../../components/cards/CardGrid.svelte';
+---
+
+<Layout title="카드 목록">
+  <h1 class="text-2xl font-bold">카드 목록</h1>
+  <p class="mt-2 text-[var(--color-text-muted)]">등록된 카드 혜택 정보를 확인하세요</p>
+
+  <div class="mt-8">
+    <CardGrid client:load />
+  </div>
+</Layout>

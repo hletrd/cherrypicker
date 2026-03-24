@@ -1,0 +1,50 @@
+issuers:
+  - id: hyundai
+    nameKo: 현대카드
+    nameEn: Hyundai Card
+    website: https://www.hyundaicard.com
+
+  - id: kb
+    nameKo: KB국민카드
+    nameEn: KB Kookmin Card
+    website: https://card.kbcard.com
+
+  - id: samsung
+    nameKo: 삼성카드
+    nameEn: Samsung Card
+    website: https://www.samsungcard.com
+
+  - id: shinhan
+    nameKo: 신한카드
+    nameEn: Shinhan Card
+    website: https://www.shinhancard.com
+
+  - id: lotte
+    nameKo: 롯데카드
+    nameEn: Lotte Card
+    website: https://www.lottecard.co.kr
+
+  - id: hana
+    nameKo: 하나카드
+    nameEn: Hana Card
+    website: https://www.hanacard.co.kr
+
+  - id: woori
+    nameKo: 우리카드
+    nameEn: Woori Card
+    website: https://www.wooricard.com
+
+  - id: ibk
+    nameKo: IBK기업은행
+    nameEn: IBK Industrial Bank
+    website: https://www.ibk.co.kr
+
+  - id: nh
+    nameKo: NH농협카드
+    nameEn: NH Card
+    website: https://card.nonghyup.com
+
+  - id: bc
+    nameKo: BC카드
+    nameEn: BC Card
+    website: https://www.bccard.com

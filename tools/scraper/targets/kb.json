@@ -1,0 +1,6 @@
+{
+  "issuer": "kb",
+  "baseUrl": "https://card.kbcard.com/CRD/DCRDINQR/1672800000?mainCC=a&cooperationcode=99999",
+  "cardListUrl": "https://card.kbcard.com/CRD/DCRDINQR/1672800000",
+  "notes": "KB국민카드 공식 홈페이지. 카드 상품 페이지에 전월실적 및 혜택 정보가 탭으로 나뉘어 있음. JavaScript 렌더링이 필요할 수 있음."
+}

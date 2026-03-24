@@ -1,0 +1,6 @@
+{
+  "issuer": "hana",
+  "baseUrl": "https://www.hanacard.co.kr/OPI1100000D.web?schID=pv&pageID=OPI1100000D",
+  "cardListUrl": "https://www.hanacard.co.kr/OPE1100001D.web",
+  "notes": "하나카드 공식 홈페이지. 카드 상세 페이지에서 '주요혜택' 섹션 확인. 전월실적 조건이 복잡할 수 있음."
+}

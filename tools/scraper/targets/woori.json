@@ -1,0 +1,6 @@
+{
+  "issuer": "woori",
+  "baseUrl": "https://card.wooricard.com/v2/wcms/ocards/cardsDetail.do",
+  "cardListUrl": "https://card.wooricard.com/v2/wcms/ocards/cardsList.do",
+  "notes": "우리카드 공식 홈페이지. 카드 상세 URL에 카드코드 파라미터 필요. REST API 응답 방식 사용 가능."
+}

@@ -1,0 +1,6 @@
+{
+  "issuer": "hyundai",
+  "baseUrl": "https://www.hyundaicard.com/cpc/cr/CPCCR0201_01.hc",
+  "cardListUrl": "https://www.hyundaicard.com/cpc/cr/CPCCR0101_01.hc",
+  "notes": "현대카드 공식 홈페이지. 카드 상품 목록 페이지에서 개별 카드 URL을 수집 후 스크래핑 권장."
+}

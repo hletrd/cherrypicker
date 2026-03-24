@@ -1,0 +1,6 @@
+{
+  "issuer": "bc",
+  "baseUrl": "https://www.bccard.com/app/card/ListCardBenefit.do",
+  "cardListUrl": "https://www.bccard.com/app/card/ListCardList.do",
+  "notes": "BC카드 공식 홈페이지. BC카드는 은행 제휴 카드가 많으므로 발급 은행별로 혜택이 다를 수 있음. 상세 혜택은 각 제휴 페이지 확인 필요."
+}

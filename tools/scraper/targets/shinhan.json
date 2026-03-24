@@ -1,0 +1,6 @@
+{
+  "issuer": "shinhan",
+  "baseUrl": "https://www.shinhancard.com/pconts/html/card/apply/credit/1221245_2206.html",
+  "cardListUrl": "https://www.shinhancard.com/pconts/html/card/apply/credit/1221245_2199.html",
+  "notes": "신한카드 공식 홈페이지. 카드 상품별 URL 패턴: 1221245_XXXX.html. 전월실적 및 혜택은 상세 페이지 하단에 위치."
+}

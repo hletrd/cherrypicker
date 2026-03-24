@@ -1,0 +1,28 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SpendingSummary from '../components/dashboard/SpendingSummary.svelte';
+import CategoryBreakdown from '../components/dashboard/CategoryBreakdown.svelte';
+import OptimalCardMap from '../components/dashboard/OptimalCardMap.svelte';
+---
+
+<Layout title="대시보드">
+  <h1 class="text-2xl font-bold">지출 분석 대시보드</h1>
+  <p class="mt-2 text-[var(--color-text-muted)]">명세서 분석 결과를 확인하세요</p>
+
+  <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+      <h2 class="text-lg font-semibold">지출 요약</h2>
+      <SpendingSummary client:load />
+    </div>
+
+    <div class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+      <h2 class="text-lg font-semibold">카테고리별 지출</h2>
+      <CategoryBreakdown client:load />
+    </div>
+
+    <div class="col-span-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+      <h2 class="text-lg font-semibold">카테고리별 최적 카드</h2>
+      <OptimalCardMap client:load />
+    </div>
+  </div>
+</Layout>

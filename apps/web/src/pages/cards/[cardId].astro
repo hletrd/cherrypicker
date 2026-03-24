@@ -1,0 +1,13 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import CardDetail from '../../components/cards/CardDetail.svelte';
+
+const { cardId } = Astro.params;
+---
+
+<Layout title="카드 상세">
+  <a href="/cards" class="text-sm text-[var(--color-primary)] hover:underline">&larr; 카드 목록</a>
+  <div class="mt-4">
+    <CardDetail cardId={cardId} client:load />
+  </div>
+</Layout>

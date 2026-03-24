@@ -1,0 +1,6 @@
+{
+  "issuer": "lotte",
+  "baseUrl": "https://www.lottecard.co.kr/app/LCAMCXCA_V100.lc",
+  "cardListUrl": "https://www.lottecard.co.kr/app/LCAMCXCA_V001.lc",
+  "notes": "롯데카드 공식 홈페이지. 카드 상세 페이지는 JavaScript 기반. 혜택 정보는 '혜택' 탭에 위치. EUC-KR 인코딩 가능성 있음."
+}

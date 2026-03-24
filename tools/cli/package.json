@@ -1,0 +1,23 @@
+{
+  "name": "@cherrypicker/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "cherrypicker": "src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@cherrypicker/core": "workspace:*",
+    "@cherrypicker/parser": "workspace:*",
+    "@cherrypicker/rules": "workspace:*",
+    "@cherrypicker/viz": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "@types/node": "^22.0.0"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "issuer": "nh",
+  "baseUrl": "https://card.nonghyup.com/rq/1cc/CCRQ0102R0.nhcc",
+  "cardListUrl": "https://card.nonghyup.com/rq/1cc/CCRQ0101R0.nhcc",
+  "notes": "NH농협카드 공식 홈페이지. 카드 상세에 전월실적 조건 및 혜택 정보 포함. 일부 페이지 EUC-KR 가능성."
+}
