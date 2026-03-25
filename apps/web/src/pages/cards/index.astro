@@ -1,23 +1,10 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import CardGrid from '../../components/cards/CardGrid.svelte';
+import CardPage from '../../components/cards/CardPage.svelte';
 ---
 
 <Layout title="카드 목록">
-  <!-- Page header -->
-  <div class="mb-8 animate-[slideUp_0.4s_ease_both]">
-    <h1 class="text-3xl font-extrabold tracking-tight">카드 목록</h1>
-    <p class="mt-2 text-[var(--color-text-muted)]">
-      등록된 카드별 혜택을 둘러보세요
-      <span class="ml-2 inline-flex items-center rounded-full bg-[var(--color-primary-light)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]" id="card-count-badge">454+ 카드</span>
-    </p>
-  </div>
-
-  <!-- Card grid -->
-  <div
-    class="animate-[slideUp_0.4s_0.05s_ease_both]"
-    style="opacity:0;animation-fill-mode:forwards;"
-  >
-    <CardGrid client:load />
+  <div class="animate-[slideUp_0.4s_ease_both]">
+    <CardPage client:load />
   </div>
 </Layout>

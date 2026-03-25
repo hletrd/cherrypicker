@@ -245,13 +245,13 @@
       <p class="text-sm text-[var(--color-text-muted)]">
         같은 카드사의 다른 카드
       </p>
-      <a
-        href="{base}cards"
-        class="mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline"
+      <button
+        class="mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline cursor-pointer"
         style="color: {issuerColor};"
+        onclick={() => { window.location.hash = ''; }}
       >
-        {formatIssuerNameKo(card.issuer)} 카드 전체 보기 →
-      </a>
+        {formatIssuerNameKo(card.issuer)} 카드 전체 보기
+      </button>
     </div>
   </div>
 {:else}

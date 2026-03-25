@@ -5,7 +5,11 @@
   import { formatWon, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
-  const base = import.meta.env.BASE_URL ?? '/';
+  interface Props {
+    onSelectCard?: (cardId: string) => void;
+  }
+
+  let { onSelectCard }: Props = $props();
 
   let cards = $state<CardSummary[]>([]);
   let loading = $state(true);
@@ -142,9 +146,9 @@
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each filteredCards as card}
         {@const issuerColor = getIssuerColor(card.issuer)}
-        <a
-          href="{base}cards/{card.id}"
-          class="group relative overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        <button
+          onclick={() => onSelectCard?.(card.id)}
+          class="group relative overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg w-full cursor-pointer"
           style="border-left: 4px solid {issuerColor};"
         >
           <!-- Card type badge -->
@@ -172,7 +176,7 @@
               </span>
             {/if}
           </div>
-        </a>
+        </button>
       {/each}
     </div>
   {/if}
