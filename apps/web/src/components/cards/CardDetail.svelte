@@ -1,7 +1,10 @@
 <script lang="ts">
   import { getCardDetail } from '../../lib/api.js';
   import type { CardDetail, RewardTier } from '../../lib/api.js';
-  import { formatWon, formatPercent, getCategoryEmoji, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
+  import { formatWon, formatPercent, getCategoryIconName, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
+  import Icon from '../ui/Icon.svelte';
+
+  const base = import.meta.env.BASE_URL ?? '/';
 
   interface Props {
     cardId: string | undefined;
@@ -202,7 +205,9 @@
                 {#each group.rows as row}
                   <tr class="border-b border-[var(--color-border)] last:border-0 hover:bg-gray-50/50 transition-colors">
                     <td class="px-4 py-2.5 font-medium">
-                      <span class="mr-1.5">{getCategoryEmoji(row.category)}</span>{row.category}
+                      <span class="mr-1.5 inline-flex items-center text-[var(--color-text-muted)]">
+                        <Icon name={getCategoryIconName(row.category)} size={14} />
+                      </span>{row.category}
                     </td>
                     <td class="px-4 py-2.5 text-right font-mono {rateColorClass(row.tier.rate)}">
                       {formatRewardRate(row.tier)}
@@ -241,7 +246,7 @@
         같은 카드사의 다른 카드도 확인해보세요
       </p>
       <a
-        href="/cards"
+        href="{base}cards"
         class="mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline"
         style="color: {issuerColor};"
       >

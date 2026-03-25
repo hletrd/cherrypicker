@@ -8,13 +8,17 @@ import FileDropzone from '../components/upload/FileDropzone.svelte';
   <div class="relative -mx-6 -mt-8 overflow-hidden px-6 py-20 text-center" style="background: var(--gradient-hero);">
     <div class="absolute inset-0 opacity-20" style="background: radial-gradient(ellipse at 30% 50%, #ffffff33 0%, transparent 60%), radial-gradient(ellipse at 70% 50%, #ffffff22 0%, transparent 60%);"></div>
     <div class="relative z-10 animate-[slideUp_0.6s_ease_both]">
-      <div class="mb-4 text-6xl">🍒</div>
+      <div class="mb-4 flex justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="56" height="56" class="text-white/90" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/>
+        </svg>
+      </div>
       <h1 class="text-5xl font-extrabold tracking-tight text-white drop-shadow-sm md:text-6xl">
         CherryPicker
       </h1>
       <p class="mx-auto mt-5 max-w-xl text-lg text-white/85 leading-relaxed">
-        카드 명세서를 업로드하면<br class="hidden sm:block" />
-        카테고리별 최적 카드를 추천해 드립니다
+        카드 명세서만 올리면<br class="hidden sm:block" />
+        어떤 카드가 제일 이득인지 알 수 있어요
       </p>
     </div>
   </div>
@@ -47,7 +51,7 @@ import FileDropzone from '../components/upload/FileDropzone.svelte';
 
   <!-- How it works -->
   <div class="mx-auto mt-16 max-w-3xl text-center animate-[slideUp_0.5s_0.35s_ease_both]" style="opacity:0;animation-fill-mode:forwards;">
-    <h2 class="text-xl font-bold">이렇게 사용하세요</h2>
+    <h2 class="text-xl font-bold">사용 방법</h2>
     <div class="mt-8 flex flex-col items-center gap-0 sm:flex-row sm:items-start sm:gap-0">
       <!-- Step 1 -->
       <div class="flex flex-1 flex-col items-center px-4">
@@ -61,7 +65,7 @@ import FileDropzone from '../components/upload/FileDropzone.svelte';
       <div class="flex flex-1 flex-col items-center px-4">
         <div class="flex h-14 w-14 items-center justify-center rounded-full text-2xl font-bold text-white shadow-md" style="background: var(--gradient-hero);">②</div>
         <h3 class="mt-3 font-semibold">AI 자동 분석</h3>
-        <p class="mt-1.5 text-sm text-[var(--color-text-muted)] leading-relaxed">지출을 카테고리별로 자동<br />분류하고 패턴을 분석합니다</p>
+        <p class="mt-1.5 text-sm text-[var(--color-text-muted)] leading-relaxed">지출을 자동으로<br />분류하고 분석해요</p>
       </div>
       <!-- Arrow -->
       <div class="my-2 text-2xl text-[var(--color-border)] sm:my-0 sm:mt-4 sm:text-3xl select-none">→</div>
@@ -69,7 +73,7 @@ import FileDropzone from '../components/upload/FileDropzone.svelte';
       <div class="flex flex-1 flex-col items-center px-4">
         <div class="flex h-14 w-14 items-center justify-center rounded-full text-2xl font-bold text-white shadow-md" style="background: var(--gradient-hero);">③</div>
         <h3 class="mt-3 font-semibold">최적 카드 추천</h3>
-        <p class="mt-1.5 text-sm text-[var(--color-text-muted)] leading-relaxed">카테고리별 최적 카드와<br />예상 절약 금액을 알려드립니다</p>
+        <p class="mt-1.5 text-sm text-[var(--color-text-muted)] leading-relaxed">카테고리별로 가장<br />유리한 카드를 알려줘요</p>
       </div>
     </div>
   </div>
@@ -77,24 +81,36 @@ import FileDropzone from '../components/upload/FileDropzone.svelte';
   <!-- Feature Cards -->
   <div class="mx-auto mt-16 grid w-full max-w-4xl grid-cols-1 gap-6 sm:grid-cols-3 animate-[slideUp_0.5s_0.45s_ease_both]" style="opacity:0;animation-fill-mode:forwards;">
     <div class="card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center shadow-[var(--shadow-card)]" style="background: linear-gradient(145deg, var(--color-surface) 80%, #dbeafe44);">
-      <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-3xl" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">📊</div>
+      <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-blue-600" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="28" height="28" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
+        </svg>
+      </div>
       <h3 class="font-semibold">지출 분석</h3>
       <p class="mt-2 text-sm text-[var(--color-text-muted)] leading-relaxed">
-        CSV, Excel, PDF 명세서를 자동으로 인식하고 카테고리별로 분류합니다
+        CSV, Excel, PDF 파일 모두 지원해요
       </p>
     </div>
     <div class="card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center shadow-[var(--shadow-card)]" style="background: linear-gradient(145deg, var(--color-surface) 80%, #fef9c344);">
-      <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-3xl" style="background: linear-gradient(135deg, #fef9c3, #fde68a);">🏆</div>
+      <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-amber-600" style="background: linear-gradient(135deg, #fef9c3, #fde68a);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="28" height="28" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-4.5A3.375 3.375 0 0 0 13.125 11h-.25A3.375 3.375 0 0 0 9.5 14.375v4.375m0-10.5h.008v.008H9.5V8.25Zm4.5 0h.008v.008H14V8.25ZM6 6a6 6 0 0 0 3 5.197V15h6v-3.803A6 6 0 0 0 18 6V4.5A1.5 1.5 0 0 0 16.5 3h-9A1.5 1.5 0 0 0 6 4.5V6Z"/>
+        </svg>
+      </div>
       <h3 class="font-semibold">최적 카드 추천</h3>
       <p class="mt-2 text-sm text-[var(--color-text-muted)] leading-relaxed">
-        전월실적, 할인한도를 고려하여 카테고리별 최적 카드를 찾아줍니다
+        전월실적과 할인한도까지 계산해서 최적 조합을 찾아요
       </p>
     </div>
     <div class="card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center shadow-[var(--shadow-card)]" style="background: linear-gradient(145deg, var(--color-surface) 80%, #d1fae544);">
-      <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-3xl" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0);">💰</div>
+      <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-emerald-600" style="background: linear-gradient(135deg, #d1fae5, #a7f3d0);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="28" height="28" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
+        </svg>
+      </div>
       <h3 class="font-semibold">절약 시뮬레이션</h3>
       <p class="mt-2 text-sm text-[var(--color-text-muted)] leading-relaxed">
-        체리피킹 전후 혜택을 비교하고 연간 절약 금액을 확인하세요
+        카드를 바꾸면 얼마나 아낄 수 있는지 비교해 보세요
       </p>
     </div>
   </div>

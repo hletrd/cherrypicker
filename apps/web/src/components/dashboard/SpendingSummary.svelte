@@ -1,6 +1,7 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatWon } from '../../lib/formatters.js';
+  import Icon from '../ui/Icon.svelte';
 
   function formatPeriod(period: { start: string; end: string } | undefined): string {
     if (!period) return '-';
@@ -32,7 +33,7 @@
     <!-- 총 지출 -->
     <div class="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
       <div class="flex items-center gap-1.5 text-sm text-blue-500">
-        <span>💳</span>
+        <Icon name="credit-card" size={15} />
         <span>총 지출</span>
       </div>
       <div class="mt-1 text-2xl font-bold text-[var(--color-primary)]">
@@ -43,7 +44,7 @@
     <!-- 거래 건수 -->
     <div class="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 p-4 shadow-sm">
       <div class="flex items-center gap-1.5 text-sm text-amber-500">
-        <span>📋</span>
+        <Icon name="receipt" size={15} />
         <span>거래 건수</span>
       </div>
       <div class="mt-1 text-2xl font-bold text-amber-600">
@@ -54,7 +55,7 @@
     <!-- 분석 기간 -->
     <div class="rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 p-4 shadow-sm">
       <div class="flex items-center gap-1.5 text-sm text-gray-500">
-        <span>📅</span>
+        <Icon name="calendar" size={15} />
         <span>분석 기간</span>
       </div>
       <div class="mt-1 text-lg font-semibold text-gray-800">
@@ -65,7 +66,7 @@
     <!-- 최다 지출 카테고리 -->
     <div class="rounded-xl bg-gradient-to-br from-green-50 to-green-100 p-4 shadow-sm">
       <div class="flex items-center gap-1.5 text-sm text-green-600">
-        <span>🏷️</span>
+        <Icon name="tag" size={15} />
         <span>최다 지출 카테고리</span>
       </div>
       <div class="mt-1 text-lg font-semibold text-green-700">
@@ -76,7 +77,7 @@
     <!-- 실효 혜택률 -->
     <div class="rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 p-4 shadow-sm">
       <div class="flex items-center gap-1.5 text-sm text-purple-500">
-        <span>💰</span>
+        <Icon name="percent" size={15} />
         <span>실효 혜택률</span>
       </div>
       <div class="mt-1 text-2xl font-bold text-purple-700">
@@ -86,7 +87,9 @@
   </div>
 {:else}
   <div class="mt-4 flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-border)] text-center">
-    <div class="text-4xl opacity-40">📂</div>
+    <div class="opacity-40 text-[var(--color-text-muted)]">
+      <Icon name="folder-open" size={40} />
+    </div>
     <div class="text-sm font-medium text-[var(--color-text-muted)]">분석 결과가 없습니다</div>
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 업로드하면 지출 요약이 표시됩니다</div>
   </div>

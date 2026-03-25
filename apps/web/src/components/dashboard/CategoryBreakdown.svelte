@@ -1,6 +1,7 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatWon } from '../../lib/formatters.js';
+  import Icon from '../ui/Icon.svelte';
 
   const CATEGORY_COLORS: Record<string, string> = {
     dining: '#ef4444',
@@ -204,7 +205,9 @@
   </div>
 {:else}
   <div class="mt-4 flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-border)]">
-    <div class="text-4xl opacity-40">📊</div>
+    <div class="opacity-40 text-[var(--color-text-muted)]">
+      <Icon name="chart-bar" size={40} />
+    </div>
     <div class="text-sm font-medium text-[var(--color-text-muted)]">카테고리 데이터가 없습니다</div>
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 업로드하면 카테고리별 지출이 표시됩니다</div>
   </div>

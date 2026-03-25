@@ -3,6 +3,9 @@
   import { getCards } from '../../lib/api.js';
   import type { CardSummary } from '../../lib/api.js';
   import { formatWon, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
+  import Icon from '../ui/Icon.svelte';
+
+  const base = import.meta.env.BASE_URL ?? '/';
 
   let cards = $state<CardSummary[]>([]);
   let loading = $state(true);
@@ -122,7 +125,7 @@
   {:else if filteredCards.length === 0}
     <div class="flex h-48 flex-col items-center justify-center gap-2 text-[var(--color-text-muted)]">
       {#if searchQuery.trim() || typeFilter !== 'all'}
-        <span class="text-3xl">🔍</span>
+        <span class="text-[var(--color-text-muted)] opacity-40"><Icon name="magnifying-glass" size={40} /></span>
         <p class="text-sm">검색 결과가 없습니다</p>
         <button
           class="mt-1 text-xs text-[var(--color-primary)] hover:underline"
@@ -131,7 +134,7 @@
           필터 초기화
         </button>
       {:else}
-        <span class="text-3xl">💳</span>
+        <span class="text-[var(--color-text-muted)] opacity-40"><Icon name="credit-card" size={40} /></span>
         <p class="text-sm">등록된 카드가 없습니다</p>
       {/if}
     </div>
@@ -140,7 +143,7 @@
       {#each filteredCards as card}
         {@const issuerColor = getIssuerColor(card.issuer)}
         <a
-          href="/cards/{card.id}"
+          href="{base}cards/{card.id}"
           class="group relative overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
           style="border-left: 4px solid {issuerColor};"
         >

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Icon from '../ui/Icon.svelte';
+
   interface Props {
     fileName: string;
     detectedBank: string | null;
@@ -28,7 +30,7 @@
 </script>
 
 <div class="flex items-center gap-3 rounded-lg bg-blue-50 p-3 text-sm">
-  <span class="text-blue-600">🔍</span>
+  <span class="text-blue-600"><Icon name="magnifying-glass" size={16} /></span>
   <div>
     <span class="font-medium">{fileName}</span>
     <span class="text-[var(--color-text-muted)]">

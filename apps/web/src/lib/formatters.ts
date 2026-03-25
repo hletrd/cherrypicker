@@ -61,33 +61,34 @@ export function formatIssuerNameKo(issuer: string): string {
 }
 
 /**
- * Return an emoji for a reward category ID.
+ * Return an icon name for a reward category ID.
+ * Use with the Icon component.
  */
-export function getCategoryEmoji(category: string): string {
-  const emojis: Record<string, string> = {
-    dining: '🍽️',
-    grocery: '🛒',
-    convenience_store: '🏪',
-    public_transit: '🚇',
-    transportation: '🚗',
-    online_shopping: '🛍️',
-    telecom: '📱',
-    streaming: '🎬',
-    subscription: '📺',
-    entertainment: '🎭',
-    medical: '🏥',
-    education: '📚',
-    cafe: '☕',
-    travel: '✈️',
-    utilities: '💡',
-    insurance: '🛡️',
-    fuel: '⛽',
-    delivery: '🛵',
-    parking: '🅿️',
-    fashion: '👗',
-    uncategorized: '📦',
+export function getCategoryIconName(category: string): string {
+  const icons: Record<string, string> = {
+    dining: 'receipt',
+    grocery: 'inbox-tray',
+    convenience_store: 'inbox-tray',
+    public_transit: 'arrow-path',
+    transportation: 'arrow-path',
+    online_shopping: 'tag',
+    telecom: 'chart-bar',
+    streaming: 'sparkles',
+    subscription: 'sparkles',
+    entertainment: 'sparkles',
+    medical: 'check-circle',
+    education: 'document-text',
+    cafe: 'receipt',
+    travel: 'arrow-up-tray',
+    utilities: 'light-bulb',
+    insurance: 'check-circle',
+    fuel: 'arrow-path',
+    delivery: 'inbox-tray',
+    parking: 'folder-open',
+    fashion: 'tag',
+    uncategorized: 'document-text',
   };
-  return emojis[category] ?? '💳';
+  return icons[category] ?? 'credit-card';
 }
 
 /**

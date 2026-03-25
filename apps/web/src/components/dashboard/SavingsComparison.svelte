@@ -1,6 +1,7 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatWon, getIssuerColor } from '../../lib/formatters.js';
+  import Icon from '../ui/Icon.svelte';
 
   let opt = $derived(analysisStore.optimization);
   let assignments = $derived(analysisStore.assignments);
@@ -154,7 +155,10 @@
 
     <!-- Center: Cherry-pick (highlighted) -->
     <div class="rounded-xl border-2 border-[var(--color-primary)] bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow-md">
-      <div class="mb-3 text-xs font-semibold text-[var(--color-primary)]">✨ 체리피킹 혜택</div>
+      <div class="mb-3 flex items-center gap-1.5 text-xs font-semibold text-[var(--color-primary)]">
+        <Icon name="sparkles" size={14} />
+        체리피킹 혜택
+      </div>
       <div class="text-3xl font-bold text-[var(--color-primary)]">{formatWon(opt.totalReward)}</div>
       <div class="mt-1 text-xs text-blue-500">
         실효 혜택률 {(opt.effectiveRate * 100).toFixed(2)}%
@@ -229,7 +233,9 @@
   </div>
 {:else}
   <div class="mt-4 flex h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-border)]">
-    <div class="text-4xl opacity-40">💡</div>
+    <div class="opacity-40 text-[var(--color-text-muted)]">
+      <Icon name="banknotes" size={40} />
+    </div>
     <div class="text-sm font-medium text-[var(--color-text-muted)]">절약 비교 데이터가 없습니다</div>
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 업로드하면 카드별 혜택 비교가 표시됩니다</div>
   </div>

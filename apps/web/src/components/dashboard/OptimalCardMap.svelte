@@ -1,6 +1,7 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatWon, formatRate, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
+  import Icon from '../ui/Icon.svelte';
 
   function getIssuerFromCardId(cardId: string): string {
     return cardId.split('-')[0] ?? 'unknown';
@@ -113,9 +114,13 @@
             </td>
             <td class="py-3">
               {#if a.rate > 0}
-                <span class="text-base" title="할인/캐시백">💸</span>
+                <span class="inline-flex text-[var(--color-text-muted)]" title="할인/캐시백">
+                  <Icon name="banknotes" size={16} />
+                </span>
               {:else}
-                <span class="text-base" title="포인트">🎯</span>
+                <span class="inline-flex text-[var(--color-text-muted)]" title="포인트">
+                  <Icon name="percent" size={16} />
+                </span>
               {/if}
             </td>
             <td class="py-3 text-right">
@@ -168,7 +173,9 @@
   </div>
 {:else}
   <div class="mt-4 flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-border)]">
-    <div class="text-4xl opacity-40">🗂️</div>
+    <div class="opacity-40 text-[var(--color-text-muted)]">
+      <Icon name="credit-card" size={40} />
+    </div>
     <div class="text-sm font-medium text-[var(--color-text-muted)]">카드 추천 데이터가 없습니다</div>
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 업로드하면 카테고리별 최적 카드가 표시됩니다</div>
   </div>

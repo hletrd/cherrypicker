@@ -1,6 +1,7 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatFileSize } from '../../lib/formatters.js';
+  import Icon from '../ui/Icon.svelte';
 
   let isDragOver = $state(false);
   let uploadedFile = $state<File | null>(null);
@@ -47,11 +48,11 @@
     { value: 'kwangju', label: '광주은행' },
   ];
 
-  function fileIcon(file: File): string {
+  function fileIconName(file: File): string {
     const name = file.name.toLowerCase();
-    if (name.endsWith('.pdf')) return '📑';
-    if (name.endsWith('.xlsx') || name.endsWith('.xls')) return '📊';
-    return '📄';
+    if (name.endsWith('.pdf')) return 'document-text';
+    if (name.endsWith('.xlsx') || name.endsWith('.xls')) return 'table-cells';
+    return 'document-text';
   }
 
   function isValidFile(file: File): boolean {
@@ -182,7 +183,9 @@
       </div>
     {:else if uploadedFile}
       <div class="flex flex-col items-center gap-2">
-        <span class="text-4xl">{fileIcon(uploadedFile)}</span>
+        <div class="text-[var(--color-text-muted)]">
+          <Icon name={fileIconName(uploadedFile)} size={40} />
+        </div>
         <p class="text-base font-semibold">{uploadedFile.name}</p>
         <p class="text-sm text-[var(--color-text-muted)]">{formatFileSize(uploadedFile.size)}</p>
         <button
@@ -194,7 +197,9 @@
       </div>
     {:else}
       <div class="flex flex-col items-center gap-2">
-        <span class="text-5xl">{isDragOver ? '📂' : '📄'}</span>
+        <div class="text-[var(--color-text-muted)]">
+          <Icon name={isDragOver ? 'folder-open' : 'arrow-up-tray'} size={40} />
+        </div>
         <p class="mt-1 text-base font-medium">카드 명세서를 끌어다 놓으세요</p>
         <p class="text-sm text-[var(--color-text-muted)]">CSV, Excel, PDF 지원</p>
         <label class="mt-3 inline-block cursor-pointer rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[var(--color-primary-dark)] transition-colors">
