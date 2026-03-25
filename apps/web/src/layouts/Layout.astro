@@ -113,18 +113,22 @@ function isActive(href: string) {
         <div class="flex flex-col px-6 py-4 gap-1">
           <a
             href={`${base}`}
+            onclick="document.getElementById('mobile-menu')?.classList.add('hidden')"
             class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(base) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >홈</a>
           <a
             href={`${base}dashboard`}
+            onclick="document.getElementById('mobile-menu')?.classList.add('hidden')"
             class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(`${base}dashboard`) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >대시보드</a>
           <a
             href={`${base}cards`}
+            onclick="document.getElementById('mobile-menu')?.classList.add('hidden')"
             class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(`${base}cards`) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >카드 목록</a>
           <a
             href={`${base}results`}
+            onclick="document.getElementById('mobile-menu')?.classList.add('hidden')"
             class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(`${base}results`) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >최적화 결과</a>
         </div>

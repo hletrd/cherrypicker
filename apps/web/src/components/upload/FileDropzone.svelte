@@ -13,6 +13,7 @@
   let uploadStatus = $state<'idle' | 'uploading' | 'success' | 'error'>('idle');
   let errorMessage = $state('');
   let bank = $state('');
+  let previousSpending = $state<string>('');
 
   // Step 1=파일선택, 2=카드사선택, 3=분석중, 4=완료
   let currentStep = $derived.by(() => {
@@ -106,6 +107,7 @@
     try {
       await analysisStore.analyze(uploadedFile, {
         bank: bank || undefined,
+        previousMonthSpending: previousSpending ? parseInt(previousSpending, 10) : undefined,
       });
 
       uploadStatus = 'success';
@@ -251,6 +253,23 @@
         </div>
       </div>
 
+      <!-- Previous month spending input -->
+      <div>
+        <p class="mb-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">전월 카드 이용액</p>
+        <div class="relative">
+          <input
+            type="number"
+            bind:value={previousSpending}
+            placeholder="500,000"
+            min="0"
+            step="10000"
+            class="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
+          />
+          <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)]">원</span>
+        </div>
+        <p class="mt-1 text-xs text-[var(--color-text-muted)]">입력하지 않으면 50만원으로 계산해요</p>
+      </div>
+
       <!-- Upload button -->
       <button
         onclick={handleUpload}
@@ -262,9 +281,9 @@
       >
         {#if uploadStatus === 'uploading'}
           <span class="flex items-center justify-center gap-2">
-            <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             분석하는 중
           </span>

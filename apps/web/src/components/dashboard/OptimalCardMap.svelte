@@ -80,7 +80,6 @@
         <tr class="border-b border-[var(--color-border)] text-left text-[var(--color-text-muted)]">
           <th class="pb-3 font-medium">카테고리</th>
           <th class="pb-3 font-medium">추천 카드</th>
-          <th class="pb-3 font-medium">혜택 유형</th>
           <th class="pb-3 text-right font-medium">혜택률</th>
           <th class="pb-3 text-right font-medium">월 예상 혜택</th>
           <th class="pb-3 w-6"></th>
@@ -112,11 +111,6 @@
                 <span class="text-xs text-[var(--color-text-muted)]">{issuerName}</span>
               </div>
             </td>
-            <td class="py-3">
-              <span class="inline-flex text-[var(--color-text-muted)]">
-                <Icon name="tag" size={16} />
-              </span>
-            </td>
             <td class="py-3 text-right">
               <div class="flex flex-col items-end gap-1">
                 <span class="font-mono font-semibold text-[var(--color-primary)]">{formatRate(a.rate)}</span>
@@ -137,7 +131,7 @@
           <!-- Expanded alternatives row -->
           {#if isExpanded && a.alternatives && a.alternatives.length > 0}
             <tr class="border-b border-[var(--color-border)] last:border-0 bg-gray-50">
-              <td colspan="6" class="px-6 py-3">
+              <td colspan="5" class="px-6 py-3">
                 <div class="text-xs text-[var(--color-text-muted)] mb-2 font-medium">대안 카드</div>
                 <div class="flex flex-wrap gap-2">
                   {#each a.alternatives as alt}
@@ -158,7 +152,7 @@
             </tr>
           {:else if isExpanded}
             <tr class="border-b border-[var(--color-border)] last:border-0 bg-gray-50">
-              <td colspan="6" class="px-6 py-3 text-xs text-[var(--color-text-muted)]">대안 없음</td>
+              <td colspan="5" class="px-6 py-3 text-xs text-[var(--color-text-muted)]">대안 없음</td>
             </tr>
           {/if}
         {/each}
@@ -172,5 +166,11 @@
     </div>
     <div class="text-sm font-medium text-[var(--color-text-muted)]">아직 추천 결과가 없어요</div>
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 올리면 항목별로 어떤 카드가 좋은지 알려 드려요</div>
+    <a
+      href={import.meta.env.BASE_URL ?? '/'}
+      class="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
+    >
+      명세서 올리러 가기
+    </a>
   </div>
 {/if}
