@@ -1,0 +1,61 @@
+card:
+  id: ibk-oil-and-life
+  issuer: ibk
+  name: IBK Oil & Life Card
+  nameKo: IBK기업은행 Oil & Life카드
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 7000
+  url: https://www.banksalad.com/product/cards/CARD000066
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: transportation
+    subcategory: fuel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 120
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - GS칼텍스
+      note: "GS칼텍스 주유 리터당 120원 할인 (LPG 포함)"
+
+  - category: telecom
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: entertainment
+    subcategory: movie
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 100.0
+        monthlyCap: 2000
+        perTransactionCap: 2000
+    conditions:
+      specificMerchants:
+        - CGV
+        - 롯데시네마
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

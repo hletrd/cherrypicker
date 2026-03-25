@@ -1,0 +1,37 @@
+card:
+  id: ibk-ceo
+  issuer: ibk
+  name: IBK CEO Card
+  nameKo: IBK기업은행 CEO카드
+  type: credit
+  annualFee:
+    domestic: 215000
+    international: 220000
+  url: https://m.card-gorilla.com/card/detail/2339
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "개인+법인카드 이용금액 합산 포인트 무제한 적립. 항공권, 골프장 그린피, 캐시백 사용 가능. 공항라운지, 호텔 발렛파킹, 15만원 상당 바우처(외식권/신세계상품권/골프문화상품권) 제공"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

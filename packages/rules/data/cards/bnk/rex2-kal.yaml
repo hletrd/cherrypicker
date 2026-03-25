@@ -1,0 +1,59 @@
+card:
+  id: bnk-rex2-kal
+  issuer: bnk
+  name: BNK REX2 KAL Mileage Card
+  nameKo: BNK부산은행 REX2 대한항공마일리지형
+  type: credit
+  annualFee:
+    domestic: 200000
+    international: 200000
+  url: https://www.busanbank.co.kr/ib20/mnu/FPMPDTDT0000001?FPCD=0010500190
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "이용금액 1,500원당 1 대한항공 마일리지 적립"
+
+  - category: transportation
+    subcategory: fuel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 70
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "주유 리터당 70원 할인"
+
+  - category: travel
+    subcategory: airline
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "공항라운지 무료, 호텔공항 발렛파킹 무료, 15만원 상당 바우처 선택"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

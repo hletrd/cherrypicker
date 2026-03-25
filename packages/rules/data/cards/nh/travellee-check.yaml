@@ -1,0 +1,74 @@
+card:
+  id: nh-travellee-check
+  issuer: nh
+  name: NH Travellee Check Card
+  nameKo: NH농협카드 트래블리 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://card.nonghyup.com/servlet/IpCo0001M.act
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: travel
+    subcategory: overseas
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "해외 가맹점 이용 시 캐시백. 해외 수수료 우대"
+
+  - category: travel
+    subcategory: airline
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "항공권 구매 시 추가 캐시백"
+
+  - category: uncategorized
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

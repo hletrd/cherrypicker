@@ -1,0 +1,84 @@
+card:
+  id: bnk-cheongchun-check
+  issuer: bnk
+  name: BNK Cheongchun Check Card
+  nameKo: BNK부산은행 청춘불패 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://namu.wiki/w/BNK%EB%B6%80%EC%82%B0%EC%9D%80%ED%96%89/%EC%B9%B4%EB%93%9C
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 199999
+
+  - id: tier1
+    label: 전월 20만원 이상
+    minSpending: 200000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: dining
+    subcategory: cafe
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: entertainment
+    subcategory: movie
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: online_shopping
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: education
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "20대 특화 혜택 - 학원, 서점 5% 캐시백"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 15000
+  minimumAnnualSpending: null

@@ -1,0 +1,60 @@
+card:
+  id: kwangju-kpass-green-v2
+  issuer: kwangju
+  name: Kwangju K-Pass Green Card V2
+  nameKo: 광주은행 K-패스그린카드 V2
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: https://www.kjbank.com/ib20/mnu/FPMCARD020102
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: public_transit
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 20.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "K-패스 대중교통 이용금액 20% 환급 (월 15회 이상 이용 시). 청년 30%, 저소득층 53%"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "에코포인트 적립 - 친환경 소비 혜택"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

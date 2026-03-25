@@ -1,0 +1,37 @@
+card:
+  id: woori-all-infinite
+  issuer: woori
+  name: Woori ALL Infinite Card
+  nameKo: 우리카드 ALL 우리카드 Infinite
+  type: credit
+  annualFee:
+    domestic: 495000
+    international: 495000
+  url: https://m.wooricard.com/dcmw/yh1/crd/crd01/M1CRD101S02.do
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "전 가맹점 2% 포인트 무제한 적립. 국내외 공항 라운지 무제한 이용 (동반 포함), 호텔 숙박, 골프, 다이닝 등 최상위 프리미엄 서비스"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

@@ -1,0 +1,75 @@
+card:
+  id: nh-on-platinum
+  issuer: nh
+  name: NH ON Platinum Card
+  nameKo: NH농협카드 ON PLATINUM
+  type: credit
+  annualFee:
+    domestic: 77000
+    international: 77000
+  url: https://card.nonghyup.com/servlet/IpCo0001M.act
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "NH포인트 무제한 적립 (포인트형). 또는 스카이패스/아시아나클럽 마일리지형 선택 가능"
+
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "비대면/구독경제/온라인 이용 시 추가 포인트 적립"
+
+  - category: travel
+    subcategory: airline
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "공항 라운지 무료 이용"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

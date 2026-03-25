@@ -1,0 +1,64 @@
+card:
+  id: ibk-bliss5
+  issuer: ibk
+  name: IBK BLISS.5 Card
+  nameKo: IBK기업은행 BLISS.5카드
+  type: credit
+  annualFee:
+    domestic: 100000
+    international: 100000
+  url: https://vip.bccard.com/app/vip/ContentsLinkActn.do?pgm_id=vip0177
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "1,500원당 1마일 기본 적립. BLISS.7 대비 연회비 절반 수준의 실속형 프리미엄 카드"
+
+  - category: entertainment
+    subcategory: movie
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 100.0
+        monthlyCap: 2000
+        perTransactionCap: 2000
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 2000
+        perTransactionCap: 2000
+    conditions:
+      specificMerchants:
+        - CGV
+        - 메가박스
+        - 롯데시네마
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

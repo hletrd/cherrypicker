@@ -1,0 +1,114 @@
+card:
+  id: dgb-im-untact
+  issuer: dgb
+  name: iM UntacT Card
+  nameKo: iM뱅크 iM UntacT 카드
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: https://mbanking.dgb.co.kr/com_ebz_mbs_00001.act?svcId=fis_ebz_sbs_41010_pddtl&PD_CD=40100101700954000&PD_NM=DGB_UntacT_
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+
+rewards:
+  - category: online_shopping
+    subcategory: simple_pay
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 17500
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 삼성페이
+        - 네이버페이
+        - 카카오페이
+        - 쿠페이
+        - 스마일페이
+        - 페이코
+        - SSG페이
+      note: "간편결제 10% 할인"
+
+  - category: dining
+    subcategory: delivery
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 17500
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 배달의민족
+        - 요기요
+        - 쿠팡이츠
+
+  - category: entertainment
+    subcategory: streaming
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 30.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 30.0
+        monthlyCap: 17500
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 넷플릭스
+        - 유튜브프리미엄
+        - 멜론
+        - 지니뮤직
+        - 웨이브
+        - FLO
+
+globalConstraints:
+  monthlyTotalDiscountCap: 35000
+  minimumAnnualSpending: null

@@ -1,0 +1,56 @@
+card:
+  id: ibk-infinite
+  issuer: ibk
+  name: IBK Infinite Card
+  nameKo: IBK기업은행 인피니트카드
+  type: credit
+  annualFee:
+    domestic: 495000
+    international: 495000
+  url: https://www.ibk.co.kr/card/mainList.ibk
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: travel
+    subcategory: airline
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "공항 라운지 무료 이용, 발렛파킹, 골프 그린피 할인 등 프리미엄 서비스"
+
+  - category: dining
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "특급호텔 다이닝 및 프리미엄 레스토랑 할인"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

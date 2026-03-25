@@ -1,0 +1,76 @@
+card:
+  id: sc-samsung-the1
+  issuer: sc
+  name: SC Samsung THE 1 Card
+  nameKo: SC제일은행 삼성카드 THE 1
+  type: credit
+  annualFee:
+    domestic: 47000
+    international: 47000
+  url: https://www.standardchartered.co.kr/np/kr/ProductMall.jsp?cardYn=Y
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier2
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "전 가맹점 포인트 적립. 공항 라운지 이용, 프리미엄 혜택"
+
+  - category: travel
+    subcategory: airline
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "공항 라운지 무료"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

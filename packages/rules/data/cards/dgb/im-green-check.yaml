@@ -1,0 +1,60 @@
+card:
+  id: dgb-im-green-check
+  issuer: dgb
+  name: iM Green Check Card
+  nameKo: iM뱅크 단디그린 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://www.imbank.co.kr/fnc_ebz_sm_11010_card.act
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 199999
+
+  - id: tier1
+    label: 전월 20만원 이상
+    minSpending: 200000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.3
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "에코포인트 적립 - 친환경 소비 시 추가 적립"
+
+  - category: public_transit
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "대중교통 이용 시 에코포인트 추가 적립"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

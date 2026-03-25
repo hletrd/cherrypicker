@@ -1,0 +1,93 @@
+card:
+  id: hana-club-premier
+  issuer: hana
+  name: Hana CLUB Premier Card
+  nameKo: 하나카드 CLUB Premier
+  type: credit
+  annualFee:
+    domestic: 197000
+    international: 197000
+  url: https://www.hanacard.co.kr/OPI41000000D.web?schID=pcd&CD_PD_SEQ=8874
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내 전 가맹점 1% 하나머니 적립"
+
+  - category: travel
+    subcategory: airline
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "LoungeKey 라운지 월 2회(연 6회) 무료, 국내 특급호텔 50% 할인(Hotel형) 또는 국내LCC 할인(Travel형)"
+
+  - category: transportation
+    subcategory: fuel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 100
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "주유 리터당 100원 할인"
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 20.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 스타벅스
+        - 커피빈
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

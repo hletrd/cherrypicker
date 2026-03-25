@@ -1,0 +1,137 @@
+card:
+  id: hana-1q-special-plus
+  issuer: hana
+  name: Hana 1Q Special+ Card
+  nameKo: 하나카드 1Q Special+
+  type: credit
+  annualFee:
+    domestic: 30000
+    international: 30000
+  url: https://www.hanacard.co.kr/OPI41000000D.web?schID=pcd&CD_PD_SEQ=7968
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: grocery
+    subcategory: local_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "지역쇼핑/주유 하나머니 5,000원 정액 적립 (전월 30만원 이상)"
+
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      note: "온라인쇼핑 하나머니 5,000원 정액 적립"
+
+  - category: transportation
+    subcategory: fuel
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1000
+        monthlyCap: 1000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1000
+        monthlyCap: 1000
+        perTransactionCap: null
+    conditions:
+      note: "음식점 1,000원 청구할인"
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 4000
+        perTransactionCap: 4000
+      - performanceTier: tier2
+        rate: 100.0
+        monthlyCap: 4000
+        perTransactionCap: 4000
+    conditions:
+      specificMerchants:
+        - 스타벅스
+        - 커피빈
+      minTransaction: 4000
+      note: "4,000원 이상 결제 시 월 1회 스타벅스/커피빈 4,000원 할인 (하나은행 결제계좌 지정 시)"
+
+  - category: transportation
+    subcategory: ev_charging
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "전기차/수소차 충전 20% 하나머니 적립 (월 최대 1만 하나머니)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 30000
+  minimumAnnualSpending: null

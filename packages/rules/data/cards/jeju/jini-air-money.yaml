@@ -1,0 +1,63 @@
+card:
+  id: jeju-jini-air-money
+  issuer: jeju
+  name: Jeju JINI Air Money Card
+  nameKo: 제주은행 JINI Air Money 카드
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 20000
+  url: https://www.e-jejubank.com/HomeAllcard.do?menuCd=1699&scrType=View&selectRow=0100552&gLnbMenuCd=1699&srchCondition9=0100552
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "AirMoney 적립 (전 세계 항공권 구매 가능한 포인트). 국내 0.7%, 해외 1.0% 기본 적립"
+
+  - category: travel
+    subcategory: airline
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 제주지니
+      note: "제주지니 가맹점 3% 청구할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

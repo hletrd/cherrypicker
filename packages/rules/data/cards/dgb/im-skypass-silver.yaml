@@ -1,0 +1,46 @@
+card:
+  id: dgb-im-skypass-silver
+  issuer: dgb
+  name: iM Skypass V2 Silver Card
+  nameKo: iM뱅크 iM 스카이패스 V2 Silver 카드
+  type: credit
+  annualFee:
+    domestic: 19000
+    international: 19000
+  url: https://www.hidomin.com/news/articleView.html?idxno=523678
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내외 가맹점 1,000원당 1 대한항공 마일리지 무제한 적립 (전월 30만원 이상 시)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

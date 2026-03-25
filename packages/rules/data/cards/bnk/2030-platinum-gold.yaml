@@ -1,0 +1,73 @@
+card:
+  id: bnk-2030-platinum-gold
+  issuer: bnk
+  name: BNK 2030 Platinum Gold Card
+  nameKo: BNK부산은행 2030플래티넘 Gold
+  type: credit
+  annualFee:
+    domestic: 18000
+    international: 20000
+  url: https://www.busanbank.co.kr/ib20/mnu/FPMPDTDT0000001?FPCD=0010500093
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: dining
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: online_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: entertainment
+    subcategory: movie
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 10000
+        perTransactionCap: 5000
+    conditions:
+      note: "MZ세대 특화 카드. 바우처 서비스: 신세계 이마트 5만원 상품권, 롯데시네마 1인 관람권 5매 등 선택"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 20000
+  minimumAnnualSpending: null

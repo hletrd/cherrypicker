@@ -1,0 +1,48 @@
+card:
+  id: woori-two-chairs-w
+  issuer: woori
+  name: Woori TWO CHAIRS W Card
+  nameKo: 우리카드 TWO CHAIRS W
+  type: credit
+  annualFee:
+    domestic: 110000
+    international: 110000
+  url: https://m.wooricard.com/dcmw/yh1/crd/crd01/M1CRD101S02.do?recomNo=102716
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내외 전 가맹점 2% 포인트 적립 (무제한). 공항 라운지 월 8회 무료 이용, TWO CHAIRS 라운지 이용 가능"
+
+  - category: travel
+    subcategory: airline
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내외 공항 라운지 무료 (동반 최대 3인). 발렛파킹 무료"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
