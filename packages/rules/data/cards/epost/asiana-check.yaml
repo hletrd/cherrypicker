@@ -1,0 +1,76 @@
+card:
+  id: epost-asiana-check
+  issuer: epost
+  name: Epost Asiana Check Card
+  nameKo: 우체국 아시아나 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상~50만원 미만
+    minSpending: 300000
+    maxSpending: 499999
+
+  - id: tier2
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: travel
+    subcategory: airline
+    label: 아시아나 마일리지 적립 (할인가맹점)
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: null
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "아시아나클럽 마일리지 적립. 할인가맹점 이용 시 1,500원당 1마일, 전월 30만원 이상 조건. 일반가맹점 3만원 이상 결제 시 2,500원당 1마일, 전월 50만원 이상 조건."
+
+  - category: uncategorized
+    label: 아시아나 마일리지 적립 (일반가맹점)
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "일반가맹점 3만원 이상 결제 시 2,500원당 1마일. 전월 50만원 이상 시 적립."
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
+  note: "Mastercard 브랜드 우체국 아시아나 제휴 체크카드. 아시아나클럽 마일리지 적립 특화. 할인가맹점 1,500원당 1마일(전월 30만원 이상), 일반가맹점 2,500원당 1마일(전월 50만원 이상, 3만원 이상 결제)."

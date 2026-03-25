@@ -1,0 +1,107 @@
+card:
+  id: kdb-choice-check
+  issuer: kdb
+  name: KDB Choice Check Card
+  nameKo: KDB Choice 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: "https://smart.kdb.co.kr/mp/MHBMCA01N00.act"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: grocery
+    subcategory: supermarket
+    label: 선택 업종 1 - 대형할인점 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "10대 업종 중 고객이 직접 선택한 2개 업종에 한해 5% 캐시백. 연 2회 변경 가능. 이 카테고리는 선택 가능한 업종 예시."
+
+  - category: online_shopping
+    subcategory: general
+    label: 선택 업종 - 온라인쇼핑 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "10대 선택 가능 업종: 대형할인점, 온라인쇼핑, 백화점, 병의원/약국, 숙박, 슈퍼, 통신, 스포츠/레저, 홈쇼핑, 커피 중 2개 선택."
+
+  - category: offline_shopping
+    subcategory: department_store
+    label: 선택 업종 - 백화점 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: medical
+    label: 선택 업종 - 병의원/약국 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: telecom
+    label: 선택 업종 - 통신 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: dining
+    subcategory: cafe
+    label: 선택 업종 - 커피 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: travel
+    subcategory: hotel
+    label: 선택 업종 - 숙박 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: entertainment
+    label: 선택 업종 - 스포츠/레저 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
+  note: "10대 주거래 업종 중 고객이 직접 선택한 2개 업종 전 가맹점 5% 캐시백. 연 2회 업종 변경 가능. 전월실적 무관 기본 캐시백 한도 1,000원 제공."

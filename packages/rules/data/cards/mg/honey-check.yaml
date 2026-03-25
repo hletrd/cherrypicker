@@ -1,0 +1,125 @@
+card:
+  id: mg-honey-check
+  issuer: mg
+  name: Honey Check Card
+  nameKo: 꿀 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: "https://mgcheck.kfcc.co.kr/pers/appl/persHoneyGuid.do"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적 (신규 2개월)
+    minSpending: 0
+    maxSpending: 199999
+
+  - id: tier1
+    label: 전월 20만원 이상~30만원 미만
+    minSpending: 200000
+    maxSpending: 299999
+
+  - id: tier2
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: entertainment
+    subcategory: streaming
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 2000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 2000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 넷플릭스
+        - YouTube Premium
+      note: "OTT 자동납부 정기결제 시 건당 2,000원 할인 (전월 20만원 이상)"
+
+  - category: subscription
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 쿠팡 로켓와우
+      note: "쿠팡 로켓와우 멤버십 최대 2,900원 할인 (전월 30만원 이상)"
+
+  - category: online_shopping
+    subcategory: general
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      note: "간편결제, 쇼핑, 배달앱 결제 시 건당 1,000원 할인 (전월 30만원 이상)"
+
+  - category: dining
+    subcategory: delivery
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 2000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 배달의민족
+        - 요기요
+        - 쿠팡이츠
+      note: "배달앱 건당 1,000원 할인 (전월 30만원 이상)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 16000
+  minimumAnnualSpending: null
+  note: "월 최대 약 16,000원 할인. OTT/구독/간편결제/쇼핑/배달 언택트 생활 특화 카드."

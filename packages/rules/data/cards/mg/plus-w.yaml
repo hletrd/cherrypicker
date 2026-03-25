@@ -1,0 +1,156 @@
+card:
+  id: mg-plus-w
+  issuer: mg
+  name: MG+ W Hana Card
+  nameKo: MG+ W 하나카드
+  type: credit
+  annualFee:
+    domestic: 19000
+    international: 19000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상~60만원 미만
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상~100만원 미만
+    minSpending: 600000
+    maxSpending: 999999
+
+  - id: tier3
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: education
+    subcategory: academy
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "입시·보습, 외국어, 예체능, 무술도장, 자동차운전, 직업훈련학원"
+
+  - category: medical
+    subcategory: hospital
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+  - category: medical
+    subcategory: pharmacy
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+  - category: offline_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 홈쇼핑
+        - 이마트
+        - 홈플러스
+        - 롯데마트
+        - 올리브영
+        - 다이소
+
+  - category: entertainment
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      note: "골프장, 헬스클럽, 레저시설, 헤어샵 등 여가생활"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 10000
+  minimumAnnualSpending: null
+  note: "통합 월 할인한도: 30만원 이상 1만원, 60만원 이상 2만원, 100만원 이상 4만원. 4050세대 웰니스 특화 카드."

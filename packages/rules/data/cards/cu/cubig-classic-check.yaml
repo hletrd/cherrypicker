@@ -1,0 +1,120 @@
+card:
+  id: cu-cubig-classic-check
+  issuer: cu
+  name: CUbig CLASSIC Check Card
+  nameKo: CUbig CLASSIC 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: "https://fatima.cu.co.kr/subList/20000036309"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적 (특화서비스)
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - tuition
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: medical
+    subcategory: hospital
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "병원·약국 실적 무관 1%, 전월 30만원 이상 시 2% 캐시백"
+
+  - category: medical
+    subcategory: pharmacy
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: offline_shopping
+    subcategory: department_store
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "백화점·마트 실적 무관 1%, 전월 30만원 이상 시 2% 캐시백"
+
+  - category: grocery
+    subcategory: supermarket
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: transportation
+    subcategory: fuel
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "주유소 실적 무관 1%, 전월 30만원 이상 시 2% 캐시백"
+
+  - category: public_transit
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "대중교통 실적 무관 1%, 전월 30만원 이상 시 2% 캐시백"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
+  note: "4060 중장년 조합원 특화 카드. 자주 이용하는 업종(병원·약국·대형마트·주유소·대중교통)에서 실적 무관 1%, 전월 30만원 이상 시 2% 캐시백. 신규 발급 후 익월 말일까지 최소 5,000원 캐시백 한도 제공."

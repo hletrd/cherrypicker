@@ -1,0 +1,59 @@
+card:
+  id: epost-bc-check
+  issuer: epost
+  name: Epost BC Check Card
+  nameKo: 우체국 BC 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: "https://mall.epostbank.go.kr/SPCDCL0000.do"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    label: 에코머니 포인트 적립
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "에코머니 가맹점(친환경 제품 매장)에서 결제금액의 1~5% 에코머니 포인트 적립"
+
+  - category: utilities
+    label: 우체국 서비스 10% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "우체국 서비스(우편, 택배 등) 이용 시 전월 실적 있으면 10% 할인"
+
+  - category: public_transit
+    label: 교통카드 기능
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "T-money 선불 교통카드 기능 탑재. 별도 충전 후 이용."
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
+  note: "BC카드 제휴 체크카드. 에코머니 포인트 적립(친환경 가맹점), T-money 교통카드 기능 내장, 우체국 서비스 할인. 전월 실적 있으면 우체국 서비스 10% 할인."

@@ -1,0 +1,117 @@
+card:
+  id: cu-eobuba-check
+  issuer: cu
+  name: Eobuba Check Card
+  nameKo: 어부바 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: "http://www.cu.co.kr/product/ad/card/selectCard.do?mi=100182&cardSn=1"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: convenience_store
+    label: 화요일 편의점 10% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - CU
+        - GS25
+        - 세븐일레븐
+        - 미니스톱
+        - 위드미
+      note: "화요일만 적용. 건당 5,000원 이상 결제 시. 일 1회, 월 4회 한도."
+
+  - category: dining
+    subcategory: cafe
+    label: 화요일 커피전문점 10% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 커피빈
+        - 스타벅스
+        - 투썸플레이스
+        - 카페베네
+        - 탐앤탐스
+        - 엔제리너스
+      note: "화요일만 적용. 건당 8,000원 이상 결제 시. 일 1회, 월 4회 한도."
+
+  - category: convenience_store
+    label: 평일 편의점 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - CU
+        - GS25
+        - 세븐일레븐
+        - 미니스톱
+        - 위드미
+      note: "화요일 외 요일 적용"
+
+  - category: dining
+    subcategory: cafe
+    label: 평일 커피전문점 5% 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "화요일 외 요일 적용. 커피전문점, 패스트푸드 포함."
+
+  - category: education
+    subcategory: books
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "도서 5% 캐시백"
+
+  - category: entertainment
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 3000
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - CGV
+        - 메가박스
+        - 롯데시네마
+      note: "영화관 3,000원 캐시백"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
+  note: "2040세대 특화 캐릭터 카드. 화요일 편의점·커피전문점 10% 더블캐시백이 핵심 혜택."

@@ -1,0 +1,58 @@
+card:
+  id: mg-market-check
+  issuer: mg
+  name: Market Ae Check Card
+  nameKo: 시장愛 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: grocery
+    subcategory: traditional_market
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 15.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "전통시장 및 나들가게 15% 할인. 일 2회 한도. 국세청 등록 가맹점에 한함."
+
+  - category: public_transit
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "교통 5% 할인"
+
+  - category: telecom
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 2000
+        monthlyCap: 2000
+        perTransactionCap: null
+    conditions:
+      note: "휴대폰요금 월 2,000원 할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
+  note: "전통시장·나들가게 특화 체크카드. 전통시장 15% 할인, 교통 5% 할인, 통신 2,000원 할인."

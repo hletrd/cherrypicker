@@ -98,3 +98,23 @@ issuers:
     nameKo: SC제일은행
     nameEn: Standard Chartered Korea
     website: https://www.standardchartered.co.kr
+
+  - id: mg
+    nameKo: MG새마을금고
+    nameEn: MG Community Credit Cooperatives
+    website: https://www.kfcc.co.kr
+
+  - id: cu
+    nameKo: 신협
+    nameEn: Credit Union Korea
+    website: https://www.cu.co.kr
+
+  - id: kdb
+    nameKo: KDB산업은행
+    nameEn: Korea Development Bank
+    website: https://www.kdb.co.kr
+
+  - id: epost
+    nameKo: 우체국
+    nameEn: Korea Post
+    website: https://www.epostbank.go.kr

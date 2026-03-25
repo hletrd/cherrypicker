@@ -1,0 +1,163 @@
+card:
+  id: mg-plus-blue
+  issuer: mg
+  name: MG+ Blue Hana Card
+  nameKo: MG+ Blue 하나카드
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: ""
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상~80만원 미만
+    minSpending: 300000
+    maxSpending: 799999
+
+  - id: tier2
+    label: 전월 80만원 이상
+    minSpending: 800000
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: dining
+    subcategory: restaurant
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 스타벅스
+        - 투썸플레이스
+        - 폴바셋
+
+  - category: telecom
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "자동납부 시"
+
+  - category: utilities
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "도시가스, 전기요금 자동납부 시"
+
+  - category: insurance
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "4대 보험(건강보험, 국민연금, 고용보험, 산재보험) 자동납부 시"
+
+  - category: grocery
+    subcategory: supermarket
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+
+  - category: transportation
+    subcategory: fuel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 30000
+  minimumAnnualSpending: null
+  note: "전월 30만원 이상 월 최대 3만원, 80만원 이상 월 최대 4.5만원 할인"

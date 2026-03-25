@@ -1,0 +1,82 @@
+card:
+  id: cu-cubig-simple-check
+  issuer: cu
+  name: CUbig SIMPLE Check Card
+  nameKo: CUbig SIMPLE 체크카드
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: "https://www.cu.co.kr/product/ad/card/selectCardList.do"
+  lastUpdated: "2026-03-25"
+  source: manual
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상~50만원 미만
+    minSpending: 300000
+    maxSpending: 499999
+
+  - id: tier2
+    label: 전월 50만원 이상~100만원 미만
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier3
+    label: 전월 100만원 이상~150만원 미만
+    minSpending: 1000000
+    maxSpending: 1499999
+
+  - id: tier4
+    label: 전월 150만원 이상~300만원 미만
+    minSpending: 1500000
+    maxSpending: 2999999
+
+  - id: tier5
+    label: 전월 300만원 이상
+    minSpending: 3000000
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    label: 전 가맹점 기본 캐시백 (1만원 이상 0.3%, 5만원 이상 0.5%)
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0.5
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 0.5
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier4
+        rate: 0.5
+        monthlyCap: 25000
+        perTransactionCap: null
+      - performanceTier: tier5
+        rate: 0.5
+        monthlyCap: 30000
+        perTransactionCap: null
+    conditions:
+      note: "건당 1만원 이상 0.3% 캐시백, 5만원 이상 0.5% 캐시백. 주말/공휴일 추가 0.1% (최대 0.6%). 후불교통 기본 탑재."
+
+globalConstraints:
+  monthlyTotalDiscountCap: 30000
+  minimumAnnualSpending: null
+  note: "전 가맹점 최대 0.6% 캐시백. 월 캐시백 한도: 30만원 이상 1만원, 50만원 이상 1.5만원, 100만원 이상 2만원, 150만원 이상 2.5만원, 300만원 이상 최대 3만원."
