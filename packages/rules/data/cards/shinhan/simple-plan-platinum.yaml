@@ -1,0 +1,60 @@
+card:
+  id: shinhan-simple-plan-platinum
+  issuer: shinhan
+  name: "Simple Platinum#"
+  nameKo: 신한카드 Simple Platinum#
+  type: credit
+  annualFee:
+    domestic: 27000
+    international: 27000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1188273_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적 (건당 3만원 미만)
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: uncategorized
+    label: 잔돈할인 (건당 3만원 이상, 1천원 미만 잔돈 할인, 월 10회)
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 999
+        monthlyCap: 9990
+        perTransactionCap: 999
+    conditions:
+      minTransaction: 30000
+
+  - category: uncategorized
+    label: 월 10회 초과 이용 캐시백 1%
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: telecom
+    label: 통신요금 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 1.7
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

@@ -1,0 +1,88 @@
+card:
+  id: kb-evo-titanium
+  issuer: kb
+  name: EVO Titanium
+  nameKo: KB국민 EVO 티타늄카드
+  type: credit
+  annualFee:
+    domestic: 30000
+    international: 30000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=09267&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: transportation
+    label: 전기/수소차 충전 포인트리 적립 50%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 30000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 전기차 충전소
+        - 수소충전소
+
+  - category: grocery
+    label: 친환경 식품 전문 브랜드 포인트리 적립 5%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      minTransaction: 10000
+      specificMerchants:
+        - 올가홀푸드
+        - 바이올가
+        - 초록마을
+
+  - category: online_shopping
+    label: 친환경 포장 배송 쇼핑몰 포인트리 적립 5%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      minTransaction: 10000
+      specificMerchants:
+        - 쓱닷컴
+        - 쿠팡
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

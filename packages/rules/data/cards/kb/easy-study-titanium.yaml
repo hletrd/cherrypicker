@@ -1,0 +1,130 @@
+card:
+  id: kb-easy-study-titanium
+  issuer: kb
+  name: Easy Study Titanium
+  nameKo: KB국민 Easy Study 티타늄카드
+  type: credit
+  annualFee:
+    domestic: 35000
+    international: 35000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=09249&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier2
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: 1499999
+
+  - id: tier3
+    label: 전월 150만원 이상
+    minSpending: 1500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: education
+    label: 학원 할인 3% (건당 10만원 이상)
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 3.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 3.0
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      minTransaction: 100000
+
+  - category: education
+    label: 온라인강의 할인 5%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 30000
+        perTransactionCap: null
+
+  - category: education
+    label: 취미/자기계발 할인 3%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 3.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 3.0
+        monthlyCap: 15000
+        perTransactionCap: null
+
+  - category: offline_shopping
+    label: 서점/문구 할인 5%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 15000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

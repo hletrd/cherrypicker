@@ -1,0 +1,91 @@
+card:
+  id: kb-everland-panda
+  issuer: kb
+  name: Everland Panda
+  nameKo: KB국민 에버랜드 판다카드
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=04440&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: entertainment
+    label: 에버랜드 자유이용권 할인 50%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 50.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 에버랜드
+
+  - category: entertainment
+    label: 캐리비안베이 입장권 할인 30%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 30.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 캐리비안베이
+
+  - category: entertainment
+    label: 에버랜드 연간회원권 할인 10%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 에버랜드 연간회원권
+
+  - category: transportation
+    label: SK주유 포인트리 적립 (60원/L)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 60
+        unit: won_per_liter
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - SK주유소
+
+  - category: dining
+    label: 패밀리레스토랑 할인 20%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 20.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 패밀리레스토랑
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

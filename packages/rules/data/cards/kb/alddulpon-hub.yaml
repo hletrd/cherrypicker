@@ -1,0 +1,61 @@
+card:
+  id: kb-alddulpon-hub
+  issuer: kb
+  name: Alddulpon Hub
+  nameKo: KB국민 알뜰폰Hub 카드
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=04323&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 699999
+
+  - id: tier2
+    label: 전월 70만원 이상
+    minSpending: 700000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: telecom
+    label: 알뜰폰 통신요금 자동이체 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 12000
+        monthlyCap: 12000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 17000
+        monthlyCap: 17000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 알뜰폰 통신사
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

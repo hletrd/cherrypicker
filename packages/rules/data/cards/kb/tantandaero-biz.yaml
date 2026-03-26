@@ -1,0 +1,94 @@
+card:
+  id: kb-tantandaero-biz
+  issuer: kb
+  name: Tantandaero Biz
+  nameKo: KB국민 탄탄대로 Biz카드
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=09183&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: 699999
+
+  - id: tier2
+    label: 전월 70만원 이상
+    minSpending: 700000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: utilities
+    label: 사회보험/통신/전기 포인트리 적립 5%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+
+  - category: transportation
+    label: 주유 포인트리 적립 (리터당 최대 130원)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 100
+        unit: won_per_liter
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 130
+        unit: won_per_liter
+        monthlyCap: 15000
+        perTransactionCap: null
+
+  - category: grocery
+    label: 대형마트/인터넷쇼핑 포인트리 적립 10~20%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 20000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

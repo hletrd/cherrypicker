@@ -1,0 +1,99 @@
+card:
+  id: shinhan-lesson-platinum
+  issuer: shinhan
+  name: "Lesson Platinum#"
+  nameKo: 신한카드 Lesson Platinum#
+  type: credit
+  annualFee:
+    domestic: 27000
+    international: 30000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1188299_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: education
+    label: 학원/학습지/독서실 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 30000
+        perTransactionCap: null
+
+  - category: sports
+    label: 문화센터/수영장/스포츠센터 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 15000
+        perTransactionCap: null
+
+  - category: offline_shopping
+    label: 서적 (YES24/교보문고 등) 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - YES24
+        - 반디앤루니스
+        - 영풍문고
+        - 교보문고
+        - 인터파크도서
+        - 알라딘
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

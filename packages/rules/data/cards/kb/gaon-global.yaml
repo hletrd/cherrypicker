@@ -1,0 +1,90 @@
+card:
+  id: kb-gaon-global
+  issuer: kb
+  name: Gaon Global
+  nameKo: KB국민 가온글로벌카드
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 20000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=09167&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 199999
+
+  - id: tier1
+    label: 전월 20만원 이상
+    minSpending: 200000
+    maxSpending: 499999
+
+  - id: tier2
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    label: 국내 전 가맹점 기본 포인트리 적립 0.3%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.3
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.3
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0.3
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: 해외 이용 포인트리 적립 1~3%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: travel
+    label: 소셜커머스/온라인마켓/커피/면세점/여행사/항공사 추가 적립 0.7%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

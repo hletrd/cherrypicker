@@ -1,0 +1,143 @@
+card:
+  id: kb-cheongchun-mania
+  issuer: kb
+  name: Cheongchundaero Mania-i
+  nameKo: KB국민 청춘대로 매니아i 카드
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 15000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=09170&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: 699999
+
+  - id: tier2
+    label: 전월 70만원 이상
+    minSpending: 700000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: public_transit
+    label: 버스/지하철/택시 포인트 적립 5%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: telecom
+    label: 통신요금 포인트 적립 5%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: dining
+    label: 커피전문점/디저트 포인트 특별 적립 10%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 커피전문점
+        - 파리바게뜨
+        - 도레도레
+
+  - category: online_shopping
+    label: 소셜커머스/마켓컬리/배달앱 포인트 적립 10%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 쿠팡
+        - 티몬
+        - 위메프
+        - 마켓컬리
+        - 배달의민족
+
+  - category: entertainment
+    label: SPA패션/미술관/음원사이트 포인트 적립 20%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 자라
+        - 유니클로
+        - H&M
+        - 멜론
+        - 지니뮤직
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

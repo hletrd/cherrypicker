@@ -1,0 +1,99 @@
+card:
+  id: shinhan-deep-eco-credit
+  issuer: shinhan
+  name: Deep ECO
+  nameKo: 신한카드 Deep ECO 신용
+  type: credit
+  annualFee:
+    domestic: 13000
+    international: 16000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1188311_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: public_transit
+    label: 버스/지하철/철도 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: transportation
+    label: 전기차 충전 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 전기차 충전소
+
+  - category: transportation
+    label: 공유모빌리티 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 쏘카
+        - 그린카
+        - 따릉이
+
+  - category: entertainment
+    label: CGV 온라인 영화 예매 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 5000
+        perTransactionCap: 1000
+    conditions:
+      specificMerchants:
+        - CGV
+
+globalConstraints:
+  monthlyTotalDiscountCap: 30000
+  minimumAnnualSpending: null

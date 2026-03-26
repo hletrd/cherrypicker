@@ -1,0 +1,107 @@
+card:
+  id: shinhan-subscription-like
+  issuer: shinhan
+  name: Subscription Like
+  nameKo: 신한카드 구독 좋아요
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 18000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1220057_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: 799999
+
+  - id: tier2
+    label: 전월 80만원 이상
+    minSpending: 800000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: subscription
+    label: OTT/음원 구독료 100% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 12000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 100.0
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 넷플릭스
+        - 유튜브프리미엄
+        - 디즈니플러스
+        - 티빙
+        - 왓챠
+        - 웨이브
+        - 쿠팡와우
+        - 네이버플러스
+        - T우주패스
+        - 요기패스
+        - 멜론
+        - 지니뮤직
+
+  - category: utilities
+    label: 정기성 결제 할인 (통신/관리비/도시가스/전기)
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 2000
+        perTransactionCap: 1000
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 1000
+        monthlyCap: 2000
+        perTransactionCap: 1000
+
+  - category: convenience_store
+    label: GS25/CU/올리브영/다이소/배달앱/스타벅스 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 8000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

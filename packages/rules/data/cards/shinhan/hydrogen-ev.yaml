@@ -1,0 +1,77 @@
+card:
+  id: shinhan-hydrogen-ev
+  issuer: shinhan
+  name: Hydrogen EV
+  nameKo: 수소차 충전할인 신한카드
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 23000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1216901_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: transportation
+    label: 수소차 충전요금 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 30000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 수소충전소
+
+  - category: transportation
+    label: 주차장/자동차SVC 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: offline_shopping
+    label: 할인점/편의점/배달앱 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

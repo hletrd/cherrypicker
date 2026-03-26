@@ -1,0 +1,80 @@
+card:
+  id: shinhan-gihoo-donghaeng-credit
+  issuer: shinhan
+  name: Climate Companion Credit
+  nameKo: 신한 후불 기후동행 신용카드
+  type: credit
+  annualFee:
+    domestic: 9000
+    international: 12000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1230340_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: public_transit
+    label: 서울 대중교통 무제한 정기권 (기후동행카드)
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 62000
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 62000
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 서울 지하철
+        - 서울 버스
+
+  - category: online_shopping
+    label: 온라인쇼핑/OTT/배달앱/온라인서점 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: dining
+    label: 커피/편의점/잡화점 오프라인 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

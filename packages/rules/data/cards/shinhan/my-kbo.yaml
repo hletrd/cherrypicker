@@ -1,0 +1,77 @@
+card:
+  id: shinhan-my-kbo
+  issuer: shinhan
+  name: MY KBO
+  nameKo: KBO제휴 신한카드 MY KBO
+  type: credit
+  annualFee:
+    domestic: 11000
+    international: 14000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1188408_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 499999
+
+  - id: tier2
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: entertainment
+    label: KBO 프로야구 티켓 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 20.0
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - KBO 프로야구
+
+  - category: uncategorized
+    label: 마이신한포인트 기본 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0.6
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

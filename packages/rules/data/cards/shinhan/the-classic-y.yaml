@@ -1,0 +1,78 @@
+card:
+  id: shinhan-the-classic-y
+  issuer: shinhan
+  name: The CLASSIC-Y
+  nameKo: 신한카드 더 클래식-Y
+  type: credit
+  annualFee:
+    domestic: 100000
+    international: 105000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/premium/1187940_2205.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: uncategorized
+    label: 마이신한포인트 기본 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: offline_shopping
+    label: 백화점/할인마트/아울렛 결제일 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: transportation
+    label: GS칼텍스 주유 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 60
+        unit: won_per_liter
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 60
+        unit: won_per_liter
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

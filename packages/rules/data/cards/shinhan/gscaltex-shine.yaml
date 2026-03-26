@@ -1,0 +1,83 @@
+card:
+  id: shinhan-gscaltex-shine
+  issuer: shinhan
+  name: GS Caltex Shine
+  nameKo: GS칼텍스 신한카드 Shine
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 15000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1187941_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: transportation
+    label: GS칼텍스 주유 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 60
+        unit: won_per_liter
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 60
+        unit: won_per_liter
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 100
+        unit: won_per_liter
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - GS칼텍스
+
+  - category: public_transit
+    label: 대중교통 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

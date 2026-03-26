@@ -1,0 +1,83 @@
+card:
+  id: kb-golfzon
+  issuer: kb
+  name: Golfzon KB
+  nameKo: 골프존 KB국민카드
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 15000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=04583&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: sports
+    label: 골프존 할인 20%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 30000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 골프존
+
+  - category: sports
+    label: 골프연습장 할인 5%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 골프연습장
+
+  - category: transportation
+    label: 모든 주유소 포인트리 적립 (60원/L)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 60
+        unit: won_per_liter
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 60
+        unit: won_per_liter
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

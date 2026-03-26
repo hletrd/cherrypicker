@@ -1,0 +1,59 @@
+card:
+  id: lotte-digiloca-pet
+  issuer: lotte
+  name: DigiLOCA Pet
+  nameKo: 롯데카드 디지로카 Pet
+  type: credit
+  annualFee:
+    domestic: 30000
+    international: 30000
+  url: "https://www.lottecard.co.kr/app/LPCDADB_V100.lc?vtCdKndC=P14728-A14728"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier2
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: medical
+    label: 반려동물 센터/동물병원 캐시백
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 50000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 동물병원
+        - 반려동물센터
+        - 펫샵
+
+globalConstraints:
+  monthlyTotalDiscountCap: 50000
+  minimumAnnualSpending: null

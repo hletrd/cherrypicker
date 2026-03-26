@@ -1,0 +1,61 @@
+card:
+  id: shinhan-the-best-f
+  issuer: shinhan
+  name: The BEST-F
+  nameKo: 신한카드 더 베스트-F
+  type: credit
+  annualFee:
+    domestic: 202000
+    international: 222000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/premium/1187948_2205.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: uncategorized
+    label: 캐시백 (캐시백형)
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: offline_shopping
+    label: 백화점/할인점/아울렛 결제일 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

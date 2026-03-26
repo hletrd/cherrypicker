@@ -1,0 +1,61 @@
+card:
+  id: shinhan-marriott-bonvoy-classic
+  issuer: shinhan
+  name: Marriott Bonvoy Classic
+  nameKo: 메리어트 본보이™ 더 클래식 신한카드
+  type: credit
+  annualFee:
+    domestic: 144000
+    international: 147000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/premium/1213229_2205.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: travel
+    label: 메리어트 호텔 포인트 적립 (해외 숙박)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 메리어트 계열 호텔
+
+  - category: uncategorized
+    label: 마이신한포인트 기본 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: medical
+    label: 국내 메리어트 호텔 조식 할인 (연 2회)
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: null
+        fixedAmount: 50000
+        monthlyCap: null
+        perTransactionCap: 50000
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

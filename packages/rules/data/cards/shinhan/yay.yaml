@@ -1,0 +1,76 @@
+card:
+  id: shinhan-yay
+  issuer: shinhan
+  name: YaY
+  nameKo: 신한카드 YaY
+  type: credit
+  annualFee:
+    domestic: 23000
+    international: 26000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1196674_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: dining
+    label: 배달앱 (배달의민족/요기요) 포인트 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 15.0
+        monthlyCap: 12500
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 배달의민족
+        - 요기요
+
+  - category: online_shopping
+    label: 온라인쇼핑 포인트 적립 (건당 5만원 이상, 건당 2500포인트)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 2500
+        monthlyCap: 12500
+        perTransactionCap: null
+    conditions:
+      minTransaction: 50000
+      specificMerchants:
+        - 롯데ON
+        - SSG.com
+        - G마켓
+        - 11번가
+        - 쿠팡
+        - 마켓컬리
+        - 오아시스마켓
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

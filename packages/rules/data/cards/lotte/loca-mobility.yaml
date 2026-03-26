@@ -1,0 +1,128 @@
+card:
+  id: lotte-loca-mobility
+  issuer: lotte
+  name: LOCA Mobility Banting
+  nameKo: 롯데카드 LOCA Mobility 반띵
+  type: credit
+  annualFee:
+    domestic: 17000
+    international: 17000
+  url: "https://www.lottecard.co.kr/app/LPCDADB_V100.lc?vtCdKndC=P14285-A14285"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: 799999
+
+  - id: tier2
+    label: 전월 80만원 이상
+    minSpending: 800000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: public_transit
+    label: 대중교통 (버스/지하철) 50% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 50.0
+        monthlyCap: 20000
+        perTransactionCap: null
+
+  - category: dining
+    label: 커피 50% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 50.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 커피전문점
+
+  - category: offline_shopping
+    label: 미용실 50% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 50.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 미용실
+
+  - category: online_shopping
+    label: 온라인쇼핑 50% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 50.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: subscription
+    label: 스트리밍/멤버십 50% 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 50.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 45000
+  minimumAnnualSpending: null

@@ -1,0 +1,78 @@
+card:
+  id: kb-finetech-kal
+  issuer: kb
+  name: FINETECH Korean Air
+  nameKo: KB국민 FINETECH카드(대한항공)
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 25000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=04581&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    label: 국내 이용 대한항공 마일리지 적립 (1500원당 1.2마일)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.08
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.08
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: 해외 이용 대한항공 마일리지 적립 (1500원당 2마일)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.13
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.13
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: entertainment
+    label: 게임/커피/영화 대한항공 마일리지 특별 적립 (1500원당 3마일)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 게임
+        - 커피전문점
+        - 영화관
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

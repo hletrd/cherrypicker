@@ -1,0 +1,94 @@
+card:
+  id: lotte-loca-money
+  issuer: lotte
+  name: LOCA MONEY
+  nameKo: 롯데카드 LOCA MONEY
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: "https://www.lottecard.co.kr/app/LPCDADB_V100.lc?vtCdKndC=P13561-A13561"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 499999
+
+  - id: tier2
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    label: 전 가맹점 로카코인 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.3
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: 온라인쇼핑 로카코인 추가 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.5
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: dining
+    label: 배달앱/카페 로카코인 추가 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.5
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 배달의민족
+        - 요기요
+        - 쿠팡이츠
+        - 커피전문점
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

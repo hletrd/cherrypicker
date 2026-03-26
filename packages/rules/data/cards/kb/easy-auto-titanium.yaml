@@ -1,0 +1,108 @@
+card:
+  id: kb-easy-auto-titanium
+  issuer: kb
+  name: Easy Auto Titanium
+  nameKo: KB국민 Easy auto 티타늄카드
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=09246&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 699999
+
+  - id: tier2
+    label: 전월 70만원 이상
+    minSpending: 700000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: transportation
+    label: SK/GS 주유 포인트리 적립 (리터당 150원)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 100
+        unit: won_per_liter
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 150
+        unit: won_per_liter
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - SK주유소
+        - GS칼텍스
+
+  - category: transportation
+    label: 정비/주차/세차 할인 5%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 자동차정비
+        - 주차장
+        - 세차
+
+  - category: transportation
+    label: 자동차보험 포인트리 적립 1만점
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 10000
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 10000
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 자동차보험
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

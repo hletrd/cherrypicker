@@ -1,0 +1,90 @@
+card:
+  id: kb-petlove
+  issuer: kb
+  name: Pet Love
+  nameKo: KB국민 반려愛카드
+  type: credit
+  annualFee:
+    domestic: 8000
+    international: 13000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=04260&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: medical
+    label: 동물병원/반려동물 업종 할인 10%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 동물병원
+        - 반려견샵
+        - 동물검사소
+        - 펫용품점
+
+  - category: grocery
+    label: 대형마트 할인 5%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 이마트
+        - 롯데마트
+        - 홈플러스
+
+  - category: online_shopping
+    label: 온라인쇼핑몰 할인 5%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - G마켓
+        - 옥션
+        - 인터파크
+        - 11번가
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

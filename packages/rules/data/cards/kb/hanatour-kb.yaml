@@ -1,0 +1,63 @@
+card:
+  id: kb-hanatour
+  issuer: kb
+  name: Hanatour KB
+  nameKo: 하나투어 KB국민카드
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=01234&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: travel
+    label: 하나투어 여행상품 마일리지 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 하나투어
+
+  - category: uncategorized
+    label: 전 가맹점 마일리지 기본 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.3
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: travel
+    label: 하나투어 무이자 할부 (2~3개월, 5만원 이상)
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      minTransaction: 50000
+      specificMerchants:
+        - 하나투어
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

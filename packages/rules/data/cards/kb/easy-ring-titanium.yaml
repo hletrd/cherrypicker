@@ -1,0 +1,66 @@
+card:
+  id: kb-easy-ring-titanium
+  issuer: kb
+  name: Easy Ring Titanium
+  nameKo: KB국민 Easy ring 티타늄카드
+  type: credit
+  annualFee:
+    domestic: 30000
+    international: 30000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=09253&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: telecom
+    label: 통신요금 자동납부 할인 (1만원당 1500원, 최대 15%)
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 15.0
+        monthlyCap: 25000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - SKT
+        - KT
+        - LGU+
+        - KB Liiv M
+
+  - category: online_shopping
+    label: 선택 서비스 (택2) 생활업종 할인 5%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 30000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

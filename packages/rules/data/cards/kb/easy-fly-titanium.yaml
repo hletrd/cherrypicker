@@ -1,0 +1,112 @@
+card:
+  id: kb-easy-fly-titanium
+  issuer: kb
+  name: Easy Fly Titanium
+  nameKo: KB국민 Easy fly 티타늄카드
+  type: credit
+  annualFee:
+    domestic: 35000
+    international: 35000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=09245&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier2
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: 1499999
+
+  - id: tier3
+    label: 전월 150만원 이상
+    minSpending: 1500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: travel
+    label: 저비용항공사 항공권 할인 5%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 진에어
+        - 티웨이항공
+        - 이스타항공
+
+  - category: travel
+    label: 면세점/호텔/숙박 할인 5%
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 30000
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: 해외 이용 캐시백 3%
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 7000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 3.0
+        monthlyCap: 7000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 3.0
+        monthlyCap: 7000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

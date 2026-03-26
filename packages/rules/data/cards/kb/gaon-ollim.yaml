@@ -1,0 +1,69 @@
+card:
+  id: kb-gaon-ollim
+  issuer: kb
+  name: Gaon Ollim (Budget)
+  nameKo: KB국민 가온올림카드(실속형)
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=09157&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    label: 국내 가맹점 기본 포인트리 적립 0.7%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: offline_shopping
+    label: 주말/공휴일 추가 적립 0.5%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: dining
+    label: 음식/교통 추가 적립 0.5%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 음식점
+        - 교통
+
+  - category: online_shopping
+    label: 해외 이용 캐시백 1.7%
+    type: cashback
+    tiers:
+      - performanceTier: tier0
+        rate: 1.7
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

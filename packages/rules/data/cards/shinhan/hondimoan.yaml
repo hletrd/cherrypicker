@@ -1,0 +1,87 @@
+card:
+  id: shinhan-hondimoan
+  issuer: shinhan
+  name: Hondimoan
+  nameKo: 신한카드 혼디모앙
+  type: credit
+  annualFee:
+    domestic: 30000
+    international: 33000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1200745_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: uncategorized
+    label: 마이신한포인트 기본 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: travel
+    label: 제주도 내 가맹점 추가 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.6
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 제주도 내 가맹점
+
+  - category: sports
+    label: 실외골프장 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 실외골프장
+
+  - category: dining
+    label: 에이바우트 커피 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 에이바우트 커피
+
+  - category: travel
+    label: 제주신화월드 적립
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 5.0
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 제주신화월드
+
+globalConstraints:
+  monthlyTotalDiscountCap: 50000
+  minimumAnnualSpending: null

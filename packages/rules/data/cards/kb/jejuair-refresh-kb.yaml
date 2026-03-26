@@ -1,0 +1,81 @@
+card:
+  id: kb-jejuair-refresh
+  issuer: kb
+  name: Jeju Air Refresh Point
+  nameKo: 제주항공 Refresh Point KB국민카드
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: "https://card.kbcard.com/CRD/DVIEW/HCAMCXPRICAC0076?cooperationcode=04420&mainCC=a"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    label: 전 가맹점 포인트 적립 (1200원당 10P)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.83
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.83
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: travel
+    label: 제주항공 이용 추가 포인트 적립 (1200원당 10P 추가)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.83
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.83
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 제주항공
+
+  - category: travel
+    label: 제주항공 항공권/부가서비스 결제일 할인 (30만원 이상 시 2만원)
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 20000
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      minTransaction: 300000
+      specificMerchants:
+        - 제주항공
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

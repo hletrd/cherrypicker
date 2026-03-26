@@ -1,0 +1,65 @@
+card:
+  id: shinhan-aliexpress
+  issuer: shinhan
+  name: AliExpress
+  nameKo: 알리익스프레스 신한카드
+  type: credit
+  annualFee:
+    domestic: 16000
+    international: 19000
+  url: "https://www.shinhancard.com/pconts/html/card/apply/credit/1231466_2207.html"
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+  - gift_card_purchase
+
+rewards:
+  - category: online_shopping
+    label: 알리익스프레스 10% 결제일 할인
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - AliExpress
+        - 알리익스프레스
+
+  - category: online_shopping
+    label: 해외 가맹점 마이신한포인트 적립 1%
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
