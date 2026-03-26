@@ -1,0 +1,91 @@
+card:
+  id: samsung-lions
+  issuer: samsung
+  name: Samsung Lions Card
+  nameKo: 삼성라이온즈카드
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: https://www.samsungcard.com/home/card/cardinfo/PGHPPCCCardCardinfoDetails001?code=AAP1875
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: entertainment
+    label: 삼성라이온즈 홈경기 입장권/굿즈샵
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 삼성라이온즈
+
+  - category: dining
+    label: 홈구장 내 식음매장
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 20000
+        perTransactionCap: null
+
+  - category: public_transit
+    label: 대중교통/택시
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: 배달앱/온라인쇼핑몰
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: subscription
+    label: 디지털콘텐츠 (OTT 등)
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: transportation
+    label: 철도요금 (KTX/SRT 등)
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

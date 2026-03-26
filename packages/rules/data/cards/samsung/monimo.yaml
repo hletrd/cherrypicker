@@ -1,0 +1,70 @@
+card:
+  id: samsung-monimo
+  issuer: samsung
+  name: Monimo Card
+  nameKo: 삼성 모니모카드
+  type: credit
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://www.samsungcard.com/home/card/cardinfo/PGHPPCCCardCardinfoDetails001?code=AAP1742
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: telecom
+    label: 이동통신요금/아파트관리비 정기결제
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: public_transit
+    label: 대중교통/택시/배달앱
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: 온라인쇼핑몰/편의점/올리브영 (선택 1)
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: entertainment
+    label: 스타벅스/온라인패션/스트리밍 (선택 2)
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 30.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 25000
+  minimumAnnualSpending: null

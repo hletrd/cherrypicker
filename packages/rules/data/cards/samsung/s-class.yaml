@@ -1,0 +1,92 @@
+card:
+  id: samsung-s-class
+  issuer: samsung
+  name: S-Class
+  nameKo: 삼성카드 S클래스
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 20000
+  url: https://www.samsungcard.com/personal/card/cardfinder/UHPPCA0102M0.jsp?code=AAP1179
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: electronics
+    label: 삼성 디지털프라자/삼성닷컴
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 삼성 디지털프라자
+        - 삼성닷컴
+
+  - category: department_store
+    label: 호텔신라/제일모직
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 호텔신라
+
+  - category: entertainment
+    label: 에버랜드
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 에버랜드
+
+  - category: convenience_store
+    label: CU편의점
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - CU
+
+  - category: online_shopping
+    label: 온라인 간편결제
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

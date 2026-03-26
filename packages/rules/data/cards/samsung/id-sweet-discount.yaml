@@ -1,0 +1,61 @@
+card:
+  id: samsung-id-sweet-discount
+  issuer: samsung
+  name: iD Sweet Discount
+  nameKo: 삼성 iD 달달할인 카드
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 5000
+  url: https://www.samsungcard.com/home/card/cardinfo/PGHPPCCCardCardinfoDetails001?code=AAP1719
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: dining
+    label: 커피전문점/패스트푸드/배달앱 (최다이용 1개 자동선택 30%)
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 30.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: convenience_store
+    label: 편의점 (8% 할인)
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 8.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: online_shopping
+    label: 온라인쇼핑몰/배달앱
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 8.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 20000
+  minimumAnnualSpending: null

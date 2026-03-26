@@ -1,0 +1,81 @@
+card:
+  id: hyundai-three-body-a
+  issuer: hyundai
+  name: 3 Body-A
+  nameKo: 3 Body-A 현대카드
+  type: credit
+  annualFee:
+    domestic: 300000
+    international: 300000
+  url: https://www.hyundaicard.com/crd/crd01/crd0101/H100000306.hdc
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+
+rewards:
+  - category: airline
+    label: 대한항공 직판 항공권 (마일리지)
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.3
+        monthlyCap: null
+        perTransactionCap: null
+        annualCap: 30000
+    conditions:
+      specificMerchants:
+        - 대한항공
+
+  - category: mart
+    label: SSG.COM (SSG머니)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 7.0
+        monthlyCap: 30000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - SSG닷컴
+
+  - category: uncategorized
+    label: 블루멤버스/마일리지/SSG 배분 적립 (일반)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

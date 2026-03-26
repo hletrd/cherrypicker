@@ -1,0 +1,78 @@
+card:
+  id: hyundai-korean-air-edition2-first
+  issuer: hyundai
+  name: Korean Air the First Edition2
+  nameKo: 대한항공카드 the First Edition2
+  type: credit
+  annualFee:
+    domestic: 800000
+    international: 800000
+  url: https://www.hyundaicard.com/crd/crd01/crd0101/H100000310.hdc
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+
+rewards:
+  - category: airline
+    label: 대한항공 직판 항공권
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 대한항공
+
+  - category: overseas
+    label: 해외 가맹점
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.3
+        monthlyCap: 6000
+        perTransactionCap: null
+
+  - category: uncategorized
+    label: 국내 일반 가맹점
+    type: mileage
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.1
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
+  annualBonusMileage: 30000

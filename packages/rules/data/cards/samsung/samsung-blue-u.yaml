@@ -1,0 +1,82 @@
+card:
+  id: samsung-blue-u
+  issuer: samsung
+  name: Samsung Electronics Membership BLUE U
+  nameKo: 삼성전자 멤버십 BLUE U 삼성카드
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 12000
+  url: https://samsungcard.com/personal/card/cardfinder/UHPPCA0102M0.jsp?code=AAP1389
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: electronics
+    label: 삼성 디지털프라자
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 삼성 디지털프라자
+
+  - category: dining
+    label: 파리바게뜨/배스킨라빈스/던킨도너츠
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 파리바게뜨
+        - 배스킨라빈스
+        - 던킨도너츠
+
+  - category: uncategorized
+    label: 생활 카테고리
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: uncategorized
+    label: 일반 가맹점
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

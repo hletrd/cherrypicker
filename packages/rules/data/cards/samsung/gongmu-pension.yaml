@@ -1,0 +1,69 @@
+card:
+  id: samsung-gongmu-pension
+  issuer: samsung
+  name: Government Employee Pension Card
+  nameKo: 공무원연금 삼성카드
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 5000
+  url: https://www.samsungcard.com/home/card/cardinfo/PGHPPCCCardCardinfoDetails001?code=AAP0013
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: transportation
+    label: S-OIL 주유
+    type: points
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmountPerLiter: 40
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - S-OIL
+
+  - category: entertainment
+    label: 영화관
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: uncategorized
+    label: 일반 가맹점
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

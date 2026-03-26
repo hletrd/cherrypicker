@@ -1,0 +1,96 @@
+card:
+  id: samsung-t-light
+  issuer: samsung
+  name: T Light
+  nameKo: T라이트 삼성카드
+  type: credit
+  annualFee:
+    domestic: 25000
+    international: 25000
+  url: https://www.samsungcard.com/personal/card/cardfinder/UHPPCA0102M0.jsp?code=AAP1613
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: 799999
+  - id: tier2
+    label: 전월 80만원 이상
+    minSpending: 800000
+    maxSpending: 1199999
+  - id: tier3
+    label: 전월 120만원 이상
+    minSpending: 1200000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - gift_card_purchase
+  - short_term_loan
+  - long_term_loan
+  - annual_fee
+
+rewards:
+  - category: telecom
+    label: SKT 통신요금 (라이트할부 미이용 시)
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: null
+        fixedAmount: 3000
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: null
+        fixedAmount: 5000
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: null
+        fixedAmount: 8000
+        monthlyCap: 8000
+        perTransactionCap: null
+
+  - category: dining
+    label: 커피전문점 (스타벅스/투썸플레이스 등)
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: convenience_store
+    label: 편의점/배달앱
+    type: discount
+    tiers:
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 20000
+  minimumAnnualSpending: null

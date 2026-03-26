@@ -1,0 +1,74 @@
+card:
+  id: hyundai-mobility
+  issuer: hyundai
+  name: Hyundai Mobility
+  nameKo: 현대 Mobility카드
+  type: credit
+  annualFee:
+    domestic: 30000
+    international: 30000
+  url: https://www.hyundai.com/kr/ko/customer-service/bluemembers-guide/bluemembers-card.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - tuition
+  - gift_card
+
+rewards:
+  - category: transportation
+    label: 차량유지관리 (주유/가스/충전/정비/주차/세차/하이패스)
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: public_transit
+    label: 대중교통/모빌리티
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: uncategorized
+    label: 현대자동차 신차 구매 및 일반 가맹점
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
