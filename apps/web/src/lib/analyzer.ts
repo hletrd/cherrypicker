@@ -7,18 +7,27 @@ import type { BankId } from './parser/types.js';
 import { getAllCardRules, loadCategories } from './cards.js';
 import type { AnalysisResult, AnalyzeOptions } from './store.svelte.js';
 
-export async function analyzeFile(
+export interface CategorizedTx {
+  id: string;
+  date: string;
+  merchant: string;
+  amount: number;
+  category: string;
+  subcategory: string | undefined;
+  confidence: number;
+  rawCategory?: string;
+  memo?: string;
+}
+
+export async function parseAndCategorize(
   file: File,
   options?: AnalyzeOptions,
-): Promise<AnalysisResult> {
-  // 1. Parse the file
+): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string }[] }> {
   const parseResult = await parseFile(file, options?.bank as BankId | undefined);
-
   if (parseResult.transactions.length === 0) {
     throw new Error('거래 내역을 찾을 수 없어요');
   }
 
-  // 2. Load categories and build matcher
   const categoryNodes = await loadCategories();
   // MerchantMatcher expects CategoryNode[] from @cherrypicker/rules which has
   // { id, labelKo, labelEn, keywords, subcategories? }. The static JSON uses
@@ -26,8 +35,7 @@ export async function analyzeFile(
   // structurally compatible, so we cast through the rules type.
   const matcher = new MerchantMatcher(categoryNodes as unknown as RulesCategoryNode[]);
 
-  // 3. Categorize transactions
-  const categorized: CategorizedTransaction[] = parseResult.transactions.map(
+  const transactions: CategorizedTx[] = parseResult.transactions.map(
     (tx: RawTransaction, idx: number) => {
       const match = matcher.match(tx.merchant, tx.category);
       return {
@@ -35,42 +43,78 @@ export async function analyzeFile(
         date: tx.date,
         merchant: tx.merchant,
         amount: tx.amount,
-        currency: 'KRW',
-        installments: tx.installments,
-        isOnline: tx.isOnline,
-        rawCategory: tx.category,
-        memo: tx.memo,
         category: match.category,
         subcategory: match.subcategory,
         confidence: match.confidence,
+        rawCategory: tx.category,
+        memo: tx.memo,
       };
     },
   );
 
-  // 4. Load card rules (optionally filtered)
+  return {
+    transactions,
+    bank: parseResult.bank ?? null,
+    format: parseResult.format ?? 'csv',
+    statementPeriod: parseResult.statementPeriod,
+    parseErrors: parseResult.errors ?? [],
+  };
+}
+
+export async function optimizeFromTransactions(
+  transactions: CategorizedTx[],
+  options?: AnalyzeOptions,
+): Promise<AnalysisResult['optimization']> {
+  // Convert CategorizedTx to CategorizedTransaction for the optimizer
+  const categorized: CategorizedTransaction[] = transactions.map(tx => ({
+    id: tx.id,
+    date: tx.date,
+    merchant: tx.merchant,
+    amount: tx.amount,
+    currency: 'KRW',
+    installments: 0,
+    isOnline: false,
+    rawCategory: tx.rawCategory,
+    memo: tx.memo,
+    category: tx.category,
+    subcategory: tx.subcategory,
+    confidence: tx.confidence,
+  }));
+
   let cardRules = await getAllCardRules();
   if (options?.cardIds && options.cardIds.length > 0) {
     cardRules = cardRules.filter(r => options.cardIds!.includes(r.card.id));
   }
 
-  // 5. Build constraints
   const previousMonthSpending = options?.previousMonthSpending ?? 500000;
   const cardPreviousSpending = new Map<string, number>(
     cardRules.map(r => [r.card.id, previousMonthSpending]),
   );
   const constraints = buildConstraints(categorized, cardPreviousSpending);
 
-  // 6. Optimize — cardRules from static JSON match the CardRuleSet shape;
+  // cardRules from static JSON match the CardRuleSet shape;
   // the local type differs only in minor string-literal widening on `source`.
   const optimizationResult = greedyOptimize(constraints, cardRules as unknown as CoreCardRuleSet[]);
 
+  return optimizationResult;
+}
+
+// Keep the original combined function for backward compatibility
+export async function analyzeFile(
+  file: File,
+  options?: AnalyzeOptions,
+): Promise<AnalysisResult> {
+  const parsed = await parseAndCategorize(file, options);
+  const optimization = await optimizeFromTransactions(parsed.transactions, options);
+
   return {
     success: true,
-    bank: parseResult.bank ?? null,
-    format: parseResult.format ?? 'csv',
-    statementPeriod: parseResult.statementPeriod,
-    transactionCount: categorized.length,
-    parseErrors: parseResult.errors ?? [],
-    optimization: optimizationResult,
+    bank: parsed.bank,
+    format: parsed.format,
+    statementPeriod: parsed.statementPeriod,
+    transactionCount: parsed.transactions.length,
+    parseErrors: parsed.parseErrors,
+    transactions: parsed.transactions,
+    optimization,
   };
 }

@@ -1,7 +1,8 @@
 // Shared Svelte 5 state store for analysis results across dashboard components
 // Must be .svelte.ts so that $state runes are compiled properly
 
-import { analyzeFile } from './analyzer.js';
+import { analyzeFile, optimizeFromTransactions } from './analyzer.js';
+import type { CategorizedTx } from './analyzer.js';
 
 // --- Types matching the API response shape ---
 
@@ -68,6 +69,7 @@ export interface AnalysisResult {
   statementPeriod?: { start: string; end: string };
   transactionCount: number;
   parseErrors: { line?: number; message: string; raw?: string }[];
+  transactions?: CategorizedTx[];
   optimization: OptimizationResult;
 }
 
@@ -151,6 +153,9 @@ function createAnalysisStore() {
     get statementPeriod(): { start: string; end: string } | undefined {
       return result?.statementPeriod;
     },
+    get transactions(): CategorizedTx[] {
+      return result?.transactions ?? [];
+    },
 
     setResult(r: AnalysisResult): void {
       result = r;
@@ -169,6 +174,22 @@ function createAnalysisStore() {
       } catch (e) {
         error = e instanceof Error ? e.message : '분석 중 문제가 생겼어요';
         result = null;
+      } finally {
+        loading = false;
+      }
+    },
+
+    async reoptimize(editedTransactions: CategorizedTx[], options?: AnalyzeOptions): Promise<void> {
+      loading = true;
+      error = null;
+      try {
+        const optimization = await optimizeFromTransactions(editedTransactions, options);
+        if (result) {
+          result = { ...result, transactions: editedTransactions, optimization };
+          persistToStorage(result);
+        }
+      } catch (e) {
+        error = e instanceof Error ? e.message : '재계산 중 문제가 생겼어요';
       } finally {
         loading = false;
       }

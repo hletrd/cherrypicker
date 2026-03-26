@@ -4,6 +4,7 @@ import SpendingSummary from '../components/dashboard/SpendingSummary.svelte';
 import CategoryBreakdown from '../components/dashboard/CategoryBreakdown.svelte';
 import OptimalCardMap from '../components/dashboard/OptimalCardMap.svelte';
 import SavingsComparison from '../components/dashboard/SavingsComparison.svelte';
+import TransactionReview from '../components/dashboard/TransactionReview.svelte';
 ---
 
 <Layout title="대시보드">
@@ -67,6 +68,11 @@ import SavingsComparison from '../components/dashboard/SavingsComparison.svelte'
         절약 비교
       </h2>
       <SavingsComparison client:load />
+    </div>
+
+    <!-- Transaction review -->
+    <div class="col-span-full">
+      <TransactionReview client:load />
     </div>
 
     <!-- Optimal card map: full width -->
