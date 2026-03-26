@@ -1,0 +1,57 @@
+card:
+  id: woori-damoa-direct
+  issuer: woori
+  name: Damoa DIRECT+ Card
+  nameKo: 우리카드 다모아 DIRECT+
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 5000
+  url: https://www.wooricard.com/
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier2
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "전 가맹점 직접 할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

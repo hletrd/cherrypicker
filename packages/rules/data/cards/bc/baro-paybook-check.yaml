@@ -1,0 +1,53 @@
+card:
+  id: bc-baro-paybook-check
+  issuer: bc
+  name: Baro Paybook Money Check Card
+  nameKo: BC 바로 Paybook Money 체크
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://m.bccard.com/app/mobileweb/CardDetail.do?exec=cardDetail&cardGdsNo=101681
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "Paybook 앱 QR·온라인 결제 시 1% Paybook 머니 적립"
+
+  - category: education
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "학습·간식·휴식 카테고리 0.5% 적립"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

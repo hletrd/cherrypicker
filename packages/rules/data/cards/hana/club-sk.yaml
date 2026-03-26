@@ -1,0 +1,117 @@
+card:
+  id: hana-club-sk
+  issuer: hana
+  name: CLUB SK Card
+  nameKo: 하나카드 CLUB SK
+  type: credit
+  annualFee:
+    domestic: 6000
+    international: 7000
+  url: https://www.hanacard.co.kr/PI41000000D.web?CD_PD_SEQ=1544
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: 699999
+
+  - id: tier2
+    label: 전월 70만원 이상
+    minSpending: 700000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: telecom
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 100.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - SK텔레콤
+
+  - category: transportation
+    subcategory: fuel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0
+        monthlyCap: 22000
+        perTransactionCap: null
+    conditions:
+      note: "SK주유소 휘발유·경유 100원/L(tier1), 150원/L(tier2)"
+      specificMerchants:
+        - SK주유소
+
+  - category: dining
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: grocery
+    subcategory: supermarket
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 이마트
+        - 홈플러스
+        - 롯데마트
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

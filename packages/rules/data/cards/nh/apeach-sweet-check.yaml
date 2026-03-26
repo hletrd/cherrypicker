@@ -1,0 +1,101 @@
+card:
+  id: nh-apeach-sweet-check
+  issuer: nh
+  name: Apeach Sweet Check Card
+  nameKo: NH농협카드 어피치 스윗 체크
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 199999
+
+  - id: tier1
+    label: 전월 20만원 이상
+    minSpending: 200000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: online_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      note: "올원페이·카카오페이·삼성페이 등 간편결제 온라인 3% 할인"
+
+  - category: beauty
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 4.0
+        monthlyCap: 2000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 올리브영
+        - 랄라블라
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 4.0
+        monthlyCap: 2000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 스타벅스
+        - 투썸플레이스
+        - 커피빈
+
+  - category: entertainment
+    subcategory: streaming
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 넷플릭스
+        - 유튜브프리미엄
+        - 애플앱스토어
+        - 구글플레이스토어
+
+globalConstraints:
+  monthlyTotalDiscountCap: 8000
+  minimumAnnualSpending: null

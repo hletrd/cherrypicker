@@ -1,0 +1,45 @@
+card:
+  id: nh-u-card
+  issuer: nh
+  name: U Card
+  nameKo: NH농협카드 Ü Card
+  type: credit
+  annualFee:
+    domestic: 200000
+    international: 200000
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "건별 10만원 미만 0.7% NH포인트 무제한 적립"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "건별 10만원 이상 1.5% NH포인트 무제한 적립, 매년 최대 20만원 캐시백, 연 15만원 상당 바우처, 전세계 공항라운지 무료"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

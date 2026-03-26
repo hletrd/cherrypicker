@@ -1,0 +1,96 @@
+card:
+  id: hana-t-plus
+  issuer: hana
+  name: T Plus Card
+  nameKo: 하나카드 내맘대로 T 플러스
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: https://www.hanacard.co.kr/OPI41000000D.web?schID=pcd&mID=P41005219P&CD_PD_SEQ=5219
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 599999
+
+  - id: tier2
+    label: 전월 60만원 이상
+    minSpending: 600000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: telecom
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 100.0
+        monthlyCap: 25000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - SK텔레콤
+      note: "SKT 단말기 구매 서비스 할인 포함"
+
+  - category: entertainment
+    subcategory: movie
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 100.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 메가박스
+      note: "메가박스 영화예매 1+1 (월 1회)"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 25000
+  minimumAnnualSpending: null

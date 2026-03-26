@@ -1,0 +1,135 @@
+card:
+  id: ibk-i-gihoo-donghaeng-credit
+  issuer: ibk
+  name: I-Climate Together Credit Card
+  nameKo: IBK I-기후동행 신용
+  type: credit
+  annualFee:
+    domestic: 14000
+    international: 14000
+  url: https://www.banksalad.com/product/cards/CARD004438
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 699999
+
+  - id: tier2
+    label: 전월 70만원 이상
+    minSpending: 700000
+    maxSpending: 999999
+
+  - id: tier3
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 1.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+  - category: dining
+    subcategory: delivery
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 1.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+  - category: grocery
+    subcategory: supermarket
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 1.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+  - category: entertainment
+    subcategory: streaming
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 5.0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 7.0
+        monthlyCap: 40000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 넷플릭스
+        - 유튜브프리미엄
+        - 디즈니플러스
+        - 티빙
+        - 쿠팡와우
+        - 네이버플러스
+
+globalConstraints:
+  monthlyTotalDiscountCap: 40000
+  minimumAnnualSpending: null

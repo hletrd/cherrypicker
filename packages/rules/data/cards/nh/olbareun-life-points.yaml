@@ -1,0 +1,49 @@
+card:
+  id: nh-olbareun-life-points
+  issuer: nh
+  name: Olbareun LIFE Points Card
+  nameKo: NH농협카드 올바른 LIFE 적립형
+  type: credit
+  annualFee:
+    domestic: 8000
+    international: 8000
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내외 가맹점 이용금액의 0.5% NH포인트 무제한 적립"
+
+  - category: grocery
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "생활업종 추가 0.5% 적립"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

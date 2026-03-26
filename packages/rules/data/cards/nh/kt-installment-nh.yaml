@@ -1,0 +1,146 @@
+card:
+  id: nh-kt-installment
+  issuer: nh
+  name: KT Installment Plus Card NH
+  nameKo: NH농협카드 KT할부 Plus
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 23000
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 399999
+
+  - id: tier1
+    label: 전월 40만원 이상
+    minSpending: 400000
+    maxSpending: 799999
+
+  - id: tier2
+    label: 전월 80만원 이상
+    minSpending: 800000
+    maxSpending: 1199999
+
+  - id: tier3
+    label: 전월 120만원 이상
+    minSpending: 1200000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: telecom
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 100.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 100.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - KT
+      note: "KT 라이트할부 또는 통신요금 자동납부 할인 (중복 적용 불가)"
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      minTransaction: 10000
+      specificMerchants:
+        - 스타벅스
+        - 이디야
+
+  - category: dining
+    subcategory: bakery
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 10.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      minTransaction: 10000
+      specificMerchants:
+        - 파리바게뜨
+        - 파리크라상
+        - 던킨도너츠
+        - 베스킨라빈스
+
+  - category: entertainment
+    subcategory: movie
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 1000
+        perTransactionCap: 1000
+      - performanceTier: tier2
+        rate: 100.0
+        monthlyCap: 1000
+        perTransactionCap: 1000
+      - performanceTier: tier3
+        rate: 100.0
+        monthlyCap: 1000
+        perTransactionCap: 1000
+    conditions:
+      specificMerchants:
+        - CGV
+
+globalConstraints:
+  monthlyTotalDiscountCap: 15000
+  minimumAnnualSpending: null

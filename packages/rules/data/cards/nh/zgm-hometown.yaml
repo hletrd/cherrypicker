@@ -1,0 +1,48 @@
+card:
+  id: nh-zgm-hometown
+  issuer: nh
+  name: zgm Hometown Card
+  nameKo: NH농협카드 zgm.고향으로
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "전 가맹점 0.7% NH포인트 기본 적립 (적립한도 없음)"
+
+  - category: grocery
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.4
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 농협판매장
+        - 농협운영주유소
+      note: "주말 기부지역 가맹점 및 농협 판매장 추가 0.7% 적립 (고향사랑기부 고객)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

@@ -1,0 +1,67 @@
+card:
+  id: nh-olbareun-travel-japan
+  issuer: nh
+  name: Olbareun TRAVEL Japan Card
+  nameKo: NH농협카드 올바른 TRAVEL 일본
+  type: credit
+  annualFee:
+    domestic: 20000
+    international: 25000
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: travel
+    subcategory: overseas
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 10.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "일본 오프라인 가맹점 이용 시 10% NH포인트 적립"
+
+  - category: travel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 9.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 익스피디아
+      note: "익스피디아 호텔 9% 할인"
+
+  - category: travel
+    subcategory: overseas
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "해외 가맹점 1.5% 적립"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

@@ -1,0 +1,35 @@
+card:
+  id: woori-010pay
+  issuer: woori
+  name: 010PAY Card
+  nameKo: 우리카드 010PAY
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: https://010pay.kr/creditcard
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.4
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "010PAY 결제 시 기본 0.4% 적립, 응DAY(매월 10일 단위)에는 3.3% 추가 적립"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

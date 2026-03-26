@@ -1,0 +1,108 @@
+card:
+  id: nh-heroes-check
+  issuer: nh
+  name: Heroes Check Card NH
+  nameKo: NH농협카드 히어로즈 체크
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 199999
+
+  - id: tier1
+    label: 전월 20만원 이상
+    minSpending: 200000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: education
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 교보문고
+        - 영풍문고
+        - 예스24
+        - 알라딘
+        - 인터파크도서
+      note: "외국어학원·서점·어학시험(토익·TEPS·JPT·KPE)·스포츠센터 10% 할인"
+
+  - category: entertainment
+    subcategory: streaming
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 넷플릭스
+        - 유튜브프리미엄
+        - 웨이브
+        - 티빙
+      note: "월 2회, 각 5000원 한도"
+
+  - category: public_transit
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 코레일
+        - 고속버스
+      note: "철도·고속버스 20% 할인 (월 2회, 각 5000원)"
+
+  - category: telecom
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - SK텔레콤
+        - KT
+        - LG유플러스
+
+globalConstraints:
+  monthlyTotalDiscountCap: 15000
+  minimumAnnualSpending: null

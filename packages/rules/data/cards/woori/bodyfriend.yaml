@@ -1,0 +1,90 @@
+card:
+  id: woori-bodyfriend
+  issuer: woori
+  name: Bodyfriend Card
+  nameKo: 우리카드 바디프랜드
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 12000
+  url: https://www.wooricard.com/
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: health
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 20000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 바디프랜드
+      note: "바디프랜드 렌탈요금 자동이체 시 월 최대 2만원 할인"
+
+  - category: entertainment
+    subcategory: movie
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 6000
+        perTransactionCap: 6000
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 5000
+        perTransactionCap: null
+
+  - category: entertainment
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 50.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "놀이공원/워터파크 50% 현장할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: 20000
+  minimumAnnualSpending: null

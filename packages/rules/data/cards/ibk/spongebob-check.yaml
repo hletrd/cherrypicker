@@ -1,0 +1,48 @@
+card:
+  id: ibk-spongebob-check
+  issuer: ibk
+  name: SpongeBob Check Card
+  nameKo: IBK 스폰지밥 체크
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://m.bccard.com/app/mobileweb/CardDetail.do?exec=cardDetail&cardGdsNo=103828
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.8
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "전월 30만원 이상 시 타임 캐시백 0.6% 추가 (합산 0.8%)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

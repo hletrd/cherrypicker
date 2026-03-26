@@ -1,0 +1,81 @@
+card:
+  id: nh-goodgame-check
+  issuer: nh
+  name: GOODGAME Check Card
+  nameKo: NH농협카드 GOODGAME 체크
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 199999
+
+  - id: tier1
+    label: 전월 20만원 이상
+    minSpending: 200000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: entertainment
+    subcategory: gaming
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 2000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 구글플레이스토어
+        - 애플앱스토어
+        - 원스토어
+        - 스팀
+        - PC방
+
+  - category: dining
+    subcategory: cafe
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 30000
+        perTransactionCap: null
+    conditions:
+      note: "커피·편의점·영화·온라인쇼핑·배달앱 평일 0.5%, 주말 1% 적립"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

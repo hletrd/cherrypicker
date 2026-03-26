@@ -1,0 +1,82 @@
+card:
+  id: ibk-ibk-point-3.8
+  issuer: ibk
+  name: IBK Point 3.8 Card
+  nameKo: IBK IBK포인트 3.8
+  type: credit
+  annualFee:
+    domestic: 5000
+    international: 5000
+  url: https://cardapplication.ibk.co.kr/card/index.do?card_prdc_id=103937
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.5
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내외 전 가맹점 1.5% IBK포인트 무한 적립"
+
+  - category: travel
+    subcategory: overseas
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: 15000
+        perTransactionCap: null
+    conditions:
+      note: "해외 가맹점 추가 3.5% 적립 (합산 5%)"
+
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 쿠팡
+        - G마켓
+        - 옥션
+        - 11번가
+      note: "온라인 쇼핑 추가 0.5% 적립 (합산 2%)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

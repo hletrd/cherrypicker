@@ -1,0 +1,92 @@
+card:
+  id: hana-shinseage-hana
+  issuer: hana
+  name: Shinsegae Hana Card
+  nameKo: 하나카드 모두의 신세계
+  type: credit
+  annualFee:
+    domestic: 12000
+    international: 12000
+  url: https://m.hanacard.co.kr/MPACMM101M.web?_frame=no&CD_PD_SEQ=13839
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: department_store
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 신세계백화점
+        - SSG닷컴
+        - 이마트
+
+  - category: online_shopping
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 5.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "간편결제 5% 할인"
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 20.0
+        monthlyCap: 10000
+        perTransactionCap: null
+
+  - category: entertainment
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 30.0
+        monthlyCap: 10000
+        perTransactionCap: null
+    conditions:
+      note: "놀이공원/워터파크 30% 할인"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

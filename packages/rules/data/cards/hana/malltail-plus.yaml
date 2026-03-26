@@ -1,0 +1,56 @@
+card:
+  id: hana-malltail-plus
+  issuer: hana
+  name: Malltail Plus Card
+  nameKo: 하나카드 몰테일 플러스
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: https://www.hanacard.co.kr/OPI42000000D.web?_frame=no&CD_PD_SEQ=13817
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: travel
+    subcategory: overseas
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 3.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 몰테일
+      note: "몰테일 배송비 결제 시 몰테일캐시 3% 적립"
+
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "국내 온라인 쇼핑 1% 하나머니 적립"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

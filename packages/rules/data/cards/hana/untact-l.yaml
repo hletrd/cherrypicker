@@ -1,0 +1,86 @@
+card:
+  id: hana-untact-l
+  issuer: hana
+  name: Untact L Card
+  nameKo: 하나카드 언택트 L
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: https://www.hanacard.co.kr/OPI42000000D.web?_frame=no&CD_PD_SEQ=13158
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 699999
+
+  - id: tier2
+    label: 전월 70만원 이상
+    minSpending: 700000
+    maxSpending: 999999
+
+  - id: tier3
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: online_shopping
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: 15000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 1.0
+        monthlyCap: 30000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 1.0
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      note: "엘페이 포함 간편결제 이용시 엘포인트 적립"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 0.5
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 50000
+  minimumAnnualSpending: null

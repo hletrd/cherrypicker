@@ -1,0 +1,126 @@
+card:
+  id: nh-solsol
+  issuer: nh
+  name: SolSol Card
+  nameKo: NH농협카드 SolSol 기본형
+  type: credit
+  annualFee:
+    domestic: 10000
+    international: 10000
+  url: https://card.nonghyup.com/SmartCenter_CardMain.html
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: 499999
+
+  - id: tier2
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: 999999
+
+  - id: tier3
+    label: 전월 100만원 이상
+    minSpending: 1000000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: convenience_store
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 12.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 12.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+  - category: public_transit
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 12.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+  - category: entertainment
+    subcategory: streaming
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 10000
+        perTransactionCap: null
+      - performanceTier: tier2
+        rate: 7.0
+        monthlyCap: 20000
+        perTransactionCap: null
+      - performanceTier: tier3
+        rate: 12.0
+        monthlyCap: 40000
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: 40000
+  minimumAnnualSpending: null

@@ -1,0 +1,73 @@
+card:
+  id: bc-baro-barbara-check
+  issuer: bc
+  name: Baro BabBara Check Card
+  nameKo: BC 바로 BabBara 체크
+  type: check
+  annualFee:
+    domestic: 0
+    international: 0
+  url: https://m.bccard.com/app/mobileweb/CardDetail.do?exec=cardDetail&cardGdsNo=102095
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 19999
+
+  - id: tier1
+    label: 전월 2만원 이상
+    minSpending: 20000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: dining
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 8.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "하루 종일 커피·점심·저녁 간식 외식 8% Paybook 머니 적립"
+
+  - category: dining
+    subcategory: cafe
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 8.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

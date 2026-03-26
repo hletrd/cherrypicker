@@ -1,0 +1,47 @@
+card:
+  id: hana-my-trip-asiana
+  issuer: hana
+  name: My Trip Asiana Card
+  nameKo: 하나카드 My Trip Asiana
+  type: credit
+  annualFee:
+    domestic: 30000
+    international: 35000
+  url: https://www.hanacard.co.kr/OPI23000000D.web
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: travel
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 아시아나항공
+      note: "아시아나항공 이용 시 추가 마일리지 적립"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.8
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "전 가맹점 이용 시 하나마일 적립 (아시아나항공 마일리지 전환 가능)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

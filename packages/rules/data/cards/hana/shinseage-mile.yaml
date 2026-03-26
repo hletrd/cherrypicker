@@ -1,0 +1,48 @@
+card:
+  id: hana-shinseage-mile
+  issuer: hana
+  name: Shinsegae the Mile Card
+  nameKo: 하나카드 신세계 the Mile
+  type: credit
+  annualFee:
+    domestic: 35000
+    international: 35000
+  url: https://www.hanacard.co.kr/OPI41000000D.web?schID=pcd&CD_PD_SEQ=8317
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: department_store
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.2
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 신세계백화점
+        - 신세계면세점
+      note: "5000원당 10마일리지 적립 (아시아나항공 마일리지)"
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.14
+        monthlyCap: null
+        perTransactionCap: null
+    conditions:
+      note: "전 가맹점 5000원당 7마일리지 무제한 적립 (아시아나항공 마일리지)"
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

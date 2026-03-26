@@ -1,0 +1,81 @@
+card:
+  id: hana-1q-daily
+  issuer: hana
+  name: 1Q Daily Card
+  nameKo: 하나카드 1Q Daily 기본
+  type: credit
+  annualFee:
+    domestic: 8000
+    international: 10000
+  url: https://www.hanacard.co.kr/OPI41000000D.web?CD_PD_SEQ=4684
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 299999
+
+  - id: tier1
+    label: 전월 30만원 이상
+    minSpending: 300000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 0.3
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+  - category: transportation
+    subcategory: fuel
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 3000
+        perTransactionCap: null
+    conditions:
+      minTransaction: 50000
+      specificMerchants:
+        - SK주유소
+
+  - category: dining
+    subcategory: cafe
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 100.0
+        monthlyCap: 4000
+        perTransactionCap: 4000
+    conditions:
+      minTransaction: 4000
+      specificMerchants:
+        - 스타벅스
+        - 커피빈
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

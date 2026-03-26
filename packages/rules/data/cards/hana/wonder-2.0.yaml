@@ -1,0 +1,33 @@
+card:
+  id: hana-wonder-2.0
+  issuer: hana
+  name: Wonder Card 2.0
+  nameKo: 하나카드 원더카드 2.0 베이스
+  type: credit
+  annualFee:
+    domestic: 15000
+    international: 15000
+  url: https://www.hanacard.co.kr/OPI41000000D.web?CD_PD_SEQ=15859
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
+
+rewards:
+  - category: uncategorized
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0.7
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null

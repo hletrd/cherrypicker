@@ -1,0 +1,99 @@
+card:
+  id: woori-opus-silver
+  issuer: woori
+  name: The OPUS Silver Card
+  nameKo: 우리카드 The OPUS Silver
+  type: credit
+  annualFee:
+    domestic: 150000
+    international: 150000
+  url: https://m.wooricard.com/dcmw/yh1/crd/crd01/M1CRD101S02.do?recomNo=103500
+  lastUpdated: "2026-03-26"
+  source: web
+
+performanceTiers:
+  - id: tier0
+    label: 무실적
+    minSpending: 0
+    maxSpending: 499999
+
+  - id: tier1
+    label: 전월 50만원 이상
+    minSpending: 500000
+    maxSpending: null
+
+performanceExclusions:
+  - tax_payment
+  - utility_bills
+  - apartment_mgmt
+  - gift_card
+
+rewards:
+  - category: travel
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 3.0
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 대한항공
+        - 아시아나항공
+      note: "국내항공사 및 5성급 호텔·면세점·골프장 3% 적립"
+
+  - category: department_store
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 2.0
+        monthlyCap: 50000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 롯데백화점
+        - 현대백화점
+        - 신세계백화점
+        - 쿠팡
+
+  - category: entertainment
+    subcategory: streaming
+    type: discount
+    tiers:
+      - performanceTier: tier0
+        rate: 0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 10.0
+        monthlyCap: 5000
+        perTransactionCap: null
+    conditions:
+      specificMerchants:
+        - 유튜브프리미엄
+        - 스타벅스
+        - 올리브영
+
+  - category: uncategorized
+    type: points
+    tiers:
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+      - performanceTier: tier1
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+
+globalConstraints:
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
