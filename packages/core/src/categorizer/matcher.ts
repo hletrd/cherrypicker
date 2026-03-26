@@ -1,6 +1,16 @@
 import type { CategoryNode } from '@cherrypicker/rules';
 import { CategoryTaxonomy } from './taxonomy.js';
 import { MERCHANT_KEYWORDS } from './keywords.js';
+import { LOCATION_KEYWORDS } from './keywords-locations.js';
+import { ENGLISH_KEYWORDS } from './keywords-english.js';
+import { NICHE_KEYWORDS } from './keywords-niche.js';
+
+const ALL_KEYWORDS: Record<string, string> = {
+  ...MERCHANT_KEYWORDS,
+  ...LOCATION_KEYWORDS,
+  ...ENGLISH_KEYWORDS,
+  ...NICHE_KEYWORDS,
+};
 
 interface MatchResult {
   category: string;
@@ -19,7 +29,7 @@ export class MerchantMatcher {
     const lower = merchantName.toLowerCase().trim();
 
     // 1. Exact match against static MERCHANT_KEYWORDS (confidence 1.0)
-    const staticExact = MERCHANT_KEYWORDS[lower];
+    const staticExact = ALL_KEYWORDS[lower];
     if (staticExact !== undefined) {
       const [category, subcategory] = staticExact.includes('.')
         ? staticExact.split('.') as [string, string]
@@ -29,7 +39,7 @@ export class MerchantMatcher {
 
     // 2. Substring match against MERCHANT_KEYWORDS keys (confidence 0.8)
     let bestStaticKw: { category: string; subcategory?: string; kwLen: number } | undefined;
-    for (const [kw, categoryStr] of Object.entries(MERCHANT_KEYWORDS)) {
+    for (const [kw, categoryStr] of Object.entries(ALL_KEYWORDS)) {
       if (lower.includes(kw) || kw.includes(lower)) {
         const [category, subcategory] = categoryStr.includes('.')
           ? categoryStr.split('.') as [string, string]
