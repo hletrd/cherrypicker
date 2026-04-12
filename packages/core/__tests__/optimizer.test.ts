@@ -91,7 +91,7 @@ const broadDiningFixture: CardRuleSet = {
     {
       category: 'dining',
       type: 'discount',
-      tiers: [{ performanceTier: 'tier0', rate: 2, monthlyCap: null, perTransactionCap: null }],
+      tiers: [{ performanceTier: 'tier0', rate: 3, monthlyCap: null, perTransactionCap: null }],
     },
   ],
   globalConstraints: {
@@ -280,9 +280,9 @@ describe('buildConstraints', () => {
 
     expect(subcategoryAssignment?.reward).toBe(1000);
     expect(subcategoryAssignment?.spending).toBe(20000);
-    expect(broadAssignment?.reward).toBe(400);
+    expect(broadAssignment?.reward).toBe(600);
     expect(broadAssignment?.spending).toBe(20000);
-    expect(result.totalReward).toBe(1400);
+    expect(result.totalReward).toBe(1600);
   });
 
   test('card totals stay aligned with calculator outputs for assigned transactions', () => {

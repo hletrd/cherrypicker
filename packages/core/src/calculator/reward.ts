@@ -33,18 +33,44 @@ function buildRuleKey(rule: RewardRule): string {
   return buildCategoryKey(rule.category, rule.subcategory);
 }
 
-function findRule(rules: RewardRule[], tx: CategorizedTransaction): RewardRule | undefined {
-  if (tx.subcategory) {
-    const exact = rules.find(
-      (rule) => rule.category === tx.category && rule.subcategory === tx.subcategory,
-    );
-    if (exact) return exact;
+function ruleConditionsMatch(rule: RewardRule, tx: CategorizedTransaction): boolean {
+  if (rule.conditions?.minTransaction !== undefined && tx.amount < rule.conditions.minTransaction) {
+    return false;
   }
+  if (rule.conditions?.excludeOnline && tx.isOnline) {
+    return false;
+  }
+  if (
+    rule.conditions?.specificMerchants &&
+    rule.conditions.specificMerchants.length > 0 &&
+    !rule.conditions.specificMerchants.some((merchant) => tx.merchant.includes(merchant))
+  ) {
+    return false;
+  }
+  return true;
+}
 
-  return (
-    rules.find((rule) => rule.category === tx.category && rule.subcategory === undefined) ??
-    rules.find((rule) => rule.category === '*')
-  );
+function ruleSpecificity(rule: RewardRule): number {
+  let score = 0;
+  if (rule.category !== '*') score += 100;
+  if (rule.subcategory) score += 50;
+  if (rule.conditions?.specificMerchants?.length) score += 25;
+  if (rule.conditions?.excludeOnline) score += 10;
+  if (rule.conditions?.minTransaction !== undefined) score += 5;
+  return score;
+}
+
+function findRule(rules: RewardRule[], tx: CategorizedTransaction): RewardRule | undefined {
+  const candidates = rules.filter((rule) => {
+    if (rule.category !== '*' && rule.category !== tx.category) return false;
+    if (rule.subcategory && rule.subcategory !== tx.subcategory) return false;
+    if (!tx.subcategory && rule.subcategory) return false;
+    return ruleConditionsMatch(rule, tx);
+  });
+
+  if (candidates.length === 0) return undefined;
+
+  return candidates.sort((a, b) => ruleSpecificity(b) - ruleSpecificity(a))[0];
 }
 
 type RewardCalcFn = (
@@ -173,44 +199,26 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       continue;
     }
 
-    // Check conditions
-    if (rule.conditions?.minTransaction !== undefined && tx.amount < rule.conditions.minTransaction) {
-      bucket.rewardType = rule.type;
-      categoryRewards.set(categoryKey, bucket);
-      continue;
-    }
-    if (rule.conditions?.excludeOnline && tx.isOnline) {
-      bucket.rewardType = rule.type;
-      categoryRewards.set(categoryKey, bucket);
-      continue;
-    }
-    if (
-      rule.conditions?.specificMerchants &&
-      rule.conditions.specificMerchants.length > 0 &&
-      !rule.conditions.specificMerchants.some((merchant) => tx.merchant.includes(merchant))
-    ) {
-      bucket.rewardType = rule.type;
-      categoryRewards.set(categoryKey, bucket);
-      continue;
-    }
-
     const normalizedRate = normalizeRate(rule.type, tierRate.rate);
     const perTxCap = tierRate.perTransactionCap;
     const monthlyCap = tierRate.monthlyCap;
     const currentRuleMonthUsed = ruleMonthUsed.get(rewardKey) ?? 0;
 
+    let rawReward = 0;
     let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
     const hasFixedReward = (tierRate.fixedAmount ?? 0) > 0;
     if (normalizedRate !== null && normalizedRate > 0) {
       const calcFn = getCalcFn(rule.type);
       const effectiveAmount = perTxCap !== null ? Math.min(tx.amount, perTxCap) : tx.amount;
-      ruleResult = calcFn(effectiveAmount, normalizedRate, monthlyCap, currentRuleMonthUsed);
+      rawReward = calcFn(effectiveAmount, normalizedRate, null, 0).reward;
+      ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
     } else if (hasFixedReward) {
-      const rawFixedReward = calculateFixedReward(tx, tierRate, rewardKey, dayRewardTracker);
-      const effectiveFixedReward =
-        perTxCap !== null ? Math.min(rawFixedReward, perTxCap) : rawFixedReward;
-      ruleResult = applyMonthlyCap(effectiveFixedReward, monthlyCap, currentRuleMonthUsed);
+      rawReward = calculateFixedReward(tx, tierRate, rewardKey, dayRewardTracker);
+      const effectiveFixedReward = perTxCap !== null ? Math.min(rawReward, perTxCap) : rawReward;
+      rawReward = effectiveFixedReward;
+      ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
     } else {
+      rawReward = 0;
       ruleResult = applyMonthlyCap(0, monthlyCap, currentRuleMonthUsed);
     }
 
@@ -219,16 +227,17 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       bucket.capReached = true;
     }
 
-    let appliedReward = ruleResult.reward;
+    const rewardAfterMonthlyCap = ruleResult.reward;
+    let appliedReward = rewardAfterMonthlyCap;
     if (globalCap !== null) {
       const globalRemaining = Math.max(0, globalCap - globalMonthUsed);
-      appliedReward = Math.min(ruleResult.reward, globalRemaining);
-      if (ruleResult.reward > globalRemaining) {
+      appliedReward = Math.min(rewardAfterMonthlyCap, globalRemaining);
+      if (rewardAfterMonthlyCap > globalRemaining) {
         capsHit.push({
           category: categoryKey,
           capType: 'monthly_total',
           capAmount: globalCap,
-          actualReward: ruleResult.reward,
+          actualReward: rewardAfterMonthlyCap,
           appliedReward,
         });
       }
@@ -244,8 +253,8 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         category: categoryKey,
         capType: 'monthly_category',
         capAmount: monthlyCap,
-        actualReward: ruleResult.reward,
-        appliedReward,
+        actualReward: rawReward,
+        appliedReward: rewardAfterMonthlyCap,
       });
     }
 

@@ -325,7 +325,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     expect(cafe!.reward).toBe(1000);
   });
 
-  test('subcategory-specific merchant conditions can suppress rewards without falling back to broad category rules', () => {
+  test('subcategory-specific merchant misses can fall back to the broader category rule', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'dining', 20000, '스타벅스 강남', false, 'cafe')],
       previousMonthSpending: 0,
@@ -333,6 +333,6 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     });
     const cafe = output.rewards.find((reward) => reward.category === 'dining.cafe');
     expect(cafe).toBeDefined();
-    expect(cafe!.reward).toBe(0);
+    expect(cafe!.reward).toBe(400);
   });
 });

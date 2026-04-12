@@ -154,6 +154,8 @@ This is the foundation. Do this before trying to “improve the optimizer” or 
 - 2026-04-12: calculator now normalizes percentage-style discount/cashback rates instead of treating them as raw multipliers.
 - 2026-04-12: fixed-amount rewards and subcategory-specific rules are evaluated before falling back to broader category logic.
 - 2026-04-12: unit-based rewards that still lack quantity inputs (`won_per_liter`, bare `miles`) are now excluded instead of being guessed from transaction amount.
+- 2026-04-12: reward selection now prefers the most specific applicable rule so duplicate category entries with merchant/subcategory conditions can fall back correctly instead of taking the first rule blindly.
+- 2026-04-12: cap reporting now records pre-cap vs post-cap values correctly for monthly-category and global caps.
 
 ### Problems being fixed
 - reward calculator ignores parts of the rule model,
