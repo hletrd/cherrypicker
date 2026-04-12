@@ -46,7 +46,10 @@ export const cardMetaSchema = z.object({
     domestic: z.number().int().nonnegative(),
     international: z.number().int().nonnegative(),
   }),
-  url: z.string().url().optional(),
+  // Keep runtime validation aligned with the generator lane: the catalog
+  // currently contains some issuer/card URLs that are useful as references
+  // but are not strict WHATWG-valid URLs.
+  url: z.string().optional(),
   lastUpdated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be ISO 8601 date (YYYY-MM-DD)'),
   source: z.enum(['manual', 'llm-scrape', 'web']),
 });

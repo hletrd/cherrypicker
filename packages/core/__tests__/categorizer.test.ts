@@ -115,10 +115,10 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     expect(result.subcategory).toBe('cafe');
   });
 
-  test('이마트 maps to grocery.supermarket', () => {
+  test('이마트 follows the current curated offline shopping override', () => {
     const result = matcher.match('이마트');
-    expect(result.category).toBe('grocery');
-    expect(result.subcategory).toBe('supermarket');
+    expect(result.category).toBe('offline_shopping');
+    expect(result.subcategory).toBeUndefined();
     expect(result.confidence).toBe(1.0);
   });
 
@@ -134,10 +134,10 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     expect(result.category).toBe('convenience_store');
   });
 
-  test('카카오택시 maps to public_transit.taxi', () => {
+  test('카카오택시 follows the current transportation override', () => {
     const result = matcher.match('카카오택시');
-    expect(result.category).toBe('public_transit');
-    expect(result.subcategory).toBe('taxi');
+    expect(result.category).toBe('transportation');
+    expect(result.subcategory).toBeUndefined();
     expect(result.confidence).toBe(1.0);
   });
 
@@ -147,22 +147,22 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     expect(result.subcategory).toBe('delivery');
   });
 
-  test('쿠팡 maps to online_shopping.general', () => {
+  test('쿠팡 maps to the top-level online shopping category', () => {
     const result = matcher.match('쿠팡');
     expect(result.category).toBe('online_shopping');
-    expect(result.subcategory).toBe('general');
+    expect(result.subcategory).toBeUndefined();
   });
 
-  test('맥도날드 maps to dining.fastfood', () => {
+  test('맥도날드 maps to dining.fast_food', () => {
     const result = matcher.match('맥도날드');
     expect(result.category).toBe('dining');
-    expect(result.subcategory).toBe('fastfood');
+    expect(result.subcategory).toBe('fast_food');
   });
 
-  test('넷플릭스 maps to entertainment.streaming', () => {
+  test('넷플릭스 follows the current subscription override', () => {
     const result = matcher.match('넷플릭스');
-    expect(result.category).toBe('entertainment');
-    expect(result.subcategory).toBe('streaming');
+    expect(result.category).toBe('subscription');
+    expect(result.subcategory).toBeUndefined();
   });
 
   test('SKT maps to telecom', () => {

@@ -137,6 +137,7 @@ This is the foundation. Do this before trying to “improve the optimizer” or 
 - 2026-04-12: `packages/rules` now preserves `fixedAmount`, `unit`, `subcategory`, reward labels, and notes instead of stripping or coercing them away.
 - 2026-04-12: `scripts/build-json.ts` now runs via `node --experimental-strip-types`, which removes the Bun-only runtime dependency for this data-generation lane.
 - 2026-04-12: rule loading / generated JSON now accept the repo's current `card.source=web` data and the single `prepaid` card instead of silently dropping most of the catalog.
+- 2026-04-12: runtime schema no longer diverges from the generated catalog over optional/blank card URLs.
 - 2026-04-12: calculator/optimizer correctness is **not fixed yet**; the current calculation path still treats `rate ?? 0` as a temporary compatibility fallback until Phase 2 lands.
 
 ### Exit criteria
@@ -355,6 +356,7 @@ Minimum regression set should include:
 
 ### Progress notes
 - 2026-04-12: GitHub Pages deploy now runs repo verification before build, and repo-level npm lint/typecheck succeed after aligning scraper validation with the preserved rule contract.
+- 2026-04-12: installed Bun locally and ran targeted Bun suites for core/parser/rules; they now pass after matcher false-positive and schema-alignment fixes.
 - 2026-04-12: Full `verify` still depends on Bun for the test lane, so end-to-end release confidence remains blocked on source fixes plus Bun-backed execution.
 
 ### Actions

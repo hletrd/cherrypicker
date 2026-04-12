@@ -12,6 +12,10 @@ const ALL_KEYWORDS: Record<string, string> = {
   ...NICHE_KEYWORDS,
 };
 
+function isSubstringSafeKeyword(keyword: string): boolean {
+  return keyword.trim().length >= 2;
+}
+
 interface MatchResult {
   category: string;
   subcategory?: string;
@@ -40,6 +44,7 @@ export class MerchantMatcher {
     // 2. Substring match against MERCHANT_KEYWORDS keys (confidence 0.8)
     let bestStaticKw: { category: string; subcategory?: string; kwLen: number } | undefined;
     for (const [kw, categoryStr] of Object.entries(ALL_KEYWORDS)) {
+      if (!isSubstringSafeKeyword(kw)) continue;
       if (lower.includes(kw) || kw.includes(lower)) {
         const [category, subcategory] = categoryStr.includes('.')
           ? categoryStr.split('.') as [string, string]
