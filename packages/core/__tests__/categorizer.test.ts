@@ -175,6 +175,20 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     const result = matcher.match('Starbucks');
     expect(result.category).toBe('dining');
   });
+
+  test('자동차세 maps to utilities after niche keyword dedupe', () => {
+    const result = matcher.match('자동차세');
+    expect(result.category).toBe('utilities');
+    expect(result.subcategory).toBeUndefined();
+    expect(result.confidence).toBe(1.0);
+  });
+
+  test('면세점 maps to offline_shopping after niche keyword dedupe', () => {
+    const result = matcher.match('신라면세점');
+    expect(result.category).toBe('offline_shopping');
+    expect(result.subcategory).toBeUndefined();
+    expect(result.confidence).toBe(0.8);
+  });
 });
 
 describe('MerchantMatcher - rawCategory fallback', () => {
