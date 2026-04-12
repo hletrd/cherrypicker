@@ -357,6 +357,7 @@ Minimum regression set should include:
 ### Progress notes
 - 2026-04-12: GitHub Pages deploy now runs repo verification before build, and repo-level npm lint/typecheck succeed after aligning scraper validation with the preserved rule contract.
 - 2026-04-12: installed Bun locally and ran targeted Bun suites for core/parser/rules; they now pass after matcher false-positive and schema-alignment fixes.
+- 2026-04-12: repo-level `npm run verify` now passes end-to-end after adding minimal CLI/viz/scraper smoke tests to packages that previously had failing empty test suites.
 - 2026-04-12: Full `verify` still depends on Bun for the test lane, so end-to-end release confidence remains blocked on source fixes plus Bun-backed execution.
 
 ### Actions
