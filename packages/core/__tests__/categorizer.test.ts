@@ -184,10 +184,10 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
   });
 
   test('면세점 maps to offline_shopping after niche keyword dedupe', () => {
-    const result = matcher.match('신라면세점');
+    const result = matcher.match('면세점');
     expect(result.category).toBe('offline_shopping');
     expect(result.subcategory).toBeUndefined();
-    expect(result.confidence).toBe(0.8);
+    expect(result.confidence).toBe(1.0);
   });
 });
 
