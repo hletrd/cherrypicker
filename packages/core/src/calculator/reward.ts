@@ -116,13 +116,18 @@ function calculateFixedReward(
     return Math.floor(tx.amount / 1500) * fixedAmount;
   }
 
-  if (tierRate.unit === null || tierRate.unit === undefined) {
+  if (
+    tierRate.unit === 'won_per_liter' ||
+    tierRate.unit === 'miles' ||
+    tierRate.unit === null ||
+    tierRate.unit === undefined
+  ) {
+    // Until transactions preserve liters / earned-miles quantities, keep explicit fixed rewards
+    // alive instead of silently degrading them to zero.
     return fixedAmount;
   }
 
-  // Units that depend on volume or other missing transaction metadata stay unsupported until the
-  // parser/runtime contract carries the necessary inputs.
-  return 0;
+  return fixedAmount;
 }
 
 export function calculateRewards(input: CalculationInput): CalculationOutput {
