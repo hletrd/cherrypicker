@@ -12,7 +12,7 @@ Turn the review findings into a practical recovery sequence that restores:
 
 ## Progress tracker
 
-- Phase 0 — Stop-ship guardrails: **in progress**
+- Phase 0 — Stop-ship guardrails: **in progress** (automatic remote PDF fallback disabled by default, browser AI runtime disabled, README/license baseline corrected)
 - Phase 1 — Repair the rule/data contract: **pending**
 - Phase 2 — Make the calculator correct on real rules: **pending**
 - Phase 3 — Replace category-total optimization with transaction-aware optimization: **pending**

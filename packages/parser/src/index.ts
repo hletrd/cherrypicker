@@ -13,6 +13,7 @@ export { parsePDF } from './pdf/index.js';
 
 export interface ParseOptions {
   bank?: BankId;
+  allowRemoteLLM?: boolean;
 }
 
 /**
@@ -52,7 +53,7 @@ export async function parseStatement(filePath: string, options?: ParseOptions): 
       return parseXLSX(filePath, bank);
 
     case 'pdf':
-      return parsePDF(filePath, bank);
+      return parsePDF(filePath, bank, { allowRemoteLLM: options?.allowRemoteLLM ?? false });
 
     default: {
       const exhaustive: never = detection.format;

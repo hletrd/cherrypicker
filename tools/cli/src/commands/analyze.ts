@@ -11,14 +11,22 @@ const DEFAULT_CATEGORIES_PATH = resolve(
   'packages/rules/data/categories.yaml',
 );
 
-function parseArgs(args: string[]): { file: string; bank?: string; categoriesPath?: string } {
+function parseArgs(args: string[]): {
+  file: string;
+  bank?: string;
+  categoriesPath?: string;
+  allowRemoteLLM: boolean;
+} {
   const file = args[0];
   if (!file) {
-    throw new Error('명세서 파일 경로를 지정하세요.\n  사용법: cherrypicker analyze <statement-file> [--bank <bankId>]');
+    throw new Error(
+      '명세서 파일 경로를 지정하세요.\n  사용법: cherrypicker analyze <statement-file> [--bank <bankId>] [--allow-remote-llm]',
+    );
   }
 
   let bank: string | undefined;
   let categoriesPath: string | undefined;
+  let allowRemoteLLM = false;
   for (let i = 1; i < args.length; i++) {
     if (args[i] === '--bank' && args[i + 1]) {
       bank = args[i + 1];
@@ -26,17 +34,24 @@ function parseArgs(args: string[]): { file: string; bank?: string; categoriesPat
     } else if (args[i] === '--categories' && args[i + 1]) {
       categoriesPath = args[i + 1];
       i++;
+    } else if (args[i] === '--allow-remote-llm') {
+      allowRemoteLLM = true;
     }
   }
-  return { file, bank, categoriesPath };
+  return { file, bank, categoriesPath, allowRemoteLLM };
 }
 
 export async function runAnalyze(args: string[]): Promise<void> {
-  const { file, bank, categoriesPath } = parseArgs(args);
+  const { file, bank, categoriesPath, allowRemoteLLM } = parseArgs(args);
 
   console.log(`파일 분석 중: ${file}`);
 
-  const parseResult = await parseStatement(file, bank ? { bank: bank as Parameters<typeof parseStatement>[1] extends { bank?: infer B } ? B : never } : undefined);
+  const parseResult = await parseStatement(file, {
+    ...(bank
+      ? { bank: bank as Parameters<typeof parseStatement>[1] extends { bank?: infer B } ? B : never }
+      : {}),
+    allowRemoteLLM,
+  });
 
   if (parseResult.errors.length > 0) {
     console.warn('파싱 경고:');

@@ -12,9 +12,9 @@ const pathname = Astro.url.pathname;
 const base = import.meta.env.BASE_URL;
 
 // Read card stats from built JSON at build time
-let totalCards = 561;
+let totalCards = 683;
 let totalIssuers = 24;
-let totalCategories = 16;
+let totalCategories = 45;
 try {
   const raw = await readFile(resolve(process.cwd(), 'public/data/cards.json'), 'utf-8');
   const data = JSON.parse(raw);
@@ -35,7 +35,7 @@ function isActive(href: string) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; worker-src 'self' blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn-lfs.huggingface.co; connect-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; worker-src 'self' blob:; connect-src 'self';" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <title>{title} | CherryPicker</title>

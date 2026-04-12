@@ -21,11 +21,12 @@ function parseArgs(args: string[]): {
   prevSpending?: number;
   bank?: string;
   categoriesPath?: string;
+  allowRemoteLLM: boolean;
 } {
   const file = args[0];
   if (!file) {
     throw new Error(
-      '명세서 파일 경로를 지정하세요.\n  사용법: cherrypicker optimize <statement-file> [--cards <dir>] [--prev-spending <amount>]',
+      '명세서 파일 경로를 지정하세요.\n  사용법: cherrypicker optimize <statement-file> [--cards <dir>] [--prev-spending <amount>] [--allow-remote-llm]',
     );
   }
 
@@ -33,6 +34,7 @@ function parseArgs(args: string[]): {
   let prevSpending: number | undefined;
   let bank: string | undefined;
   let categoriesPath: string | undefined;
+  let allowRemoteLLM = false;
 
   for (let i = 1; i < args.length; i++) {
     if (args[i] === '--cards' && args[i + 1]) {
@@ -47,18 +49,25 @@ function parseArgs(args: string[]): {
     } else if (args[i] === '--categories' && args[i + 1]) {
       categoriesPath = args[i + 1];
       i++;
+    } else if (args[i] === '--allow-remote-llm') {
+      allowRemoteLLM = true;
     }
   }
 
-  return { file, cardsDir, prevSpending, bank, categoriesPath };
+  return { file, cardsDir, prevSpending, bank, categoriesPath, allowRemoteLLM };
 }
 
 export async function runOptimize(args: string[]): Promise<void> {
-  const { file, cardsDir, prevSpending, bank, categoriesPath } = parseArgs(args);
+  const { file, cardsDir, prevSpending, bank, categoriesPath, allowRemoteLLM } = parseArgs(args);
 
   console.log(`파일 분석 중: ${file}`);
 
-  const parseResult = await parseStatement(file, bank ? { bank: bank as Parameters<typeof parseStatement>[1] extends { bank?: infer B } ? B : never } : undefined);
+  const parseResult = await parseStatement(file, {
+    ...(bank
+      ? { bank: bank as Parameters<typeof parseStatement>[1] extends { bank?: infer B } ? B : never }
+      : {}),
+    allowRemoteLLM,
+  });
 
   if (parseResult.errors.length > 0) {
     console.warn('파싱 경고:');

@@ -4,6 +4,10 @@ import { extractText } from './extractor.js';
 import { parseTable, filterTransactionRows } from './table-parser.js';
 import { parsePDFWithLLM } from './llm-fallback.js';
 
+export interface PDFParseOptions {
+  allowRemoteLLM?: boolean;
+}
+
 const DATE_PATTERN = /(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/;
 const AMOUNT_PATTERN = /^-?[\d,]+원?$/;
 
@@ -86,7 +90,11 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
   }
 }
 
-export async function parsePDF(filePath: string, bank?: BankId): Promise<ParseResult> {
+export async function parsePDF(
+  filePath: string,
+  bank?: BankId,
+  options: PDFParseOptions = {},
+): Promise<ParseResult> {
   const errors: ParseError[] = [];
   let text: string;
 
@@ -116,7 +124,20 @@ export async function parsePDF(filePath: string, bank?: BankId): Promise<ParseRe
     };
   }
 
-  errors.push({ message: '구조화된 파싱 실패, LLM 폴백 시도 중...' });
+  if (!options.allowRemoteLLM) {
+    errors.push({
+      message:
+        '구조화된 PDF 파싱에 실패했습니다. 원격 LLM 폴백은 기본적으로 비활성화되어 있습니다. 명시적으로 허용하려면 --allow-remote-llm 플래그를 사용하세요.',
+    });
+    return {
+      bank: resolvedBank,
+      format: 'pdf',
+      transactions: [],
+      errors,
+    };
+  }
+
+  errors.push({ message: '구조화된 파싱 실패, 명시적으로 허용된 LLM 폴백을 시도합니다...' });
 
   // Tier 3: LLM fallback
   try {

@@ -1,5 +1,6 @@
 import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js';
 import { detectBank } from './detect.js';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 // ---------------------------------------------------------------------------
 // Table parser (ported from packages/parser/src/pdf/table-parser.ts)
@@ -225,9 +226,8 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   try {
     const pdfjsLib = await import('pdfjs-dist');
 
-    // Set worker source (use CDN for compatibility)
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    // Use a bundled same-origin worker instead of a remote CDN worker.
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
 

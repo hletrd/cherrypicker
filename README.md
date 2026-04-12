@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Astro](https://img.shields.io/badge/Astro-BC52EE?logo=astro&logoColor=white)](https://astro.build/)
 [![Svelte](https://img.shields.io/badge/Svelte-FF3E00?logo=svelte&logoColor=white)](https://svelte.dev/)
-[![Cards](https://img.shields.io/badge/Cards-561-DC2626)](packages/rules/data/cards/)
+[![Cards](https://img.shields.io/badge/Cards-683-DC2626)](packages/rules/data/cards/)
 [![Issuers](https://img.shields.io/badge/Issuers-24-16A34A)](packages/rules/data/cards/)
 
 [Demo](https://hletrd.github.io/cherrypicker/) · [카드 데이터](packages/rules/data/cards/)
@@ -24,18 +24,18 @@
 
 한 장짜리로 밀어 쓸 때보다 얼마나 더 아낄 수 있는지도 비교할 수 있어요.
 
-> CherryPicker analyzes your credit card statement and finds the best card for each spending category, factoring in performance tiers, monthly caps, and reward types across 561 cards from 24 Korean issuers.
+> CherryPicker analyzes your credit card statement and finds the best card for each spending category, factoring in performance tiers, monthly caps, and reward types across 683 cards from 24 Korean issuers.
 
 ---
 
 ## 주요 기능
 
 - **명세서 분석**: CSV, Excel, PDF 파일을 올리면 알아서 읽고 항목별로 분류
-- **거래 분류**: 350개 이상 키워드 매칭 + 브라우저 AI 임베딩 모델(multilingual-e5-small)로 미분류 거래 자동 분류. 수동 수정도 가능
+- **거래 분류**: 350개 이상 키워드 매칭 기반 분류 + 수동 수정 지원. 브라우저 AI 보조 분류는 자체 호스팅 런타임이 준비될 때까지 비활성화되어 있어요
 - **카드 추천**: 전월실적, 할인한도까지 따져서 항목별로 가장 이득인 카드 조합 계산
 - **절약 비교**: 카드 한 장으로 쓸 때와 체리피킹했을 때 차이를 한눈에
-- **561개 카드 데이터**: 24개 카드사 혜택을 YAML로 정리
-- **웹 대시보드**: GitHub Pages에서 바로 사용 가능. 서버로 데이터가 안 나가요
+- **683개 카드 데이터**: 24개 카드사 혜택을 YAML로 정리
+- **웹 대시보드**: GitHub Pages에서 바로 사용 가능. 기본 분석은 브라우저에서 처리돼요
 - **CLI**: 터미널에서 명세서 분석
 
 ---
@@ -45,7 +45,7 @@
 명세서에서 읽은 거래를 항목별로 나누는 과정이에요.
 
 1. **키워드 매칭** (350개 이상): "스타벅스"는 카페, "쿠팡"은 온라인쇼핑처럼 가맹점 이름으로 바로 분류
-2. **AI 임베딩** (선택): 키워드로 안 잡히는 거래는 브라우저에서 `multilingual-e5-small` 모델을 돌려서 의미 유사도로 분류. 모델은 33MB 정도, 버튼을 눌러야 내려받아요
+2. **AI 임베딩** (준비 중): 자체 호스팅된 런타임으로 전환되기 전까지는 기본 비활성화 상태예요
 3. **수동 수정**: 거래 목록에서 드롭다운으로 직접 고칠 수 있어요. 고친 다음 "변경 적용"을 누르면 추천이 다시 계산돼요
 
 ---
@@ -75,7 +75,7 @@
 |---|---|
 | 웹 | Astro 6, Svelte 5, Tailwind CSS 4 |
 | 파싱 | PapaParse, SheetJS, pdfjs-dist |
-| AI 분류 | Transformers.js, multilingual-e5-small (브라우저 WASM) |
+| AI 분류 | 비활성화 상태 (자체 호스팅 런타임 준비 중) |
 | 데이터 | Zod, YAML, 561개 카드 규칙 |
 | 배포 | GitHub Pages (정적 사이트) |
 | CLI/스크래퍼 | Bun, Claude API |
@@ -90,7 +90,7 @@ cherrypicker/
 ├── apps/web/              # Astro 정적 웹앱 (GitHub Pages)
 │   ├── src/lib/parser/    # 브라우저용 파서 (CSV, XLSX, PDF)
 │   ├── src/lib/analyzer.ts # 분석 파이프라인
-│   ├── src/lib/categorizer-ai.ts # AI 임베딩 분류기
+│   ├── src/lib/categorizer-ai.ts # 비활성화된 AI 분류기 자리표시자
 │   └── public/data/       # 빌드된 cards.json
 ├── packages/
 │   ├── core/              # 분류기, 계산기, 옵티마이저 (순수 TS)
@@ -109,7 +109,7 @@ cherrypicker/
 
 ### 웹
 
-[hletrd.github.io/cherrypicker](https://hletrd.github.io/cherrypicker/)에서 바로 써 볼 수 있어요. 명세서를 올리면 브라우저에서 바로 분석해요. 서버로 데이터가 나가지 않아요.
+[hletrd.github.io/cherrypicker](https://hletrd.github.io/cherrypicker/)에서 바로 써 볼 수 있어요. 명세서를 올리면 브라우저에서 바로 분석해요.
 
 ### 로컬 개발
 
@@ -168,4 +168,4 @@ globalConstraints:
 
 ## 라이선스
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE)
