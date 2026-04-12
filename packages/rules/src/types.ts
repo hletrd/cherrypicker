@@ -1,7 +1,7 @@
 export type RewardType = 'discount' | 'points' | 'cashback' | 'mileage';
 export type RewardUnit = string;
 
-export type CardType = 'credit' | 'check';
+export type CardType = 'credit' | 'check' | 'prepaid';
 
 export interface PerformanceTier {
   id: string;
@@ -48,7 +48,7 @@ export interface CardMeta {
   };
   url?: string;
   lastUpdated: string;
-  source: 'manual' | 'llm-scrape';
+  source: 'manual' | 'llm-scrape' | 'web';
 }
 
 export interface GlobalConstraints {

@@ -106,9 +106,13 @@
           </span>
           <span
             class="rounded-full px-2.5 py-0.5 text-xs font-medium
-              {card.type === 'credit' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}"
+              {card.type === 'credit'
+                ? 'bg-blue-100 text-blue-700'
+                : card.type === 'check'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-violet-100 text-violet-700'}"
           >
-            {card.type === 'credit' ? '신용카드' : '체크카드'}
+            {card.type === 'credit' ? '신용카드' : card.type === 'check' ? '체크카드' : '선불카드'}
           </span>
         </div>
         <h1 class="mt-1.5 text-2xl font-bold tracking-tight">{card.nameKo}</h1>

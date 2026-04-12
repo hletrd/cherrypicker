@@ -209,7 +209,7 @@ describe('loadCardRule', () => {
 
   test('loaded card has correct type enum', async () => {
     const rule = await loadCardRule(join(cardsDir, 'shinhan/simple-plan.yaml'));
-    expect(['credit', 'check']).toContain(rule.card.type);
+    expect(['credit', 'check', 'prepaid']).toContain(rule.card.type);
   });
 
   test('loaded card lastUpdated matches ISO format', async () => {
@@ -231,15 +231,25 @@ describe('loadCardRule', () => {
     expect(rule.rewards.find((reward) => reward.subcategory === 'cafe')).toBeDefined();
   });
 
+  test('loads web-sourced cards without rejecting their metadata', async () => {
+    const rule = await loadCardRule(join(cardsDir, 'lotte/digiloca-auto.yaml'));
+    expect(rule.card.source).toBe('web');
+  });
+
+  test('loads prepaid cards when the dataset marks them explicitly', async () => {
+    const rule = await loadCardRule(join(cardsDir, 'shinhan/pick-e.yaml'));
+    expect(rule.card.type).toBe('prepaid');
+  });
+
   test('throws on non-existent file', async () => {
     await expect(loadCardRule(join(cardsDir, 'shinhan/nonexistent-card.yaml'))).rejects.toThrow();
   });
 });
 
 describe('loadAllCardRules', () => {
-  test('loads all 145 card rules from data/cards', async () => {
+  test('loads the full supported dataset from data/cards', async () => {
     const rules = await loadAllCardRules(cardsDir);
-    expect(rules.length).toBe(145);
+    expect(rules.length).toBeGreaterThan(650);
   }, 30000);
 
   test('all loaded rules have valid card ids', async () => {

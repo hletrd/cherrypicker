@@ -57,14 +57,14 @@ const cardMetaSchema = z.object({
   issuer: z.string(),
   name: z.string(),
   nameKo: z.string(),
-  type: z.enum(['credit', 'check']),
+  type: z.enum(['credit', 'check', 'prepaid']),
   annualFee: z.object({
     domestic: z.number().int().nonnegative(),
     international: z.number().int().nonnegative(),
   }),
   url: z.string().optional().default(''),
   lastUpdated: z.string().default('2026-03-24'),
-  source: z.enum(['manual', 'llm-scrape']).default('manual'),
+  source: z.enum(['manual', 'llm-scrape', 'web']).default('manual'),
 }).strip();
 
 const globalConstraintsSchema = z.object({
@@ -89,7 +89,7 @@ interface CardEntry {
     issuer: string;
     name: string;
     nameKo: string;
-    type: 'credit' | 'check';
+    type: 'credit' | 'check' | 'prepaid';
     annualFee: { domestic: number; international: number };
     url: string;
     lastUpdated: string;
@@ -158,7 +158,7 @@ interface OrganizedOutput {
   categories: unknown[];
   index: {
     byCategory: Record<string, IndexedReward[]>;
-    byType: { credit: string[]; check: string[] };
+    byType: { credit: string[]; check: string[]; prepaid: string[] };
     noMinSpend: string[];
   };
 }
@@ -349,6 +349,7 @@ for (const cat of Object.keys(byCategoryIndex)) {
 // Build type index
 const creditCards = cards.filter((c) => c.card.type === 'credit').map((c) => c.card.id);
 const checkCards = cards.filter((c) => c.card.type === 'check').map((c) => c.card.id);
+const prepaidCards = cards.filter((c) => c.card.type === 'prepaid').map((c) => c.card.id);
 
 // Build no-min-spend index (cards with tier0 that has meaningful rewards)
 const noMinSpend = cards.filter((c) => {
@@ -369,7 +370,7 @@ const output: OrganizedOutput = {
   categories: categoriesRaw.categories,
   index: {
     byCategory: byCategoryIndex,
-    byType: { credit: creditCards, check: checkCards },
+    byType: { credit: creditCards, check: checkCards, prepaid: prepaidCards },
     noMinSpend,
   },
 };
@@ -380,7 +381,7 @@ await writeFile(outputPath, JSON.stringify(output, null, 2), 'utf-8');
 
 console.log(`\n📊 Output: ${outputPath}`);
 console.log(`   ${output.meta.totalIssuers} issuers, ${output.meta.totalCards} cards`);
-console.log(`   ${creditCards.length} credit cards, ${checkCards.length} check cards`);
+console.log(`   ${creditCards.length} credit cards, ${checkCards.length} check cards, ${prepaidCards.length} prepaid cards`);
 console.log(`   ${noMinSpend.length} cards with no minimum spend`);
 console.log(`   ${Object.keys(byCategoryIndex).length} categories indexed`);
 

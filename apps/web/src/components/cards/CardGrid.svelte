@@ -15,7 +15,7 @@
   let loading = $state(true);
   let error = $state<string | null>(null);
   let searchQuery = $state('');
-  let typeFilter = $state<'all' | 'credit' | 'check'>('all');
+  let typeFilter = $state<'all' | 'credit' | 'check' | 'prepaid'>('all');
   let sortOrder = $state<'name' | 'fee-asc' | 'fee-desc' | 'rewards'>('name');
   let issuerFilter = $state('');
 
@@ -29,6 +29,8 @@
       result = result.filter((c) => c.type === 'credit');
     } else if (typeFilter === 'check') {
       result = result.filter((c) => c.type === 'check');
+    } else if (typeFilter === 'prepaid') {
+      result = result.filter((c) => c.type === 'prepaid');
     }
 
     // Issuer filter
@@ -97,13 +99,13 @@
 
   <!-- Type filter tabs + count badge -->
   <div class="flex items-center gap-2 flex-wrap">
-    {#each [['all', '전체'], ['credit', '신용카드'], ['check', '체크카드']] as [val, label]}
+    {#each [['all', '전체'], ['credit', '신용카드'], ['check', '체크카드'], ['prepaid', '선불카드']] as [val, label]}
       <button
         class="rounded-full px-4 py-1.5 text-sm font-medium transition-colors
           {typeFilter === val
             ? 'bg-[var(--color-primary)] text-white shadow-sm'
             : 'bg-[var(--color-bg)] text-[var(--color-text-muted)] hover:bg-[var(--color-border)]'}"
-        onclick={() => (typeFilter = val as 'all' | 'credit' | 'check')}
+        onclick={() => (typeFilter = val as 'all' | 'credit' | 'check' | 'prepaid')}
       >
         {label}
       </button>
@@ -178,9 +180,11 @@
             class="absolute right-3 top-3 rounded-full px-2 py-0.5 text-xs font-medium
               {card.type === 'credit'
                 ? 'bg-blue-100 text-blue-700'
-                : 'bg-emerald-100 text-emerald-700'}"
+                : card.type === 'check'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-violet-100 text-violet-700'}"
           >
-            {card.type === 'credit' ? '신용' : '체크'}
+            {card.type === 'credit' ? '신용' : card.type === 'check' ? '체크' : '선불'}
           </span>
 
           <div class="text-xs font-medium" style="color: {issuerColor};">

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const rewardTypeSchema = z.enum(['discount', 'points', 'cashback', 'mileage']);
 
-export const cardTypeSchema = z.enum(['credit', 'check']);
+export const cardTypeSchema = z.enum(['credit', 'check', 'prepaid']);
 
 export const performanceTierSchema = z.object({
   id: z.string(),
@@ -48,7 +48,7 @@ export const cardMetaSchema = z.object({
   }),
   url: z.string().url().optional(),
   lastUpdated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be ISO 8601 date (YYYY-MM-DD)'),
-  source: z.enum(['manual', 'llm-scrape']),
+  source: z.enum(['manual', 'llm-scrape', 'web']),
 });
 
 export const globalConstraintsSchema = z.object({

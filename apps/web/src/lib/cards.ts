@@ -6,7 +6,7 @@ export interface CardRuleSet {
     issuer: string;
     name: string;
     nameKo: string;
-    type: 'credit' | 'check';
+    type: 'credit' | 'check' | 'prepaid';
     annualFee: { domestic: number; international: number };
     url: string;
     lastUpdated: string;
@@ -120,7 +120,7 @@ interface CardsJson {
       monthlyCap: number | null;
       subcategory?: string;
     }>>;
-    byType: { credit: string[]; check: string[] };
+    byType: { credit: string[]; check: string[]; prepaid: string[] };
     noMinSpend: string[];
   };
 }
