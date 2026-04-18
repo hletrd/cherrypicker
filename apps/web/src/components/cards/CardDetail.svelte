@@ -107,10 +107,10 @@
           <span
             class="rounded-full px-2.5 py-0.5 text-xs font-medium
               {card.type === 'credit'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-400'
                 : card.type === 'check'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-violet-100 text-violet-700'}"
+                  ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-400'}"
           >
             {card.type === 'credit' ? '신용카드' : card.type === 'check' ? '체크카드' : '선불카드'}
           </span>
@@ -131,7 +131,7 @@
             </span>
           {/if}
           {#if globalLimit !== null}
-            <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+            <span class="rounded-full bg-amber-100 dark:bg-amber-900 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
               월 최대 할인 한도 {formatWon(globalLimit)}
             </span>
           {/if}
@@ -249,9 +249,9 @@
       <button
         class="mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline cursor-pointer"
         style="color: {issuerColor};"
-        onclick={() => { window.location.hash = ''; }}
+        onclick={() => { window.location.href = import.meta.env.BASE_URL + 'cards'; }}
       >
-        {formatIssuerNameKo(card.issuer)} 카드 전체 보기
+        카드 목록으로 돌아가기
       </button>
     </div>
   </div>

@@ -181,7 +181,7 @@
           {editedTxs.length}건
         </span>
         {#if uncategorizedCount > 0}
-          <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+          <span class="rounded-full bg-amber-100 dark:bg-amber-900 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400">
             미분류 {uncategorizedCount}건
           </span>
         {/if}
@@ -209,7 +209,7 @@
             <button
               onclick={runAICategorization}
               disabled={aiRunning}
-              class="flex items-center gap-1 rounded-lg border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 transition-colors"
+              class="flex items-center gap-1 rounded-lg border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950 dark:bg-purple-950 px-3 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-400 hover:bg-purple-100 disabled:opacity-50 transition-colors"
             >
               {#if aiRunning}
                 <svg class="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -262,6 +262,7 @@
                   <td class="px-3 py-2">
                     <select
                       value={tx.category}
+                      aria-label={tx.merchant + " 카테고리"}
                       onchange={(e) => changeCategory(tx.id, (e.target as HTMLSelectElement).value)}
                       class="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-xs outline-none focus:border-[var(--color-primary)] cursor-pointer
                         {tx.confidence < 0.5 ? 'border-amber-300 bg-amber-50 text-amber-700' : ''}
@@ -274,15 +275,15 @@
                   </td>
                   <td class="px-3 py-2 text-center">
                     {#if tx.confidence >= 1.0}
-                      <span class="inline-block rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700" title="키워드 정확 일치">정확</span>
+                      <span class="inline-block rounded-full bg-green-100 dark:bg-green-900 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-400" title="키워드 정확 일치">정확</span>
                     {:else if tx.confidence >= 0.8}
-                      <span class="inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700" title="키워드 부분 일치">높음</span>
+                      <span class="inline-block rounded-full bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-400" title="키워드 부분 일치">높음</span>
                     {:else if tx.confidence >= 0.5}
                       <span class="inline-block rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700" title="은행 분류 또는 YAML 키워드">보통</span>
                     {:else if tx.confidence > 0}
-                      <span class="inline-block rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-700" title="약한 매칭">낮음</span>
+                      <span class="inline-block rounded-full bg-orange-100 dark:bg-orange-900 px-1.5 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-400" title="약한 매칭">낮음</span>
                     {:else}
-                      <span class="inline-block rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-700" title="매칭 실패">없음</span>
+                      <span class="inline-block rounded-full bg-red-100 dark:bg-red-900 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:text-red-400" title="매칭 실패">없음</span>
                     {/if}
                   </td>
                 </tr>

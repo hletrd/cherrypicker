@@ -154,29 +154,29 @@
     {/if}
 
     <!-- Center: Cherry-pick (highlighted) -->
-    <div class="rounded-xl border-2 border-[var(--color-primary)] bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow-md">
+    <div class="rounded-xl border-2 border-[var(--color-primary)] bg-gradient-to-br from-blue-50 to-blue-100 p-5 dark:from-blue-950 dark:to-blue-900/50 shadow-md">
       <div class="mb-3 flex items-center gap-1.5 text-xs font-semibold text-[var(--color-primary)]">
         <Icon name="sparkles" size={14} />
         체리피킹 혜택
       </div>
       <div class="text-3xl font-bold text-[var(--color-primary)]">{formatWon(opt.totalReward)}</div>
-      <div class="mt-1 text-xs text-blue-500">
+      <div class="mt-1 text-xs text-blue-500 dark:text-blue-400">
         실효 혜택률 {(opt.effectiveRate * 100).toFixed(2)}%
       </div>
-      <div class="mt-2 text-xs text-blue-600 font-medium">
+      <div class="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
         {uniqueCards}장 카드 사용
       </div>
     </div>
 
     <!-- Right: Savings -->
-    <div class="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-emerald-100 p-5">
-      <div class="mb-3 text-xs font-medium text-green-700">추가 절약</div>
-      <div class="text-3xl font-bold text-green-700">+{formatWon(displayedSavings)}</div>
-      <div class="mt-1 text-xs text-green-600">
+    <div class="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-emerald-100 p-5 dark:from-green-950 dark:to-emerald-900/50">
+      <div class="mb-3 text-xs font-medium text-green-700 dark:text-green-400">추가 절약</div>
+      <div class="text-3xl font-bold text-green-700 dark:text-green-400">+{formatWon(displayedSavings)}</div>
+      <div class="mt-1 text-xs text-green-600 dark:text-green-400">
         연간 약 {formatWon(opt.savingsVsSingleCard * 12)} 절약
       </div>
       {#if savingsPct > 0}
-        <div class="mt-2 inline-block rounded-full bg-green-200 px-2 py-0.5 text-xs font-semibold text-green-800">
+        <div class="mt-2 inline-block rounded-full bg-green-200 dark:bg-green-800 px-2 py-0.5 text-xs font-semibold text-green-800 dark:text-green-200">
           한 장짜리보다 +{savingsPct}%
         </div>
       {/if}

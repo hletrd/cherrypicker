@@ -40,8 +40,8 @@
 {:else if analysisStore.result}
   <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
     <!-- 총 지출 -->
-    <div class="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">
-      <div class="flex items-center gap-1.5 text-sm text-blue-500">
+    <div class="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm dark:from-blue-950 dark:to-blue-900/50">
+      <div class="flex items-center gap-1.5 text-sm text-blue-500 dark:text-blue-400">
         <Icon name="credit-card" size={15} />
         <span>총 지출</span>
       </div>
@@ -51,12 +51,12 @@
     </div>
 
     <!-- 거래 건수 -->
-    <div class="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 p-4 shadow-sm">
-      <div class="flex items-center gap-1.5 text-sm text-amber-500">
+    <div class="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 p-4 shadow-sm dark:from-amber-950 dark:to-amber-900/50">
+      <div class="flex items-center gap-1.5 text-sm text-amber-500 dark:text-amber-400">
         <Icon name="receipt" size={15} />
         <span>거래 건수</span>
       </div>
-      <div class="mt-1 text-2xl font-bold text-amber-600">
+      <div class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
         {analysisStore.transactionCount}건
       </div>
     </div>
@@ -73,23 +73,23 @@
     </div>
 
     <!-- 최다 지출 카테고리 -->
-    <div class="rounded-xl bg-gradient-to-br from-green-50 to-green-100 p-4 shadow-sm">
-      <div class="flex items-center gap-1.5 text-sm text-green-600">
+    <div class="rounded-xl bg-gradient-to-br from-green-50 to-green-100 p-4 shadow-sm dark:from-green-950 dark:to-green-900/50">
+      <div class="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400">
         <Icon name="tag" size={15} />
         <span>최다 지출 카테고리</span>
       </div>
-      <div class="mt-1 text-lg font-semibold text-green-700">
+      <div class="mt-1 text-lg font-semibold text-green-700 dark:text-green-400">
         {getTopCategory(analysisStore.assignments)}
       </div>
     </div>
 
     <!-- 실효 혜택률 -->
-    <div class="rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 p-4 shadow-sm">
-      <div class="flex items-center gap-1.5 text-sm text-purple-500">
+    <div class="rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 p-4 shadow-sm dark:from-purple-950 dark:to-purple-900/50">
+      <div class="flex items-center gap-1.5 text-sm text-purple-500 dark:text-purple-400">
         <Icon name="percent" size={15} />
         <span>실효 혜택률</span>
       </div>
-      <div class="mt-1 text-2xl font-bold text-purple-700">
+      <div class="mt-1 text-2xl font-bold text-purple-700 dark:text-purple-400">
         {analysisStore.optimization ? (analysisStore.optimization.effectiveRate * 100).toFixed(2) + '%' : '-'}
       </div>
     </div>

@@ -87,7 +87,7 @@
       />
     </div>
     <select
-      bind:value={sortOrder}
+      bind:value={sortOrder} aria-label="정렬 기준"
       class="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)] cursor-pointer"
     >
       <option value="name">이름순</option>
@@ -179,10 +179,10 @@
           <span
             class="absolute right-3 top-3 rounded-full px-2 py-0.5 text-xs font-medium
               {card.type === 'credit'
-                ? 'bg-blue-100 text-blue-700'
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-400'
                 : card.type === 'check'
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-violet-100 text-violet-700'}"
+                  ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-400'}"
           >
             {card.type === 'credit' ? '신용' : card.type === 'check' ? '체크' : '선불'}
           </span>
@@ -197,7 +197,7 @@
               연회비 {card.annualFee.domestic === 0 ? '없음' : formatWon(card.annualFee.domestic)}
             </span>
             {#if card.rewardCategories.length > 0}
-              <span class="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+              <span class="rounded-full bg-green-100 dark:bg-green-900 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
                 {card.rewardCategories.length}개 혜택
               </span>
             {/if}
