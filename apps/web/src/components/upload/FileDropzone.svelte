@@ -197,7 +197,7 @@
 <div class="flex flex-col gap-5">
 
   <!-- Step indicator -->
-  <div class="flex items-center justify-center gap-0">
+  <div class="flex items-center justify-center gap-0" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={4} aria-label="업로드 진행">
     {#each STEPS as step, i}
       {@const stepNum = i + 1}
       {@const isActive = currentStep === stepNum}
@@ -321,7 +321,7 @@
     <div class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-4">
       <div>
         <p class="mb-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">카드사를 고르면 더 정확해요</p>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap gap-2" role="group" aria-label="카드사 선택">
           <!-- Auto-detect pill -->
           <button
             class="rounded-full border px-3 py-1.5 text-xs font-medium transition-all
@@ -351,7 +351,7 @@
         <p class="mb-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">전월 카드 이용액</p>
         <div class="relative">
           <input
-            type="number"
+            type="number" aria-label="전월 카드 이용액"
             bind:value={previousSpending}
             placeholder="500,000"
             min="0"
@@ -389,13 +389,6 @@
         {/if}
       </button>
 
-      <!-- Progress bar during upload -->
-      {#if uploadStatus === 'uploading'}
-        <div class="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-border)]">
-          <div class="h-full animate-[loading_1.5s_ease-in-out_infinite] rounded-full bg-[var(--color-primary)]"
-            style="width: 60%;"></div>
-        </div>
-      {/if}
     </div>
   {/if}
 
