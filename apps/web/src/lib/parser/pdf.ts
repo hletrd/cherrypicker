@@ -268,15 +268,18 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   const fallbackTransactions: RawTransaction[] = [];
   const lines = text.split('\n');
   const fallbackDatePattern = /(\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2})/;
-  const fallbackAmountPattern = /([\d,]+)원?/;
+  const fallbackAmountPattern = /([\d,]+)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
-    const amountMatch = line.match(fallbackAmountPattern);
+    // Use the last amount match — Korean statements typically list the
+    // transaction amount as the last numeric value on the line
+    const amountMatches = [...line.matchAll(fallbackAmountPattern)];
+    const amountMatch = amountMatches.length > 0 ? amountMatches[amountMatches.length - 1] : null;
     if (dateMatch && amountMatch) {
       // Extract merchant: everything between date and amount
       const dateEnd = line.indexOf(dateMatch[0]) + dateMatch[0].length;
-      const amountStart = line.indexOf(amountMatch[0]);
+      const amountStart = line.lastIndexOf(amountMatch[0]);
       if (amountStart > dateEnd) {
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
