@@ -38,11 +38,17 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
 
   const client = new Anthropic({ apiKey });
 
+  const model = process.env['ANTHROPIC_MODEL'] ?? 'claude-opus-4-5';
+
   // Truncate text to avoid token limits — take first 8000 chars
   const truncated = text.length > 8000 ? text.slice(0, 8000) + '\n...(truncated)' : text;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+
+  try {
   const message = await client.messages.create({
-    model: 'claude-opus-4-5',
+    model,
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [
@@ -58,13 +64,18 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
     .map((block) => (block.type === 'text' ? block.text : ''))
     .join('');
 
-  // Extract JSON from response
-  const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+  // Extract JSON from response — use non-greedy match to capture only the first JSON array
+  const jsonMatch = responseText.match(/\[[\s\S]*?\](?=\s*$|\s*```)/);
   if (!jsonMatch) {
-    throw new Error('LLM 응답에서 JSON을 파싱할 수 없습니다.');
+    throw new Error('LLM 응답에서 JSON 배열을 찾을 수 없습니다.');
   }
 
-  const parsed: LLMTransaction[] = JSON.parse(jsonMatch[0]);
+  let parsed: LLMTransaction[];
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch {
+    throw new Error('LLM이 올바른 JSON을 반환하지 않았습니다.');
+  }
 
   return parsed
     .filter((tx): tx is Required<Pick<LLMTransaction, 'date' | 'merchant' | 'amount'>> & LLMTransaction =>
@@ -81,4 +92,7 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
       }
       return result;
     });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
