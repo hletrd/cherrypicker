@@ -205,7 +205,7 @@ function parseDateToISO(raw: unknown): string {
     if (shortYearMatch) {
       const year = parseInt(shortYearMatch[1]!, 10);
       const fullYear = year >= 50 ? 1900 + year : 2000 + year;
-      return `${fullYear}-${shortYearMatch[2]}-${shortYearMatch[3]}`;
+      return `${fullYear}-${shortYearMatch[2]!.padStart(2, '0')}-${shortYearMatch[3]!.padStart(2, '0')}`;
     }
 
     // 2024년 1월 15일

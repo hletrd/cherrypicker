@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = JSON.parse(raw);
       const opt = data.optimization;
       if (opt) {
-        const formatWon = (amount) => amount.toLocaleString('ko-KR') + '원';
+        const formatWon = (amount) => Number.isFinite(amount) ? amount.toLocaleString('ko-KR') + '원' : '0원';
         const totalSpending = document.getElementById('stat-total-spending');
         const totalSavings = document.getElementById('stat-total-savings');
         const cardsNeeded = document.getElementById('stat-cards-needed');

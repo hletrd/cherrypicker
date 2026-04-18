@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const opt = data.optimization;
     if (!opt) return;
 
-    const formatWon = (amount) => amount.toLocaleString('ko-KR') + '원';
+    const formatWon = (amount) => Number.isFinite(amount) ? amount.toLocaleString('ko-KR') + '원' : '0원';
     const reportContent = document.getElementById('report-content');
     if (!reportContent) return;
 
