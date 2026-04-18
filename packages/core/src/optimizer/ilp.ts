@@ -45,5 +45,6 @@ export function ilpOptimize(
   cardRules: CardRuleSet[],
 ): OptimizationResult {
   // TODO: Replace with actual ILP solver once glpk.js is integrated.
+  console.warn('[cherrypicker] ILP optimizer is not yet implemented — falling back to greedy optimizer');
   return greedyOptimize(constraints, cardRules);
 }

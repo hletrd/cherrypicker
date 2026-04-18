@@ -36,9 +36,10 @@ export async function parseStatement(filePath: string, options?: ParseOptions): 
       let content: string;
       try {
         content = buffer.toString('utf-8');
-        // Sanity check: if too many replacement chars, try EUC-KR
+        // Sanity check: if too many replacement chars per KB, try EUC-KR
         const replacementCount = (content.match(/\uFFFD/g) ?? []).length;
-        if (replacementCount > 5) {
+        const ratio = replacementCount / (content.length / 1024);
+        if (ratio > 1) {
           const decoder = new TextDecoder('euc-kr');
           content = decoder.decode(buffer);
         }

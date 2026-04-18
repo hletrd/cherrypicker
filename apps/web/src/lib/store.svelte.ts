@@ -112,7 +112,15 @@ function loadFromStorage(): AnalysisResult | null {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && parsed.optimization && Array.isArray(parsed.optimization.assignments)) {
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        parsed.optimization &&
+        Array.isArray(parsed.optimization.assignments) &&
+        typeof parsed.optimization.totalReward === 'number' &&
+        typeof parsed.optimization.totalSpending === 'number' &&
+        typeof parsed.optimization.effectiveRate === 'number'
+      ) {
         return {
           success: Boolean(parsed.success),
           bank: typeof parsed.bank === 'string' || parsed.bank === null ? parsed.bank : null,
