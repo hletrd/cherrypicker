@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, getIssuerColor } from '../../lib/formatters.js';
+  import { formatWon, getIssuerColor, getIssuerFromCardId } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let opt = $derived(analysisStore.optimization);
@@ -78,10 +78,6 @@
     const ratio = opt.bestSingleCard.totalReward / opt.totalReward;
     return Math.min(Math.round(ratio * 100), 100);
   });
-
-  function getIssuerFromCardId(cardId: string): string {
-    return cardId.split('-')[0] ?? 'unknown';
-  }
 </script>
 
 {#if analysisStore.loading}

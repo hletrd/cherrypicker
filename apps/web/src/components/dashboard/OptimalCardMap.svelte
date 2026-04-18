@@ -1,11 +1,7 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRate, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
+  import { formatWon, formatRate, getIssuerColor, formatIssuerNameKo, getIssuerFromCardId } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
-
-  function getIssuerFromCardId(cardId: string): string {
-    return cardId.split('-')[0] ?? 'unknown';
-  }
 
   type SortKey = 'spending' | 'rate' | 'reward';
 

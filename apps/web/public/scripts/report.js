@@ -1,11 +1,3 @@
-function esc(value) {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function el(tag, attrs, children) {
   const node = document.createElement(tag);
   if (attrs) {

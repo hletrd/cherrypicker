@@ -1,7 +1,7 @@
-/**
- * Format a number as Korean Won currency.
- * Example: 1234567 → "1,234,567원"
- */
+export function getIssuerFromCardId(cardId: string): string {
+  return cardId.split('-')[0] ?? 'unknown';
+}
+
 export function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
   return amount.toLocaleString('ko-KR') + '원';
