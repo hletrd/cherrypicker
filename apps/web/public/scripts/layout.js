@@ -40,7 +40,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const menuButton = document.getElementById('mobile-menu-btn');
   const mobileMenu = document.getElementById('mobile-menu');
   menuButton?.addEventListener('click', () => {
-    mobileMenu?.classList.toggle('hidden');
+    const isHidden = mobileMenu?.classList.toggle('hidden');
+    if (isHidden) {
+      mobileMenu?.setAttribute('inert', '');
+    } else {
+      mobileMenu?.removeAttribute('inert');
+    }
   });
 
   document.querySelectorAll('[data-mobile-nav-link]').forEach((link) => {
