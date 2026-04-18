@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const period = data.statementPeriod
-      ? esc(data.statementPeriod.start) + ' ~ ' + esc(data.statementPeriod.end)
+      ? data.statementPeriod.start + ' ~ ' + data.statementPeriod.end
       : '-';
 
     summaryTable.appendChild(summaryRow('분석 기간', period));
@@ -93,8 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tbody = el('tbody');
     for (const assignment of opt.assignments) {
       tbody.appendChild(el('tr', {}, [
-        el('td', { style: { padding: '8px', borderBottom: '1px solid #e2e8f0' } }, [esc(assignment.categoryNameKo)]),
-        el('td', { style: { padding: '8px', borderBottom: '1px solid #e2e8f0' } }, [esc(assignment.assignedCardName)]),
+        el('td', { style: { padding: '8px', borderBottom: '1px solid #e2e8f0' } }, [assignment.categoryNameKo]),
+        el('td', { style: { padding: '8px', borderBottom: '1px solid #e2e8f0' } }, [assignment.assignedCardName]),
         el('td', { style: { padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' } }, [formatWon(assignment.reward)]),
         el('td', { style: { padding: '8px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' } }, [formatWon(assignment.spending)]),
       ]));

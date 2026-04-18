@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-mobile-nav-link]').forEach((link) => {
     link.addEventListener('click', () => {
       mobileMenu?.classList.add('hidden');
+      mobileMenu?.setAttribute('inert', '');
     });
   });
 
