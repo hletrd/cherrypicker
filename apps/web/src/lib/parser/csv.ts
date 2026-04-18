@@ -10,9 +10,12 @@ function splitLine(line: string, delimiter: string): string[] {
   const result: string[] = [];
   let inQuotes = false;
   let current = '';
-  for (const char of line) {
-    if (char === '"') { inQuotes = !inQuotes; }
-    else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]!;
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
     else { current += char; }
   }
   result.push(current.trim());
@@ -67,8 +70,13 @@ function parseAmount(raw: string): number {
   if (isNegative) cleaned = cleaned.slice(1, -1);
   cleaned = cleaned.replace(/원$/, '').replace(/,/g, '').replace(/\s/g, '');
   const parsed = parseInt(cleaned, 10);
-  if (Number.isNaN(parsed)) return 0;
+  if (Number.isNaN(parsed)) return NaN;
   return isNegative ? -parsed : parsed;
+}
+
+function safeAmount(raw: string): number {
+  const v = parseAmount(raw);
+  return Number.isNaN(v) ? 0 : v;
 }
 
 // ---------------------------------------------------------------------------
@@ -179,8 +187,9 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
     const amount = parseAmount(amountRaw);
-    if (isNaN(amount) && amountRaw) {
-      errors.push({ line: i + 1, message: `Cannot parse amount: ${amountRaw}`, raw: line });
+    if (Number.isNaN(amount)) {
+      if (amountRaw) errors.push({ line: i + 1, message: `Cannot parse amount: ${amountRaw}`, raw: line });
+      continue;
     }
 
     const tx: RawTransaction = {
@@ -260,7 +269,7 @@ const samsungAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -322,7 +331,7 @@ const shinhanAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -385,7 +394,7 @@ const kbAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -448,7 +457,7 @@ const hyundaiAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -510,7 +519,7 @@ const lotteAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -572,7 +581,7 @@ const hanaAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -635,7 +644,7 @@ const wooriAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -697,7 +706,7 @@ const nhAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -760,7 +769,7 @@ const ibkAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -822,7 +831,7 @@ const bcAdapter: BankAdapter = {
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount: safeAmount(amountRaw),
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
