@@ -65,6 +65,10 @@ function findRule(rules: RewardRule[], tx: CategorizedTransaction): RewardRule |
     if (rule.category !== '*' && rule.category !== tx.category) return false;
     if (rule.subcategory && rule.subcategory !== tx.subcategory) return false;
     if (!tx.subcategory && rule.subcategory) return false;
+    // Broad category rules (no subcategory) should not match transactions
+    // that have a subcategory — Korean card terms typically exclude
+    // subcategories like cafe from the broader dining category
+    if (tx.subcategory && !rule.subcategory && rule.category !== '*') return false;
     return ruleConditionsMatch(rule, tx);
   });
 
@@ -168,6 +172,11 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
   const capsHit: CapInfo[] = [];
 
   for (const tx of transactions) {
+    // Skip negative-amount transactions (refunds, reversals)
+    if (tx.amount <= 0) continue;
+    // Skip non-KRW transactions — reward math assumes Won amounts
+    if (tx.currency && tx.currency !== 'KRW') continue;
+
     const categoryKey = buildCategoryKey(tx.category, tx.subcategory);
     const rule = tierId === 'none' ? undefined : findRule(rewardRules, tx);
     const rewardKey = rule ? buildRuleKey(rule) : categoryKey;
