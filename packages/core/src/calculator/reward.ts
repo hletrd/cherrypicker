@@ -98,10 +98,8 @@ function getCalcFn(type: string): RewardCalcFn {
 
 function normalizeRate(ruleType: string, rate: number | null): number | null {
   if (rate === null) return null;
-  if (ruleType === 'discount' || ruleType === 'cashback') {
-    return rate / 100;
-  }
-  return rate;
+  // All YAML rates are stored in percentage form (e.g., 1.5 means 1.5%)
+  return rate / 100;
 }
 
 function applyMonthlyCap(
@@ -240,6 +238,10 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
           actualReward: rewardAfterMonthlyCap,
           appliedReward,
         });
+        // Sync ruleMonthUsed to reflect actual applied amount so subsequent
+        // transactions aren't under-rewarded at the rule level
+        const overcount = rewardAfterMonthlyCap - appliedReward;
+        ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed - overcount);
       }
       globalMonthUsed += appliedReward;
     }
