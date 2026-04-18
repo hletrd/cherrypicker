@@ -42,7 +42,12 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
       try {
         return adapter.parseCSV(content);
       } catch (err) {
-        // Fall through to generic parser
+        // Fall through to generic parser, but record the failure
+        const fallbackResult = parseGenericCSV(content, resolvedBank);
+        fallbackResult.errors.unshift({
+          message: `${resolvedBank} 어댑터 파싱 실패: ${err instanceof Error ? err.message : String(err)}`,
+        });
+        return fallbackResult;
       }
     }
   }
@@ -53,7 +58,8 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
       try {
         return adapter.parseCSV(content);
       } catch (err) {
-        // Try next
+        // Try next adapter, but record the failure
+        continue;
       }
     }
   }

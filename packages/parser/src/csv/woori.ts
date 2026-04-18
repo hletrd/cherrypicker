@@ -3,8 +3,8 @@ import { detectCSVDelimiter } from '../detect.js';
 
 function parseDateToISO(raw: string): string {
   const cleaned = raw.trim();
-  const fullMatch = cleaned.match(/^(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/);
-  if (fullMatch) return `${fullMatch[1]}-${fullMatch[2]}-${fullMatch[3]}`;
+  const fullMatch = cleaned.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+  if (fullMatch) return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
   if (/^\d{8}$/.test(cleaned)) return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
   return cleaned;
 }
@@ -14,7 +14,7 @@ function parseAmount(raw: string): number {
   const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNeg) cleaned = cleaned.slice(1, -1);
   const n = parseInt(cleaned, 10);
-  if (isNaN(n)) return 0;
+  if (isNaN(n)) return NaN;
   return isNeg ? -n : n;
 }
 
@@ -23,9 +23,12 @@ function splitLine(line: string, delimiter: string): string[] {
   const result: string[] = [];
   let inQuotes = false;
   let current = '';
-  for (const char of line) {
-    if (char === '"') { inQuotes = !inQuotes; }
-    else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]!;
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
     else { current += char; }
   }
   result.push(current.trim());
