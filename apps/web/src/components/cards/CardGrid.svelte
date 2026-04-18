@@ -138,12 +138,12 @@
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {#each Array(6) as _}
         <div class="animate-pulse rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-          <div class="h-3 w-20 rounded bg-gray-200"></div>
-          <div class="mt-3 h-5 w-3/4 rounded bg-gray-200"></div>
-          <div class="mt-2 h-3 w-1/2 rounded bg-gray-200"></div>
+          <div class="h-3 w-20 rounded bg-gray-200 dark:bg-gray-700"></div>
+          <div class="mt-3 h-5 w-3/4 rounded bg-gray-200 dark:bg-gray-700"></div>
+          <div class="mt-2 h-3 w-1/2 rounded bg-gray-200 dark:bg-gray-700"></div>
           <div class="mt-6 flex items-center justify-between">
-            <div class="h-3 w-24 rounded bg-gray-200"></div>
-            <div class="h-5 w-16 rounded-full bg-gray-200"></div>
+            <div class="h-3 w-24 rounded bg-gray-200 dark:bg-gray-700"></div>
+            <div class="h-5 w-16 rounded-full bg-gray-200 dark:bg-gray-700"></div>
           </div>
         </div>
       {/each}
