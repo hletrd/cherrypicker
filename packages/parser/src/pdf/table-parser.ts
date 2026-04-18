@@ -1,5 +1,5 @@
-// Korean date pattern
-const DATE_PATTERN = /\d{4}[.\-\/]\d{2}[.\-\/]\d{2}/;
+// Korean date pattern (anchored to match standalone dates)
+const DATE_PATTERN = /^\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/;
 // Korean amount pattern
 const AMOUNT_PATTERN = /[\d,]+원?/;
 
@@ -15,7 +15,9 @@ interface Column {
 function detectColumnBoundaries(lines: string[]): Column[] {
   if (lines.length === 0) return [];
 
-  const maxLen = Math.max(...lines.map((l) => l.length));
+  const lengths = lines.map((l) => l.length);
+  const maxLen = lengths.length > 0 ? Math.max(...lengths) : 0;
+  if (maxLen === 0) return [];
   // Count non-space characters at each position
   const charCount = new Array<number>(maxLen).fill(0);
 

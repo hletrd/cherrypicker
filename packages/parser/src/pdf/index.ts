@@ -18,7 +18,8 @@ function parseDateToISO(raw: string): string {
 }
 
 function parseAmount(raw: string): number {
-  return parseInt(raw.replace(/원$/, '').replace(/,/g, ''), 10) || 0;
+  const n = parseInt(raw.replace(/원$/, '').replace(/,/g, ''), 10);
+  return Number.isNaN(n) ? NaN : n;
 }
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
@@ -62,7 +63,7 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
       const merchant = merchantIdx !== -1 ? (row[merchantIdx] ?? '').trim() : '';
       const amount = parseAmount(amountCell.value);
 
-      if (!merchant && amount === 0) continue;
+      if (Number.isNaN(amount) || (!merchant && amount === 0)) continue;
 
       const tx: RawTransaction = {
         date: parseDateToISO(dateCell.value),
@@ -85,8 +86,11 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
     }
 
     return transactions.length > 0 ? transactions : null;
-  } catch {
-    return null;
+  } catch (err) {
+    if (err instanceof SyntaxError || err instanceof TypeError || err instanceof RangeError) {
+      return null;
+    }
+    throw err;
   }
 }
 
