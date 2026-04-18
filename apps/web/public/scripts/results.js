@@ -16,6 +16,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const uniqueCards = new Set(opt.assignments.map((assignment) => assignment.assignedCardId)).size;
           cardsNeeded.textContent = uniqueCards + '장';
         }
+
+        // Show data content, hide empty state
+        const emptyState = document.getElementById('results-empty-state');
+        const dataContent = document.getElementById('results-data-content');
+        if (emptyState) emptyState.classList.add('hidden');
+        if (dataContent) dataContent.classList.remove('hidden');
       }
     }
   } catch {
