@@ -1,6 +1,6 @@
 (function applyStoredTheme() {
   try {
-    const theme = localStorage.getItem('theme');
+    const theme = localStorage.getItem('cherrypicker:theme');
     if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
     }
@@ -26,7 +26,7 @@ function toggleTheme() {
   const html = document.documentElement;
   const isDark = html.classList.toggle('dark');
   try {
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    localStorage.setItem('cherrypicker:theme', isDark ? 'dark' : 'light');
   } catch {
     // Ignore storage access issues.
   }
