@@ -279,7 +279,7 @@
                     {:else if tx.confidence >= 0.8}
                       <span class="inline-block rounded-full bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-400" title="키워드 부분 일치">높음</span>
                     {:else if tx.confidence >= 0.5}
-                      <span class="inline-block rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700" title="은행 분류 또는 YAML 키워드">보통</span>
+                      <span class="inline-block rounded-full bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400" title="은행 분류 또는 YAML 키워드">보통</span>
                     {:else if tx.confidence > 0}
                       <span class="inline-block rounded-full bg-orange-100 dark:bg-orange-900 px-1.5 py-0.5 text-[10px] font-medium text-orange-700 dark:text-orange-400" title="약한 매칭">낮음</span>
                     {:else}
