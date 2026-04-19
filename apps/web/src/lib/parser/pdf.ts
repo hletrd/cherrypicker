@@ -233,7 +233,7 @@ function findAmountCell(row: string[]): { idx: number; value: string } | null {
   return null;
 }
 
-function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[] | null {
+function tryStructuredParse(text: string, _bank: BankId | null): RawTransaction[] | null {
   try {
     const rows = parseTable(text);
     const txRows = filterTransactionRows(rows);
