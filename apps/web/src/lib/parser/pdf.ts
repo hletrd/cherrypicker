@@ -123,6 +123,18 @@ function filterTransactionRows(rows: string[][]): string[][] {
 // Structured parser (ported from packages/parser/src/pdf/index.ts)
 // ---------------------------------------------------------------------------
 
+/** Infer the year for a short-date (month/day only) using a look-back
+ *  heuristic: if the date would be more than 3 months in the future,
+ *  assume it belongs to the previous year. */
+function inferYear(month: number, day: number): number {
+  const now = new Date();
+  const candidate = new Date(now.getFullYear(), month - 1, day);
+  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
+    return now.getFullYear() - 1;
+  }
+  return now.getFullYear();
+}
+
 function parseDateToISO(raw: string): string {
   const match = raw.match(STRICT_DATE_PATTERN);
   if (match) return `${match[1]}-${match[2]!.padStart(2, '0')}-${match[3]!.padStart(2, '0')}`;
@@ -138,6 +150,26 @@ function parseDateToISO(raw: string): string {
   // Korean date formats
   const koreanFull = raw.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
   if (koreanFull) return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
+
+  // 1월 15일 — Korean short date without year
+  const koreanShort = raw.match(/(\d{1,2})월\s*(\d{1,2})일/);
+  if (koreanShort) {
+    const month = parseInt(koreanShort[1]!, 10);
+    const day = parseInt(koreanShort[2]!, 10);
+    const year = inferYear(month, day);
+    return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
+  }
+
+  // MM/DD or MM.DD — infer year with look-back heuristic
+  const mdMatch = raw.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
+  if (mdMatch) {
+    const month = parseInt(mdMatch[1]!, 10);
+    const day = parseInt(mdMatch[2]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const year = inferYear(month, day);
+      return `${year}-${mdMatch[1]!.padStart(2, '0')}-${mdMatch[2]!.padStart(2, '0')}`;
+    }
+  }
 
   return raw;
 }
