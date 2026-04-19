@@ -850,3 +850,25 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/components/cards/CardDetail.svelte:55-70`
 - **Reason for deferral:** Same as D-62. The `fetchGeneration` counter correctly prevents stale responses. Adding AbortController would be a nice improvement but the network waste is minimal (one fetch per card navigation).
 - **Exit criterion:** If CardDetail fetches cause noticeable performance issues, add AbortController cleanup.
+
+---
+
+## Deferred Findings (Cycle 42)
+
+### D-106: Web-side PDF `tryStructuredParse` catches all exceptions with bare `catch {}`
+
+- **Original finding:** C42-L01 (carry-over from C41 sweep item 17)
+- **Severity:** LOW (defensive coding)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/pdf.ts:284`
+- **Reason for deferral:** The web-side `tryStructuredParse` uses `catch {}` which swallows all errors including programming errors (ReferenceError, etc.). The server-side equivalent at `packages/parser/src/pdf/index.ts:181-186` only catches `SyntaxError | TypeError | RangeError` and re-throws everything else. This inconsistency could mask bugs on the web side, but the parser is a best-effort component where silent failure is acceptable behavior. The risk of a programming error being silently swallowed is low because the parser is well-tested and the code paths are simple.
+- **Exit criterion:** If a programming error in the web-side PDF parser is silently caught and causes user confusion (showing "no transactions" with no diagnostic), narrow the catch to specific error types matching the server-side implementation.
+
+### D-107: Server-side CSV `parseCSV` silently swallows adapter errors during content-signature detection
+
+- **Original finding:** C42-L02 (carry-over from C41 sweep item 19)
+- **Severity:** LOW (diagnostics)
+- **Confidence:** High
+- **File+line:** `packages/parser/src/csv/index.ts:56-65`
+- **Reason for deferral:** The content-signature detection loop uses `catch { continue; }` which silently drops errors from bank-specific adapters. The web-side equivalent at `apps/web/src/lib/parser/csv.ts:974-980` logs the error with `console.warn`. If all adapters fail, the user gets no feedback about why bank-specific parsing failed, but the generic parser provides a reasonable fallback. Adding diagnostic logging is a minor improvement with no functional impact.
+- **Exit criterion:** If users report confusion about why bank-specific parsing failed with no diagnostic output, add `console.warn` or error collection in the catch block to match the web-side behavior.
