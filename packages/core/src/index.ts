@@ -15,7 +15,7 @@ export { MerchantMatcher } from './categorizer/matcher.js';
 export { MERCHANT_KEYWORDS } from './categorizer/keywords.js';
 
 // Calculator
-export { calculateRewards } from './calculator/reward.js';
+export { calculateRewards, buildCategoryKey } from './calculator/reward.js';
 export { calculateDiscount } from './calculator/discount.js';
 export { calculatePoints } from './calculator/points.js';
 export { calculateCashback } from './calculator/cashback.js';
