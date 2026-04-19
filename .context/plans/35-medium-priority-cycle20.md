@@ -77,4 +77,4 @@ if (sortOrder === 'fee-asc') {
 
 ## Progress
 
-- [ ] Task 1: Add international annual fee as secondary sort key
+- [x] Task 1: Add international annual fee as secondary sort key

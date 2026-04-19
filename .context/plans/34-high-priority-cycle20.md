@@ -54,4 +54,4 @@ onMount(async () => {
 
 ## Progress
 
-- [ ] Task 1: Show Korean labels in CardDetail reward table
+- [x] Task 1: Show Korean labels in CardDetail reward table
