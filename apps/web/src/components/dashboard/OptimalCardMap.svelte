@@ -16,7 +16,7 @@
 
   let maxRate = $derived.by(() => {
     if (!assignments.length) return 1;
-    return Math.max(...assignments.map((a) => a.rate), 0.001);
+    return assignments.reduce((max, a) => Math.max(max, a.rate), 0.001);
   });
 
   let sortedAssignments = $derived.by(() => {
