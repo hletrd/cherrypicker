@@ -94,10 +94,18 @@ export const shinhanAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (isNaN(amount)) {
+        if (amountRaw.trim()) {
+          errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}`, raw: line });
+        }
+        continue;
+      }
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: parseAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
