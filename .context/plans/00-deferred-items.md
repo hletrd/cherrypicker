@@ -907,3 +907,16 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/lib/store.svelte.ts:340-411`
 - **Reason for deferral:** When the user edits a transaction from a non-latest month in `TransactionReview.svelte`, the `reoptimize` method correctly recalculates `previousMonthSpending` from all edited transactions (including non-latest). However, the optimization result only reflects the latest month's transactions. If the user changes a category on a non-latest month transaction, the optimization doesn't visibly change, which could be confusing. This is correct behavior from a reward calculation perspective -- the optimizer only assigns the latest month's transactions. Adding a message or visual indicator for non-latest-month edits is a UX enhancement, not a bug fix.
 - **Exit criterion:** If users report confusion about why editing non-latest month transactions has no visible effect on the optimization, add a UI message explaining that only the latest month is optimized.
+
+---
+
+## Deferred Findings (Cycle 3)
+
+### D-111: `getCardById` performs O(n) linear scan of all issuers and cards
+
+- **Original finding:** C3-L02
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/cards.ts:214-240`
+- **Reason for deferral:** Same class as D-09/D-51 (performance at scale). With 683 cards across 10 issuers, the linear scan takes < 1ms and is not a bottleneck. The function is called once per CardDetail mount and once per card in the grid. A Map index would be O(1) but adds complexity for minimal benefit at current scale.
+- **Exit criterion:** If the card count exceeds 5000 or `getCardById` is called in tight loops, build a `Map<string, CardRuleSet>` index when `loadCardsData()` is first called.
