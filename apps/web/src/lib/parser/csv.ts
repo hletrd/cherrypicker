@@ -931,8 +931,8 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
     if (adapter?.parseCSV) {
       try {
         return adapter.parseCSV(content);
-      } catch {
-        // Fall through to generic parser
+      } catch (err) {
+        console.warn(`[cherrypicker] Bank adapter ${adapter.bankId} failed, falling through:`, err);
       }
     }
   }
@@ -942,8 +942,8 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
     if (adapter.detect(content) && adapter.parseCSV) {
       try {
         return adapter.parseCSV(content);
-      } catch {
-        // Try next
+      } catch (err) {
+        console.warn(`[cherrypicker] Bank adapter ${adapter.bankId} (detect) failed:`, err);
       }
     }
   }
