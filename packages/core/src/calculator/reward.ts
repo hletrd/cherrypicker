@@ -67,7 +67,17 @@ function findRule(rules: RewardRule[], tx: CategorizedTransaction): RewardRule |
     if (!tx.subcategory && rule.subcategory) return false;
     // Broad category rules (no subcategory) should not match transactions
     // that have a subcategory — Korean card terms typically exclude
-    // subcategories like cafe from the broader dining category
+    // subcategories like cafe from the broader dining category.
+    //
+    // Rationale: In Korean credit card reward structures, a "dining 5%"
+    // rule usually does NOT cover cafe subcategory transactions; cafe
+    // gets its own separate rule (possibly with a different rate). If we
+    // allowed broad rules to match subcategorized transactions, the
+    // optimizer would over-count rewards for those transactions.
+    //
+    // TODO: If a future card's terms explicitly include subcategories
+    // under a broad category rule, add an `includeSubcategories: true`
+    // field to the RewardRule schema and check it here before skipping.
     if (tx.subcategory && !rule.subcategory && rule.category !== '*') return false;
     return ruleConditionsMatch(rule, tx);
   });
