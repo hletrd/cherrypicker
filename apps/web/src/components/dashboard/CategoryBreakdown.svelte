@@ -140,12 +140,15 @@
     {#each categories as cat, i}
       {@const isTop3 = i < 3}
       <div
-        class="relative rounded-lg px-3 py-2 transition-colors duration-150 cursor-default {isTop3 ? 'bg-[var(--color-bg)]' : ''} {hoveredIndex === i ? 'bg-[var(--color-primary-light)]' : ''}"
-        role="row"
+        class="relative rounded-lg px-3 py-2 transition-colors duration-150 cursor-default focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-1 {isTop3 ? 'bg-[var(--color-bg)]' : ''} {hoveredIndex === i ? 'bg-[var(--color-primary-light)]' : ''}"
+        role="button"
+        tabindex="0"
         aria-label={cat.labelKo}
+        aria-expanded={hoveredIndex === i}
         onmouseenter={() => (hoveredIndex = i)}
         onmouseleave={() => (hoveredIndex = null)}
         onclick={() => (hoveredIndex = hoveredIndex === i ? null : i)}
+        onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hoveredIndex = hoveredIndex === i ? null : i; } }}
       >
         <div class="flex items-center gap-3">
           <!-- Rank -->
