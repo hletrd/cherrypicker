@@ -146,19 +146,21 @@ export async function optimizeFromTransactions(
 
   // 전월실적 기본값: 사용자가 입력하지 않으면 이번 달 총 지출과 같다고 가정
   // 단, 카드사별 performanceExclusions에 포함된 카테고리의 지출은 전월실적에서 제외
-  const allExclusions = new Set<string>();
+  // 각 카드마다 제외 항목이 다르므로 카드별로 개별 계산
+  const cardPreviousSpending = new Map<string, number>();
   for (const rule of cardRules) {
-    for (const ex of rule.performanceExclusions) {
-      allExclusions.add(ex);
+    if (options?.previousMonthSpending !== undefined) {
+      // 사용자가 명시적으로 입력한 값 — 모든 카드에 동일 적용
+      cardPreviousSpending.set(rule.card.id, options.previousMonthSpending);
+    } else {
+      // 카드별 performanceExclusions에 따라 전월실적 개별 계산
+      const exclusions = new Set(rule.performanceExclusions);
+      const qualifying = transactions
+        .filter(tx => !exclusions.has(tx.category))
+        .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+      cardPreviousSpending.set(rule.card.id, qualifying);
     }
   }
-  const qualifyingSpending = transactions
-    .filter(tx => !allExclusions.has(tx.category))
-    .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-  const previousMonthSpending = options?.previousMonthSpending ?? qualifyingSpending;
-  const cardPreviousSpending = new Map<string, number>(
-    cardRules.map(r => [r.card.id, previousMonthSpending]),
-  );
   const constraints = buildConstraints(categorized, cardPreviousSpending);
 
   // cardRules from static JSON are validated and narrowed to the core
