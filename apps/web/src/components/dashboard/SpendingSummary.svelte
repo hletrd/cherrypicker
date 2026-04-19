@@ -14,10 +14,11 @@
 
   function formatPeriod(period: { start: string; end: string } | undefined): string {
     if (!period) return '-';
-    const start = new Date(period.start);
-    const end = new Date(period.end);
-    const startStr = `${start.getFullYear()}년 ${start.getMonth() + 1}월`;
-    const endStr = `${end.getFullYear()}년 ${end.getMonth() + 1}월`;
+    const [sy, sm] = period.start.split('-');
+    const [ey, em] = period.end.split('-');
+    if (!sy || !sm || !ey || !em) return '-';
+    const startStr = `${sy}년 ${parseInt(sm, 10)}월`;
+    const endStr = `${ey}년 ${parseInt(em, 10)}월`;
     return startStr === endStr ? startStr : `${startStr} ~ ${endStr}`;
   }
 
