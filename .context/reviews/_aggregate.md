@@ -1,41 +1,32 @@
-# Review Aggregate -- 2026-04-19 (Cycle 37)
+# Review Aggregate -- 2026-04-19 (Cycle 38)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle37-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle38-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-36 per-agent and aggregate files
+- All cycle 1-37 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-Cycle 36 findings C36-01 and C36-02 are CONFIRMED ALREADY FIXED in the current codebase. Deferred item D-99 is also CONFIRMED FIXED. Cycle 37 finding C37-01 is NEW and requires implementation.
+Cycle 37 finding C37-01 is CONFIRMED ALREADY FIXED in the current codebase. No duplicate findings with prior cycles. C38-01 is NEW and requires implementation.
 
 ---
 
-## Verification of Cycle 36 Fixes
+## Verification of Cycle 37 Fixes
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C36-01 | **FIXED** | `apps/web/src/lib/parser/csv.ts:258` now uses `inst > 1` instead of `inst > 0` |
-| C36-02 | **FIXED** | `packages/parser/src/xlsx/index.ts:128` now uses `Math.round(raw)` for numeric values |
+| C37-01 | **FIXED** | `packages/parser/src/pdf/index.ts:98-101` now returns 0 instead of NaN for unparseable amounts |
 
 ---
 
-## Verification of Deferred Item Fix
-
-| Finding | Status | Evidence |
-|---|---|---|
-| D-99 | **FIXED** | `apps/web/src/lib/store.svelte.ts:147-148` now has `Number.isFinite(tx.amount) && tx.amount > 0` in `isValidTx` |
-
----
-
-## Active Findings (New in Cycle 37)
+## Active Findings (New in Cycle 38)
 
 | ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C37-01 | LOW | High | `packages/parser/src/pdf/index.ts:98` | Server-side PDF `parseAmount` returns NaN for unparseable amounts instead of 0 -- inconsistent with web-side, creates fragile NaN-propagation risk if new code paths skip NaN guard | PENDING |
+| C38-01 | MEDIUM | High | `apps/web/src/components/upload/FileDropzone.svelte:409` | "50만원으로 계산해요" text is misleading -- code computes per-card exclusion-filtered spending from uploaded transactions, not a flat 500,000 Won default | PENDING |
 
 ---
 
