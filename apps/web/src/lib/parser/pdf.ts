@@ -155,9 +155,16 @@ function parseDateToISO(raw: string): string {
     return `${fullYear}-${shortMatch[2]!.padStart(2, '0')}-${shortMatch[3]!.padStart(2, '0')}`;
   }
 
-  // Korean date formats
+  // Korean date formats — validate month/day ranges to avoid producing
+  // invalid date strings from corrupted text (e.g., "2026년 99월 99일").
   const koreanFull = raw.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-  if (koreanFull) return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
+  if (koreanFull) {
+    const month = parseInt(koreanFull[2]!, 10);
+    const day = parseInt(koreanFull[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
+    }
+  }
 
   // 1월 15일 — Korean short date without year
   const koreanShort = raw.match(/(\d{1,2})월\s*(\d{1,2})일/);
