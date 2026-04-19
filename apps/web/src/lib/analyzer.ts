@@ -132,8 +132,17 @@ export async function optimizeFromTransactions(
   }
 
   // 전월실적 기본값: 사용자가 입력하지 않으면 이번 달 총 지출과 같다고 가정
-  const totalSpendingThisMonth = transactions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-  const previousMonthSpending = options?.previousMonthSpending ?? totalSpendingThisMonth;
+  // 단, 카드사별 performanceExclusions에 포함된 카테고리의 지출은 전월실적에서 제외
+  const allExclusions = new Set<string>();
+  for (const rule of cardRules) {
+    for (const ex of rule.performanceExclusions) {
+      allExclusions.add(ex);
+    }
+  }
+  const qualifyingSpending = transactions
+    .filter(tx => !allExclusions.has(tx.category))
+    .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+  const previousMonthSpending = options?.previousMonthSpending ?? qualifyingSpending;
   const cardPreviousSpending = new Map<string, number>(
     cardRules.map(r => [r.card.id, previousMonthSpending]),
   );
