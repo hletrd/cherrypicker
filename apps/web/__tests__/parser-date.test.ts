@@ -43,25 +43,36 @@ function parseDateToISO(raw: string): string {
   }
 
   // MM/DD or MM.DD — infer year with look-back heuristic
+  // Validate month/day ranges to avoid producing invalid date strings
   const shortMatch = cleaned.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
   if (shortMatch) {
     const month = parseInt(shortMatch[1]!, 10);
     const day = parseInt(shortMatch[2]!, 10);
-    const year = inferYear(month, day);
-    return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const year = inferYear(month, day);
+      return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
+    }
   }
 
-  // 2024년 1월 15일
+  // 2024년 1월 15일 — validate month/day ranges
   const koreanFull = cleaned.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-  if (koreanFull) return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
+  if (koreanFull) {
+    const month = parseInt(koreanFull[2]!, 10);
+    const day = parseInt(koreanFull[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
+    }
+  }
 
-  // 1월 15일
+  // 1월 15일 — validate month/day ranges
   const koreanShort = cleaned.match(/(\d{1,2})월\s*(\d{1,2})일/);
   if (koreanShort) {
     const month = parseInt(koreanShort[1]!, 10);
     const day = parseInt(koreanShort[2]!, 10);
-    const year = inferYear(month, day);
-    return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const year = inferYear(month, day);
+      return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
+    }
   }
 
   return cleaned;
@@ -191,5 +202,65 @@ describe('parseDateToISO — edge cases', () => {
 
   test('empty string passes through', () => {
     expect(parseDateToISO('')).toBe('');
+  });
+});
+
+describe('parseDateToISO — invalid date range validation', () => {
+  test('MM/DD with month > 12 is rejected', () => {
+    expect(parseDateToISO('13/45')).toBe('13/45');
+  });
+
+  test('MM/DD with day > 31 is rejected', () => {
+    expect(parseDateToISO('01/32')).toBe('01/32');
+  });
+
+  test('MM/DD with month 0 is rejected', () => {
+    expect(parseDateToISO('0/15')).toBe('0/15');
+  });
+
+  test('MM/DD with day 0 is rejected', () => {
+    expect(parseDateToISO('1/0')).toBe('1/0');
+  });
+
+  test('koreanFull with month > 12 is rejected', () => {
+    expect(parseDateToISO('2026년 99월 99일')).toBe('2026년 99월 99일');
+  });
+
+  test('koreanFull with month 0 is rejected', () => {
+    expect(parseDateToISO('2026년 0월 15일')).toBe('2026년 0월 15일');
+  });
+
+  test('koreanFull with day 0 is rejected', () => {
+    expect(parseDateToISO('2026년 1월 0일')).toBe('2026년 1월 0일');
+  });
+
+  test('koreanFull with day > 31 is rejected', () => {
+    expect(parseDateToISO('2026년 1월 32일')).toBe('2026년 1월 32일');
+  });
+
+  test('koreanShort with month > 12 is rejected', () => {
+    expect(parseDateToISO('99월 99일')).toBe('99월 99일');
+  });
+
+  test('koreanShort with month 0 is rejected', () => {
+    expect(parseDateToISO('0월 15일')).toBe('0월 15일');
+  });
+
+  test('koreanShort with day 0 is rejected', () => {
+    expect(parseDateToISO('1월 0일')).toBe('1월 0일');
+  });
+
+  test('koreanShort with day > 31 is rejected', () => {
+    expect(parseDateToISO('1월 32일')).toBe('1월 32일');
+  });
+
+  test('valid boundary: month 12 day 31 passes', () => {
+    const result = parseDateToISO('12/31');
+    expect(result).toMatch(/^\d{4}-12-31$/);
+  });
+
+  test('valid boundary: month 1 day 1 passes', () => {
+    const result = parseDateToISO('1/1');
+    expect(result).toMatch(/^\d{4}-01-01$/);
   });
 });
