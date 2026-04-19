@@ -1,4 +1,5 @@
 const path = require('node:path');
+const fs = require('node:fs');
 const { readFileSync } = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const { expect, test } = require('@playwright/test');
@@ -13,6 +14,25 @@ let buildConstraints;
 let greedyOptimize;
 
 test.beforeAll(async () => {
+  // Verify dist/ exists and warn if stale (source newer than dist)
+  const distDir = path.join(repoRoot, 'packages/core/dist');
+  if (!fs.existsSync(distDir)) {
+    throw new Error(
+      'packages/core/dist/ not found. Run `bun run build` in packages/core before E2E tests.'
+    );
+  }
+  const matcherDist = path.join(distDir, 'categorizer/matcher.js');
+  const matcherSrc = path.join(repoRoot, 'packages/core/src/categorizer/matcher.ts');
+  if (fs.existsSync(matcherDist) && fs.existsSync(matcherSrc)) {
+    const distMtime = fs.statSync(matcherDist).mtimeMs;
+    const srcMtime = fs.statSync(matcherSrc).mtimeMs;
+    if (srcMtime > distMtime) {
+      console.warn(
+        '[E2E WARNING] packages/core/src is newer than dist/. Run `bun run build` in packages/core to get current code.'
+      );
+    }
+  }
+
   ({ MerchantMatcher } = await import(
     pathToFileURL(path.join(repoRoot, 'packages/core/dist/categorizer/matcher.js')).href
   ));
