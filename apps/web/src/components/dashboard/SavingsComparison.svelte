@@ -18,7 +18,6 @@
     cardName: string;
     spending: number;
     reward: number;
-    rate: number;
   }
 
   let cardBreakdown = $derived.by((): CardBreakdown[] => {
@@ -35,7 +34,6 @@
           cardName: a.assignedCardName,
           spending: a.spending,
           reward: a.reward,
-          rate: a.rate,
         });
       }
     }
