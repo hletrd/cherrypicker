@@ -90,8 +90,12 @@ const STORAGE_KEY = 'cherrypicker:analysis';
 
 type PersistedAnalysisResult = Pick<
   AnalysisResult,
-  'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown'
+  'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown' | 'transactions'
 >;
+
+/** Maximum serialized payload size to persist in sessionStorage (4MB, leaving
+ *  1MB headroom for other keys within the typical 5MB per-origin limit). */
+const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
 
 function persistToStorage(data: AnalysisResult): void {
   try {
@@ -106,10 +110,30 @@ function persistToStorage(data: AnalysisResult): void {
         totalTransactionCount: data.totalTransactionCount,
         optimization: data.optimization,
         monthlyBreakdown: data.monthlyBreakdown,
+        transactions: data.transactions,
       };
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+      const serialized = JSON.stringify(persisted);
+      if (serialized.length > MAX_PERSIST_SIZE) {
+        // Transactions are the largest field — omit them if over budget
+        const withoutTxs: PersistedAnalysisResult = { ...persisted, transactions: undefined };
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(withoutTxs));
+      } else {
+        sessionStorage.setItem(STORAGE_KEY, serialized);
+      }
     }
   } catch { /* quota exceeded or SSR */ }
+}
+
+function isValidTx(tx: any): tx is CategorizedTx {
+  return (
+    tx &&
+    typeof tx === 'object' &&
+    typeof tx.id === 'string' &&
+    typeof tx.date === 'string' &&
+    typeof tx.merchant === 'string' &&
+    typeof tx.amount === 'number' &&
+    typeof tx.category === 'string'
+  );
 }
 
 function loadFromStorage(): AnalysisResult | null {
@@ -127,6 +151,14 @@ function loadFromStorage(): AnalysisResult | null {
         typeof parsed.optimization.totalSpending === 'number' &&
         typeof parsed.optimization.effectiveRate === 'number'
       ) {
+        // Restore transactions with validation — each entry must have
+        // the essential fields; invalid entries are silently dropped.
+        let transactions: CategorizedTx[] | undefined;
+        if (Array.isArray(parsed.transactions)) {
+          const validTxs = parsed.transactions.filter(isValidTx);
+          transactions = validTxs.length > 0 ? validTxs : undefined;
+        }
+
         return {
           success: Boolean(parsed.success),
           bank: typeof parsed.bank === 'string' || parsed.bank === null ? parsed.bank : null,
@@ -136,6 +168,7 @@ function loadFromStorage(): AnalysisResult | null {
           fullStatementPeriod: parsed.fullStatementPeriod,
           totalTransactionCount: typeof parsed.totalTransactionCount === 'number' ? parsed.totalTransactionCount : undefined,
           parseErrors: [],
+          transactions,
           optimization: parsed.optimization,
           monthlyBreakdown: Array.isArray(parsed.monthlyBreakdown)
             ? parsed.monthlyBreakdown.map((item: any) => ({
@@ -245,6 +278,7 @@ function createAnalysisStore() {
         const optimization = await optimizeFromTransactions(editedTransactions, options);
         if (result) {
           result = { ...result, transactions: editedTransactions, optimization };
+          generation++;
           persistToStorage(result);
         }
       } catch (e) {
