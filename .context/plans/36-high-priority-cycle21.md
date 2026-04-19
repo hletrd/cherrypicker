@@ -49,4 +49,4 @@ for (const line of lines) {
 
 ## Progress
 
-- [ ] Task 1: Fix PDF parseTable early exit
+- [x] Task 1: Fix PDF parseTable early exit

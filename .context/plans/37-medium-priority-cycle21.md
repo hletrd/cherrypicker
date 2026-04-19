@@ -72,4 +72,4 @@ const maxLen = lines.reduce((max, l) => Math.max(max, l.length), 0);
 ## Progress
 
 - [x] Task 1: WITHDRAWN — intentional design choice
-- [ ] Task 2: Replace Math.max spread in pdf.ts
+- [x] Task 2: Replace Math.max spread in pdf.ts
