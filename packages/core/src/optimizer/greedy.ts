@@ -109,7 +109,7 @@ function scoreCardsForTransaction(
   return scores.sort((a, b) => b.reward - a.reward);
 }
 
-function buildAssignments(txAssignments: TxAssignment[]): CardAssignment[] {
+function buildAssignments(txAssignments: TxAssignment[], categoryLabels?: Map<string, string>): CardAssignment[] {
   const assignmentMap = new Map<string, CardAssignment>();
   const alternativeRewardMap = new Map<string, Map<string, { cardName: string; reward: number }>>();
 
@@ -124,7 +124,7 @@ function buildAssignments(txAssignments: TxAssignment[]): CardAssignment[] {
     } else {
       assignmentMap.set(key, {
         category: assignment.tx.category,
-        categoryNameKo: CATEGORY_NAMES_KO[assignment.tx.category] ?? assignment.tx.category,
+        categoryNameKo: categoryLabels?.get(assignment.tx.category) ?? CATEGORY_NAMES_KO[assignment.tx.category] ?? assignment.tx.category,
         assignedCardId: assignment.assignedCardId,
         assignedCardName: assignment.assignedCardName,
         spending: assignment.tx.amount,
@@ -246,7 +246,7 @@ export function greedyOptimize(
     });
   }
 
-  const assignments = buildAssignments(txAssignments);
+  const assignments = buildAssignments(txAssignments, constraints.categoryLabels);
   const cardResults = buildCardResults(cardRules, cardPreviousSpending, assignedTransactionsByCard);
 
   const totalReward = cardResults.reduce((sum, cardResult) => sum + cardResult.totalReward, 0);

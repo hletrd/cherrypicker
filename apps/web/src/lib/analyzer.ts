@@ -163,6 +163,19 @@ export async function optimizeFromTransactions(
   }
   const constraints = buildConstraints(categorized, cardPreviousSpending);
 
+  // Build category labels map from taxonomy for the optimizer
+  const categoryNodes = await loadCategories();
+  const categoryLabels = new Map<string, string>();
+  for (const node of categoryNodes) {
+    categoryLabels.set(node.id, node.labelKo);
+    if (node.subcategories) {
+      for (const sub of node.subcategories) {
+        categoryLabels.set(sub.id, sub.labelKo);
+      }
+    }
+  }
+  constraints.categoryLabels = categoryLabels;
+
   // cardRules from static JSON are validated and narrowed to the core
   // CardRuleSet shape via the adapter function.
   const optimizationResult = greedyOptimize(constraints, toCoreCardRuleSets(cardRules));

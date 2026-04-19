@@ -4,6 +4,7 @@ export interface OptimizationConstraints {
   cards: { cardId: string; previousMonthSpending: number }[];
   transactions: CategorizedTransaction[];
   categorySpending: Map<string, number>;  // reporting-only category → total spending
+  categoryLabels?: Map<string, string>;   // Optional: category ID → Korean label
 }
 
 export function buildConstraints(
