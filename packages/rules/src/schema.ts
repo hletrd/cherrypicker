@@ -18,7 +18,10 @@ export const rewardTierRateSchema = z.object({
   unit: z.string().min(1).nullable().optional().transform((v) => v ?? null),
   monthlyCap: z.number().int().nonnegative().nullable().optional().transform((v) => v ?? null),
   perTransactionCap: z.number().int().nonnegative().nullable().optional().transform((v) => v ?? null),
-});
+}).refine(
+  (tier) => !(tier.rate !== null && tier.rate > 0 && tier.fixedAmount !== null && tier.fixedAmount > 0),
+  { message: 'rate and fixedAmount are mutually exclusive — use one or the other, not both' },
+);
 
 export const rewardConditionsSchema = z.object({
   minTransaction: z.number().int().nonnegative().nullable().optional().transform((v) => v ?? undefined).pipe(z.number().int().nonnegative().optional()),
