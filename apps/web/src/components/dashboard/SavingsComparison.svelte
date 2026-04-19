@@ -71,6 +71,13 @@
 
   let savingsPct = $derived.by(() => {
     if (!opt || !opt.bestSingleCard) return 0;
+    // When the best single card earns 0 but cherry-picking earns more, the
+    // improvement is "infinite" — return a sentinel so the template can show
+    // a special badge instead of hiding the improvement behind 0%.
+    if (opt.bestSingleCard.totalReward === 0 && opt.savingsVsSingleCard > 0) {
+      return Infinity;
+    }
+    if (opt.bestSingleCard.totalReward === 0) return 0;
     const raw = opt.savingsVsSingleCard / opt.bestSingleCard.totalReward;
     return Number.isFinite(raw) ? Math.round(raw * 100) : 0;
   });
@@ -186,9 +193,13 @@
       <div class="mb-3 text-xs font-medium text-green-700 dark:text-green-400">{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}</div>
       <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 0 ? '+' : ''}{formatWon(displayedSavings)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
-        연간 약 {formatWon((opt.savingsVsSingleCard >= 0 ? opt.savingsVsSingleCard : Math.abs(opt.savingsVsSingleCard)) * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'}
+        연간 약 {formatWon((opt.savingsVsSingleCard >= 0 ? opt.savingsVsSingleCard : Math.abs(opt.savingsVsSingleCard)) * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준)
       </div>
-      {#if savingsPct > 0}
+      {#if savingsPct === Infinity}
+        <div class="mt-2 inline-block rounded-full bg-green-200 dark:bg-green-800 px-2 py-0.5 text-xs font-semibold text-green-800 dark:text-green-200">
+          최적 조합만 혜택
+        </div>
+      {:else if savingsPct > 0}
         <div class="mt-2 inline-block rounded-full bg-green-200 dark:bg-green-800 px-2 py-0.5 text-xs font-semibold text-green-800 dark:text-green-200">
           한 장짜리보다 +{savingsPct}%
         </div>
