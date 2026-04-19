@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { getCardDetail } from '../../lib/api.js';
   import type { CardDetail, RewardTier } from '../../lib/api.js';
   import { formatWon, formatPercent, getCategoryIconName, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
+  import { loadCategories } from '../../lib/cards.js';
   import Icon from '../ui/Icon.svelte';
 
   interface Props {
@@ -13,6 +15,26 @@
   let error = $state<string | null>(null);
   let card = $state<CardDetail | null>(null);
   let fetchGeneration = 0;
+  let categoryLabels = $state<Map<string, string>>(new Map());
+
+  onMount(async () => {
+    try {
+      const nodes = await loadCategories();
+      const map = new Map<string, string>();
+      for (const node of nodes) {
+        map.set(node.id, node.labelKo);
+        if (node.subcategories) {
+          for (const sub of node.subcategories) {
+            map.set(sub.id, sub.labelKo);
+            map.set(`${node.id}.${sub.id}`, sub.labelKo);
+          }
+        }
+      }
+      categoryLabels = map;
+    } catch {
+      // Fall back to showing raw IDs — non-critical
+    }
+  });
 
   function rateColorClass(rate: number): string {
     const pct = rate * 100;
@@ -206,7 +228,7 @@
                     <td class="px-4 py-2.5 font-medium">
                       <span class="mr-1.5 inline-flex items-center text-[var(--color-text-muted)]">
                         <Icon name={getCategoryIconName(row.category)} size={14} />
-                      </span>{row.category}
+                      </span>{categoryLabels.get(row.category) ?? row.category}
                     </td>
                     <td class="px-4 py-2.5 text-right font-mono {rateColorClass(row.tier.rate)}">
                       {formatRewardRate(row.tier)}
