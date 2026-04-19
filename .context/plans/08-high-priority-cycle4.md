@@ -2,7 +2,7 @@
 
 **Priority:** HIGH
 **Findings addressed:** C4-01, C4-04, C4-11, C4-10, C4-08
-**Status:** Pending
+**Status:** DONE
 
 ---
 
@@ -232,8 +232,8 @@ This way, `editedTxs` only re-syncs when the generation actually changes (new up
 
 ## Progress
 
-- [ ] Task 1: Fix SavingsComparison division by zero
-- [ ] Task 2: Fix CategoryBreakdown a11y
-- [ ] Task 3: Add findCategory regression test
-- [ ] Task 4: Add E2E dist staleness check
-- [ ] Task 5: Add generation counter for editedTxs sync
+- [x] Task 1: Fix SavingsComparison division by zero
+- [x] Task 2: Fix CategoryBreakdown a11y
+- [x] Task 3: Add findCategory regression test
+- [x] Task 4: Add E2E dist staleness check
+- [x] Task 5: Add generation counter for editedTxs sync

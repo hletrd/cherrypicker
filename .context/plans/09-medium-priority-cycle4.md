@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM
 **Findings addressed:** C4-12, C4-05, C4-02, C4-03, C4-15
-**Status:** Pending
+**Status:** DONE
 
 ---
 
@@ -157,8 +157,8 @@ function getCachedCoreRules(rules: CardRuleSet[]): CoreCardRuleSet[] {
 
 ## Progress
 
-- [ ] Task 1: Fix parseInt -> Number with isFinite guard
-- [ ] Task 2: Pass categoryLabels into buildConstraints
-- [ ] Task 3: Eliminate redundant loadCategories() call
-- [ ] Task 4: Compute monthlyBreakdown in single pass
-- [ ] Task 5: Cache toCoreCardRuleSets result
+- [x] Task 1: Fix parseInt -> Number with isFinite guard
+- [x] Task 2: Pass categoryLabels into buildConstraints
+- [x] Task 3: Eliminate redundant loadCategories() call
+- [x] Task 4: Compute monthlyBreakdown in single pass
+- [x] Task 5: Cache toCoreCardRuleSets result
