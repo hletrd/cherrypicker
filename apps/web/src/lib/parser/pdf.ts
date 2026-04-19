@@ -6,10 +6,13 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 // Table parser (ported from packages/parser/src/pdf/table-parser.ts)
 // ---------------------------------------------------------------------------
 
-const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2})/;
+const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일)/;
 const AMOUNT_PATTERN = /[\d,]+원?/;
 const STRICT_DATE_PATTERN = /(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/;
 const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})/;
+const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
+const KOREAN_SHORT_DATE_PATTERN = /\d{1,2}월\s*\d{1,2}일/;
+const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/]\d{1,2}$/;
 const STRICT_AMOUNT_PATTERN = /^-?[\d,]+원?$/;
 
 interface Column {
@@ -182,7 +185,13 @@ function parseAmount(raw: string): number {
 function findDateCell(row: string[]): { idx: number; value: string } | null {
   for (let i = 0; i < row.length; i++) {
     const cell = row[i] ?? '';
-    if (STRICT_DATE_PATTERN.test(cell) || SHORT_YEAR_DATE_PATTERN.test(cell)) return { idx: i, value: cell };
+    if (
+      STRICT_DATE_PATTERN.test(cell) ||
+      SHORT_YEAR_DATE_PATTERN.test(cell) ||
+      KOREAN_FULL_DATE_PATTERN.test(cell) ||
+      KOREAN_SHORT_DATE_PATTERN.test(cell) ||
+      SHORT_MD_DATE_PATTERN.test(cell)
+    ) return { idx: i, value: cell };
   }
   return null;
 }
@@ -300,7 +309,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   // Fallback: scan every line for date + amount patterns
   const fallbackTransactions: RawTransaction[] = [];
   const lines = text.split('\n');
-  const fallbackDatePattern = /(\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2})/;
+  const fallbackDatePattern = /(\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/]\d{1,2}(?![.\-\/\d]))/;
   const fallbackAmountPattern = /([\d,]+)원?/g;
 
   for (const line of lines) {
