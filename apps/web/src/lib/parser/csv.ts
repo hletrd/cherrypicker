@@ -90,9 +90,16 @@ function parseAmount(raw: string): number {
   return isNegative ? -parsed : parsed;
 }
 
-function safeAmount(raw: string): number {
-  const v = parseAmount(raw);
-  return Number.isNaN(v) ? 0 : v;
+/** Check if a parsed amount is valid (not NaN). Pushes an error and returns
+ *  false if the amount is NaN, so the caller can skip the transaction. */
+function isValidAmount(amount: number, amountRaw: string, lineIdx: number, errors: ParseError[]): boolean {
+  if (Number.isNaN(amount)) {
+    if (amountRaw.trim()) {
+      errors.push({ line: lineIdx + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}` });
+    }
+    return false;
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -282,10 +289,13 @@ const samsungAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -344,10 +354,13 @@ const shinhanAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -407,10 +420,13 @@ const kbAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -470,10 +486,13 @@ const hyundaiAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -532,10 +551,13 @@ const lotteAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -594,10 +616,13 @@ const hanaAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -657,10 +682,13 @@ const wooriAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -719,10 +747,13 @@ const nhAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -782,10 +813,13 @@ const ibkAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
@@ -844,10 +878,13 @@ const bcAdapter: BankAdapter = {
 
       if (!dateRaw && !merchantRaw) continue;
 
+      const amount = parseAmount(amountRaw);
+      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
       const tx: RawTransaction = {
         date: parseDateToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount: safeAmount(amountRaw),
+        amount,
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
