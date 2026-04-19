@@ -179,7 +179,10 @@ function parseDateToISO(raw: string): string {
 
 function parseAmount(raw: string): number {
   const n = parseInt(raw.replace(/원$/, '').replace(/,/g, ''), 10);
-  return Number.isNaN(n) ? NaN : n;
+  // Return 0 instead of NaN so callers never have to guard against NaN
+  // propagation. Amounts of 0 are correctly filtered out by the > 0
+  // checks in both the structured and fallback parsing paths.
+  return Number.isNaN(n) ? 0 : n;
 }
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
@@ -229,7 +232,7 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
       const merchant = merchantIdx !== -1 ? (row[merchantIdx] ?? '').trim() : '';
       const amount = parseAmount(amountCell.value);
 
-      if (Number.isNaN(amount) || (!merchant && amount === 0)) continue;
+      if (amount <= 0 || (!merchant && amount === 0)) continue;
 
       const tx: RawTransaction = {
         date: parseDateToISO(dateCell.value),
@@ -310,6 +313,9 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   const fallbackTransactions: RawTransaction[] = [];
   const lines = text.split('\n');
   const fallbackDatePattern = /(\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/]\d{1,2}(?![.\-\/\d]))/;
+  // The 'g' flag is required for matchAll() below. Do NOT hoist this regex
+  // to module scope — the global flag's lastIndex mutation would break
+  // .test()/.exec() calls if the regex were shared across invocations.
   const fallbackAmountPattern = /([\d,]+)원?/g;
 
   for (const line of lines) {
@@ -326,7 +332,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
           const amount = parseAmount(amountMatch[1]!);
-          if (!Number.isNaN(amount) && amount > 0) {
+          if (amount > 0) {
             fallbackTransactions.push({
               date: parseDateToISO(dateMatch[1]!),
               merchant: between.replace(/\s+/g, ' ').trim(),
