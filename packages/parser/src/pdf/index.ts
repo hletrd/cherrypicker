@@ -8,7 +8,13 @@ export interface PDFParseOptions {
   allowRemoteLLM?: boolean;
 }
 
-const DATE_PATTERN = /(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})/;
+// Date patterns for findDateCell — must cover all formats that parseDateToISO
+// handles, matching the web-side implementation in apps/web/src/lib/parser/pdf.ts.
+const STRICT_DATE_PATTERN = /(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/;
+const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})/;
+const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
+const KOREAN_SHORT_DATE_PATTERN = /\d{1,2}월\s*\d{1,2}일/;
+const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/]\d{1,2}$/;
 const AMOUNT_PATTERN = /^-?[\d,]+원?$/;
 
 /** Infer the year for a short-date (month/day only) using a look-back
@@ -103,7 +109,14 @@ function parseAmount(raw: string): number {
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
   for (let i = 0; i < row.length; i++) {
-    if (DATE_PATTERN.test(row[i] ?? '')) return { idx: i, value: row[i] ?? '' };
+    const cell = row[i] ?? '';
+    if (
+      STRICT_DATE_PATTERN.test(cell) ||
+      SHORT_YEAR_DATE_PATTERN.test(cell) ||
+      KOREAN_FULL_DATE_PATTERN.test(cell) ||
+      KOREAN_SHORT_DATE_PATTERN.test(cell) ||
+      SHORT_MD_DATE_PATTERN.test(cell)
+    ) return { idx: i, value: cell };
   }
   return null;
 }

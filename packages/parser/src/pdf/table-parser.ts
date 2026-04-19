@@ -1,5 +1,6 @@
-// Korean date pattern (anchored to match standalone dates)
-const DATE_PATTERN = /^\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/;
+// Korean date pattern — must cover all formats that parseDateToISO handles,
+// matching the web-side implementation in apps/web/src/lib/parser/pdf.ts.
+const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일)/;
 // Korean amount pattern
 const AMOUNT_PATTERN = /[\d,]+원?/;
 
