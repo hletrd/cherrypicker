@@ -1,53 +1,51 @@
-# Review Aggregate — 2026-04-19 (Cycle 22)
+# Review Aggregate — 2026-04-19 (Cycle 24)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle22-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle24-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-21 per-agent and aggregate files
+- All cycle 1-23 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-All cycle 1-21 findings have been verified as fixed or deferred. Cycle 21 findings C21-04, C21-05, C21-06 are now CONFIRMED FIXED.
+All cycle 1-23 findings have been verified as fixed or deferred. Cycle 23 findings C23-01, C23-02 are now CONFIRMED FIXED.
 
-C22-01 is a new finding (CategoryBreakdown bar overflow). C22-02 and C22-03 extend D-73/D-89 (Math.max spread pattern) to two additional Svelte components not previously flagged.
+C24-01 is a new finding (duplicate transaction IDs on multi-file upload). Not previously reported in any cycle.
+
+C24-02 is a new finding (double-negative in annual savings display). This is a residual issue from the C23-02 fix — the sign prefix was fixed but the absolute-value issue in the annual label was not.
+
+C24-03 is a new finding (misleading bar comparison when optimizer is suboptimal). Not previously reported.
 
 Deferred items D-01 through D-105 remain unchanged and are not re-listed here.
 
 ---
 
-## Verification of Cycle 21 Fixes
+## Verification of Cycle 23 Fixes
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C21-02 | DEFERRED | LOW, inconsistent rate formatting — minor UX |
-| C21-03 | DEFERRED (D-42/D-57) | LOW, third copy of bank names |
-| C21-04 | FIXED | `CardGrid.svelte:63-65` — now includes international fee as secondary sort key |
-| C21-05 | FIXED | `pdf.ts:86-89` — now requires 2+ consecutive blank lines to break |
-| C21-06 | FIXED | `pdf.ts:26` — now uses `reduce` instead of spread |
+| C23-01 | FIXED | `packages/core/src/calculator/reward.ts:161-166` — `won_per_liter` unit now returns `fixedAmount` as per-transaction discount |
+| C23-02 | FIXED | `SavingsComparison.svelte:173` — conditional `+` prefix; line 175 — label switches to "추가 비용" when negative |
 
 ---
 
-## Active Findings (New in Cycle 22, Deduplicated)
+## Active Findings (New in Cycle 24, Deduplicated)
 
-| ID | Severity | Confidence | File | Description | Cross-ref |
+| ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C22-01 | MEDIUM | High | `CategoryBreakdown.svelte:114,170` | "Other" combined bar overflow when its percentage exceeds top individual category | New |
-| C22-02 | LOW | High | `OptimalCardMap.svelte:19` | `Math.max(...spread)` stack overflow risk | Extends D-73/D-89 |
-| C22-03 | LOW | High | `CardGrid.svelte:19` | `Math.max(...spread)` stack overflow risk | Extends D-73/D-89 |
+| C24-01 | MEDIUM | High | `apps/web/src/lib/analyzer.ts:101-117` | Duplicate transaction IDs when multiple files are uploaded — breaks Svelte keyed each and `changeCategory` in TransactionReview | OPEN |
+| C24-02 | MEDIUM | High | `apps/web/src/components/dashboard/SavingsComparison.svelte:175` | Negative annual savings displays double-negative "-X원 추가 비용" — minus sign from `formatWon` conflicts with "추가 비용" label | OPEN |
+| C24-03 | LOW | High | `apps/web/src/components/dashboard/SavingsComparison.svelte:79-83` | Bar comparison visually misleading when greedy optimizer is suboptimal — both bars render at 100% width | OPEN |
 
 ---
 
 ## Prioritized Action Items
 
-### MEDIUM (should fix this cycle)
-- C22-01: Fix CategoryBreakdown bar overflow — compute maxPercentage from all categories including "other"
-
-### LOW (defer or accept)
-- C22-02: Math.max spread in OptimalCardMap — extends D-73/D-89, theoretical only
-- C22-03: Math.max spread in CardGrid — extends D-73/D-89, theoretical only
+1. **C24-01**: Fix duplicate transaction IDs — include file index in the ID pattern to prevent collision across multi-file uploads
+2. **C24-02**: Fix double-negative annual savings display — use `Math.abs()` when the label is "추가 비용"
+3. **C24-03**: Fix misleading bar comparison — invert bar widths when optimizer is suboptimal
 
 ---
 
