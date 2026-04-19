@@ -173,6 +173,7 @@ function buildCardResults(
   cardRules: CardRuleSet[],
   cardPreviousSpending: Map<string, number>,
   assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
+  categoryLabels?: Map<string, string>,
 ): CardRewardResult[] {
   const cardResults: CardRewardResult[] = [];
 
@@ -183,7 +184,13 @@ function buildCardResults(
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
     const output = calculateCardOutput(assignedTransactions, previousMonthSpending, rule);
     const totalSpending = assignedTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-    const byCategory: CategoryReward[] = output.rewards;
+    // Replace English categoryKey in categoryNameKo with the Korean label
+    // from the taxonomy (if available). calculateRewards sets categoryNameKo
+    // to the raw categoryKey (e.g. "dining.cafe"); we want "카페" instead.
+    const byCategory: CategoryReward[] = output.rewards.map(r => ({
+      ...r,
+      categoryNameKo: categoryLabels?.get(r.category) ?? CATEGORY_NAMES_KO[r.category] ?? r.categoryNameKo,
+    }));
     const capsHit: CapInfo[] = output.capsHit;
 
     cardResults.push({
@@ -251,7 +258,7 @@ export function greedyOptimize(
   }
 
   const assignments = buildAssignments(txAssignments, constraints.categoryLabels);
-  const cardResults = buildCardResults(cardRules, cardPreviousSpending, assignedTransactionsByCard);
+  const cardResults = buildCardResults(cardRules, cardPreviousSpending, assignedTransactionsByCard, constraints.categoryLabels);
 
   const totalReward = cardResults.reduce((sum, cardResult) => sum + cardResult.totalReward, 0);
   const totalSpending = txAssignments.reduce((sum, assignment) => sum + assignment.tx.amount, 0);
