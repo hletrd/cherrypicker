@@ -114,6 +114,11 @@ export function detectBank(content: string): { bank: BankId | null; confidence: 
   for (const sig of BANK_SIGNATURES) {
     let score = 0;
     for (const pattern of sig.patterns) {
+      // Reset lastIndex defensively — if a pattern ever uses the /g flag,
+      // .test() would advance lastIndex on each call, causing subsequent
+      // calls to start from the wrong position. Resetting is a no-op for
+      // non-global regexes but prevents silent breakage with /g.
+      pattern.lastIndex = 0;
       if (pattern.test(content)) {
         score++;
       }
