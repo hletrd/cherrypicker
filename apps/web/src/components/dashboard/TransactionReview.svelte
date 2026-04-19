@@ -122,12 +122,15 @@
   }
 
   // Sync from store when transactions change — re-sync on new upload (generation change)
+  let lastSyncedGeneration = $state(0);
+
   $effect(() => {
     const gen = analysisStore.generation;
     const txs = analysisStore.transactions;
-    if (txs.length > 0) {
+    if (txs.length > 0 && gen !== lastSyncedGeneration) {
       editedTxs = txs.map(tx => ({ ...tx }));
       hasEdits = false;
+      lastSyncedGeneration = gen;
     }
   });
 
