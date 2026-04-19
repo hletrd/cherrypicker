@@ -148,16 +148,29 @@ export async function optimizeFromTransactions(
     confidence: tx.confidence,
   }));
 
-  let cardRules = await getAllCardRules();
+  // cardRules from static JSON are validated and narrowed to the core
+  // CardRuleSet shape via the adapter function. Cache the FULL unfiltered
+  // result since the underlying cards.json data never changes within a session.
+  // The cardIds filter is applied after cache retrieval so filtered calls
+  // don't get stale unfiltered data from the cache.
+  const allCardRules = await getAllCardRules();
+  if (!cachedCoreRules) {
+    cachedCoreRules = toCoreCardRuleSets(allCardRules);
+  }
+  let coreRules = cachedCoreRules;
+
+  // Apply cardIds filter AFTER cache retrieval to avoid returning stale
+  // unfiltered rules when a filtered set is requested.
   if (options?.cardIds && options.cardIds.length > 0) {
-    cardRules = cardRules.filter(r => options.cardIds!.includes(r.card.id));
+    const idSet = new Set(options.cardIds);
+    coreRules = coreRules.filter(r => idSet.has(r.card.id));
   }
 
   // 전월실적 기본값: 사용자가 입력하지 않으면 이번 달 총 지출과 같다고 가정
   // 단, 카드사별 performanceExclusions에 포함된 카테고리의 지출은 전월실적에서 제외
   // 각 카드마다 제외 항목이 다르므로 카드별로 개별 계산
   const cardPreviousSpending = new Map<string, number>();
-  for (const rule of cardRules) {
+  for (const rule of coreRules) {
     if (options?.previousMonthSpending !== undefined) {
       // 사용자가 명시적으로 입력한 값 — 모든 카드에 동일 적용
       cardPreviousSpending.set(rule.card.id, options.previousMonthSpending);
@@ -188,13 +201,7 @@ export async function optimizeFromTransactions(
 
   const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
 
-  // cardRules from static JSON are validated and narrowed to the core
-  // CardRuleSet shape via the adapter function. Cache the result since
-  // the rules don't change within a session.
-  if (!cachedCoreRules) {
-    cachedCoreRules = toCoreCardRuleSets(cardRules);
-  }
-  const optimizationResult = greedyOptimize(constraints, cachedCoreRules);
+  const optimizationResult = greedyOptimize(constraints, coreRules);
 
   return optimizationResult;
 }
