@@ -26,7 +26,7 @@ function parseAmount(raw: string): number {
   const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNeg) cleaned = cleaned.slice(1, -1);
   const n = parseInt(cleaned, 10);
-  if (isNaN(n)) return 0;
+  if (Number.isNaN(n)) return NaN;
   return isNeg ? -n : n;
 }
 
@@ -98,7 +98,7 @@ export const samsungAdapter: BankAdapter = {
       if (!dateRaw && !merchantRaw) continue;
 
       const amount = parseAmount(amountRaw);
-      if (isNaN(amount)) {
+      if (Number.isNaN(amount)) {
         if (amountRaw.trim()) {
           errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}`, raw: line });
         }
@@ -113,7 +113,7 @@ export const samsungAdapter: BankAdapter = {
 
       if (installIdx !== -1 && cells[installIdx]) {
         const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (!isNaN(inst) && inst > 1) tx.installments = inst;
+        if (!Number.isNaN(inst) && inst > 1) tx.installments = inst;
       }
       if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
 

@@ -34,7 +34,6 @@ function detectColumnBoundaries(lines: string[]): Column[] {
   for (let i = 1; i < maxLen - 1; i++) {
     const count = charCount[i] ?? 0;
     const prevCount = charCount[i - 1] ?? 0;
-    const nextCount = charCount[i + 1] ?? 0;
 
     // Transition from dense chars to sparse = column boundary
     if (prevCount > threshold && count <= threshold) {

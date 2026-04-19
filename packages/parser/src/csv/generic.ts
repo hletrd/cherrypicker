@@ -122,7 +122,7 @@ function parseAmount(raw: string): number | null {
   if (isNeg) cleaned = cleaned.slice(1, -1);
   if (!cleaned) return null;
   const n = parseInt(cleaned, 10);
-  if (isNaN(n)) return null;
+  if (Number.isNaN(n)) return null;
   return isNeg ? -n : n;
 }
 
@@ -244,7 +244,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
 
     if (installmentsCol !== -1 && cells[installmentsCol]) {
       const inst = parseInt(cells[installmentsCol] ?? '', 10);
-      if (!isNaN(inst) && inst > 1) tx.installments = inst;
+      if (!Number.isNaN(inst) && inst > 1) tx.installments = inst;
     }
 
     if (categoryCol !== -1 && cells[categoryCol]) {
