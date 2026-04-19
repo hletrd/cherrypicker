@@ -150,7 +150,10 @@ export function formatDateKo(dateStr: string): string {
   const parts = dateStr.split('-');
   if (parts.length !== 3) return '-';
   const [y, m, d] = parts;
-  return `${y}년 ${parseInt(m!, 10)}월 ${parseInt(d!, 10)}일`;
+  const mNum = parseInt(m!, 10);
+  const dNum = parseInt(d!, 10);
+  if (Number.isNaN(mNum) || Number.isNaN(dNum)) return '-';
+  return `${y}년 ${mNum}월 ${dNum}일`;
 }
 
 /**
@@ -161,7 +164,10 @@ export function formatDateShort(dateStr: string): string {
   const parts = dateStr.split('-');
   if (parts.length !== 3) return '-';
   const [, m, d] = parts;
-  return `${parseInt(m!, 10)}/${parseInt(d!, 10)}`;
+  const mNum = parseInt(m!, 10);
+  const dNum = parseInt(d!, 10);
+  if (Number.isNaN(mNum) || Number.isNaN(dNum)) return '-';
+  return `${mNum}/${dNum}`;
 }
 
 /**
