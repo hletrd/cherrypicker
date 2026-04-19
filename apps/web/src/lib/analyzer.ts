@@ -5,7 +5,49 @@ import { parseFile } from './parser/index.js';
 import type { RawTransaction } from './parser/types.js';
 import type { BankId } from './parser/types.js';
 import { getAllCardRules, loadCategories } from './cards.js';
+import type { CardRuleSet, CategoryNode } from './cards.js';
 import type { AnalysisResult, AnalyzeOptions } from './store.svelte.js';
+
+// ---------------------------------------------------------------------------
+// Type adapters — safely bridge local types to core/rules types without
+// bypassing TypeScript's structural checking via `as unknown as`.
+// ---------------------------------------------------------------------------
+
+/** Project the web CategoryNode (which has `label` but no `labelEn`) to the
+ *  rules package's CategoryNode shape (which has `labelKo` + `labelEn`).
+ *  We provide `labelEn` as an empty string since it is not used by the
+ *  MerchantMatcher — only `id`, `labelKo`, and `keywords` matter for
+ *  matching. */
+function toRulesCategoryNodes(nodes: CategoryNode[]): RulesCategoryNode[] {
+  return nodes.map((node) => ({
+    id: node.id,
+    labelKo: node.labelKo,
+    labelEn: '', // not present in web CategoryNode; unused by matcher
+    keywords: node.keywords,
+    ...(node.subcategories
+      ? { subcategories: toRulesCategoryNodes(node.subcategories) }
+      : {}),
+  }));
+}
+
+/** Validate and narrow the web CardRuleSet to the core package's CardRuleSet.
+ *  The only field that differs is `card.source`: the web type has `string`
+ *  while the core expects `'manual' | 'llm-scrape' | 'web'`. The static
+ *  JSON is validated by the Zod schema at build time, so the narrowing is
+ *  safe — but we assert explicitly so the type system stays honest. */
+const VALID_SOURCES = new Set(['manual', 'llm-scrape', 'web']);
+
+function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
+  return rules.map((rule) => ({
+    ...rule,
+    card: {
+      ...rule.card,
+      source: VALID_SOURCES.has(rule.card.source)
+        ? (rule.card.source as 'manual' | 'llm-scrape' | 'web')
+        : 'web', // fallback for unknown source values
+    },
+  }));
+}
 
 export interface CategorizedTx {
   id: string;
@@ -32,10 +74,9 @@ export async function parseAndCategorize(
 
   const categoryNodes = await loadCategories();
   // MerchantMatcher expects CategoryNode[] from @cherrypicker/rules which has
-  // { id, labelKo, labelEn, keywords, subcategories? }. The static JSON uses
-  // the same shape; the local type has an extra `label` field but is otherwise
-  // structurally compatible, so we cast through the rules type.
-  const matcher = new MerchantMatcher(categoryNodes as unknown as RulesCategoryNode[]);
+  // { id, labelKo, labelEn, keywords, subcategories? }. We project our local
+  // type (which has an extra `label` field) to the rules shape via the adapter.
+  const matcher = new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
 
   const transactions: CategorizedTx[] = parseResult.transactions.map(
     (tx: RawTransaction, idx: number) => {
@@ -98,9 +139,9 @@ export async function optimizeFromTransactions(
   );
   const constraints = buildConstraints(categorized, cardPreviousSpending);
 
-  // cardRules from static JSON match the CardRuleSet shape;
-  // the local type differs only in minor string-literal widening on `source`.
-  const optimizationResult = greedyOptimize(constraints, cardRules as unknown as CoreCardRuleSet[]);
+  // cardRules from static JSON are validated and narrowed to the core
+  // CardRuleSet shape via the adapter function.
+  const optimizationResult = greedyOptimize(constraints, toCoreCardRuleSets(cardRules));
 
   return optimizationResult;
 }
