@@ -81,7 +81,7 @@ describe('toCoreCardRuleSets type adapter', () => {
   };
 
   test('valid source values pass through unchanged', () => {
-    for (const src of ['manual', 'llm-scrape', 'web']) {
+    for (const src of ['manual', 'llm-scrape', 'web'] as const) {
       const result = toCoreCardRuleSets([{ ...baseRule, card: { ...baseRule.card, source: src } }]);
       expect(result[0]!.card.source).toBe(src);
     }
@@ -98,7 +98,7 @@ describe('toCoreCardRuleSets type adapter', () => {
   });
 
   test('valid reward types pass through unchanged', () => {
-    for (const type of ['discount', 'points', 'cashback', 'mileage']) {
+    for (const type of ['discount', 'points', 'cashback', 'mileage'] as const) {
       const result = toCoreCardRuleSets([{
         ...baseRule,
         rewards: [{ type, tiers: [{ rate: 1, monthlyCap: null, perTransactionCap: null }] }],
@@ -151,9 +151,12 @@ describe('toCoreCardRuleSets type adapter', () => {
     };
     const result = toCoreCardRuleSets([rule]);
     expect(result[0]!.card.id).toBe('preserve-test');
-    expect(result[0]!.card.extra).toBe('field');
-    expect(result[0]!.rewards[0]!.category).toBe('dining');
-    expect(result[0]!.extraField).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((result[0]!.card as any).extra).toBe('field');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((result[0]!.rewards[0] as any).category).toBe('dining');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((result[0] as any).extraField).toBe(true);
   });
 });
 
