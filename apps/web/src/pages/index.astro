@@ -4,9 +4,9 @@ import FileDropzone from '../components/upload/FileDropzone.svelte';
 import { readFile } from 'fs/promises';
 import { resolve } from 'path';
 
-let totalCards = 561;
+let totalCards = 683;
 let totalIssuers = 24;
-let totalCategories = 16;
+let totalCategories = 45;
 try {
   const raw = await readFile(resolve(process.cwd(), 'public/data/cards.json'), 'utf-8');
   const data = JSON.parse(raw);
