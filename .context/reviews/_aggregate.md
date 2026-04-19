@@ -1,60 +1,60 @@
-# Review Aggregate — 2026-04-19 (Cycle 7)
+# Review Aggregate — 2026-04-19 (Cycle 8)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle7-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle8-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- `.context/reviews/_aggregate.md` (cycle 6)
-- All cycle 1-6 per-agent files
+- All cycle 1-7 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-All cycle 1-5 findings have been verified as fixed or deferred. Cycle 6 findings C6-01 through C6-11 are now fixed. They are not re-listed here.
+All cycle 1-7 findings have been verified as fixed or deferred. Cycle 7 fixes (C7-01 through C7-11) are all correctly implemented. They are not re-listed here.
 
-Deferred items D-01 through D-55 and LOW items from cycle 6 remain unchanged and are not re-listed here.
-
----
-
-## Verification of Cycle 6 Fixes
-
-All 5 implemented cycle 6 fixes verified as correctly implemented:
-- C6-07: AI categorizer subcategory clearing
-- C6-01: Redundant CardBreakdown rate field removed
-- C6-02: persistWarning indicator for truncated sessionStorage
-- C6-03: Smooth count-up animation on re-render
-- C6-11: formatRatePrecise helper added
+Deferred items D-01 through D-61 and LOW items from cycle 7 remain unchanged and are not re-listed here.
 
 ---
 
-## Active Findings (New in Cycle 7, Deduplicated)
+## Verification of Cycle 7 Fixes
+
+All 7 implemented cycle 7 fixes verified as correctly implemented:
+- C7-08: Korean short-date and MM/DD parsing in PDF parser
+- C7-01: formatRate in SavingsComparison breakdown
+- C7-02: formatRatePrecise in SpendingSummary effective rate
+- C7-03: formatRatePrecise in SavingsComparison best single card
+- C7-11: persistWarningKind differentiation (truncated vs corrupted)
+- C7-04: TransactionReview effect guard with lastSyncedGeneration
+- C7-06: Documentation comment for all-month transactions behavior
+
+---
+
+## Active Findings (New in Cycle 8, Deduplicated)
 
 | ID | Severity | Confidence | File | Description | Cross-ref |
 |---|---|---|---|---|---|
-| C7-01 | MEDIUM | High | `SavingsComparison.svelte:223` | Breakdown table uses inline rate formatting instead of `formatRate()` | Extends C6-11 |
-| C7-02 | MEDIUM | High | `SpendingSummary.svelte:94` | Effective rate uses inline formatting instead of `formatRatePrecise()` | Extends C6-11 |
-| C7-03 | LOW | High | `SavingsComparison.svelte:149` | Best single card rate uses inline formatting instead of `formatRatePrecise()` | Extends C6-11 |
-| C7-04 | MEDIUM | Medium | `TransactionReview.svelte:125-132` | `$effect` re-sync overwrites `editedTxs` on any generation change — fragile | New |
-| C7-05 | LOW | High | `store.svelte.ts:102` | `_persistWarning` module-level mutable creates fragile coupling | New |
-| C7-06 | LOW | High | `analyzer.ts:264-294` | All-month transactions in reoptimize but only latest month optimized — mismatch | New |
-| C7-07 | LOW | High | `detect.ts` (both copies) | `BANK_SIGNATURES` duplicated across packages/parser and apps/web | Extends D-01 |
-| C7-08 | MEDIUM | High | `pdf.ts:126-143` | Browser PDF `parseDateToISO` missing Korean short-date and MM/DD handling | New |
-| C7-09 | LOW | High | `formatters.ts:151,162` | `formatDateKo`/`formatDateShort` use `parseInt` without NaN guard | New |
-| C7-10 | LOW | High | `CategoryBreakdown.svelte:78,94-95` | Percentage rounding can cause total > 100% | New |
-| C7-11 | MEDIUM | Medium | `store.svelte.ts:215` | `persistWarning` message misleading for data corruption vs size truncation | Extends C6-02 |
-| C7-12 | LOW | High | `CardDetail.svelte:252` | Uses `window.location.href` for navigation instead of client-side router | Extends D-45 |
-| C7-13 | LOW | Medium | `analyzer.ts:191-194` | `toCoreCardRuleSets` cache never hits — reference equality on always-new array | New |
+| C8-01 | MEDIUM | High | `SpendingSummary.svelte:17-23` | `formatPeriod` uses `parseInt` without NaN guard on date parts | Extends D-58 |
+| C8-02 | MEDIUM | High | `pdf.ts:303` | PDF fallback `fallbackDatePattern` doesn't match Korean/short dates — loses transactions | New |
+| C8-03 | MEDIUM | High | `pdf.ts:182-188` | PDF structured `findDateCell` doesn't search Korean/short date formats — skips rows | New |
+| C8-04 | LOW | Medium | `CardDetail.svelte:57-72` | Fetch race condition — no cleanup on component destroy | New |
+| C8-05 | LOW | High | `SavingsComparison.svelte:71-75` | `savingsPct` divides by zero (NaN path) when bestSingleCard has 0 reward | New |
+| C8-06 | LOW | High | `CategoryBreakdown.svelte:7-49` | CATEGORY_COLORS missing many categories from taxonomy | Extends D-42/D-46 |
+| C8-07 | LOW | Medium | `detect.ts:114-137` | `detectBank` confidence score misleading with single-pattern banks | New |
+| C8-08 | LOW | High | `CardGrid.svelte:22` | Issuer filter shows issuers with 0 cards after type filter | New |
+| C8-09 | LOW | High | `analyzer.ts:172-184` | `optimizeFromTransactions` rebuilds category labels map on every reoptimize | New |
+| C8-10 | LOW | Medium | `pdf.ts:177-180` | `parseAmount` uses `parseInt` which truncates instead of rounding | New |
+| C8-11 | MEDIUM | High | `store.svelte.ts:154` | `_loadPersistWarningKind` not reset after consumption or in `reset()` | New |
+| C8-12 | LOW | High | `TransactionReview.svelte:6` | AI categorizer import is dead code | Extends D-10 |
+| C8-13 | LOW | High | `constraints.ts:17` | `buildConstraints` shallow-copies transactions — latent mutation risk | New |
 
 ---
 
-## Cross-Agent Agreement (Cycle 7)
+## Cross-Agent Agreement (Cycle 8)
 
 | Finding | Signal |
 |---|---|
-| C7-01 / C7-02 / C7-03 / C6-11 | Inline rate formatting inconsistency — 4 locations across 2 components. C6-11 fixed one location but missed the other 3. Strong signal that all inline rate formatting should use helpers. |
-| C7-11 / C6-02 | persistWarning UX — C6-02 added the indicator but the message doesn't differentiate truncation from corruption. Combined signal is MEDIUM. |
-| C7-07 / D-01 | Duplicated code across packages/parser and apps/web — 2 findings across cycles. Signal remains LOW but the divergence risk increases. |
+| C8-02 + C8-03 | Two related findings on the same root cause (PDF parser misses Korean/short dates in two different code paths). Combined signal is HIGH — these are real bugs that lose transactions. |
+| C8-01 / D-58 | SpendingSummary.formatPeriod NaN guard is same class as formatDateKo/formatDateShort NaN guard (D-58). Combined signal is MEDIUM. |
 
 ---
 
@@ -64,18 +64,15 @@ All 5 implemented cycle 6 fixes verified as correctly implemented:
 - None — all prior criticals are fixed
 
 ### HIGH (should fix this cycle)
-1. C7-08: Add `inferYear` and short-date handling to PDF parser's `parseDateToISO` (real bug — missing date formats)
-2. C7-02: Replace inline rate formatting in SpendingSummary with `formatRatePrecise`
-3. C7-01: Replace inline rate formatting in SavingsComparison breakdown table with `formatRate`
-4. C7-03: Replace inline rate formatting in SavingsComparison best single card with `formatRatePrecise`
+1. C8-02 + C8-03: Extend PDF fallback and structured parsers to match Korean date formats and short dates
+2. C8-11: Reset `_loadPersistWarningKind` after consumption and in `reset()` method
 
 ### MEDIUM (plan for next cycles)
-5. C7-11: Differentiate persistWarning between truncation and corruption
-6. C7-04: Guard TransactionReview effect against unnecessary re-syncs
-7. C7-06: Filter editedTxs to latest month in reoptimize or document the behavior
+3. C8-01: Add NaN guard to `SpendingSummary.formatPeriod`
+4. C8-09: Pass prebuilt category labels through reoptimize
 
 ### LOW (defer or accept)
-- C7-05, C7-07, C7-09, C7-10, C7-12, C7-13
+- C8-04, C8-05, C8-06, C8-07, C8-08, C8-10, C8-12, C8-13
 
 ---
 
