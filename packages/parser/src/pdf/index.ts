@@ -95,7 +95,10 @@ function parseDateToISO(raw: string): string {
 
 function parseAmount(raw: string): number {
   const n = parseInt(raw.replace(/원$/, '').replace(/,/g, ''), 10);
-  return Number.isNaN(n) ? NaN : n;
+  // Return 0 instead of NaN so callers never have to guard against NaN
+  // propagation. Amounts of 0 are correctly filtered out by the > 0
+  // checks in both the structured and fallback parsing paths.
+  return Number.isNaN(n) ? 0 : n;
 }
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
