@@ -1,0 +1,6 @@
+[test]
+# Exclude Playwright E2E spec files from bun test discovery.
+# These files use Playwright's test API (test.beforeAll, test.describe.configure)
+# which is not compatible with Bun's built-in test runner.
+# Run E2E tests with: bun run test:e2e
+pathIgnorePatterns = ["e2e/**"]
