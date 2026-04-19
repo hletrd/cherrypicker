@@ -130,7 +130,7 @@ describe('greedyOptimize - basic', () => {
     }
   });
 
-  test('totalSpending equals sum of categorySpending values', () => {
+  test('totalSpending equals sum of transaction amounts', () => {
     const constraints = makeConstraints([
       makeTx('t1', 'uncategorized', 50000),
       makeTx('t2', 'dining', 30000),
@@ -309,18 +309,6 @@ describe('greedyOptimize - bestSingleCard', () => {
 });
 
 describe('buildConstraints', () => {
-  test('aggregates spending by category', () => {
-    const txs: CategorizedTransaction[] = [
-      makeTx('t1', 'dining', 10000),
-      makeTx('t2', 'dining', 20000),
-      makeTx('t3', 'grocery', 50000),
-    ];
-    const prevSpending = new Map([['shinhan-simple-plan', 300000]]);
-    const constraints = buildConstraints(txs, prevSpending);
-    expect(constraints.categorySpending.get('dining')).toBe(30000);
-    expect(constraints.categorySpending.get('grocery')).toBe(50000);
-  });
-
   test('builds cards array from previousSpending map', () => {
     const txs: CategorizedTransaction[] = [makeTx('t1', 'dining', 10000)];
     const prevSpending = new Map([
