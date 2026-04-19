@@ -135,9 +135,10 @@ export function getIssuerColor(issuer: string): string {
  * Example: "2026-03-15" → "2026년 3월 15일"
  */
 export function formatDateKo(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '-';
-  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return '-';
+  const [y, m, d] = parts;
+  return `${y}년 ${parseInt(m!, 10)}월 ${parseInt(d!, 10)}일`;
 }
 
 /**
@@ -145,9 +146,10 @@ export function formatDateKo(dateStr: string): string {
  * Example: "2026-03-15" → "3/15"
  */
 export function formatDateShort(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '-';
-  return `${date.getMonth() + 1}/${date.getDate()}`;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return '-';
+  const [, m, d] = parts;
+  return `${parseInt(m!, 10)}/${parseInt(d!, 10)}`;
 }
 
 /**
