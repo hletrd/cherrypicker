@@ -76,9 +76,23 @@
   });
 
   // Bar comparison widths (proportional)
+  // When optimizer is optimal (savingsVsSingleCard >= 0): cherry-pick bar is 100%,
+  // single-card bar is proportional. When optimizer is suboptimal (< 0): single-card
+  // bar is 100% (it gives more), cherry-pick bar is proportional.
+  let isSuboptimal = $derived.by(() => {
+    if (!opt) return false;
+    return opt.savingsVsSingleCard < 0;
+  });
   let singleBarWidth = $derived.by(() => {
     if (!opt || opt.totalReward === 0 || !opt.bestSingleCard) return 0;
+    if (opt.savingsVsSingleCard < 0) return 100; // single card is better — full width
     const ratio = opt.bestSingleCard.totalReward / opt.totalReward;
+    return Math.min(Math.round(ratio * 100), 100);
+  });
+  let cherrypickBarWidth = $derived.by(() => {
+    if (!opt || opt.totalReward === 0 || !opt.bestSingleCard) return 0;
+    if (opt.savingsVsSingleCard >= 0) return 100; // cherry-pick is better — full width
+    const ratio = opt.totalReward / opt.bestSingleCard.totalReward;
     return Math.min(Math.round(ratio * 100), 100);
   });
 </script>
@@ -111,13 +125,13 @@
           {formatWon(opt.bestSingleCard.totalReward)}
         </div>
       </div>
-      <!-- Cherry-pick bar (always 100%) -->
+      <!-- Cherry-pick bar (100% when optimal, proportional when suboptimal) -->
       <div class="flex items-center gap-3">
         <div class="w-24 shrink-0 text-xs font-semibold text-[var(--color-primary)]">체리피킹</div>
         <div class="flex-1 h-6 overflow-hidden rounded-lg bg-[var(--color-primary-light)]">
           <div
             class="h-full rounded-lg bg-[var(--color-primary)] transition-all duration-700"
-            style="width: 100%"
+            style="width: {cherrypickBarWidth}%"
           ></div>
         </div>
         <div class="w-28 shrink-0 text-right text-sm font-mono font-bold text-[var(--color-primary)]">
@@ -169,14 +183,18 @@
 
     <!-- Right: Savings -->
     <div class="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-emerald-100 p-5 dark:from-green-950 dark:to-emerald-900/50">
-      <div class="mb-3 text-xs font-medium text-green-700 dark:text-green-400">추가 절약</div>
+      <div class="mb-3 text-xs font-medium text-green-700 dark:text-green-400">{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}</div>
       <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 0 ? '+' : ''}{formatWon(displayedSavings)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
-        연간 약 {formatWon(opt.savingsVsSingleCard * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'}
+        연간 약 {formatWon((opt.savingsVsSingleCard >= 0 ? opt.savingsVsSingleCard : Math.abs(opt.savingsVsSingleCard)) * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'}
       </div>
       {#if savingsPct > 0}
         <div class="mt-2 inline-block rounded-full bg-green-200 dark:bg-green-800 px-2 py-0.5 text-xs font-semibold text-green-800 dark:text-green-200">
           한 장짜리보다 +{savingsPct}%
+        </div>
+      {:else if savingsPct < 0}
+        <div class="mt-2 inline-block rounded-full bg-amber-200 dark:bg-amber-800 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-200">
+          단일 카드가 더 유리
         </div>
       {/if}
     </div>
