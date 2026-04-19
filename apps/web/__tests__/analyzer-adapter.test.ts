@@ -5,6 +5,8 @@
  * the narrowing logic by reproducing the same validation sets and rules.
  */
 import { describe, test, expect } from 'bun:test';
+import { getLatestMonth } from '../src/lib/analyzer.js';
+import type { CategorizedTx } from '../src/lib/analyzer.js';
 
 // Mirrors the VALID_SOURCES set from analyzer.ts
 const VALID_SOURCES = new Set(['manual', 'llm-scrape', 'web']);
@@ -128,5 +130,53 @@ describe('toCoreCardRuleSets type adapter', () => {
     expect(result[0]!.card.extra).toBe('field');
     expect(result[0]!.rewards[0]!.category).toBe('dining');
     expect(result[0]!.extraField).toBe(true);
+  });
+});
+
+describe('getLatestMonth', () => {
+  function makeTx(id: string, date: string): CategorizedTx {
+    return {
+      id,
+      date,
+      merchant: 'test',
+      amount: 10000,
+      category: 'dining',
+      subcategory: undefined,
+      confidence: 1.0,
+    };
+  }
+
+  test('returns null for empty array', () => {
+    expect(getLatestMonth([])).toBe(null);
+  });
+
+  test('returns the latest month from multi-month transactions', () => {
+    const txs = [
+      makeTx('t1', '2026-01-15'),
+      makeTx('t2', '2026-02-15'),
+      makeTx('t3', '2026-03-15'),
+    ];
+    expect(getLatestMonth(txs)).toBe('2026-03');
+  });
+
+  test('returns the only month for single-month transactions', () => {
+    const txs = [makeTx('t1', '2026-01-15')];
+    expect(getLatestMonth(txs)).toBe('2026-01');
+  });
+
+  test('handles transactions with invalid dates', () => {
+    const txs = [
+      { ...makeTx('t1', ''), date: '' },
+      makeTx('t2', '2026-02-15'),
+    ];
+    expect(getLatestMonth(txs)).toBe('2026-02');
+  });
+
+  test('handles transactions with short dates gracefully', () => {
+    const txs = [
+      { ...makeTx('t1', '2026'), date: '2026' },
+      makeTx('t2', '2026-03-15'),
+    ];
+    expect(getLatestMonth(txs)).toBe('2026-03');
   });
 });
