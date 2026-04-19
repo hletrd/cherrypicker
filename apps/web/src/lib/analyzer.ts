@@ -194,6 +194,10 @@ export async function optimizeFromTransactions(
       if (node.subcategories) {
         for (const sub of node.subcategories) {
           categoryLabels.set(sub.id, sub.labelKo);
+          // Dot-notation key for optimizer lookups — buildCategoryKey
+          // produces "dining.cafe" but the taxonomy only has "cafe" as
+          // the sub ID; without this entry, categoryLabels.get() misses.
+          categoryLabels.set(`${node.id}.${sub.id}`, sub.labelKo);
         }
       }
     }
@@ -248,6 +252,10 @@ export async function analyzeMultipleFiles(
         if (node.subcategories) {
           for (const sub of node.subcategories) {
             categoryLabels.set(sub.id, sub.labelKo);
+            // Dot-notation key for optimizer lookups — buildCategoryKey
+            // produces "dining.cafe" but the taxonomy only has "cafe" as
+            // the sub ID; without this entry, categoryLabels.get() misses.
+            categoryLabels.set(`${node.id}.${sub.id}`, sub.labelKo);
           }
         }
       }
