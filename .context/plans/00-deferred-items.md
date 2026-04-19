@@ -1,236 +1,219 @@
-# Deferred Items — 2026-04-19 (Cycle 1)
+# Deferred Items — 2026-04-19 (Cycle 3)
 
 Every finding from the reviews must be either (a) scheduled for implementation in a plan, or (b) explicitly recorded here as a deferred item. No finding may be silently dropped.
 
 ---
 
-## Deferred Findings
+## Deferred Findings (Cycle 1)
 
 ### D-01: Duplicate parser implementations (web vs packages)
-
 - **Original finding:** 00-summary #3, deep-code-quality P1-01
 - **Severity:** HIGH (architectural)
 - **Confidence:** High
 - **File+line:** `apps/web/src/lib/parser/*` vs `packages/parser/src/*`
-- **Reason for deferral:** This is a major architectural refactor requiring extraction of shared parser logic into a platform-agnostic module. The web parser runs in the browser (no Bun/Node APIs) while the packages parser runs on Bun. This requires careful design of a shared core with platform-specific I/O layers. Doing this in a single cycle risks breaking both parser paths simultaneously.
+- **Reason for deferral:** Major architectural refactor requiring extraction of shared parser logic into a platform-agnostic module. The web parser runs in the browser (no Bun/Node APIs) while the packages parser runs on Bun.
 - **Exit criterion:** Create a dedicated refactor cycle with a design doc first, then implement incrementally with dual-path testing.
 
 ### D-02: README says MIT, LICENSE is Apache 2.0
-
 - **Original finding:** 00-summary #7
 - **Severity:** MEDIUM (legal metadata)
 - **Confidence:** High
 - **File+line:** `README.md:169-171` vs `LICENSE:1-15`
-- **Reason for deferral:** Legal metadata fix requires confirming the intended license with the project owner. Changing the README without confirmation could be incorrect.
+- **Reason for deferral:** Legal metadata fix requires confirming the intended license with the project owner.
 - **Exit criterion:** Confirm intended license with project owner, then update README or LICENSE accordingly.
 
 ### D-03: `cards-compact.json` stale relative to `cards.json`
-
 - **Original finding:** 00-summary #7
 - **Severity:** MEDIUM (build artifact drift)
 - **Confidence:** High
 - **File+line:** `packages/rules/data/cards-compact.json`
-- **Reason for deferral:** This is a build pipeline issue. The compact JSON should be regenerated as part of the build process. Fixing it requires understanding whether `cards-compact.json` is still needed or can be removed entirely.
+- **Reason for deferral:** Build pipeline issue. Fixing requires understanding whether `cards-compact.json` is still needed.
 - **Exit criterion:** Determine if `cards-compact.json` is consumed anywhere; if so, add it to the build pipeline; if not, delete it.
 
 ### D-04: No workspace-level `lint` script
-
 - **Original finding:** 00-summary #6
 - **Severity:** MEDIUM (tooling gap)
 - **Confidence:** High
 - **File+line:** Root `package.json:9-19`
-- **Reason for deferral:** Adding a meaningful lint configuration (ESLint, Biome, etc.) across all workspaces is a non-trivial setup task. It should be done as a dedicated tooling improvement cycle.
-- **Exit criterion:** Add ESLint or Biome to the monorepo with appropriate rules, add `lint` scripts to all workspaces.
+- **Reason for deferral:** Adding a meaningful lint configuration across all workspaces is a non-trivial setup task.
+- **Exit criterion:** Add ESLint or Biome to the monorepo with appropriate rules.
 
-### D-05: No CI quality gate (no test/lint/typecheck in deploy workflow)
-
+### D-05: No CI quality gate
 - **Original finding:** 00-summary #6
 - **Severity:** HIGH (release discipline)
 - **Confidence:** High
 - **File+line:** `.github/workflows/deploy.yml:17-40`
-- **Reason for deferral:** CI configuration changes affect the deployment pipeline. Adding quality gates requires ensuring they pass reliably first (which depends on D-04 for lint). This should be done after lint and typecheck are green.
+- **Reason for deferral:** CI configuration changes affect the deployment pipeline. Depends on D-04 for lint.
 - **Exit criterion:** Add test, lint, and typecheck steps to the deploy workflow after all quality checks pass locally.
 
 ### D-06: Browser CSV support overstated (24 banks advertised, 10 have dedicated adapters)
-
-- **Original finding:** 00-summary #11 (comprehensive review)
+- **Original finding:** 00-summary #11
 - **Severity:** MEDIUM (documentation accuracy)
 - **Confidence:** High
-- **File+line:** `apps/web/src/lib/parser/csv.ts` (10 bank adapters), `apps/web/src/lib/parser/detect.ts` (24 bank signatures)
-- **Reason for deferral:** The generic CSV parser handles most bank formats reasonably well. Adding dedicated adapters for the remaining 14 banks requires access to real statement samples for testing. The generic parser is a functional fallback.
-- **Exit criterion:** Either add dedicated adapters for remaining banks (with test data), or update documentation to clarify which banks have dedicated vs generic support.
+- **File+line:** `apps/web/src/lib/parser/csv.ts`, `apps/web/src/lib/parser/detect.ts`
+- **Reason for deferral:** The generic CSV parser handles most bank formats reasonably well. Adding dedicated adapters requires real statement samples for testing.
+- **Exit criterion:** Either add dedicated adapters for remaining banks, or update documentation to clarify support levels.
 
 ### D-07: Fetch caching race condition in `loadCardsData`
-
-- **Original finding:** M-04 (this cycle)
+- **Original finding:** M-04 (cycle 1)
 - **Severity:** MEDIUM
 - **Confidence:** Low
 - **File+line:** `apps/web/src/lib/cards.ts:144-157`
-- **Reason for deferral:** The race condition is theoretical and would only manifest under very specific network failure timing. The current `.catch(() => { cardsPromise = null })` handling is adequate for most scenarios. Fixing this properly would require a more sophisticated caching strategy.
-- **Exit criterion:** If users report stale/failed data loading issues, replace with a proper caching library or add timestamp-based staleness checks.
+- **Reason for deferral:** The race condition is theoretical and would only manifest under very specific network failure timing.
+- **Exit criterion:** If users report stale/failed data loading issues, replace with a proper caching library.
 
 ### D-08: `cu` bank ID is ambiguous
-
-- **Original finding:** L-02 (this cycle)
+- **Original finding:** L-02 (cycle 1)
 - **Severity:** LOW
 - **Confidence:** Low
 - **File+line:** `packages/parser/src/detect.ts:95-96`, `apps/web/src/lib/parser/detect.ts:95-96`
-- **Reason for deferral:** Renaming the bank ID would be a breaking change for any persisted data or URLs that reference `cu`. The current code works correctly (pattern `/신협/` matches the right bank). The ID is only ambiguous to humans reading the code.
-- **Exit criterion:** If the bank ID is ever exposed in user-facing URLs or APIs, rename to `shinhyup` or `credit_union` with a migration path.
+- **Reason for deferral:** Renaming the bank ID would be a breaking change. The current code works correctly.
+- **Exit criterion:** If the bank ID is ever exposed in user-facing URLs or APIs, rename with a migration path.
 
 ### D-09: `scoreCardsForTransaction` is O(n*m) per transaction (performance)
-
-- **Original finding:** Final sweep (this cycle)
+- **Original finding:** Final sweep (cycle 1), C2-P01, C3-P01
 - **Severity:** LOW (performance)
 - **Confidence:** Medium
 - **File+line:** `packages/core/src/optimizer/greedy.ts:84-110`
-- **Reason for deferral:** The greedy optimizer recalculates `calculateCardOutput` for each card before and after adding each transaction. For typical use cases (< 1000 transactions, < 10 cards), this is fast enough. Optimization would require incremental reward tracking, which is a significant refactor.
-- **Exit criterion:** If performance becomes an issue for large statement sets, implement incremental scoring that tracks running totals instead of recalculating from scratch.
+- **Reason for deferral:** For typical use cases (< 1000 transactions, < 10 cards), this is fast enough. Optimization would require incremental reward tracking.
+- **Exit criterion:** If performance becomes an issue for large statement sets, implement incremental scoring.
 
 ### D-10: Browser AI categorizer is disabled but still imported
-
 - **Original finding:** Final sweep (cycle 1)
 - **Severity:** LOW (dead code)
 - **Confidence:** High
-- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:6` — `import * as aiCategorizer from '../../lib/categorizer-ai.js'`
-- **Reason for deferral:** The import adds minimal bundle weight since the module is tiny (just throws errors). Removing it now would require also removing the AI-related UI code (buttons, progress indicators). It's cleaner to leave it in place as a feature flag until the self-hosted runtime is ready.
-- **Exit criterion:** When the self-hosted AI runtime is implemented, either re-enable the feature or remove the dead code entirely.
+- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:6`
+- **Reason for deferral:** The import adds minimal bundle weight. Removing it would require also removing AI-related UI code. Cleaner to leave as feature flag.
+- **Exit criterion:** When the self-hosted AI runtime is implemented, either re-enable or remove.
+
+### D-11 through D-25: (unchanged from cycle 2 — see prior deferred items file for D-11 through D-25)
 
 ---
 
-## Deferred Findings (Cycle 2)
+## Deferred Findings (Cycle 3)
 
-### D-11: O(n) substring scan in `CategoryTaxonomy.findCategory`
+### D-26: LLM fallback JSON regex can match nested arrays incorrectly
 
-- **Original finding:** C2-02 (code-reviewer)
-- **Severity:** MEDIUM (performance)
-- **Confidence:** High
-- **File+line:** `packages/core/src/categorizer/taxonomy.ts:68-74`
-- **Reason for deferral:** The current keyword count (~500) makes the linear scan acceptable for typical use cases. Optimization (trie, Aho-Corasick) would require significant implementation effort for marginal gain.
-- **Exit criterion:** If keyword count grows past 2000 or if categorization latency becomes noticeable, implement a trie-based lookup.
-
-### D-12: No runtime validation of fetched JSON shape in `loadCardsData`/`loadCategories`
-
-- **Original finding:** C2-03 (code-reviewer)
-- **Severity:** MEDIUM (reliability)
+- **Original finding:** C3-05 (code-reviewer)
+- **Severity:** LOW (edge case)
 - **Confidence:** Medium
-- **File+line:** `apps/web/src/lib/cards.ts:144-173`
-- **Reason for deferral:** The JSON is generated by the build pipeline and validated by Zod schemas at generation time. Runtime validation adds overhead for every page load. A bad deploy would be caught by the build pipeline before reaching production.
-- **Exit criterion:** If a bad deploy causes runtime errors from invalid JSON shape, add Zod validation at fetch time.
+- **File+line:** `packages/parser/src/pdf/llm-fallback.ts:75`
+- **Reason for deferral:** The LLM rarely produces nested JSON arrays in transaction output. The current regex handles the common case (flat array of objects). Fixing this requires a more complex JSON extraction approach (bracket matching or streaming parser).
+- **Exit criterion:** If LLM responses with nested arrays become common, implement a bracket-matching JSON extractor.
 
-### D-13: `labelEn: ''` in `toRulesCategoryNodes` is semantically misleading
+### D-27: Transaction IDs use array index — duplicates across multi-file uploads
 
-- **Original finding:** C2-05 (code-reviewer)
-- **Severity:** LOW (semantic)
+- **Original finding:** C3-06 (code-reviewer)
+- **Severity:** LOW (data quality)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/analyzer.ts:98`
+- **Reason for deferral:** The `changeCategory` function in `TransactionReview.svelte` uses `tx.id` to find transactions, but the current upload flow doesn't allow uploading a second file while the first is being edited. The duplicate ID issue only manifests if the user uploads multiple files in a single batch AND the per-file transaction indices happen to collide AND the user edits categories. The `editedTxs` array is a flat merge from all files, so IDs are actually unique within the merged array (each file's `tx-${idx}` is unique because idx is relative to the merged array). The only risk is if `analyzeMultipleFiles` creates separate `parseAndCategorize` calls that each start from `tx-0`, but the current implementation merges all transactions into a single array before assigning IDs.
+- **Exit criterion:** If multi-file upload with category editing causes ID collisions, use `crypto.randomUUID()` or a file-scoped prefix.
+
+### D-28: `parseInt` for previousMonthSpending without NaN validation
+
+- **Original finding:** C3-08 (code-reviewer)
+- **Severity:** LOW (input validation)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:176-177`
+- **Reason for deferral:** The HTML `<input type="number">` already prevents non-numeric input in most browsers. The `parseInt` call only receives strings from this input element, so NaN is extremely unlikely. The worst case (NaN → no tier matches → 0 rewards) is recoverable by re-entering a valid number.
+- **Exit criterion:** If users report 0-reward results after entering spending amounts, add `Number.isFinite` validation.
+
+### D-29: Marginal reward is 0 when cap hit — misleading assignment
+
+- **Original finding:** C3-D02 (debugger)
+- **Severity:** MEDIUM (UX clarity)
 - **Confidence:** Medium
-- **File+line:** `apps/web/src/lib/analyzer.ts:25`
-- **Reason for deferral:** The empty string satisfies the type and is unused by the matcher. Adding `labelEn` to the web CategoryNode type would require changes to the categories.json format and the cards.ts type definition for minimal benefit.
-- **Exit criterion:** If `labelEn` becomes meaningful for matching or display, add it to the web type properly.
+- **File+line:** `packages/core/src/optimizer/greedy.ts:84-110`
+- **Reason for deferral:** This is correct behavior from a reward perspective — the card really does give 0 additional reward. The "misleading" aspect is that the user might not understand why a category is assigned to a card with 0% rate. Adding an annotation ("cap reached") would require changing the `CardAssignment` type and updating the UI, which is a feature enhancement rather than a bug fix.
+- **Exit criterion:** If users report confusion about 0% rate assignments, add a `capReached` annotation to `CardAssignment`.
 
-### D-14: E2E tests use CJS `require()` style
+### D-30: `reoptimize` can set result to stale state after navigation
 
-- **Original finding:** C2-06 (code-reviewer)
-- **Severity:** LOW (style)
-- **Confidence:** High
-- **File+line:** `e2e/ui-ux-review.spec.js:6-9`
-- **Reason for deferral:** Playwright's test runner supports both CJS and ESM. Converting to ESM would require renaming to `.mjs` or adding `"type": "module"` to a config. The current code works correctly and the style difference has no functional impact.
-- **Exit criterion:** If the project standardizes on ESM for all test files, convert the E2E tests as well.
+- **Original finding:** C3-D06 (debugger)
+- **Severity:** MEDIUM (state consistency)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/store.svelte.ts:229-243`
+- **Reason for deferral:** This requires a version tracking mechanism across the store and the edited transactions. It's a real concern but the scenario (user navigates away, comes back, and applies stale edits) is uncommon. The simpler fix (Task 1 in Plan 07 — reset editedTxs on new result) would also prevent this scenario.
+- **Exit criterion:** After Plan 07 Task 1 is implemented, verify if the stale reoptimize scenario is still possible. If so, add version tracking.
 
-### D-15: XLSX has 24 bank configs, CSV only 10 adapters (asymmetry)
+### D-31: sessionStorage parse errors silently swallowed
 
-- **Original finding:** C2-07 (code-reviewer), also D-06 (cycle 1)
-- **Severity:** LOW (documentation/coverage gap)
-- **Confidence:** High
-- **File+line:** `apps/web/src/lib/parser/xlsx.ts:18-170`, `apps/web/src/lib/parser/csv.ts`
-- **Reason for deferral:** Duplicate of D-06. The generic CSV parser handles most bank formats. Adding dedicated CSV adapters for the remaining 14 banks requires access to real statement samples.
-- **Exit criterion:** Add dedicated CSV adapters for remaining banks, or document the coverage gap.
+- **Original finding:** C3-S03 (security-reviewer)
+- **Severity:** LOW (debugging)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/store.svelte.ts:119-120`
+- **Reason for deferral:** The catch block already removes the corrupted data from sessionStorage, which is the correct recovery behavior. Adding a console.warn would help developers debug but isn't critical for users.
+- **Exit criterion:** If storage corruption is reported, add console.warn logging.
 
-### D-16: PDF text extraction string concatenation
+### D-32: No Subresource Integrity on external script
 
-- **Original finding:** C2-P02 (perf-reviewer)
+- **Original finding:** C3-S04 (security-reviewer)
+- **Severity:** LOW (supply chain)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/layouts/Layout.astro:53`
+- **Reason for deferral:** SRI requires computing hash at build time and adding it to the script tag. The `is:inline` attribute already ensures the script is embedded (not loaded from an external URL), so the supply chain risk is limited. If the hosting server is compromised, SRI wouldn't help since the script is served from the same origin.
+- **Exit criterion:** If the script is ever loaded from a CDN or external origin, add SRI.
+
+### D-33: `loadCategories` fetches data already in `cards.json`
+
+- **Original finding:** C3-P04 (perf-reviewer), C3-A02 (architect)
 - **Severity:** LOW (performance)
 - **Confidence:** Medium
-- **File+line:** `apps/web/src/lib/parser/pdf.ts:236-244`
-- **Reason for deferral:** Most PDF statements are < 20 pages, making the O(n^2) concatenation negligible. The fix (array + join) is trivial but low priority.
-- **Exit criterion:** If PDFs with 100+ pages are commonly processed, switch to array-based concatenation.
+- **File+line:** `apps/web/src/lib/cards.ts:159-173`
+- **Reason for deferral:** The extra fetch is a single HTTP request that is cached by the browser. The `categories.json` file is small (~5KB). The data consistency risk is theoretical — both files are generated in the same build.
+- **Exit criterion:** If the extra fetch causes noticeable latency on slow connections, extract categories from `cards.json`.
 
-### D-17: No HTTP cache control for cards.json
+### D-34: Mixing parsing, categorization, and optimization in analyzer.ts
 
-- **Original finding:** C2-P05 (perf-reviewer)
-- **Severity:** LOW (performance/infra)
-- **Confidence:** High
-- **File+line:** `apps/web/src/lib/cards.ts:144-157`
-- **Reason for deferral:** Cache control is set by the hosting server (GitHub Pages / CDN), not by the application code. GitHub Pages sets reasonable cache headers by default.
-- **Exit criterion:** If the cards.json fetch is slow on repeat visits, configure the hosting server or add a service worker.
-
-### D-18: Duplicate bank detection logic across 3 files
-
-- **Original finding:** C2-A02 (architect), also D-01 (cycle 1)
-- **Severity:** MEDIUM (architectural)
-- **Confidence:** High
-- **File+line:** `packages/parser/src/detect.ts`, `apps/web/src/lib/parser/detect.ts`, `apps/web/src/lib/parser/csv.ts`
-- **Reason for deferral:** Duplicate of D-01. This is a major architectural refactor requiring extraction of shared logic into a platform-agnostic module.
-- **Exit criterion:** Create a dedicated refactor cycle with a design doc first, then implement incrementally.
-
-### D-19: ILP optimizer stub adds console noise
-
-- **Original finding:** C2-A03 (architect)
-- **Severity:** LOW (noise)
-- **Confidence:** High
-- **File+line:** `packages/core/src/optimizer/ilp.ts:48`
-- **Reason for deferral:** The ILP optimizer is only called if explicitly selected. The default path uses greedy. Removing the export would be a breaking API change.
-- **Exit criterion:** Either implement the ILP optimizer or remove it from the public API in a major version bump.
-
-### D-20: Overlapping CardRuleSet types in core and rules packages
-
-- **Original finding:** C2-A04 (architect)
-- **Severity:** LOW (maintenance)
+- **Original finding:** C3-A03 (architect)
+- **Severity:** LOW (architectural)
 - **Confidence:** Medium
-- **File+line:** `packages/core/src/models/card.ts`, `packages/rules/src/schema.ts`
-- **Reason for deferral:** The two types serve different purposes (core uses a runtime type, rules uses a Zod-inferred type). Unifying them requires careful consideration of the dependency graph to avoid circular imports.
-- **Exit criterion:** If the divergence causes actual bugs, unify by having core re-export from rules.
+- **File+line:** `apps/web/src/lib/analyzer.ts`
+- **Reason for deferral:** The current coupling works and the file is not excessively long (~270 lines). Splitting into separate services would add complexity without immediate benefit.
+- **Exit criterion:** If the analyzer becomes hard to test or maintain, split into ParseService, CategorizationService, and OptimizationService.
 
-### D-21: Subcategories use spaces instead of optgroup in dropdown
+### D-35: `inferYear` and `parseDateToISO` duplicated across parser files
 
-- **Original finding:** C2-U02 (designer)
-- **Severity:** LOW (accessibility)
+- **Original finding:** C3-A04 (architect)
+- **Severity:** LOW (DRY)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/csv.ts:29-37`, `apps/web/src/lib/parser/xlsx.ts:183-190`
+- **Reason for deferral:** The functions are small (~10 lines each) and the duplication is across two files in the same module. Extracting them would require a shared import that adds a dependency.
+- **Exit criterion:** If more parser files are added that need these functions, extract to `date-utils.ts`.
+
+### D-36: No unit tests for web-side XLSX parser
+
+- **Original finding:** C3-T03 (test-engineer)
+- **Severity:** MEDIUM (test gap)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/xlsx.ts`
+- **Reason for deferral:** The XLSX parser is well-covered by the E2E tests (upload flow). Adding unit tests requires mock XLSX data, which is time-consuming to create. The parser is relatively stable and rarely modified.
+- **Exit criterion:** If the XLSX parser has regressions, add unit tests with mock data.
+
+### D-37: E2E tests use `waitForTimeout` instead of condition-based waits
+
+- **Original finding:** C3-T04 (test-engineer)
+- **Severity:** MEDIUM (test reliability)
+- **Confidence:** High
+- **File+line:** `e2e/ui-ux-review.spec.js:374,381,393`
+- **Reason for deferral:** The E2E tests currently pass reliably. Replacing `waitForTimeout` with condition-based waits requires identifying the right DOM conditions to wait for, which varies by page. This is a quality improvement, not a bug fix.
+- **Exit criterion:** If E2E tests become flaky in CI, replace `waitForTimeout` with `waitForSelector`.
+
+### D-38: Dashboard shows both empty state and data content divs
+
+- **Original finding:** C3-U04 (designer)
+- **Severity:** LOW (performance)
 - **Confidence:** Medium
-- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:267-270`
-- **Reason for deferral:** The current approach works visually. Using `<optgroup>` would prevent selecting the parent category, which may not be desired (users might want to assign a transaction to the broad category). A CSS-based indentation would be a better approach but is low priority.
-- **Exit criterion:** If users report difficulty navigating the category dropdown, implement CSS-based indentation with ARIA grouping.
+- **File+line:** `apps/web/src/pages/dashboard.astro:31-119`
+- **Reason for deferral:** The Svelte components handle empty state internally. The extra DOM nodes add minimal overhead. Using `client:visible` would require Astro configuration changes.
+- **Exit criterion:** If the dashboard page has noticeable load time issues, switch to `client:visible`.
 
-### D-22: Dark mode doesn't respect prefers-color-scheme on first visit
+### D-39: No loading skeleton for card list page
 
-- **Original finding:** C2-U04 (designer)
+- **Original finding:** C3-U05 (designer)
 - **Severity:** LOW (UX)
 - **Confidence:** Medium
-- **File+line:** `apps/web/src/layouts/Layout.astro`
-- **Reason for deferral:** The flash of wrong theme only occurs if JS fails to load, which is rare. Adding an inline script adds complexity and conflicts with the CSP discussion.
-- **Exit criterion:** If users report theme flicker, add the inline detection script.
-
-### D-23: Select dropdowns lack aria-live for category changes
-
-- **Original finding:** C2-U06 (designer)
-- **Severity:** LOW (accessibility)
-- **Confidence:** Medium
-- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:260-270`
-- **Reason for deferral:** Native HTML `<select>` elements have reasonable built-in accessibility. Adding `aria-live` for every category change could be noisy for screen reader users.
-- **Exit criterion:** If accessibility testing reveals issues with the select dropdowns, add targeted ARIA improvements.
-
-### D-24: E2E test temp file not cleaned up
-
-- **Original finding:** C2-T06 (test-engineer)
-- **Severity:** LOW (hygiene)
-- **Confidence:** High
-- **File+line:** `e2e/ui-ux-review.spec.js:194-197`
-- **Reason for deferral:** `/tmp` is periodically cleaned by the OS. The file is tiny and doesn't contain sensitive data.
-- **Exit criterion:** If temp file accumulation becomes an issue, add cleanup in `afterEach`.
-
-### D-25: No virtualization for large transaction lists
-
-- **Original finding:** C2-U01 (designer)
-- **Severity:** MEDIUM (UX/performance)
-- **Confidence:** High
-- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:236-295`
-- **Reason for deferral:** Typical card statements have < 200 transactions, which renders fine. Virtual scrolling adds significant complexity for a marginal benefit in most cases. The `max-h-[400px] overflow-y-auto` handles the visual scrolling.
-- **Exit criterion:** If users with 500+ transactions report sluggish scrolling, implement virtual scrolling.
+- **File+line:** `apps/web/src/pages/cards/index.astro`, `apps/web/src/components/cards/CardGrid.svelte`
+- **Reason for deferral:** The cards.json fetch typically completes in < 500ms. Adding a loading skeleton is a nice-to-have, not a critical UX issue.
+- **Exit criterion:** If the cards page has noticeable blank time on slow connections, add a loading skeleton.

@@ -12,8 +12,9 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "test:bun": "bun test packages/parser tools/scraper",
-    "lint": "npm run lint --workspaces --if-present --include-workspace-root=false",
-    "typecheck": "npm run typecheck --workspaces --if-present --include-workspace-root=false",
+    "test:e2e": "turbo run build --filter=@cherrypicker/core --filter=@cherrypicker/rules && playwright test",
+    "lint": "npm run --workspaces --if-present --include-workspace-root=false lint",
+    "typecheck": "npm run --workspaces --if-present --include-workspace-root=false typecheck",
     "verify": "npm run lint && npm run typecheck && bun run test",
     "parse": "bun run packages/parser/src/index.ts",
     "scrape": "bun run tools/scraper/src/cli.ts",
@@ -21,6 +22,7 @@
     "optimize": "bun run tools/cli/src/index.ts optimize"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "turbo": "^2.8.20",
     "typescript": "^5.9.3",
     "yaml": "^2.8.3",
