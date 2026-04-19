@@ -14,8 +14,12 @@
 
   function formatPeriod(period: { start: string; end: string } | undefined): string {
     if (!period) return '-';
-    const [sy, sm] = period.start.split('-');
-    const [ey, em] = period.end.split('-');
+    // ISO 8601 dates: extract YYYY-MM via slice(0,7) for robustness
+    const startYM = period.start.slice(0, 7);
+    const endYM = period.end.slice(0, 7);
+    if (startYM.length < 7 || endYM.length < 7) return '-';
+    const [sy, sm] = startYM.split('-');
+    const [ey, em] = endYM.split('-');
     if (!sy || !sm || !ey || !em) return '-';
     const smNum = parseInt(sm, 10);
     const emNum = parseInt(em, 10);
