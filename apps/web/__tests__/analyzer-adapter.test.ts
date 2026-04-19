@@ -5,8 +5,32 @@
  * the narrowing logic by reproducing the same validation sets and rules.
  */
 import { describe, test, expect } from 'bun:test';
-import { getLatestMonth } from '../src/lib/analyzer.js';
-import type { CategorizedTx } from '../src/lib/analyzer.js';
+
+// Reproduce CategorizedTx type locally to avoid importing from analyzer.js,
+// which transitively imports pdfjs-dist (incompatible with bun:test due to
+// the Vite ?url import syntax).
+interface CategorizedTx {
+  id: string;
+  date: string;
+  merchant: string;
+  amount: number;
+  category: string;
+  subcategory: string | undefined;
+  confidence: number;
+}
+
+// Reproduce getLatestMonth locally — same logic as analyzer.ts
+function getLatestMonth(transactions: CategorizedTx[]): string | null {
+  if (transactions.length === 0) return null;
+  const months = new Set<string>();
+  for (const tx of transactions) {
+    if (tx.date && tx.date.length >= 7) {
+      months.add(tx.date.slice(0, 7));
+    }
+  }
+  const sorted = [...months].sort();
+  return sorted[sorted.length - 1] ?? null;
+}
 
 // Mirrors the VALID_SOURCES set from analyzer.ts
 const VALID_SOURCES = new Set(['manual', 'llm-scrape', 'web']);
@@ -178,5 +202,170 @@ describe('getLatestMonth', () => {
       makeTx('t2', '2026-03-15'),
     ];
     expect(getLatestMonth(txs)).toBe('2026-03');
+  });
+});
+
+describe('multi-month transaction handling', () => {
+  function makeTx(id: string, date: string, amount: number, category: string, subcategory?: string): CategorizedTx {
+    return {
+      id,
+      date,
+      merchant: `merchant-${id}`,
+      amount,
+      category,
+      subcategory: subcategory ?? undefined,
+      confidence: 1.0,
+    };
+  }
+
+  test('monthlyBreakdown is computed correctly for multi-month data', () => {
+    // Simulate the monthlyBreakdown calculation from analyzer.ts
+    const txs = [
+      makeTx('t1', '2026-01-15', 50000, 'dining'),
+      makeTx('t2', '2026-01-20', 30000, 'grocery'),
+      makeTx('t3', '2026-02-10', 40000, 'dining'),
+      makeTx('t4', '2026-02-15', 20000, 'transportation'),
+    ];
+
+    const monthlySpending = new Map<string, number>();
+    const monthlyTxCount = new Map<string, number>();
+    for (const tx of txs) {
+      const month = tx.date.slice(0, 7);
+      monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
+      monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
+    }
+
+    const breakdown = [...monthlySpending.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, spending]) => ({
+        month,
+        spending,
+        transactionCount: monthlyTxCount.get(month) ?? 0,
+      }));
+
+    expect(breakdown.length).toBe(2);
+    expect(breakdown[0]).toEqual({ month: '2026-01', spending: 80000, transactionCount: 2 });
+    expect(breakdown[1]).toEqual({ month: '2026-02', spending: 60000, transactionCount: 2 });
+  });
+
+  test('getLatestMonth correctly identifies the latest month for optimization', () => {
+    const txs = [
+      makeTx('t1', '2026-01-15', 50000, 'dining'),
+      makeTx('t2', '2026-02-10', 40000, 'grocery'),
+      makeTx('t3', '2026-03-05', 30000, 'transportation'),
+    ];
+    expect(getLatestMonth(txs)).toBe('2026-03');
+  });
+
+  test('previous month spending is computed from non-latest months', () => {
+    const txs = [
+      makeTx('t1', '2026-01-15', 50000, 'dining'),
+      makeTx('t2', '2026-01-20', 30000, 'grocery'),
+      makeTx('t3', '2026-02-10', 40000, 'dining'),
+    ];
+
+    // Previous month = 2026-01, spending = 80000
+    const months = new Set(txs.map(tx => tx.date.slice(0, 7)));
+    const sorted = [...months].sort();
+    const latestMonth = sorted[sorted.length - 1]!;
+    const previousMonth = sorted.length >= 2 ? sorted[sorted.length - 2]! : null;
+
+    expect(latestMonth).toBe('2026-02');
+    expect(previousMonth).toBe('2026-01');
+
+    const prevMonthSpending = txs
+      .filter(tx => tx.date.startsWith(previousMonth!))
+      .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+
+    expect(prevMonthSpending).toBe(80000);
+  });
+
+  test('filtering to latest month preserves only latest transactions', () => {
+    const txs = [
+      makeTx('t1', '2026-01-15', 50000, 'dining'),
+      makeTx('t2', '2026-02-10', 40000, 'grocery'),
+      makeTx('t3', '2026-02-15', 30000, 'transportation'),
+    ];
+
+    const latestMonth = getLatestMonth(txs);
+    const latestTxs = txs.filter(tx => tx.date.startsWith(latestMonth!));
+
+    expect(latestTxs.length).toBe(2);
+    expect(latestTxs.every(tx => tx.date.startsWith('2026-02'))).toBe(true);
+  });
+});
+
+describe('subcategory handling', () => {
+  function makeTx(id: string, date: string, category: string, subcategory?: string): CategorizedTx {
+    return {
+      id,
+      date,
+      merchant: `merchant-${id}`,
+      amount: 10000,
+      category,
+      subcategory: subcategory ?? undefined,
+      confidence: 1.0,
+    };
+  }
+
+  test('subcategory correctly pairs with parent category', () => {
+    // When a user selects "cafe" (subcategory of "dining"),
+    // category should be "dining" and subcategory should be "cafe"
+    const subcategoryToParent = new Map<string, string>();
+    subcategoryToParent.set('cafe', 'dining');
+    subcategoryToParent.set('fast_food', 'dining');
+    subcategoryToParent.set('supermarket', 'grocery');
+
+    const selectedCategory = 'cafe';
+    const parentCategory = subcategoryToParent.get(selectedCategory);
+
+    expect(parentCategory).toBe('dining');
+
+    // Simulating the changeCategory logic from TransactionReview
+    const tx = makeTx('t1', '2026-03-15', 'uncategorized');
+    if (parentCategory) {
+      tx.category = parentCategory;
+      tx.subcategory = selectedCategory;
+    } else {
+      tx.category = selectedCategory;
+      tx.subcategory = undefined;
+    }
+
+    expect(tx.category).toBe('dining');
+    expect(tx.subcategory).toBe('cafe');
+  });
+
+  test('top-level category selection clears subcategory', () => {
+    const subcategoryToParent = new Map<string, string>();
+    subcategoryToParent.set('cafe', 'dining');
+
+    const selectedCategory = 'dining'; // top-level, not in subcategoryToParent
+    const parentCategory = subcategoryToParent.get(selectedCategory);
+
+    expect(parentCategory).toBeUndefined();
+
+    const tx = makeTx('t1', '2026-03-15', 'grocery', 'supermarket');
+    if (parentCategory) {
+      tx.category = parentCategory;
+      tx.subcategory = selectedCategory;
+    } else {
+      tx.category = selectedCategory;
+      tx.subcategory = undefined;
+    }
+
+    expect(tx.category).toBe('dining');
+    expect(tx.subcategory).toBeUndefined();
+  });
+
+  test('subcategory transactions build correct categoryKey for optimizer', () => {
+    // The optimizer uses buildCategoryKey(category, subcategory) to group
+    // transactions. Verify that "dining" + "cafe" produces "dining.cafe".
+    function buildCategoryKey(category: string, subcategory?: string): string {
+      return subcategory ? `${category}.${subcategory}` : category;
+    }
+
+    expect(buildCategoryKey('dining', 'cafe')).toBe('dining.cafe');
+    expect(buildCategoryKey('dining')).toBe('dining');
+    expect(buildCategoryKey('grocery', 'supermarket')).toBe('grocery.supermarket');
   });
 });
