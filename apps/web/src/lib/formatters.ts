@@ -25,6 +25,16 @@ export function formatPercent(rate: number): string {
 }
 
 /**
+ * Format a decimal rate as percentage with 2 decimal places.
+ * Use for effective rate displays that need more precision than formatRate().
+ * Example: 0.01525 → "1.53%"
+ */
+export function formatRatePrecise(rate: number): string {
+  if (!Number.isFinite(rate)) return '0.00%';
+  return (rate * 100).toFixed(2) + '%';
+}
+
+/**
  * Format a number with comma separator.
  * Example: 1234 → "1,234"
  */

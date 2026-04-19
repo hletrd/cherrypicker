@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, getIssuerColor, getIssuerFromCardId } from '../../lib/formatters.js';
+  import { formatWon, formatRatePrecise, getIssuerColor, getIssuerFromCardId } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let opt = $derived(analysisStore.optimization);
@@ -159,7 +159,7 @@
       </div>
       <div class="text-3xl font-bold text-[var(--color-primary)]">{formatWon(opt.totalReward)}</div>
       <div class="mt-1 text-xs text-blue-500 dark:text-blue-400">
-        실효 혜택률 {(opt.effectiveRate * 100).toFixed(2)}%
+        실효 혜택률 {formatRatePrecise(opt.effectiveRate)}
       </div>
       <div class="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
         {uniqueCards}장 카드 사용
