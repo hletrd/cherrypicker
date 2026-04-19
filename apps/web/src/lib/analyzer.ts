@@ -31,11 +31,13 @@ function toRulesCategoryNodes(nodes: CategoryNode[]): RulesCategoryNode[] {
 }
 
 /** Validate and narrow the web CardRuleSet to the core package's CardRuleSet.
- *  The only field that differs is `card.source`: the web type has `string`
- *  while the core expects `'manual' | 'llm-scrape' | 'web'`. The static
- *  JSON is validated by the Zod schema at build time, so the narrowing is
- *  safe — but we assert explicitly so the type system stays honest. */
+ *  Fields that differ between web and core types:
+ *  - `card.source`: web has `string`, core expects `'manual' | 'llm-scrape' | 'web'`
+ *  - `rewards[].type`: web has `string`, core expects `RewardType`
+ *  The static JSON is validated by the Zod schema at build time, so the narrowing
+ *  is safe — but we assert explicitly so the type system stays honest. */
 const VALID_SOURCES = new Set(['manual', 'llm-scrape', 'web']);
+const VALID_REWARD_TYPES = new Set(['discount', 'points', 'cashback', 'mileage']);
 
 function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
   return rules.map((rule) => ({
@@ -46,6 +48,17 @@ function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
         ? (rule.card.source as 'manual' | 'llm-scrape' | 'web')
         : 'web', // fallback for unknown source values
     },
+    rewards: rule.rewards.map((r) => ({
+      ...r,
+      type: VALID_REWARD_TYPES.has(r.type)
+        ? (r.type as 'discount' | 'points' | 'cashback' | 'mileage')
+        : 'discount', // fallback for unknown reward types
+      tiers: r.tiers.map((t) => ({
+        ...t,
+        // Ensure unit is narrowed from string | undefined to the expected union
+        unit: t.unit ?? null,
+      })),
+    })),
   }));
 }
 
