@@ -39,12 +39,15 @@ function isActive(href: string) {
     <!--
       CSP: 'unsafe-inline' is required for script-src because Astro injects
       inline <script> blocks for Svelte island hydration (astro-island custom
-      element registration and component loader). Removing it would break all
-      interactive components. 'strict-dynamic' is added for forward compat;
-      browsers that support it will ignore the legacy 'unsafe-inline' fallback.
+      element registration and component loader) and layout.js (theme toggle).
+      Removing it would break all interactive components.
+      'strict-dynamic' was previously added for forward compat but removed
+      because browsers that support it ignore 'self' and 'unsafe-inline',
+      blocking both layout.js and Astro's hydration scripts entirely.
       style-src 'unsafe-inline' is required by Tailwind CSS v4 scoped styles.
-      TODO: Migrate to hash-based CSP (compute SHA256 of inline scripts at
-      build time) to fully remove 'unsafe-inline' from script-src.
+      TODO: Migrate to nonce-based CSP (compute nonce at build time, inject
+      into both the meta tag and all <script> elements) to fully remove
+      'unsafe-inline' from script-src.
     -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; worker-src 'self' blob:; connect-src 'self';" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
