@@ -111,6 +111,19 @@ export function detectFormatFromFile(file: File): 'csv' | 'xlsx' | 'pdf' {
   return 'csv'; // default
 }
 
+/**
+ * Detect which bank issued a statement based on keyword signatures.
+ *
+ * @param content - Full text content of the statement
+ * @returns The detected bank ID and confidence score (0–1)
+ *
+ * Tie-breaking: When multiple banks have the same match count (score),
+ * the bank that appears first in BANK_SIGNATURES wins. This means banks
+ * with more specific patterns (more entries in the patterns array) are
+ * naturally more likely to match multiple patterns and win ties. Banks
+ * with only a single generic pattern (e.g., cu/신협) can score 1.0
+ * confidence on a single match, which may be misleading — see D-65.
+ */
 export function detectBank(content: string): { bank: BankId | null; confidence: number } {
   let bestMatch: BankId | null = null;
   let bestScore = 0;
