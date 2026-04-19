@@ -200,11 +200,17 @@
         previousMonthSpending: (() => { const v = Number(previousSpending); return Number.isFinite(v) && v >= 0 ? v : undefined; })(),
       });
 
-      uploadStatus = 'success';
-
-      navigateTimeout = setTimeout(() => {
-        window.location.href = import.meta.env.BASE_URL + 'dashboard';
-      }, 1200);
+      // analysisStore.analyze() catches errors internally (sets error, result=null)
+      // without re-throwing, so we must check analysisStore.error here.
+      if (analysisStore.error) {
+        errorMessage = analysisStore.error;
+        uploadStatus = 'error';
+      } else {
+        uploadStatus = 'success';
+        navigateTimeout = setTimeout(() => {
+          window.location.href = import.meta.env.BASE_URL + 'dashboard';
+        }, 1200);
+      }
     } catch (e) {
       errorMessage = e instanceof Error ? e.message : '분석 실패';
       uploadStatus = 'error';
