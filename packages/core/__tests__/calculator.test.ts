@@ -284,6 +284,361 @@ describe('calculateRewards - mr-life (tiered, capped)', () => {
   });
 });
 
+const globalCapFixture: CardRuleSet = {
+  card: {
+    id: 'fixture-global-cap-card',
+    issuer: 'fixture',
+    name: 'Fixture Global Cap Card',
+    nameKo: '글로벌캡 테스트 카드',
+    type: 'credit',
+    annualFee: { domestic: 0, international: 0 },
+    url: 'https://example.com/global-cap-fixture',
+    lastUpdated: '2026-04-19',
+    source: 'manual',
+  },
+  performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+  performanceExclusions: [],
+  rewards: [
+    {
+      category: 'dining',
+      type: 'discount',
+      tiers: [{ performanceTier: 'tier0', rate: 5, monthlyCap: 3000, perTransactionCap: null }],
+    },
+    {
+      category: 'grocery',
+      type: 'discount',
+      tiers: [{ performanceTier: 'tier0', rate: 3, monthlyCap: null, perTransactionCap: null }],
+    },
+  ],
+  globalConstraints: {
+    monthlyTotalDiscountCap: 5000,
+    minimumAnnualSpending: null,
+  },
+};
+
+const perTxCapFixture: CardRuleSet = {
+  card: {
+    id: 'fixture-per-tx-cap-card',
+    issuer: 'fixture',
+    name: 'Fixture Per-Tx Cap Card',
+    nameKo: '건당상한 테스트 카드',
+    type: 'credit',
+    annualFee: { domestic: 0, international: 0 },
+    url: 'https://example.com/per-tx-cap-fixture',
+    lastUpdated: '2026-04-19',
+    source: 'manual',
+  },
+  performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+  performanceExclusions: [],
+  rewards: [
+    {
+      category: 'dining',
+      type: 'discount',
+      tiers: [{ performanceTier: 'tier0', rate: 10, monthlyCap: null, perTransactionCap: 50000 }],
+    },
+  ],
+  globalConstraints: {
+    monthlyTotalDiscountCap: null,
+    minimumAnnualSpending: null,
+  },
+};
+
+const nullRateFixture: CardRuleSet = {
+  card: {
+    id: 'fixture-null-rate-card',
+    issuer: 'fixture',
+    name: 'Fixture Null Rate Card',
+    nameKo: 'null rate 테스트 카드',
+    type: 'credit',
+    annualFee: { domestic: 0, international: 0 },
+    url: 'https://example.com/null-rate-fixture',
+    lastUpdated: '2026-04-19',
+    source: 'manual',
+  },
+  performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+  performanceExclusions: [],
+  rewards: [
+    {
+      category: 'dining',
+      type: 'discount',
+      tiers: [{ performanceTier: 'tier0', rate: null, monthlyCap: null, perTransactionCap: null }],
+    },
+  ],
+  globalConstraints: {
+    monthlyTotalDiscountCap: null,
+    minimumAnnualSpending: null,
+  },
+};
+
+const fixedRewardPerDayFixture: CardRuleSet = {
+  card: {
+    id: 'fixture-fixed-per-day-card',
+    issuer: 'fixture',
+    name: 'Fixture Fixed Per Day Card',
+    nameKo: '일일 고정 테스트 카드',
+    type: 'credit',
+    annualFee: { domestic: 0, international: 0 },
+    url: 'https://example.com/fixed-per-day-fixture',
+    lastUpdated: '2026-04-19',
+    source: 'manual',
+  },
+  performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+  performanceExclusions: [],
+  rewards: [
+    {
+      category: 'telecom',
+      type: 'discount',
+      tiers: [{ performanceTier: 'tier0', rate: null, fixedAmount: 3000, unit: 'won_per_day', monthlyCap: null, perTransactionCap: null }],
+    },
+  ],
+  globalConstraints: {
+    monthlyTotalDiscountCap: null,
+    minimumAnnualSpending: null,
+  },
+};
+
+const mileageFixture: CardRuleSet = {
+  card: {
+    id: 'fixture-mileage-card',
+    issuer: 'fixture',
+    name: 'Fixture Mileage Card',
+    nameKo: '마일리지 테스트 카드',
+    type: 'credit',
+    annualFee: { domestic: 0, international: 0 },
+    url: 'https://example.com/mileage-fixture',
+    lastUpdated: '2026-04-19',
+    source: 'manual',
+  },
+  performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+  performanceExclusions: [],
+  rewards: [
+    {
+      category: 'travel',
+      type: 'mileage',
+      tiers: [{ performanceTier: 'tier0', rate: 2, monthlyCap: null, perTransactionCap: null }],
+    },
+  ],
+  globalConstraints: {
+    monthlyTotalDiscountCap: null,
+    minimumAnnualSpending: null,
+  },
+};
+
+describe('calculateRewards - global cap and per-transaction cap', () => {
+  test('global cap enforcement: reward does not exceed globalMonthlyTotalDiscountCap', () => {
+    // dining 5% of 60000 = 3000 (exactly at rule monthlyCap)
+    // grocery 3% of 100000 = 3000
+    // Total raw = 6000, but global cap = 5000
+    const output = calculateRewards({
+      transactions: [
+        makeTx('t1', 'dining', 60000),
+        makeTx('t2', 'grocery', 100000),
+      ],
+      previousMonthSpending: 0,
+      cardRule: globalCapFixture,
+    });
+    expect(output.totalReward).toBe(5000);
+  });
+
+  test('global cap tracks remaining correctly across categories', () => {
+    // dining 5% of 40000 = 2000 (under rule cap of 3000)
+    // grocery 3% of 200000 = 6000
+    // Total raw = 8000, but global cap = 5000
+    // dining takes 2000, grocery gets min(6000, 5000-2000) = 3000
+    const output = calculateRewards({
+      transactions: [
+        makeTx('t1', 'dining', 40000),
+        makeTx('t2', 'grocery', 200000),
+      ],
+      previousMonthSpending: 0,
+      cardRule: globalCapFixture,
+    });
+    expect(output.totalReward).toBe(5000);
+    const dining = output.rewards.find((r) => r.category === 'dining');
+    expect(dining!.reward).toBe(2000);
+  });
+
+  test('per-transaction cap: reward amount capped per transaction', () => {
+    // 10% of 100000 = 10000, but perTransactionCap=50000 → 10% of 50000 = 5000
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'dining', 100000)],
+      previousMonthSpending: 0,
+      cardRule: perTxCapFixture,
+    });
+    const dining = output.rewards.find((r) => r.category === 'dining');
+    expect(dining!.reward).toBe(5000);
+  });
+
+  test('per-transaction cap does not affect transactions under cap', () => {
+    // 10% of 30000 = 3000, perTransactionCap=50000 → no binding
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'dining', 30000)],
+      previousMonthSpending: 0,
+      cardRule: perTxCapFixture,
+    });
+    const dining = output.rewards.find((r) => r.category === 'dining');
+    expect(dining!.reward).toBe(3000);
+  });
+});
+
+describe('calculateRewards - filtering and edge cases', () => {
+  test('negative amount transactions are skipped', () => {
+    const output = calculateRewards({
+      transactions: [
+        makeTx('t1', 'uncategorized', 100000),
+        makeTx('t2', 'uncategorized', -50000),
+      ],
+      previousMonthSpending: 0,
+      cardRule: simplePlan,
+    });
+    // Only the positive transaction should count
+    expect(output.totalSpending).toBe(100000);
+    expect(output.totalReward).toBe(1000);
+  });
+
+  test('zero amount transactions are skipped', () => {
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'uncategorized', 0)],
+      previousMonthSpending: 0,
+      cardRule: simplePlan,
+    });
+    expect(output.totalReward).toBe(0);
+    expect(output.rewards).toHaveLength(0);
+  });
+
+  test('non-KRW currency transactions are skipped', () => {
+    const tx: CategorizedTransaction = {
+      id: 't1',
+      date: '2026-02-01',
+      merchant: '테스트',
+      amount: 100000,
+      currency: 'USD',
+      category: 'uncategorized',
+      subcategory: undefined,
+      confidence: 1.0,
+    };
+    const output = calculateRewards({
+      transactions: [tx],
+      previousMonthSpending: 0,
+      cardRule: simplePlan,
+    });
+    expect(output.totalReward).toBe(0);
+  });
+
+  test('rule with null rate and null fixedAmount produces 0 reward', () => {
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'dining', 100000)],
+      previousMonthSpending: 0,
+      cardRule: nullRateFixture,
+    });
+    const dining = output.rewards.find((r) => r.category === 'dining');
+    expect(dining).toBeDefined();
+    expect(dining!.reward).toBe(0);
+  });
+
+  test('normalizeRate: percentage form (5) is converted to decimal (0.05)', () => {
+    // 5% rate on 10000 = 500 reward
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'dining', 10000)],
+      previousMonthSpending: 0,
+      cardRule: subcategoryFixture,  // dining rate=2 → 200, cafe rate=5
+    });
+    const dining = output.rewards.find((r) => r.category === 'dining');
+    expect(dining!.reward).toBe(200); // 10000 * 0.02 = 200
+  });
+});
+
+describe('calculateRewards - fixed reward types', () => {
+  test('won_per_day unit: fixed amount applies only once per day', () => {
+    const output = calculateRewards({
+      transactions: [
+        { ...makeTx('t1', 'telecom', 55000), date: '2026-02-01' },
+        { ...makeTx('t2', 'telecom', 30000), date: '2026-02-01' },
+        { ...makeTx('t3', 'telecom', 40000), date: '2026-02-02' },
+      ],
+      previousMonthSpending: 0,
+      cardRule: fixedRewardPerDayFixture,
+    });
+    // Day 1: first tx gets 3000, second tx gets 0 (same day)
+    // Day 2: gets 3000
+    const telecom = output.rewards.find((r) => r.category === 'telecom');
+    expect(telecom!.reward).toBe(6000);
+  });
+
+  test('mileage type uses same math as points', () => {
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'travel', 50000)],
+      previousMonthSpending: 0,
+      cardRule: mileageFixture,
+    });
+    // 2% of 50000 = 1000
+    const travel = output.rewards.find((r) => r.category === 'travel');
+    expect(travel!.reward).toBe(1000);
+    expect(travel!.rewardType).toBe('mileage');
+  });
+});
+
+describe('calculateRewards - multiple transactions accumulating toward monthly cap', () => {
+  test('monthly cap accumulation across multiple transactions', () => {
+    // mr-life tier1: convenience_store rate=10%, monthlyCap=10000
+    // tx1: 50000 * 10% = 5000 (remaining cap: 5000)
+    // tx2: 30000 * 10% = 3000 (but only 5000 remaining → 3000 fits)
+    // tx3: 50000 * 10% = 5000 (but only 2000 remaining → 2000)
+    const output = calculateRewards({
+      transactions: [
+        makeTx('t1', 'convenience_store', 50000),
+        makeTx('t2', 'convenience_store', 30000),
+        makeTx('t3', 'convenience_store', 50000),
+      ],
+      previousMonthSpending: 300000,
+      cardRule: mrLife,
+    });
+    const cat = output.rewards.find((r) => r.category === 'convenience_store');
+    expect(cat!.reward).toBe(10000);
+    expect(cat!.capReached).toBe(true);
+  });
+});
+
+describe('calculateRewards - broad category rule blocked by subcategorized transaction', () => {
+  test('broad dining rule does not match cafe subcategory transaction', () => {
+    const broadOnlyFixture: CardRuleSet = {
+      card: {
+        id: 'fixture-broad-only-card',
+        issuer: 'fixture',
+        name: 'Fixture Broad Only Card',
+        nameKo: '일반 외식 전용 카드',
+        type: 'credit',
+        annualFee: { domestic: 0, international: 0 },
+        url: 'https://example.com/broad-only-fixture',
+        lastUpdated: '2026-04-19',
+        source: 'manual',
+      },
+      performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+      performanceExclusions: [],
+      rewards: [
+        {
+          category: 'dining',
+          type: 'discount',
+          tiers: [{ performanceTier: 'tier0', rate: 5, monthlyCap: null, perTransactionCap: null }],
+        },
+      ],
+      globalConstraints: {
+        monthlyTotalDiscountCap: null,
+        minimumAnnualSpending: null,
+      },
+    };
+    // Transaction with subcategory='cafe' should NOT match the broad dining rule
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'dining', 20000, '스타벅스', false, 'cafe')],
+      previousMonthSpending: 0,
+      cardRule: broadOnlyFixture,
+    });
+    const cafe = output.rewards.find((r) => r.category === 'dining.cafe');
+    expect(cafe).toBeDefined();
+    expect(cafe!.reward).toBe(0);
+  });
+});
+
 describe('calculateRewards - fixed amount and subcategory handling', () => {
   test('cashback percentage rates are normalized before calculator math', () => {
     const output = calculateRewards({
@@ -329,7 +684,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     expect(cafe!.reward).toBe(1000);
   });
 
-  test('subcategory-specific merchant misses can fall back to the broader category rule', () => {
+  test('subcategory-specific merchant misses result in 0 reward when broad rule is blocked', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'dining', 20000, '스타벅스 강남', false, 'cafe')],
       previousMonthSpending: 0,
@@ -337,6 +692,8 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     });
     const cafe = output.rewards.find((reward) => reward.category === 'dining.cafe');
     expect(cafe).toBeDefined();
-    expect(cafe!.reward).toBe(400);
+    // Broad dining rule is blocked because tx has subcategory='cafe'
+    // Specific cafe rule doesn't match because merchant doesn't contain '메가커피'
+    expect(cafe!.reward).toBe(0);
   });
 });
