@@ -4,8 +4,20 @@ import { detectCSVDelimiter } from '../detect.js';
 function parseDateToISO(raw: string): string {
   const cleaned = raw.trim();
   const fullMatch = cleaned.match(/^(\d{4})[.\-\/\s](\d{1,2})[.\-\/\s](\d{1,2})/);
-  if (fullMatch) return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
-  if (/^\d{8}$/.test(cleaned)) return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+  if (fullMatch) {
+    const month = parseInt(fullMatch[2]!, 10);
+    const day = parseInt(fullMatch[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
+    }
+  }
+  if (/^\d{8}$/.test(cleaned)) {
+    const month = parseInt(cleaned.slice(4, 6), 10);
+    const day = parseInt(cleaned.slice(6, 8), 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+    }
+  }
   return cleaned;
 }
 
