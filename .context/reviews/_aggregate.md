@@ -1,32 +1,32 @@
-# Review Aggregate -- 2026-04-19 (Cycle 38)
+# Review Aggregate -- 2026-04-19 (Cycle 39)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle38-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle39-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-37 per-agent and aggregate files
+- All cycle 1-38 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-Cycle 37 finding C37-01 is CONFIRMED ALREADY FIXED in the current codebase. No duplicate findings with prior cycles. C38-01 is NEW and requires implementation.
+C38-01 is CONFIRMED ALREADY FIXED in the current codebase (FileDropzone text updated). C39-01 is NEW and requires implementation. No duplicate findings with prior cycles.
 
 ---
 
-## Verification of Cycle 37 Fixes
+## Verification of Cycle 38 Fixes
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C37-01 | **FIXED** | `packages/parser/src/pdf/index.ts:98-101` now returns 0 instead of NaN for unparseable amounts |
+| C38-01 | **FIXED** | `apps/web/src/components/upload/FileDropzone.svelte:409` now says "이번 달 지출액을 기준으로 자동 계산해요" instead of "50만원으로 계산해요" |
 
 ---
 
-## Active Findings (New in Cycle 38)
+## Active Findings (New in Cycle 39)
 
 | ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C38-01 | MEDIUM | High | `apps/web/src/components/upload/FileDropzone.svelte:409` | "50만원으로 계산해요" text is misleading -- code computes per-card exclusion-filtered spending from uploaded transactions, not a flat 500,000 Won default | PENDING |
+| C39-01 | MEDIUM | High | `packages/parser/src/pdf/index.ts:11,104-109` + `packages/parser/src/pdf/table-parser.ts:2` | Server-side PDF `findDateCell` DATE_PATTERN only matches YYYY-MM-DD -- silently drops rows with Korean/short-year dates while web-side correctly parses them | PENDING |
 
 ---
 
