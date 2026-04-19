@@ -250,6 +250,10 @@ function createAnalysisStore() {
       if (node.subcategories) {
         for (const sub of node.subcategories) {
           labels.set(sub.id, sub.labelKo);
+          // Dot-notation key for optimizer lookups — buildCategoryKey
+          // produces "dining.cafe" but the taxonomy only has "cafe" as
+          // the sub ID; without this entry, categoryLabels.get() misses.
+          labels.set(`${node.id}.${sub.id}`, sub.labelKo);
         }
       }
     }
@@ -345,7 +349,28 @@ function createAnalysisStore() {
         const latestTransactions = latestMonth
           ? editedTransactions.filter(tx => tx.date.startsWith(latestMonth))
           : editedTransactions;
-        const optimization = await optimizeFromTransactions(latestTransactions, options, categoryLabels);
+
+        // Compute previousMonthSpending from monthlyBreakdown to match the
+        // initial analysis behavior (previous month's spending determines
+        // performance tier, not the same month being optimized). Without this,
+        // optimizeFromTransactions would compute previousMonthSpending from
+        // the same transactions being optimized — a circular dependency that
+        // produces incorrect tier qualification for multi-month uploads.
+        let previousMonthSpending: number | undefined;
+        if (result?.monthlyBreakdown && latestMonth) {
+          const months = result.monthlyBreakdown.map(m => m.month).sort();
+          const latestIdx = months.indexOf(latestMonth);
+          if (latestIdx > 0) {
+            const prevMonth = months[latestIdx - 1];
+            const prevData = result.monthlyBreakdown.find(m => m.month === prevMonth);
+            previousMonthSpending = prevData?.spending;
+          }
+        }
+
+        const optimization = await optimizeFromTransactions(latestTransactions, {
+          ...options,
+          previousMonthSpending,
+        }, categoryLabels);
         if (result) {
           // Keep all months in the transactions field for display/editing,
           // but the optimization only covers the latest month.
