@@ -197,7 +197,7 @@
     try {
       await analysisStore.analyze(uploadedFiles, {
         bank: bank || undefined,
-        previousMonthSpending: (() => { const v = Number(previousSpending); return Number.isFinite(v) && v >= 0 ? v : undefined; })(),
+        previousMonthSpending: (() => { const v = previousSpending.trim(); if (v === '') return undefined; const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : undefined; })(),
       });
 
       // analysisStore.analyze() catches errors internally (sets error, result=null)
