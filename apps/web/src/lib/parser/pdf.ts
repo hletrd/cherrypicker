@@ -143,7 +143,8 @@ function parseDateToISO(raw: string): string {
 }
 
 function parseAmount(raw: string): number {
-  return parseInt(raw.replace(/원$/, '').replace(/,/g, ''), 10) || 0;
+  const n = parseInt(raw.replace(/원$/, '').replace(/,/g, ''), 10);
+  return Number.isNaN(n) ? NaN : n;
 }
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
@@ -187,7 +188,7 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
       const merchant = merchantIdx !== -1 ? (row[merchantIdx] ?? '').trim() : '';
       const amount = parseAmount(amountCell.value);
 
-      if (!merchant && amount === 0) continue;
+      if (Number.isNaN(amount) || (!merchant && amount === 0)) continue;
 
       const tx: RawTransaction = {
         date: parseDateToISO(dateCell.value),
@@ -283,7 +284,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
       if (amountStart > dateEnd) {
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
-          const amount = parseInt(amountMatch[1]!.replace(/,/g, ''), 10) || 0;
+          const amount = parseInt(amountMatch[1]!.replace(/,/g, ''), 10);
           if (amount > 0) {
             fallbackTransactions.push({
               date: parseDateToISO(dateMatch[1]!),
