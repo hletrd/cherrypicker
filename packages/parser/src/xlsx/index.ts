@@ -122,7 +122,11 @@ function parseDateToISO(raw: unknown): string {
 }
 
 function parseAmount(raw: unknown): number | null {
-  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+  if (typeof raw === 'number') {
+    // Korean Won amounts must be integers — round to prevent decimal
+    // values (e.g., from formula cells) from polluting reward math.
+    return Number.isFinite(raw) ? Math.round(raw) : null;
+  }
   if (typeof raw === 'string') {
     let cleaned = raw.trim().replace(/원$/, '').replace(/,/g, '');
     // Handle parenthesized negatives: (1234) → -1234
