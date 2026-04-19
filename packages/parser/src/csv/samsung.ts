@@ -26,7 +26,7 @@ function parseAmount(raw: string): number {
   const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNeg) cleaned = cleaned.slice(1, -1);
   const n = parseInt(cleaned, 10);
-  if (isNaN(n)) return NaN;
+  if (isNaN(n)) return 0;
   return isNeg ? -n : n;
 }
 
