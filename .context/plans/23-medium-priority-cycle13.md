@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM
 **Findings addressed:** C13-12, C13-13
-**Status:** PENDING
+**Status:** DONE
 
 ---
 
@@ -190,5 +190,5 @@ describe('calculateRewards — global cap rollback', () => {
 
 ## Progress
 
-- [ ] Task 1: Add unit tests for parseDateToISO
-- [ ] Task 2: Add test for calculateRewards global cap rollback
+- [x] Task 1: Add unit tests for parseDateToISO — Committed (000000031b)
+- [x] Task 2: Add test for calculateRewards global cap rollback — Committed (000000031b)

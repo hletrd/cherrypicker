@@ -2,7 +2,7 @@
 
 **Priority:** HIGH
 **Findings addressed:** C13-01, C13-02, C13-16
-**Status:** PENDING
+**Status:** DONE
 
 ---
 
@@ -68,6 +68,6 @@ to:
 
 ## Progress
 
-- [ ] Task 1: Fix CSV short-year date zero-padding
-- [ ] Task 2: Fix PDF short-year date zero-padding
-- [ ] Task 3: Fix "전전월" → "전월" in FileDropzone help text
+- [x] Task 1: Fix CSV short-year date zero-padding — Committed (0000000a7)
+- [x] Task 2: Fix PDF short-year date zero-padding — Committed (0000000a7)
+- [x] Task 3: Fix "전전월" → "전월" in FileDropzone help text — Committed (0000000a7)
