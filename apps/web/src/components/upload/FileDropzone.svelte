@@ -203,7 +203,7 @@
     try {
       await analysisStore.analyze(uploadedFiles, {
         bank: bank || undefined,
-        previousMonthSpending: (() => { const v = previousSpending.trim(); if (v === '') return undefined; const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : undefined; })(),
+        previousMonthSpending: (() => { const v = previousSpending.trim(); if (v === '') return undefined; const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 ? n : undefined; })(),
       });
 
       // analysisStore.analyze() catches errors internally (sets error, result=null)
