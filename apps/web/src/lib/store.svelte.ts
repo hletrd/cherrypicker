@@ -133,6 +133,8 @@ function loadFromStorage(): AnalysisResult | null {
           format: typeof parsed.format === 'string' ? parsed.format : 'unknown',
           statementPeriod: parsed.statementPeriod,
           transactionCount: typeof parsed.transactionCount === 'number' ? parsed.transactionCount : 0,
+          fullStatementPeriod: parsed.fullStatementPeriod,
+          totalTransactionCount: typeof parsed.totalTransactionCount === 'number' ? parsed.totalTransactionCount : undefined,
           parseErrors: [],
           optimization: parsed.optimization,
           monthlyBreakdown: parsed.monthlyBreakdown,
