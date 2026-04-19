@@ -19,7 +19,16 @@
   let sortOrder = $state<'name' | 'fee-asc' | 'fee-desc' | 'rewards'>('name');
   let issuerFilter = $state('');
 
-  let availableIssuers = $derived([...new Set(cards.map(c => c.issuer))].sort());
+  let availableIssuers = $derived([...new Set(filteredCards.map(c => c.issuer))].sort());
+
+  // Reset issuer filter if the selected issuer is no longer available
+  // after type filter change (e.g., issuer only has credit cards but
+  // user selected "체크카드" filter)
+  $effect(() => {
+    if (issuerFilter && !availableIssuers.includes(issuerFilter)) {
+      issuerFilter = '';
+    }
+  });
 
   let filteredCards = $derived.by(() => {
     let result = cards.slice();
