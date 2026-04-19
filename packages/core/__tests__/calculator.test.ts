@@ -5,6 +5,10 @@ import { loadCardRule } from '@cherrypicker/rules';
 import type { CategorizedTransaction } from '../src/models/transaction.js';
 import type { CardRuleSet } from '@cherrypicker/rules';
 
+// NOTE: Reward rate values in test fixtures use percentage form
+// (e.g., rate: 2 means 2%, rate: 5 means 5%) matching YAML convention.
+// calculateRewards() normalizes these via normalizeRate (divides by 100).
+
 const rulesDir = join(import.meta.dir, '../../../packages/rules/data/cards');
 
 // Use shinhan/simple-plan: tier0 (0 minSpending), 1% discount on uncategorized, no cap
