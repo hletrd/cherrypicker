@@ -19,7 +19,7 @@
   4. In `tools/cli/src/commands/report.ts`, build the category labels Map from the loaded categories (already available from `loadCategories`) and pass it to both functions.
   5. The `CATEGORY_NAMES_KO` map in `greedy.ts` is currently private. Either re-export it from `@cherrypicker/core` or duplicate it in the viz package (it's already duplicated in spirit across the codebase for the web dashboard). The cleaner approach is to re-export it from `@cherrypicker/core`.
 - **Verification:** Run `cherrypicker report` on a sample statement. The terminal summary and HTML report category columns should show Korean labels instead of English IDs. Run `bun test` to ensure no regressions.
-- **Status:** TODO
+- **Status:** DONE
 
 ---
 
@@ -32,7 +32,7 @@
 - **Description:** `generateHTMLReport` uses `template.replace('{{SUMMARY}}', ...)` which only replaces the first occurrence. If the template ever contained a placeholder twice, the second occurrence would remain unreplaced. Using `replaceAll()` would be safer.
 - **Fix:** Change all 5 `.replace(` calls to `.replaceAll(` in `generateHTMLReport`.
 - **Verification:** Run `bun test` and `bun run build` to ensure no regressions. The template currently has single occurrences so output should be identical.
-- **Status:** TODO
+- **Status:** DONE
 
 ---
 
