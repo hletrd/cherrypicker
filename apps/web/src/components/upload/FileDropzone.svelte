@@ -107,10 +107,18 @@
     return ACCEPTED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext));
   }
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per file
+  const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50 MB total
+
   function addFiles(newFiles: File[]) {
     const invalid: string[] = [];
+    const oversized: string[] = [];
     const valid: File[] = [];
     for (const f of newFiles) {
+      if (f.size > MAX_FILE_SIZE) {
+        oversized.push(`${f.name} (${formatFileSize(f.size)})`);
+        continue;
+      }
       if (isValidFile(f)) {
         // Avoid duplicates by name
         if (!uploadedFiles.some(existing => existing.name === f.name)) {
@@ -120,12 +128,22 @@
         invalid.push(f.name);
       }
     }
+    // Check total size after adding valid files
+    const totalSize = [...uploadedFiles, ...valid].reduce((sum, f) => sum + f.size, 0);
+    if (totalSize > MAX_TOTAL_SIZE) {
+      errorMessage = `전체 파일 크기가 50MB를 초과합니다`;
+      uploadStatus = 'error';
+      return;
+    }
     if (valid.length > 0) {
       uploadedFiles = [...uploadedFiles, ...valid];
       uploadStatus = 'idle';
       errorMessage = '';
     }
-    if (invalid.length > 0) {
+    if (oversized.length > 0) {
+      errorMessage = `파일 크기는 10MB 이하여야 합니다 (초과: ${oversized.join(', ')})`;
+      uploadStatus = 'error';
+    } else if (invalid.length > 0) {
       errorMessage = `CSV, Excel, PDF 파일만 지원합니다 (제외됨: ${invalid.join(', ')})`;
       uploadStatus = 'error';
     }
