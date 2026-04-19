@@ -39,6 +39,10 @@ function toRulesCategoryNodes(nodes: CategoryNode[]): RulesCategoryNode[] {
 const VALID_SOURCES = new Set(['manual', 'llm-scrape', 'web']);
 const VALID_REWARD_TYPES = new Set(['discount', 'points', 'cashback', 'mileage']);
 
+// Cache for toCoreCardRuleSets — rules from static JSON don't change per session
+let cachedCoreRules: CoreCardRuleSet[] | null = null;
+let cachedRulesRef: CardRuleSet[] | null = null;
+
 function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
   return rules.map((rule) => ({
     ...rule,
@@ -79,7 +83,7 @@ export interface CategorizedTx {
 export async function parseAndCategorize(
   file: File,
   options?: AnalyzeOptions,
-): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string }[] }> {
+): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string }[]; categoryNodes: CategoryNode[] }> {
   const parseResult = await parseFile(file, options?.bank as BankId | undefined);
   if (parseResult.transactions.length === 0) {
     throw new Error('거래 내역을 찾을 수 없어요');
@@ -116,12 +120,14 @@ export async function parseAndCategorize(
     format: parseResult.format ?? 'csv',
     statementPeriod: parseResult.statementPeriod,
     parseErrors: parseResult.errors ?? [],
+    categoryNodes,
   };
 }
 
 export async function optimizeFromTransactions(
   transactions: CategorizedTx[],
   options?: AnalyzeOptions,
+  prebuiltCategoryLabels?: Map<string, string>,
 ): Promise<AnalysisResult['optimization']> {
   // Convert CategorizedTx to CategorizedTransaction for the optimizer
   const categorized: CategorizedTransaction[] = transactions.map(tx => ({
@@ -161,24 +167,32 @@ export async function optimizeFromTransactions(
       cardPreviousSpending.set(rule.card.id, qualifying);
     }
   }
-  const constraints = buildConstraints(categorized, cardPreviousSpending);
-
   // Build category labels map from taxonomy for the optimizer
-  const categoryNodes = await loadCategories();
-  const categoryLabels = new Map<string, string>();
-  for (const node of categoryNodes) {
-    categoryLabels.set(node.id, node.labelKo);
-    if (node.subcategories) {
-      for (const sub of node.subcategories) {
-        categoryLabels.set(sub.id, sub.labelKo);
+  // Skip loadCategories() if labels were pre-built by the caller
+  let categoryLabels = prebuiltCategoryLabels;
+  if (!categoryLabels) {
+    const categoryNodes = await loadCategories();
+    categoryLabels = new Map<string, string>();
+    for (const node of categoryNodes) {
+      categoryLabels.set(node.id, node.labelKo);
+      if (node.subcategories) {
+        for (const sub of node.subcategories) {
+          categoryLabels.set(sub.id, sub.labelKo);
+        }
       }
     }
   }
-  constraints.categoryLabels = categoryLabels;
+
+  const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
 
   // cardRules from static JSON are validated and narrowed to the core
-  // CardRuleSet shape via the adapter function.
-  const optimizationResult = greedyOptimize(constraints, toCoreCardRuleSets(cardRules));
+  // CardRuleSet shape via the adapter function. Cache the result since
+  // the rules don't change within a session.
+  if (cachedRulesRef !== cardRules || !cachedCoreRules) {
+    cachedCoreRules = toCoreCardRuleSets(cardRules);
+    cachedRulesRef = cardRules;
+  }
+  const optimizationResult = greedyOptimize(constraints, cachedCoreRules);
 
   return optimizationResult;
 }
@@ -192,17 +206,30 @@ export async function analyzeMultipleFiles(
     files.map(f => parseAndCategorize(f, options))
   );
 
-  // 2. Merge all transactions
+  // 2. Merge all transactions and build category labels from the first parsed result
   const allTransactions: CategorizedTx[] = [];
   const allErrors: { line?: number; message: string; raw?: string }[] = [];
   let bank: string | null = null;
   let format = 'csv';
 
+  // Build category labels once from the taxonomy data returned by parseAndCategorize
+  const categoryLabels = new Map<string, string>();
   for (const parsed of allParsed) {
     allTransactions.push(...parsed.transactions);
     allErrors.push(...parsed.parseErrors);
     if (parsed.bank) bank = parsed.bank;
     format = parsed.format;
+    // Build labels from the first parsed result (all results use the same taxonomy)
+    if (categoryLabels.size === 0 && parsed.categoryNodes) {
+      for (const node of parsed.categoryNodes) {
+        categoryLabels.set(node.id, node.labelKo);
+        if (node.subcategories) {
+          for (const sub of node.subcategories) {
+            categoryLabels.set(sub.id, sub.labelKo);
+          }
+        }
+      }
+    }
   }
 
   if (allTransactions.length === 0) {
@@ -212,11 +239,13 @@ export async function analyzeMultipleFiles(
   // 3. Sort transactions by date
   allTransactions.sort((a, b) => a.date.localeCompare(b.date));
 
-  // 4. Detect months and calculate per-month spending
+  // 4. Detect months and calculate per-month spending + transaction counts
   const monthlySpending = new Map<string, number>();
+  const monthlyTxCount = new Map<string, number>();
   for (const tx of allTransactions) {
     const month = tx.date.slice(0, 7); // "2026-01"
     monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
+    monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
   }
 
   // 5. Find the latest month's transactions for optimization
@@ -238,7 +267,7 @@ export async function analyzeMultipleFiles(
   const optimization = await optimizeFromTransactions(latestTransactions, {
     ...options,
     previousMonthSpending,
-  });
+  }, categoryLabels);
 
   // 8. Calculate statement periods from transactions
   // - fullStatementPeriod / totalTransactionCount: all uploaded months
@@ -267,7 +296,7 @@ export async function analyzeMultipleFiles(
     monthlyBreakdown: [...monthlySpending.entries()].map(([month, spending]) => ({
       month,
       spending,
-      transactionCount: allTransactions.filter(tx => tx.date.startsWith(month)).length,
+      transactionCount: monthlyTxCount.get(month) ?? 0,
     })),
   };
 }

@@ -10,6 +10,7 @@ export interface OptimizationConstraints {
 export function buildConstraints(
   transactions: CategorizedTransaction[],
   cardPreviousSpending: Map<string, number>,
+  categoryLabels?: Map<string, string>,
 ): OptimizationConstraints {
   // Keep the original transactions intact so the optimizer can preserve
   // merchant/subcategory/online facts when it scores assignments.
@@ -28,5 +29,5 @@ export function buildConstraints(
     cards.push({ cardId, previousMonthSpending });
   }
 
-  return { cards, transactions: preservedTransactions, categorySpending };
+  return { cards, transactions: preservedTransactions, categorySpending, categoryLabels };
 }
