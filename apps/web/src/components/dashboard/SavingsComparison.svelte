@@ -45,20 +45,23 @@
 
   let showBreakdown = $state(false);
 
-  // Count-up animation for savings
+  // Count-up animation for savings — smoothly transitions from current
+  // displayed value to the new target instead of resetting to 0
   let displayedSavings = $state(0);
 
   $effect(() => {
     const target = opt?.savingsVsSingleCard ?? 0;
     if (target === 0) { displayedSavings = 0; return; }
+    const startVal = displayedSavings;
     let cancelled = false;
     let rafId: number;
     const start = performance.now();
-    const duration = 800;
+    const duration = 600;
     function tick(now: number) {
       if (cancelled) return;
       const progress = Math.min((now - start) / duration, 1);
-      displayedSavings = Math.round(target * progress);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      displayedSavings = Math.round(startVal + (target - startVal) * eased);
       if (progress < 1) rafId = requestAnimationFrame(tick);
     }
     rafId = requestAnimationFrame(tick);
