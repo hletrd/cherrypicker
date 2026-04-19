@@ -65,8 +65,11 @@ export class CategoryTaxonomy {
     }
 
     // 2. Substring match — keyword is contained in merchant name
+    //    Skip single-character keywords to avoid false positives (e.g., a
+    //    1-char Korean particle matching every merchant name containing it).
     let bestSubstring: { category: string; subcategory?: string; kwLen: number } | undefined;
     for (const [kw, mapping] of this.keywordMap) {
+      if (kw.trim().length < 2) continue;
       if (lower.includes(kw)) {
         if (!bestSubstring || kw.length > bestSubstring.kwLen) {
           bestSubstring = { ...mapping, kwLen: kw.length };
