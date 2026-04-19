@@ -2,7 +2,7 @@ import type { CardRuleSet } from '@cherrypicker/rules';
 import type { CategorizedTransaction } from '../models/transaction.js';
 import type { OptimizationResult, CardAssignment, CardRewardResult, CategoryReward, CapInfo } from '../models/result.js';
 import type { OptimizationConstraints } from './constraints.js';
-import { calculateRewards } from '../calculator/reward.js';
+import { calculateRewards, buildCategoryKey } from '../calculator/reward.js';
 
 const CATEGORY_NAMES_KO: Record<string, string> = {
   dining: '외식',
@@ -114,7 +114,8 @@ function buildAssignments(txAssignments: TxAssignment[], categoryLabels?: Map<st
   const alternativeRewardMap = new Map<string, Map<string, { cardName: string; reward: number }>>();
 
   for (const assignment of txAssignments) {
-    const key = `${assignment.tx.category}::${assignment.assignedCardId}`;
+    const categoryKey = buildCategoryKey(assignment.tx.category, assignment.tx.subcategory);
+    const key = `${categoryKey}::${assignment.assignedCardId}`;
     const current = assignmentMap.get(key);
 
     if (current) {
@@ -123,8 +124,8 @@ function buildAssignments(txAssignments: TxAssignment[], categoryLabels?: Map<st
       current.rate = current.spending > 0 ? current.reward / current.spending : 0;
     } else {
       assignmentMap.set(key, {
-        category: assignment.tx.category,
-        categoryNameKo: categoryLabels?.get(assignment.tx.category) ?? CATEGORY_NAMES_KO[assignment.tx.category] ?? assignment.tx.category,
+        category: categoryKey,
+        categoryNameKo: categoryLabels?.get(categoryKey) ?? categoryLabels?.get(assignment.tx.category) ?? CATEGORY_NAMES_KO[categoryKey] ?? CATEGORY_NAMES_KO[assignment.tx.category] ?? categoryKey,
         assignedCardId: assignment.assignedCardId,
         assignedCardName: assignment.assignedCardName,
         spending: assignment.tx.amount,

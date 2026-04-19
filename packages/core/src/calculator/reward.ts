@@ -25,7 +25,7 @@ function findTierRate(rule: RewardRule, tierId: string): RewardTierRate | undefi
   return rule.tiers.find((t) => t.performanceTier === tierId);
 }
 
-function buildCategoryKey(category: string, subcategory?: string): string {
+export function buildCategoryKey(category: string, subcategory?: string): string {
   return subcategory ? `${category}.${subcategory}` : category;
 }
 
