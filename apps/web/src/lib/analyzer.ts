@@ -87,6 +87,7 @@ export async function parseAndCategorize(
   file: File,
   options?: AnalyzeOptions,
   fileIndex?: number,
+  matcher?: MerchantMatcher,
 ): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string }[]; categoryNodes: CategoryNode[] }> {
   const parseResult = await parseFile(file, options?.bank as BankId | undefined);
   if (parseResult.transactions.length === 0) {
@@ -94,10 +95,12 @@ export async function parseAndCategorize(
   }
 
   const categoryNodes = await loadCategories();
+  // Reuse the provided matcher (from analyzeMultipleFiles) or construct a new
+  // one for backward compatibility (e.g., analyzeFile single-call path).
   // MerchantMatcher expects CategoryNode[] from @cherrypicker/rules which has
   // { id, labelKo, labelEn, keywords, subcategories? }. We project our local
   // type (which has an extra `label` field) to the rules shape via the adapter.
-  const matcher = new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
+  const effectiveMatcher = matcher ?? new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
 
   // Include fileIndex in the ID to prevent collisions when multiple files
   // are uploaded — without it, each file produces tx-0 through tx-N and
@@ -107,7 +110,7 @@ export async function parseAndCategorize(
 
   const transactions: CategorizedTx[] = parseResult.transactions.map(
     (tx: RawTransaction, idx: number) => {
-      const match = matcher.match(tx.merchant, tx.category);
+      const match = effectiveMatcher.match(tx.merchant, tx.category);
       return {
         id: `tx-${idPrefix}${idx}`,
         date: tx.date,
@@ -234,9 +237,14 @@ export async function analyzeMultipleFiles(
   files: File[],
   options?: AnalyzeOptions,
 ): Promise<AnalysisResult> {
-  // 1. Parse and categorize ALL files
+  // 1. Construct MerchantMatcher once (shared across all files) to avoid
+  // redundant loadCategories() fetches and matcher construction per file.
+  const categoryNodes = await loadCategories();
+  const sharedMatcher = new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
+
+  // 2. Parse and categorize ALL files using the shared matcher
   const allParsed = await Promise.all(
-    files.map((f, i) => parseAndCategorize(f, options, i))
+    files.map((f, i) => parseAndCategorize(f, options, i, sharedMatcher))
   );
 
   // 2. Merge all transactions and build category labels from the first parsed result
