@@ -265,3 +265,110 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/layouts/Layout.astro:15-24`
 - **Reason for deferral:** The fallback values (683, 24, 45) are only shown if `cards.json` can't be read at build time, which means the build is broken anyway. Making the build fail would add friction to the development workflow. The values will be correct on the next successful build.
 - **Exit criterion:** If stale numbers are seen in production, remove fallback values and show "—" instead, or make the build fail on missing cards.json.
+
+---
+
+## Deferred Findings (Cycle 5)
+
+### D-45: FileDropzone success navigation uses full page reload
+
+- **Original finding:** C5-04
+- **Severity:** LOW (perf/UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:205-207`
+- **Reason for deferral:** The full page reload works correctly and sessionStorage restores data. Switching to Astro's `navigate()` requires testing that the Svelte island hydration works correctly with client-side navigation. The performance gain is marginal (1-2 seconds saved on a typical analysis flow that takes 3+ seconds).
+- **Exit criterion:** If client-side navigation is needed for other features (e.g., instant page transitions), replace `window.location.href` with Astro's `navigate()`.
+
+### D-46: CategoryBreakdown hardcoded colors missing `traditional_market`
+
+- **Original finding:** C5-05 (extends C4-09/D-42)
+- **Severity:** LOW (data freshness)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:7-49`
+- **Reason for deferral:** Same class as D-42. The `traditional_market` category falls through to `uncategorized` gray, making it indistinguishable from truly uncategorized items. The fix is either adding the missing entry or implementing a dynamic color generator (per D-42 exit criterion).
+- **Exit criterion:** When D-42 is resolved (dynamic color generation), this will be automatically fixed.
+
+### D-47: FileDropzone duplicate file detection by name only
+
+- **Original finding:** C5-06
+- **Severity:** LOW (UX)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:129`
+- **Reason for deferral:** Comparing only filenames is a simplification that works for most use cases. Two different CSV files with the same name from different banks is an edge case. Adding file size comparison (`existing.size === f.size`) could cause false negatives when the same file is re-uploaded (same name, same size). A confirmation dialog would be a better UX but adds complexity.
+- **Exit criterion:** If users report issues with duplicate file handling, add a size+name comparison with a confirmation dialog for same-name different-size files.
+
+### D-48: SessionStorage quota exceeded — no user feedback
+
+- **Original finding:** C5-07 (partially addressed by C6-02/Plan 10 Task 3)
+- **Severity:** LOW (UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/store.svelte.ts:96-113`
+- **Reason for deferral:** C6-02 adds a `persistWarning` indicator for when transactions are truncated. The full quota exceeded scenario (where even the truncated payload fails) is already handled by the catch block, which silently removes corrupted data. The `persistWarning` flag from C6-02 will cover this case too.
+- **Exit criterion:** After C6-02 is implemented, verify that `persistWarning` is set in the catch block as well. If not, add it.
+
+### D-49: `inferYear` uses `new Date()` — non-deterministic in tests
+
+- **Original finding:** C5-08
+- **Severity:** LOW (testability)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/parser/csv.ts:30-36`, `apps/web/src/lib/parser/xlsx.ts:183-190`
+- **Reason for deferral:** The `new Date()` call makes short-date parsing non-deterministic in tests. Adding an optional `now` parameter would fix this, but it requires changing the function signature and all callers. The current tests pass because they use full-date formats.
+- **Exit criterion:** If tests become flaky due to date-dependent parsing, add an optional `now` parameter with a default of `Date.now()`.
+
+---
+
+## Deferred Findings (Cycle 6)
+
+### D-50: `findRule` wildcard exemption from subcategory blocking is undocumented
+
+- **Original finding:** C6-04
+- **Severity:** LOW (documentation)
+- **Confidence:** Medium
+- **File+line:** `packages/core/src/calculator/reward.ts:81`
+- **Reason for deferral:** The behavior is correct for Korean card terms — wildcard rules should match all transactions including subcategorized ones. The existing TODO comment at line 79-80 already mentions the `includeSubcategories` schema extension. Adding a comment at line 81 about the wildcard exemption would help future developers but is not urgent.
+- **Exit criterion:** When the `includeSubcategories` schema field is added, update the comment to reference it.
+
+### D-51: `scoreCardsForTransaction` calls `calculateCardOutput` twice per card per transaction
+
+- **Original finding:** C6-05 (extends D-09)
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/greedy.ts:84-110`
+- **Reason for deferral:** Same class as D-09. For typical use cases (< 1000 transactions, < 10 cards), this is fast enough. Caching the previous `calculateCardOutput` result per card would halve the calls but adds complexity due to cache invalidation.
+- **Exit criterion:** If performance becomes an issue for large statement sets, implement incremental reward tracking with per-card caching.
+
+### D-52: XLSX HTML detection decodes buffer twice for HTML-as-XLS files
+
+- **Original finding:** C6-06
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/xlsx.ts:272-273, 290-291`
+- **Reason for deferral:** The double decode only affects HTML-as-XLS files (a small minority of uploads). For binary XLSX files, only the 512-byte check is done. The performance impact is negligible for files under 10MB.
+- **Exit criterion:** If HTML-as-XLS parsing becomes a performance bottleneck, cache the decoded HTML string from `isHTMLContent` and reuse it.
+
+### D-53: `cardBreakdown` derivation source should be documented
+
+- **Original finding:** C6-08
+- **Severity:** LOW (documentation)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/SavingsComparison.svelte:24-46`
+- **Reason for deferral:** The current implementation is correct — `cardBreakdown` derives from `assignments` which only includes categories with spending. A comment would help future maintainers but is not urgent.
+- **Exit criterion:** When C6-01 is implemented (removing the redundant `rate` field), add a comment clarifying the derivation source.
+
+### D-54: `loadCategories` fetch deduplication gap
+
+- **Original finding:** C6-09 (same as D-07)
+- **Severity:** LOW (reliability)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/cards.ts:159-173`
+- **Reason for deferral:** Same as D-07. JavaScript's single-threaded execution makes concurrent duplicate fetches extremely unlikely. The `categoriesPromise` cache already handles the common case.
+- **Exit criterion:** If users report stale/failed data loading issues, replace with a proper caching library.
+
+### D-55: `inferYear` duplicated across csv.ts and xlsx.ts — divergence risk
+
+- **Original finding:** C6-10 (extends D-35)
+- **Severity:** LOW (DRY)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/csv.ts:29-37`, `apps/web/src/lib/parser/xlsx.ts:183-190`
+- **Reason for deferral:** Same as D-35. The functions are identical but could diverge over time. Extracting them requires a shared import that adds a dependency. The duplication is across two files in the same module.
+- **Exit criterion:** If more parser files are added that need these functions, extract to `date-utils.ts`.

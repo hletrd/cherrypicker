@@ -1,52 +1,57 @@
-# Review Aggregate — 2026-04-19 (Cycle 5)
+# Review Aggregate — 2026-04-19 (Cycle 6)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle5-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle6-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- `.context/reviews/_aggregate.md` (cycle 4)
-- All cycle 1-4 per-agent files
+- `.context/reviews/_aggregate.md` (cycle 5)
+- All cycle 1-5 per-agent files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-All cycle 1-3 findings have been verified as fixed or deferred. They are not re-listed here unless a cycle 4/5 finding extends or revisits them.
+All cycle 1-4 findings have been verified as fixed or deferred. Cycle 5 findings C5-01, C5-02, C5-03 are now fixed. They are not re-listed here.
 
-Deferred items D-01 through D-39 and LOW items from cycle 4 (C4-06, C4-07, C4-09, C4-13, C4-14) remain unchanged and are not re-listed here.
-
----
-
-## Verification of Cycle 4 Fixes
-
-All 10 implemented cycle 4 fixes verified as correctly implemented:
-- C4-01 (NaN guard), C4-02 (prebuiltCategoryLabels), C4-03 (monthlyTxCount single pass), C4-04 (a11y keyboard), C4-05 (categoryLabels in buildConstraints), C4-08 (generation-gated effect), C4-10 (stale dist warning), C4-11 (fuzzy match regression test), C4-12 (Number+isFinite), C4-15 (cached core rules)
+Deferred items D-01 through D-44 and LOW items from cycle 5 (C5-04 through C5-08) remain unchanged and are not re-listed here.
 
 ---
 
-## Active Findings (New in Cycle 5, Deduplicated)
+## Verification of Cycle 5 Fixes
+
+All 3 implemented cycle 5 fixes verified as correctly implemented:
+- C5-01/C5-09 (`generation++` in `reoptimize()`)
+- C5-02 (transactions persisted in sessionStorage with validation and size-based truncation)
+- C5-03 (OptimalCardMap keyboard accessibility with role, tabindex, aria, onkeydown)
+
+---
+
+## Active Findings (New in Cycle 6, Deduplicated)
 
 | ID | Severity | Confidence | File | Description | Cross-ref |
 |---|---|---|---|---|---|
-| C5-01 | MEDIUM | High | `store.svelte.ts:241-255` | `reoptimize()` doesn't increment `generation` — inconsistent change detection | New |
-| C5-02 | MEDIUM | High | `store.svelte.ts:91-94,96-113` | `loadFromStorage` doesn't restore `transactions` — empty TransactionReview after reload | New |
-| C5-03 | LOW | High | `OptimalCardMap.svelte:91-125` | Table rows not keyboard accessible (same class as C4-04, which was fixed) | Extends C4-04 |
-| C5-04 | LOW | High | `FileDropzone.svelte:205-207` | Success navigation uses full page reload | New |
-| C5-05 | LOW | High | `CategoryBreakdown.svelte:7-49` | Missing `traditional_market` in hardcoded colors | Extends C4-09 |
-| C5-06 | LOW | Medium | `FileDropzone.svelte:129` | Duplicate file detection by name only | New |
-| C5-07 | LOW | High | `store.svelte.ts:96-113` | SessionStorage quota exceeded — no user feedback | New |
-| C5-08 | LOW | Medium | `csv.ts:30-36` | `inferYear` uses `new Date()` — non-deterministic in tests | New |
-| C5-09 | LOW | Medium | `store.svelte.ts:247` | `reoptimize` re-assigns `result` without `generation++` — reactivity edge case | Overlaps C5-01 |
+| C6-01 | MEDIUM | High | `SavingsComparison.svelte:33-40` | `cardBreakdown` stores stale initial `rate` before recalculation — fragile pattern | New |
+| C6-02 | MEDIUM | High | `store.svelte.ts:96-125` | `persistToStorage` silently truncates transactions on oversize — no indicator | Extends C5-07 |
+| C6-03 | LOW | High | `SavingsComparison.svelte:53-68` | Count-up animation resets to 0 on re-render instead of smooth transition | New |
+| C6-04 | LOW | Medium | `reward.ts:81` | `findRule` wildcard exemption from subcategory blocking is undocumented | Extends C3-02/M-06 |
+| C6-05 | LOW | High | `greedy.ts:84-110` | `scoreCardsForTransaction` calls `calculateCardOutput` twice per card per transaction | Extends D-09 |
+| C6-06 | LOW | High | `xlsx.ts:272-273` | XLSX HTML detection decodes buffer twice for HTML-as-XLS files | New |
+| C6-07 | MEDIUM | High | `TransactionReview.svelte:99-104` | AI categorizer doesn't clear subcategory when changing category | Same class as C-01 (fixed) |
+| C6-08 | LOW | Medium | `SavingsComparison.svelte:24-46` | `cardBreakdown` derivation source should be documented | New |
+| C6-09 | LOW | Medium | `cards.ts:159-173` | `loadCategories` fetch deduplication gap | Same as D-07 |
+| C6-10 | LOW | High | `csv.ts:29-37`, `xlsx.ts:183-190` | `inferYear` duplicated — divergence risk | Extends D-35 |
+| C6-11 | LOW | High | `SavingsComparison.svelte:161` | Inline rate formatting vs `formatRate()` — precision mismatch | New |
 
 ---
 
-## Cross-Agent Agreement (Cycle 5)
+## Cross-Agent Agreement (Cycle 6)
 
 | Finding | Signal |
 |---|---|
-| C5-01 / C5-09 | `generation` not incremented in `reoptimize` — 2 findings (strong signal, same root cause) |
-| C5-03 / C4-04 | Keyboard accessibility for interactive table rows — 2 findings across cycles (C4-04 fixed for CategoryBreakdown, same pattern needed for OptimalCardMap) |
-| C5-05 / C4-09 | Hardcoded CATEGORY_COLORS missing entries — 2 findings (strong signal for dynamic color generation) |
+| C6-07 / C-01 | AI categorizer subcategory clearing — same bug class as the already-fixed manual `changeCategory` (C-01). Strong signal that this is a real bug. |
+| C6-02 / C5-07 | SessionStorage persistence feedback — 2 findings across cycles (C5-07 was deferred; C6-02 adds the truncation-specific failure mode). Combined signal is MEDIUM. |
+| C6-10 / D-35 | `inferYear` duplication — 2 findings across cycles. Signal remains LOW but divergence risk increases over time. |
+| C6-05 / D-09 | `scoreCardsForTransaction` double call — 2 findings across cycles. Signal remains LOW (performance). |
 
 ---
 
@@ -56,15 +61,16 @@ All 10 implemented cycle 4 fixes verified as correctly implemented:
 - None — all prior criticals are fixed
 
 ### HIGH (should fix this cycle)
-1. C5-01: Add `generation++` to `reoptimize()` in store.svelte.ts (also fixes C5-09)
-2. C5-02: Persist `transactions` in sessionStorage or show prominent notice when data is lost after reload
+1. C6-07: Add `tx.subcategory = undefined;` to AI categorizer result application (1-line fix, same pattern as C-01)
+2. C6-01: Remove redundant `rate` field from `CardBreakdown` interface initialization
+3. C6-02: Add `persistWarning` indicator when transactions are truncated from sessionStorage save
 
 ### MEDIUM (plan for next cycles)
-3. C5-03: Add keyboard accessibility to OptimalCardMap rows
-4. C5-07: Add user feedback when sessionStorage quota is exceeded
+4. C6-03: Smooth count-up animation transition on re-render
+5. C6-11: Add `formatRatePrecise` helper or document inline rate formatting intent
 
 ### LOW (defer or accept)
-- C5-04, C5-05, C5-06, C5-08
+- C6-04, C6-05, C6-06, C6-08, C6-09, C6-10
 
 ---
 
