@@ -209,8 +209,15 @@ function parseDateToISO(raw: unknown): string {
     const fullMatch = cleaned.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
     if (fullMatch) return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
 
-    // YYYYMMDD
-    if (/^\d{8}$/.test(cleaned)) return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+    // YYYYMMDD — validate month/day ranges to avoid producing invalid date
+    // strings from corrupted data (e.g., "20261399" → "2026-13-99").
+    if (/^\d{8}$/.test(cleaned)) {
+      const month = parseInt(cleaned.slice(4, 6), 10);
+      const day = parseInt(cleaned.slice(6, 8), 10);
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+      }
+    }
 
     // YY-MM-DD or YY.MM.DD
     const shortYearMatch = cleaned.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})$/);
