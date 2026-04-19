@@ -235,6 +235,10 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       rawReward = effectiveFixedReward;
       ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
     } else {
+      // Rule has neither rate nor fixed amount — likely a misconfiguration
+      if (rule.category !== '*') {
+        console.warn(`[cherrypicker] Rule for "${buildRuleKey(rule)}" tier "${tierId}" has no rate or fixedAmount — producing 0 reward`);
+      }
       rawReward = 0;
       ruleResult = applyMonthlyCap(0, monthlyCap, currentRuleMonthUsed);
     }
