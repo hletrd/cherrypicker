@@ -171,6 +171,21 @@ function loadFromStorage(): AnalysisResult | null {
         typeof parsed.optimization.totalSpending === 'number' &&
         typeof parsed.optimization.effectiveRate === 'number'
       ) {
+        // Shallow validation of cardResults entries — each must have the
+        // essential fields that dashboard components access during rendering.
+        // If any entry fails validation, strip the entire cardResults array
+        // to prevent TypeError crashes in CategoryBreakdown / OptimalCardMap.
+        if (Array.isArray(parsed.optimization.cardResults)) {
+          const validCardResults = parsed.optimization.cardResults.filter(
+            (cr: any) =>
+              cr &&
+              typeof cr === 'object' &&
+              typeof cr.cardId === 'string' &&
+              typeof cr.totalReward === 'number' &&
+              Array.isArray(cr.byCategory)
+          );
+          parsed.optimization.cardResults = validCardResults;
+        }
         // Restore transactions with validation — each entry must have
         // the essential fields; invalid entries are silently dropped.
         let transactions: CategorizedTx[] | undefined;
