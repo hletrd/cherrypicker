@@ -100,6 +100,7 @@
           const tx = editedTxs.find(t => t.id === txId);
           if (tx) {
             tx.category = result.category;
+            tx.subcategory = undefined; // Previous subcategory is invalid after category change
             tx.confidence = result.confidence;
             changed++;
           }
