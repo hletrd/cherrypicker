@@ -1,37 +1,36 @@
-# Review Aggregate — 2026-04-19 (Cycle 33)
+# Review Aggregate — 2026-04-19 (Cycle 34)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle33-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle34-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-32 per-agent and aggregate files
+- All cycle 1-33 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-Cycle 32 findings C32-01 through C32-03 and carried-over C31-01 are CONFIRMED FIXED. Cycle 33 finding C33-01 is NEW and requires implementation.
+Cycle 33 finding C33-01 is CONFIRMED FIXED. Cycle 34 findings C34-01 through C34-03 are NEW and require implementation.
 
 Deferred items D-01 through D-105 remain unchanged and are not re-listed here.
 
 ---
 
-## Verification of Cycle 32 Fixes
+## Verification of Cycle 33 Fixes
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C31-01 | **FIXED** | `parser-date.test.ts:41-49` — YYYYMMDD handler now has range validation; test cases for invalid YYYYMMDD strings added |
-| C32-01 | **FIXED** | `report.js:63-64` — now prepends "+" for positive savings |
-| C32-02 | **FIXED** | `csv.ts:43-51`, `xlsx.ts:210-217`, `pdf.ts:149-156` — full-date format validates month/day ranges |
-| C32-03 | **FIXED** | `csv.ts:63-74`, `xlsx.ts:231-240`, `pdf.ts:158-169` — short-year format validates month/day ranges |
+| C33-01 | **FIXED** | `bunfig.toml` has `pathIgnorePatterns = ["e2e/**"]`; `bun test` passes with 266 tests, 0 failures |
 
 ---
 
-## Active Findings (New in Cycle 33)
+## Active Findings (New in Cycle 34)
 
 | ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C33-01 | MEDIUM | High | `e2e/*.spec.js`, missing `bunfig.toml` | Playwright E2E spec files crash `bun test` — no exclusion configured | OPEN |
+| C34-01 | HIGH | High | `packages/parser/src/pdf/index.ts:14-18` | Server-side PDF parseDateToISO is a minimal stub — missing all date formats and range validation | OPEN |
+| C34-02 | MEDIUM | High | `packages/parser/src/xlsx/index.ts:28-78` | Server-side XLSX parseDateToISO missing month/day range validation | OPEN |
+| C34-03 | LOW | High | 11 bank CSV adapters | Bank-specific CSV adapters lack month/day range validation in parseDateToISO | OPEN |
 
 ---
 
