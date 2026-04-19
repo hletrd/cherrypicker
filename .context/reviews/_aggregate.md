@@ -1,63 +1,67 @@
-# Review Aggregate — 2026-04-19 (Cycle 10)
+# Review Aggregate — 2026-04-19 (Cycle 11)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle10-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle11-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-9 per-agent and aggregate files
+- All cycle 1-10 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-All cycle 1-9 findings have been verified as fixed or deferred. Cycle 9 fixes (C9-01 through C9-13) are all correctly implemented. They are not re-listed here.
+All cycle 1-10 findings have been verified as fixed or deferred. Cycle 10 fixes (C10-01 through C10-13) are all correctly implemented. They are not re-listed here.
 
-Deferred items D-01 through D-76 and LOW items from cycle 9 remain unchanged and are not re-listed here.
-
----
-
-## Verification of Cycle 9 Fixes
-
-All 5 implemented cycle 9 fixes verified as correctly implemented:
-- C9-05: Error feedback when reoptimize discards edits due to null result
-- C9-01: Fix `toCoreCardRuleSets` cache — remove reference equality check
-- C9-11: Add non-empty string checks for critical fields in `isValidTx` validation
-- C9-13: Explicitly sort `monthlyBreakdown` by month before rendering
-- C9-03: Document bank detection tie-breaking behavior
+Deferred items D-01 through D-85 remain unchanged and are not re-listed here.
 
 ---
 
-## Active Findings (New in Cycle 10, Deduplicated)
+## Verification of Cycle 10 Fixes
+
+All 3 implemented cycle 10 fixes verified as correctly implemented:
+- C10-06: `handleUpload` now checks `analysisStore.error` before setting success status
+- C10-09: `reoptimize` filters transactions to latest month via `getLatestMonth`
+- C10-02: Minimum merchant name length guard added in `matcher.ts` and `taxonomy.ts`
+
+---
+
+## Active Findings (New in Cycle 11, Deduplicated)
 
 | ID | Severity | Confidence | File | Description | Cross-ref |
 |---|---|---|---|---|---|
-| C10-01 | LOW | High | `reward.ts:265-268` | Global cap over-count correction is subtle — needs documentation | New |
-| C10-02 | MEDIUM | High | `matcher.ts:46-55, taxonomy.ts:69-76` | Short merchant names (2 chars) falsely match longer keywords via `kw.includes(lower)` | New |
-| C10-03 | LOW | Medium | `xlsx.ts:193-203` | `parseDateToISO` doesn't guard against `Infinity` from Excel formula errors | New |
-| C10-04 | LOW | High | `CategoryBreakdown.svelte:87` | Subcategory color fallback goes to gray instead of parent category color | Extends D-42/D-46/D-64 |
-| C10-05 | LOW | High | `greedy.ts:256-268` | bestSingleCard computation is O(n*m) — acceptable at current scale | Extends D-09/D-51 |
-| C10-06 | MEDIUM | High | `FileDropzone.svelte:192-211` | `handleUpload` always sets `uploadStatus = 'success'` even when analysis fails | New |
-| C10-07 | LOW | Medium | `OptimalCardMap.svelte:62` | `as const` type assertion works but fragile — maintainability note | New |
-| C10-08 | LOW | High | `TransactionReview.svelte:6` | AI categorizer import is dead code | Duplicate of D-10/D-68 |
-| C10-09 | MEDIUM | High | `analyzer.ts:266-271,293-311` | `reoptimize` includes all-month transactions but initial optimization uses only latest month | New |
-| C10-10 | LOW | High | `SavingsComparison.svelte:174` | Annual savings projection * 12 is simplistic | Duplicate of D-40 |
-| C10-11 | LOW | High | `detect.ts:8-105` | BANK_SIGNATURES patterns should not use `g` flag — latent risk note | New |
-| C10-12 | MEDIUM | Medium | `store.svelte.ts:124-127` | SessionStorage truncation only omits transactions but optimization object can also be large | Extends D-48 |
-| C10-13 | LOW | Medium | `matcher.ts:32-79` | Empty merchant name matches first keyword with 0.8 confidence | New |
+| C11-01 | LOW | High | `greedy.ts:96-97` | Redundant recalculation in `scoreCardsForTransaction` | Extends D-09/D-51 |
+| C11-02 | LOW | Low | `reward.ts:193-203` | Bucket object pattern fragile (theoretical) | New |
+| C11-03 | LOW | High | `csv.ts:247-901` | Bank adapter code duplication | Extends D-01 |
+| C11-04 | LOW | Medium | `OptimalCardMap.svelte:19` | Math.max spread overflow risk | Extends D-73 |
+| C11-05 | LOW | High | `pdf.ts:23-58` | Column detection iterates all lines | New |
+| C11-06 | LOW | Medium | `store.svelte.ts:163-203` | Shallow validation of nested optimization data | New |
+| C11-07 | MEDIUM | Medium | `astro.config.ts` | No Content-Security-Policy headers | New |
+| C11-08 | LOW | High | `greedy.ts:211-213` | Redundant Map creation from constraints.cards | New |
+| C11-09 | LOW | High | `constraints.ts:17`, `greedy.ts:219` | Redundant array copy in buildConstraints | New |
+| C11-10 | LOW | High | `reward.ts:200-203` | Default `rewardType: 'discount'` misleading for no-rule categories | New |
+| C11-11 | LOW | High | `detect.ts:127-150` | Confidence 0 when no detection (internal only) | New |
+| C11-12 | MEDIUM | High | `store.svelte.ts:334-363` | `monthlyBreakdown` stale after reoptimize with multi-month edits | New |
+| C11-13 | MEDIUM | High | `categorizer.test.ts` | Missing tests for merchant name length guard | New |
+| C11-14 | MEDIUM | High | `__tests__/` | Missing integration test for reoptimize latest-month filtering | New |
+| C11-15 | LOW | High | `CategoryBreakdown.svelte:51` | "Other" group color is hardcoded gray | Extends D-42/D-64/D-78 |
+| C11-16 | MEDIUM | High | `SpendingSummary.svelte:104` | "전월실적 0원" displayed for single-month data | New |
+| C11-17 | MEDIUM | High | `TransactionReview.svelte:153-161` | Category select doesn't set subcategory correctly | New |
+| C11-18 | LOW | Medium | `reward.ts:113-117` | normalizeRate assumption not validated at schema level | New |
+| C11-19 | LOW | High | `csv.ts:82` vs `xlsx.ts:241` | parseInt vs raw number inconsistency | Extends D-67 |
+| C11-20 | LOW | Medium | `store.svelte.ts:139-149` | isValidTx doesn't check amount for NaN/negative | New |
 
 ---
 
-## Cross-Agent Agreement (Cycle 10)
+## Cross-Agent Agreement (Cycle 11)
 
 | Finding | Signal |
 |---|---|
-| C10-02 | NEW — independent discovery. Short merchant names matching via `kw.includes(lower)` is a genuine false-positive vector. Combined with the fact that `isSubstringSafeKeyword` only checks keyword length (not merchant length), this is a real issue. HIGH signal. |
-| C10-06 | NEW — independent discovery. `handleUpload` always succeeds because `analysisStore.analyze()` catches errors internally. This is a UX bug — users get redirected to dashboard even on analysis failure. HIGH signal. |
-| C10-09 | NEW — independent discovery. The discrepancy between initial optimization (latest month only) and reoptimize (all months) is a subtle but real consistency issue. HIGH signal. |
-| C10-04 / D-42/D-46/D-64 | Same root cause (hardcoded color map). C10-04 identifies that subcategory lookups fall through to gray instead of parent category color. Combined signal is LOW (same class as existing deferred). |
-| C10-08 / D-10/D-68 | Same finding (dead AI categorizer import). No new signal. |
-| C10-10 / D-40 | Same finding (annual savings projection). No new signal. |
-| C10-12 / D-48 | Related class (sessionStorage size limits). C10-12 adds that optimization object itself can be large. Combined signal is MEDIUM. |
+| C11-12 | NEW — independent discovery. `monthlyBreakdown` is carried over from the original result and never recalculated after reoptimize. If a user edits transactions in a non-latest month, the breakdown for that month is stale. HIGH signal — this is a real consistency bug. |
+| C11-17 | NEW — independent discovery. The category select in TransactionReview treats subcategory IDs as standalone categories instead of correctly setting `category` to the parent and `subcategory` to the child. This is a real UX/data-integrity bug. HIGH signal. |
+| C11-16 | NEW — independent discovery. Single-month data shows "전월실적 0원 기준" which is misleading. The spending amount was actually computed from the transaction data. HIGH signal. |
+| C11-07 | NEW — No CSP headers. Defense-in-depth improvement. MEDIUM signal. |
+| C11-13/C11-14 | NEW — Missing test coverage for recent behavioral changes. HIGH signal — test gaps should be filled to prevent regression. |
+| C11-01/C11-03/C11-04/C11-15/C11-19 | Same class as existing deferred items (D-09, D-01, D-73, D-42, D-67). No new signal. |
 
 ---
 
@@ -67,19 +71,21 @@ All 5 implemented cycle 9 fixes verified as correctly implemented:
 - None — all prior criticals are fixed
 
 ### HIGH (should fix this cycle)
-1. C10-06: Fix `handleUpload` to check `analysisStore.error` before setting success status
-2. C10-09: Filter `reoptimize` transactions to latest month to match initial optimization behavior
-3. C10-02: Add minimum merchant name length guard for `kw.includes(lower)` substring matching
+1. C11-12: Recalculate `monthlyBreakdown` from `editedTransactions` after reoptimize
+2. C11-17: Fix category select in TransactionReview to correctly set `category` (parent) and `subcategory` (child) when a subcategory is selected
+3. C11-16: Fix SpendingSummary to hide or correctly display previous month spending for single-month data
 
 ### MEDIUM (plan for next cycles)
-4. C10-12: Consider truncating `optimization.cardResults` when sessionStorage payload is still too large
-5. C10-01: Add documentation comment for global cap over-count correction in `calculateRewards`
+4. C11-07: Add Content-Security-Policy headers
+5. C11-13: Add unit tests for merchant name length guard
+6. C11-14: Add integration test for reoptimize latest-month filtering
+7. C11-10: Change default `rewardType` for no-rule categories from 'discount' to 'none'
 
 ### LOW (defer or accept)
-- C10-03, C10-04 (extends D-42), C10-05 (extends D-09), C10-07, C10-08 (dup of D-10), C10-10 (dup of D-40), C10-11, C10-13
+- C11-01 (extends D-09), C11-02, C11-03 (extends D-01), C11-04 (extends D-73), C11-05, C11-06, C11-08, C11-09, C11-11, C11-15 (extends D-42), C11-18, C11-19 (extends D-67), C11-20
 
 ---
 
 ## Agent Failures
 
-No agent failures. Single comprehensive review completed successfully.
+No agent failures. Single comprehensive multi-angle review completed successfully.

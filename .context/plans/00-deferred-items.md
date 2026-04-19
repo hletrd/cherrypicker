@@ -658,3 +658,133 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/lib/store.svelte.ts:124-127`
 - **Reason for deferral:** The optimization object is typically < 100KB. The 4MB budget leaves ample headroom even with a large optimization object. The scenario where optimization alone exceeds 4MB requires extreme inputs (> 50 cards with > 30 categories each). The current truncation strategy handles the common case (large transaction lists) correctly.
 - **Exit criterion:** If users report `persistWarning = 'corrupted'` with normal-sized uploads, also truncate `optimization.cardResults` when the payload is still too large after omitting transactions.
+
+---
+
+## Deferred Findings (Cycle 11)
+
+### D-86: Redundant recalculation in `scoreCardsForTransaction`
+
+- **Original finding:** C11-01 (extends D-09/D-51)
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/greedy.ts:96-97`
+- **Reason for deferral:** Same class as D-09/D-51. `scoreCardsForTransaction` calls `calculateCardOutput` twice per card per transaction (before and after). Caching the `before` result would halve the calls but adds complexity due to cache invalidation when a new transaction is assigned. For typical use cases (< 1000 transactions, < 10 cards), this is fast enough.
+- **Exit criterion:** If optimization latency becomes noticeable (> 5s), implement per-card result caching.
+
+### D-87: Bucket object pattern in `calculateRewards` is fragile
+
+- **Original finding:** C11-02
+- **Severity:** LOW (code quality)
+- **Confidence:** Low
+- **File+line:** `packages/core/src/calculator/reward.ts:193-203`
+- **Reason for deferral:** The inline bucket creation with `?? { ... }` works correctly in the current code flow. The Map.get/set pattern ensures each categoryKey has exactly one bucket. The theoretical risk of cross-category contamination requires two transactions with the same categoryKey where the second get returns undefined despite the first having set it, which is impossible in JavaScript's single-threaded execution.
+- **Exit criterion:** If the bucket creation logic is refactored, add an explicit null check after `categoryRewards.get`.
+
+### D-88: Bank adapter code duplication in CSV parser
+
+- **Original finding:** C11-03 (extends D-01)
+- **Severity:** LOW (DRY)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/csv.ts:247-901`
+- **Reason for deferral:** Same class as D-01. All 10 bank adapters follow the same pattern with only column name differences. The duplication makes maintenance harder but the code works correctly. Creating a generic `parseBankCSV(config)` function is a refactor that doesn't change behavior.
+- **Exit criterion:** When D-01 is resolved (shared parser module), bank adapters will be unified as part of that refactor.
+
+### D-89: `Math.max(...array)` stack overflow risk in OptimalCardMap
+
+- **Original finding:** C11-04 (extends D-73)
+- **Severity:** LOW (edge-case)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/OptimalCardMap.svelte:19`
+- **Reason for deferral:** Same class as D-73. `Math.max(...array)` can cause a stack overflow for arrays > ~100K entries. Typical usage has < 50 assignments, so this is not a realistic concern.
+- **Exit criterion:** If assignments ever exceed 10,000 entries, replace with `array.reduce((a, b) => Math.max(a, b.rate), 0.001)`.
+
+### D-90: PDF table parser `detectColumnBoundaries` iterates all lines
+
+- **Original finding:** C11-05
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/pdf.ts:23-58`
+- **Reason for deferral:** The column detection is O(n*m) where n is line count and m is max line length. For typical PDFs (< 50 pages), this completes in < 100ms. For very large PDFs, the performance impact is still acceptable because the rest of the parsing is also O(n).
+- **Exit criterion:** If PDF parsing of large files (> 100 pages) is noticeably slow, limit `detectColumnBoundaries` to the first 50 lines.
+
+### D-91: Shallow validation of nested optimization data in `loadFromStorage`
+
+- **Original finding:** C11-06
+- **Severity:** LOW (defense-in-depth)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/store.svelte.ts:163-203`
+- **Reason for deferral:** sessionStorage is same-origin and not accessible to other websites. The shallow validation of the optimization object (checking assignments array, totalReward/totalSpending/effectiveRate as numbers) is sufficient for the current use case. Adding deep validation of `cardResults` and `alternatives` would add complexity with minimal security benefit.
+- **Exit criterion:** If malformed sessionStorage data causes UI rendering errors, add deeper validation for `cardResults` entries.
+
+### D-92: Redundant Map creation from `constraints.cards` in `greedyOptimize`
+
+- **Original finding:** C11-08
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/greedy.ts:211-213`
+- **Reason for deferral:** The Map creation from `constraints.cards.map()` is O(n) where n is the number of cards (< 700). The allocation cost is negligible. Changing the `OptimizationConstraints` type would be a breaking change to the core package's public API.
+- **Exit criterion:** If `greedyOptimize` is called in tight loops or the card count exceeds 5000, accept `Map<string, number>` directly in `OptimizationConstraints`.
+
+### D-93: Redundant array copy in `buildConstraints`
+
+- **Original finding:** C11-09
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/constraints.ts:17`, `packages/core/src/optimizer/greedy.ts:219-221`
+- **Reason for deferral:** `buildConstraints` creates a shallow copy `[...transactions]`, and then `greedyOptimize` creates another copy with `[...constraints.transactions].filter().sort()`. The first copy is unnecessary since the optimizer always creates its own working copy. However, removing the copy in `buildConstraints` changes the documented behavior that "the original transactions are preserved." For typical transaction counts (< 1000), the extra allocation is negligible.
+- **Exit criterion:** If memory usage is a concern for large transaction sets (> 10,000), remove the spread copy in `buildConstraints` and update the documentation comment.
+
+### D-94: Default `rewardType: 'discount'` misleading for no-rule categories
+
+- **Original finding:** C11-10 (partially addressed in Plan 21 Task 4)
+- **Severity:** LOW (UX clarity)
+- **Confidence:** High
+- **File+line:** `packages/core/src/calculator/reward.ts:200-203`
+- **Reason for deferral:** Plan 21 Task 4 proposes changing the default from `'discount'` to `'none'`, but this is a behavioral API change that requires updating all downstream consumers. The current `'discount'` default is misleading but doesn't cause incorrect calculations. The UI only displays `rewardType` in limited contexts (card detail breakdown), where the 0 reward amount makes it clear no discount is applied.
+- **Exit criterion:** If Plan 21 Task 4 is implemented, this is automatically resolved. Otherwise, if users report confusion about "할인" labels on categories with 0 reward, change the default.
+
+### D-95: Confidence score of 0 when no bank detection is confusing (internal only)
+
+- **Original finding:** C11-11
+- **Severity:** LOW (internal clarity)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/detect.ts:127-150`
+- **Reason for deferral:** The `confidence: 0` value when no bank is detected is never surfaced to the user. It's only used internally for bank detection logic. The value is technically correct (0% confidence in any detection) and changing it would add no functional benefit.
+- **Exit criterion:** If `confidence` is ever displayed to users, change to `null` when no detection is made.
+
+### D-96: "Other" group color is hardcoded gray in CategoryBreakdown
+
+- **Original finding:** C11-15 (extends D-42/D-64/D-78)
+- **Severity:** LOW (UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:51`
+- **Reason for deferral:** Same class as D-42/D-64/D-78. The hardcoded `OTHER_COLOR = '#cbd5e1'` makes the subcategory items within the "other" expansion hard to visually distinguish. Adding a palette of muted colors for subcategory items is a UX enhancement.
+- **Exit criterion:** When D-42 is resolved (dynamic color generation), implement subcategory color differentiation within the "other" group.
+
+### D-97: `normalizeRate` percentage-form assumption not validated at schema level
+
+- **Original finding:** C11-18
+- **Severity:** LOW (data integrity)
+- **Confidence:** Medium
+- **File+line:** `packages/core/src/calculator/reward.ts:113-117`
+- **Reason for deferral:** The assumption that all YAML rates are in percentage form (e.g., 1.5 means 1.5%) is documented in code comments but not enforced by the Zod schema. If a YAML file is created with decimal rates (e.g., 0.015 for 1.5%), the division by 100 would produce 0.015% instead of 1.5%. This is a data contract issue that should be validated at schema level. However, all existing YAML files use percentage form consistently.
+- **Exit criterion:** If a new YAML file is created with decimal-form rates, add a Zod schema validation that rejects rates < 0.01.
+
+### D-98: `parseInt` vs raw number inconsistency between CSV and XLSX parsers
+
+- **Original finding:** C11-19 (extends D-67)
+- **Severity:** LOW (consistency)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/csv.ts:82` vs `apps/web/src/lib/parser/xlsx.ts:241-255`
+- **Reason for deferral:** Same class as D-67. CSV `parseAmount` uses `parseInt` (truncates to integer). XLSX `parseAmount` returns raw number for numeric input (can be float). For Korean Won, amounts are always integers, so both approaches produce correct results. Adding `Math.round()` in the XLSX numeric path would add consistency but no functional improvement.
+- **Exit criterion:** If foreign-currency-converted amounts with decimal remainders appear in XLSX statements, add `Math.round()` in the XLSX numeric path.
+
+### D-99: `isValidTx` doesn't check amount for NaN or negative values
+
+- **Original finding:** C11-20
+- **Severity:** LOW (validation)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/store.svelte.ts:139-149`
+- **Reason for deferral:** `isValidTx` checks that `amount` is of type `number` but doesn't validate that it's finite or positive. A restored transaction with `amount: NaN` would pass validation and potentially display "NaN원" in the UI. However, `loadFromStorage` validates the broader structure before reaching `isValidTx`, and the parsing code already guards against NaN amounts. The risk of NaN reaching `isValidTx` is very low.
+- **Exit criterion:** If `NaN원` is ever displayed in the UI after sessionStorage restoration, add `Number.isFinite(tx.amount)` to the validation check.
