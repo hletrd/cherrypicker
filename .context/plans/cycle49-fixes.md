@@ -18,7 +18,7 @@
   3. The `try` block's `JSON.parse()` always assigns `parsed` before the `.filter()` call.
   The only path where `parsed` could be `[]` at line 111 is if the code somehow bypassed both the `try` and `catch` assignments, which is impossible given the control flow.
 - **Verification:** Run `tsc --noEmit` in `packages/parser` and `bun run build` from root. Both should succeed with no errors.
-- **Status:** TODO
+- **Status:** DONE
 
 ---
 
