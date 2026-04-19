@@ -1,60 +1,62 @@
-# Review Aggregate — 2026-04-19 (Cycle 25)
+# Review Aggregate — 2026-04-19 (Cycle 26)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle25-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle26-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-24 per-agent and aggregate files
+- All cycle 1-25 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-All cycle 1-24 findings have been verified as fixed or deferred. Cycle 24 findings C24-01, C24-02, C24-03 are now CONFIRMED FIXED.
+All cycle 1-25 findings have been verified as fixed or deferred. Cycle 25 findings C25-01, C25-03, C25-04, C25-05 are now CONFIRMED FIXED. C25-02 remains deferred.
 
-C25-01 is a new finding (rate + fixedAmount coexistence silently drops fixed reward). Not previously reported in any cycle.
+C26-01 is a new finding (rewardType overwrite in bucket). Not previously reported.
 
-C25-02 is a new finding (greedy optimizer recalculation performance). The O(N*M*K) complexity was implicitly acknowledged in prior reviews but never formally flagged as a finding.
+C26-02 is a new finding (CATEGORY_COLORS missing dot-notation keys). Not previously reported.
 
-C25-03 is a new finding (search only matches merchant names). Not previously reported.
+C26-03 is a new finding (stale monthlyBreakdown in reoptimize). Not previously reported.
 
-C25-04 is a new finding (redundant MerchantMatcher construction). Not previously reported.
+C26-04 is a re-flag of D-03/D-43 (inferYear/parseDateToISO duplication). Still present, now formally tracked as an active finding.
 
-C25-05 is a new finding (spending/transaction count scope mismatch). Not previously reported.
+C26-05 is a new finding (전월실적 display mismatch). Not previously reported.
 
 Deferred items D-01 through D-105 remain unchanged and are not re-listed here.
 
 ---
 
-## Verification of Cycle 24 Fixes
+## Verification of Cycle 25 Fixes
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C24-01 | FIXED | `apps/web/src/lib/analyzer.ts:106` — ID includes file index prefix |
-| C24-02 | FIXED | `SavingsComparison.svelte:189` — Math.abs used for annual display when negative |
-| C24-03 | FIXED | `SavingsComparison.svelte:82-97` — Bar widths invert when optimizer is suboptimal |
+| C25-01 | FIXED | `reward.ts:254-264` — explicit branch with warn; `schema.ts:21-24` — Zod refine enforcing mutual exclusivity |
+| C25-02 | DEFERRED | Deferred per cycle 25 plan — O(N*M*K) performance acceptable for typical inputs |
+| C25-03 | FIXED | `TransactionReview.svelte:153-167` — search matches category/subcategory labels |
+| C25-04 | FIXED | `analyzer.ts:86-103,243` — sharedMatcher passed to parseAndCategorize |
+| C25-05 | FIXED | `SpendingSummary.svelte:57` — uses monthlyBreakdown reduce for total spending |
 
 ---
 
-## Active Findings (New in Cycle 25, Deduplicated)
+## Active Findings (New in Cycle 26, Deduplicated)
 
 | ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C25-01 | MEDIUM | High | `packages/core/src/calculator/reward.ts:253-271` | When both rate and fixedAmount are present on a tier, only rate-based reward is calculated — fixed amount is silently ignored | OPEN |
-| C25-02 | LOW | High | `packages/core/src/optimizer/greedy.ts:116-141` | Greedy optimizer recalculates full per-card rewards from scratch for every transaction — O(N*M*K) complexity | OPEN |
-| C25-03 | LOW | High | `apps/web/src/components/dashboard/TransactionReview.svelte:153-155` | Search only matches merchant names, not category labels | OPEN |
-| C25-04 | LOW | High | `apps/web/src/lib/analyzer.ts:86-135` | `parseAndCategorize` creates a new MerchantMatcher per file — redundant in multi-file uploads | OPEN |
-| C25-05 | LOW | Medium | `apps/web/src/components/dashboard/SpendingSummary.svelte:57` | Total spending shows only latest month but transaction count shows all months — inconsistent scope | OPEN |
+| C26-01 | MEDIUM | High | `packages/core/src/calculator/reward.ts:220-231,318` | Bucket `rewardType` overwritten by last transaction's type instead of tracking dominant reward type | OPEN |
+| C26-02 | LOW | High | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:87` | `CATEGORY_COLORS` lookup misses dot-notation subcategory keys — subcategorized categories get gray fallback color | OPEN |
+| C26-03 | LOW | Medium | `apps/web/src/lib/store.svelte.ts:359-368` | `reoptimize` uses stale `monthlyBreakdown` for `previousMonthSpending` before recalculating | OPEN |
+| C26-04 | LOW | High | Multiple files in `apps/web/src/lib/parser/` | `inferYear` and `parseDateToISO` duplicated 4+ times — maintenance hazard | OPEN |
+| C26-05 | LOW | Medium | `apps/web/src/components/dashboard/SpendingSummary.svelte:108` | "전월실적" display uses raw spending, not actual optimizer `previousMonthSpending` | OPEN |
 
 ---
 
 ## Prioritized Action Items
 
-1. **C25-01**: Handle rate + fixedAmount coexistence — either sum both reward components before applying the monthly cap, or add a schema-level constraint that makes them mutually exclusive with a warning
-2. **C25-02**: Optimize greedy optimizer — cache per-card output and incrementally update instead of full recalculation (performance, not correctness)
-3. **C25-03**: Extend transaction search to include category labels — allows finding transactions by category name
-4. **C25-04**: Hoist MerchantMatcher construction out of `parseAndCategorize` — construct once in `analyzeMultipleFiles`
-5. **C25-05**: Fix spending/transaction count scope mismatch — make both metrics consistent
+1. **C26-01**: Track dominant rewardType per category bucket — preserve the type that contributes the most reward, not the last one
+2. **C26-02**: Add dot-notation subcategory keys to `CATEGORY_COLORS` or extract leaf ID for lookup — prevents subcategorized categories from showing as gray
+3. **C26-03**: Compute `previousMonthSpending` from editedTransactions in reoptimize, not from stale monthlyBreakdown
+4. **C26-04**: Extract `inferYear`/`parseDateToISO` into shared utility module (deferred — refactoring effort)
+5. **C26-05**: Display actual `previousMonthSpending` or clarify label as "전월 지출" vs "전월실적" (deferred — UX clarification)
 
 ---
 
