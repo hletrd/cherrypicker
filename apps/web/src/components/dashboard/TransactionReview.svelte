@@ -29,6 +29,10 @@
 
   let categoryMap = $state<Map<string, string>>(new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label])));
 
+  // Maps subcategory IDs to their parent category IDs for correct
+  // category/subcategory assignment when the user selects a subcategory.
+  let subcategoryToParent = $state<Map<string, string>>(new Map());
+
   let expanded = $state(false);
   let editedTxs = $state<CategorizedTx[]>([]);
   let hasEdits = $state(false);
@@ -46,14 +50,17 @@
     try {
       const nodes = await loadCategories();
       const options: { id: string; label: string }[] = [];
+      const parentMap = new Map<string, string>();
       for (const node of nodes) {
         options.push({ id: node.id, label: node.labelKo });
         if (node.subcategories) {
           for (const sub of node.subcategories) {
             options.push({ id: sub.id, label: `  ${sub.labelKo}` });
+            parentMap.set(sub.id, node.id);
           }
         }
       }
+      subcategoryToParent = parentMap;
       categoryOptions = options;
       categoryMap = new Map(options.map(c => [c.id, c.label]));
     } catch {
@@ -153,8 +160,16 @@
   function changeCategory(txId: string, newCategory: string) {
     const tx = editedTxs.find(t => t.id === txId);
     if (tx) {
-      tx.category = newCategory;
-      tx.subcategory = undefined; // Old subcategory is invalid after category change
+      const parentCategory = subcategoryToParent.get(newCategory);
+      if (parentCategory) {
+        // User selected a subcategory — set both parent and child
+        tx.category = parentCategory;
+        tx.subcategory = newCategory;
+      } else {
+        // User selected a top-level category
+        tx.category = newCategory;
+        tx.subcategory = undefined;
+      }
       tx.confidence = 1.0; // manually set = full confidence
       hasEdits = true;
     }
@@ -269,7 +284,7 @@
                   </td>
                   <td class="px-3 py-2">
                     <select
-                      value={tx.category}
+                      value={tx.subcategory ?? tx.category}
                       aria-label={tx.merchant + " 카테고리"}
                       onchange={(e) => changeCategory(tx.id, (e.target as HTMLSelectElement).value)}
                       class="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-xs outline-none focus:border-[var(--color-primary)] cursor-pointer
