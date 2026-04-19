@@ -152,7 +152,19 @@
     }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      list = list.filter(tx => tx.merchant.toLowerCase().includes(q));
+      list = list.filter(tx => {
+        // Match against merchant name (English/Korean)
+        if (tx.merchant.toLowerCase().includes(q)) return true;
+        // Also match against category and subcategory labels (Korean)
+        // e.g. searching "카페" or "cafe" finds all cafe-categorized transactions
+        const catLabel = categoryMap.get(tx.category)?.toLowerCase() ?? '';
+        if (catLabel.includes(q)) return true;
+        if (tx.subcategory) {
+          const subLabel = categoryMap.get(`${tx.category}.${tx.subcategory}`)?.toLowerCase() ?? '';
+          if (subLabel.includes(q)) return true;
+        }
+        return false;
+      });
     }
     return list;
   });
