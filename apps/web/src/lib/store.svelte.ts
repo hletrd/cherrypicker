@@ -137,7 +137,13 @@ function loadFromStorage(): AnalysisResult | null {
           totalTransactionCount: typeof parsed.totalTransactionCount === 'number' ? parsed.totalTransactionCount : undefined,
           parseErrors: [],
           optimization: parsed.optimization,
-          monthlyBreakdown: parsed.monthlyBreakdown,
+          monthlyBreakdown: Array.isArray(parsed.monthlyBreakdown)
+            ? parsed.monthlyBreakdown.map((item: any) => ({
+                month: typeof item?.month === 'string' ? item.month : '',
+                spending: typeof item?.spending === 'number' ? item.spending : 0,
+                transactionCount: typeof item?.transactionCount === 'number' ? item.transactionCount : 0,
+              }))
+            : undefined,
         } as AnalysisResult;
       }
       sessionStorage.removeItem(STORAGE_KEY);
