@@ -5,7 +5,7 @@ import { MerchantMatcher, buildConstraints, optimize } from '@cherrypicker/core'
 import { loadCategories, loadAllCardRules } from '@cherrypicker/rules';
 import type { RawTransaction } from '@cherrypicker/parser';
 import type { CategorizedTransaction } from '@cherrypicker/core';
-import { printOptimizationResult, generateHTMLReport } from '@cherrypicker/viz';
+import { printOptimizationResult, printSpendingSummary, generateHTMLReport } from '@cherrypicker/viz';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
   new URL('../../../..', import.meta.url).pathname,
@@ -140,6 +140,7 @@ export async function runReport(args: string[]): Promise<void> {
   const result = optimize(constraints, cardRules);
 
   // Print terminal summary
+  printSpendingSummary(categorized, categoryLabels);
   printOptimizationResult(result);
 
   // Generate and write HTML report
