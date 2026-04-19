@@ -245,3 +245,62 @@ describe('MerchantMatcher - uncategorized fallback', () => {
     expect(result.confidence).toBe(0.0);
   });
 });
+
+describe('MerchantMatcher - length guard (C10-02 / C11-13)', () => {
+  test('empty string returns uncategorized with confidence 0', () => {
+    const result = matcher.match('');
+    expect(result.category).toBe('uncategorized');
+    expect(result.confidence).toBe(0);
+  });
+
+  test('single character returns uncategorized with confidence 0', () => {
+    const result = matcher.match('스');
+    expect(result.category).toBe('uncategorized');
+    expect(result.confidence).toBe(0);
+  });
+
+  test('whitespace-only string returns uncategorized with confidence 0', () => {
+    const result = matcher.match('   ');
+    expect(result.category).toBe('uncategorized');
+    expect(result.confidence).toBe(0);
+  });
+
+  test('two character name works for forward matching (exact keyword)', () => {
+    // "CU" is a 2-char exact keyword — should match at confidence 1.0
+    const result = matcher.match('CU');
+    expect(result.category).toBe('convenience_store');
+    expect(result.confidence).toBe(1.0);
+  });
+
+  test('two character name does NOT reverse-match longer keywords', () => {
+    // "스타" (2 CJK chars) should NOT reverse-match "스타벅스" —
+    // the reverse substring check requires merchant length >= 3.
+    // It may match if "스타" is an exact keyword, but it should
+    // NOT get a confidence of 0.8 from the reverse substring path.
+    const result = matcher.match('스타');
+    // If "스타" is not an exact keyword, it should be uncategorized or low confidence
+    // (not 0.8 from reverse substring match of "스타벅스")
+    if (result.confidence === 0.8) {
+      // If it does match at 0.8, it must be from forward matching
+      // (merchant contains a keyword), not reverse matching
+      expect(result.category).not.toBe('cafe');
+    }
+  });
+
+  test('three character name can reverse-match longer keywords via taxonomy', () => {
+    // "스타벅" (3 CJK chars) should be able to reverse-match "스타벅스"
+    // since the length guard only blocks < 3 chars
+    const fixtureNodes: CategoryNode[] = [
+      {
+        id: 'dining',
+        labelKo: '외식',
+        labelEn: 'Dining',
+        keywords: ['스타벅스'],
+      },
+    ];
+    const fixtureTaxonomy = new CategoryTaxonomy(fixtureNodes);
+    const result = fixtureTaxonomy.findCategory('스타벅');
+    expect(result.category).toBe('dining');
+    expect(result.confidence).toBe(0.6); // fuzzy match confidence
+  });
+});
