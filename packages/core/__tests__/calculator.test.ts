@@ -662,7 +662,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     expect(telecom!.reward).toBe(2500);
   });
 
-  test('unsupported unit-based rewards stay explicit instead of being fabricated from spend amount', () => {
+  test('won_per_liter fuel discount returns fixedAmount as per-transaction discount', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'transportation', 50000)],
       previousMonthSpending: 300000,
@@ -670,7 +670,9 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     });
     const transportation = output.rewards.find((reward) => reward.category === 'transportation');
     expect(transportation).toBeDefined();
-    expect(transportation!.reward).toBe(0);
+    // won_per_liter applies fixedAmount (60 Won) as a per-transaction discount
+    // since transaction model does not carry fuel volume in liters.
+    expect(transportation!.reward).toBe(60);
   });
 
   test('subcategory-specific rules win over broad category rules', () => {

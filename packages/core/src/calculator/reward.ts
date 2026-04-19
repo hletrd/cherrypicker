@@ -158,6 +158,13 @@ function calculateFixedReward(
     return Math.floor(tx.amount / 1500) * fixedAmount;
   }
 
+  if (tierRate.unit === 'won_per_liter') {
+    // Transaction model doesn't carry fuel volume, so apply fixedAmount
+    // as a per-transaction discount — matches per-transaction display
+    // in Korean card apps for fuel discounts.
+    return fixedAmount;
+  }
+
   if (tierRate.unit === null || tierRate.unit === undefined) {
     return fixedAmount;
   }
