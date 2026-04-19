@@ -212,10 +212,11 @@ export async function analyzeMultipleFiles(
   const previousMonth = months.length >= 2 ? months[months.length - 2]! : null;
 
   // Use previous month's spending as performance tier input
-  // If only one month uploaded, use that month's total as estimate
+  // If only one month uploaded, leave undefined so optimizeFromTransactions
+  // computes per-card exclusion-filtered spending automatically
   const previousMonthSpending = previousMonth
     ? monthlySpending.get(previousMonth)!
-    : options?.previousMonthSpending ?? monthlySpending.get(latestMonth)!;
+    : options?.previousMonthSpending;
 
   // 6. Filter to latest month for optimization
   const latestTransactions = allTransactions.filter(tx => tx.date.startsWith(latestMonth));
