@@ -19,7 +19,7 @@
   4. Also fix: replace `isNaN(amount)` with `Number.isNaN(amount)` in the callers (covers C5-M02).
   5. Also fix: replace `isNaN(inst)` with `Number.isNaN(inst)` in the installment parsing (covers C5-M02).
 - **Verification:** Run `bun test` to ensure no regressions. Manually verify that a CSV row with unparseable amount (e.g., "abc") now produces an error in `ParseResult.errors` instead of a 0-amount transaction.
-- **Status:** TODO
+- **Status:** DONE
 
 ---
 
@@ -32,7 +32,7 @@
 - **Description:** The `detectColumnBoundaries` function reads `charCount[i + 1]` into `nextCount` but never uses it.
 - **Fix:** Remove line 37 (`const nextCount = charCount[i + 1] ?? 0;`).
 - **Verification:** Run `bun test` and `tsc --noEmit` to ensure no regressions.
-- **Status:** TODO
+- **Status:** DONE
 
 ---
 
