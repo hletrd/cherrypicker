@@ -205,9 +205,16 @@ function parseDateToISO(raw: unknown): string {
   if (typeof raw === 'string') {
     const cleaned = raw.trim();
 
-    // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD
+    // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD — validate month/day ranges to
+    // avoid producing invalid date strings from corrupted data (e.g., "2026/13/99").
     const fullMatch = cleaned.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
-    if (fullMatch) return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
+    if (fullMatch) {
+      const month = parseInt(fullMatch[2]!, 10);
+      const day = parseInt(fullMatch[3]!, 10);
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
+      }
+    }
 
     // YYYYMMDD — validate month/day ranges to avoid producing invalid date
     // strings from corrupted data (e.g., "20261399" → "2026-13-99").
@@ -219,12 +226,17 @@ function parseDateToISO(raw: unknown): string {
       }
     }
 
-    // YY-MM-DD or YY.MM.DD
+    // YY-MM-DD or YY.MM.DD — validate month/day ranges to avoid producing
+    // invalid date strings from corrupted data (e.g., "99/13/99").
     const shortYearMatch = cleaned.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})$/);
     if (shortYearMatch) {
       const year = parseInt(shortYearMatch[1]!, 10);
       const fullYear = year >= 50 ? 1900 + year : 2000 + year;
-      return `${fullYear}-${shortYearMatch[2]!.padStart(2, '0')}-${shortYearMatch[3]!.padStart(2, '0')}`;
+      const month = parseInt(shortYearMatch[2]!, 10);
+      const day = parseInt(shortYearMatch[3]!, 10);
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        return `${fullYear}-${shortYearMatch[2]!.padStart(2, '0')}-${shortYearMatch[3]!.padStart(2, '0')}`;
+      }
     }
 
     // 2024년 1월 15일 — validate month/day ranges to avoid producing

@@ -144,15 +144,28 @@ function inferYear(month: number, day: number): number {
 }
 
 function parseDateToISO(raw: string): string {
+  // YYYY-MM-DD etc. — validate month/day ranges to avoid producing invalid
+  // date strings from corrupted data (e.g., "2026/13/99").
   const match = raw.match(STRICT_DATE_PATTERN);
-  if (match) return `${match[1]}-${match[2]!.padStart(2, '0')}-${match[3]!.padStart(2, '0')}`;
+  if (match) {
+    const month = parseInt(match[2]!, 10);
+    const day = parseInt(match[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${match[1]}-${match[2]!.padStart(2, '0')}-${match[3]!.padStart(2, '0')}`;
+    }
+  }
 
-  // YY.MM.DD or YY-MM-DD
+  // YY.MM.DD or YY-MM-DD — validate month/day ranges to avoid producing
+  // invalid date strings from corrupted data (e.g., "99/13/99").
   const shortMatch = raw.match(SHORT_YEAR_DATE_PATTERN);
   if (shortMatch) {
     const year = parseInt(shortMatch[1]!, 10);
     const fullYear = year >= 50 ? 1900 + year : 2000 + year;
-    return `${fullYear}-${shortMatch[2]!.padStart(2, '0')}-${shortMatch[3]!.padStart(2, '0')}`;
+    const month = parseInt(shortMatch[2]!, 10);
+    const day = parseInt(shortMatch[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${fullYear}-${shortMatch[2]!.padStart(2, '0')}-${shortMatch[3]!.padStart(2, '0')}`;
+    }
   }
 
   // Korean date formats — validate month/day ranges to avoid producing
