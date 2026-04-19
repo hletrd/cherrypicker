@@ -97,6 +97,10 @@ type PersistedAnalysisResult = Pick<
  *  1MB headroom for other keys within the typical 5MB per-origin limit). */
 const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
 
+/** Set to true when sessionStorage persistence partially or fully failed.
+ *  Read by the store to inform the user that their data may not survive a tab close. */
+let _persistWarning = false;
+
 function persistToStorage(data: AnalysisResult): void {
   try {
     if (typeof sessionStorage !== 'undefined') {
@@ -117,11 +121,15 @@ function persistToStorage(data: AnalysisResult): void {
         // Transactions are the largest field — omit them if over budget
         const withoutTxs: PersistedAnalysisResult = { ...persisted, transactions: undefined };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(withoutTxs));
+        _persistWarning = true; // Data was truncated — transactions not saved
       } else {
         sessionStorage.setItem(STORAGE_KEY, serialized);
+        _persistWarning = false; // Full save succeeded
       }
     }
-  } catch { /* quota exceeded or SSR */ }
+  } catch {
+    _persistWarning = true; // quota exceeded or SSR — save failed entirely
+  }
 }
 
 function isValidTx(tx: any): tx is CategorizedTx {
@@ -202,6 +210,9 @@ function createAnalysisStore() {
   let loading = $state(false);
   let error = $state<string | null>(null);
   let generation = $state(0);
+  // Set when sessionStorage persistence was partial (transactions truncated)
+  // or failed entirely (quota exceeded). Reset on successful full save.
+  let persistWarning = $state(result !== null && result.transactions === undefined);
 
   return {
     get result() {
@@ -215,6 +226,9 @@ function createAnalysisStore() {
     },
     get generation() {
       return generation;
+    },
+    get persistWarning(): boolean {
+      return persistWarning;
     },
 
     // Derived helpers
@@ -251,6 +265,7 @@ function createAnalysisStore() {
       generation++;
       error = null;
       persistToStorage(r);
+      persistWarning = _persistWarning;
     },
 
     async analyze(files: File | File[], options?: AnalyzeOptions): Promise<void> {
@@ -263,6 +278,7 @@ function createAnalysisStore() {
         result = analysisResult;
         generation++;
         persistToStorage(analysisResult);
+        persistWarning = _persistWarning;
       } catch (e) {
         error = e instanceof Error ? e.message : '분석 중 문제가 생겼어요';
         result = null;
@@ -280,6 +296,7 @@ function createAnalysisStore() {
           result = { ...result, transactions: editedTransactions, optimization };
           generation++;
           persistToStorage(result);
+          persistWarning = _persistWarning;
         }
       } catch (e) {
         error = e instanceof Error ? e.message : '재계산 중 문제가 생겼어요';
@@ -292,6 +309,8 @@ function createAnalysisStore() {
       result = null;
       error = null;
       loading = false;
+      persistWarning = false;
+      _persistWarning = false;
       clearStorage();
     },
   };

@@ -107,6 +107,11 @@
       <button class="ml-auto shrink-0 text-amber-500 hover:text-amber-700" onclick={() => { dismissed = true; try { localStorage.setItem('cherrypicker:dismissed-warning', '1'); } catch {} }}>닫기</button>
     </div>
   {/if}
+  {#if analysisStore.persistWarning}
+    <div class="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800">
+      <span>데이터가 커서 거래 내역이 저장되지 않았어요. 탭을 닫으면 분석 결과도 사라져요.</span>
+    </div>
+  {/if}
 {:else}
   <div class="mt-4 flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-border)] text-center">
     <div class="opacity-40 text-[var(--color-text-muted)]">
