@@ -134,7 +134,7 @@ function parseAmount(raw: unknown): number | null {
     if (isNeg) cleaned = cleaned.slice(1, -1);
     if (!cleaned) return null;
     const n = parseInt(cleaned, 10);
-    if (isNaN(n)) return null;
+    if (Number.isNaN(n)) return null;
     return isNeg ? -n : n;
   }
   return null;
@@ -144,7 +144,7 @@ function parseInstallments(raw: unknown): number | undefined {
   if (typeof raw === 'number') return raw > 1 ? raw : undefined;
   if (typeof raw === 'string') {
     const n = parseInt(raw, 10);
-    return !isNaN(n) && n > 1 ? n : undefined;
+    return !Number.isNaN(n) && n > 1 ? n : undefined;
   }
   return undefined;
 }
