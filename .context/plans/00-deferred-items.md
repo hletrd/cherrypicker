@@ -894,3 +894,16 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/lib/parser/index.ts:34`
 - **Reason for deferral:** The web-side `parseFile` tries multiple encodings (utf-8, euc-kr, cp949) in a loop with `catch { continue; }`. If all decodings fail, the fallback at line 37 uses utf-8 which may produce garbled text. The user gets no feedback that encoding detection failed. Same class as D-107 (silent error swallowing).
 - **Exit criterion:** If users report garbled transaction data with no error message after uploading, add a warning error to the ParseResult when `bestReplacements` is still very high after all encoding attempts.
+
+---
+
+## Deferred Findings (Cycle 44)
+
+### D-110: Edits to non-latest month transactions have no visible optimization effect
+
+- **Original finding:** C44-L04
+- **Severity:** LOW (UX)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/store.svelte.ts:340-411`
+- **Reason for deferral:** When the user edits a transaction from a non-latest month in `TransactionReview.svelte`, the `reoptimize` method correctly recalculates `previousMonthSpending` from all edited transactions (including non-latest). However, the optimization result only reflects the latest month's transactions. If the user changes a category on a non-latest month transaction, the optimization doesn't visibly change, which could be confusing. This is correct behavior from a reward calculation perspective -- the optimizer only assigns the latest month's transactions. Adding a message or visual indicator for non-latest-month edits is a UX enhancement, not a bug fix.
+- **Exit criterion:** If users report confusion about why editing non-latest month transactions has no visible effect on the optimization, add a UI message explaining that only the latest month is optimized.
