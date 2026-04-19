@@ -118,6 +118,7 @@
   function addFiles(newFiles: File[]) {
     const invalid: string[] = [];
     const oversized: string[] = [];
+    const duplicateNames: string[] = [];
     const valid: File[] = [];
     for (const f of newFiles) {
       if (f.size > MAX_FILE_SIZE) {
@@ -128,6 +129,8 @@
         // Avoid duplicates by name
         if (!uploadedFiles.some(existing => existing.name === f.name)) {
           valid.push(f);
+        } else {
+          duplicateNames.push(f.name);
         }
       } else {
         invalid.push(f.name);
@@ -150,6 +153,9 @@
       uploadStatus = 'error';
     } else if (invalid.length > 0) {
       errorMessage = `CSV, Excel, PDF 파일만 지원합니다 (제외됨: ${invalid.join(', ')})`;
+      uploadStatus = 'error';
+    } else if (duplicateNames.length > 0) {
+      errorMessage = `같은 이름의 파일이 이미 있어요 (제외됨: ${duplicateNames.join(', ')})`;
       uploadStatus = 'error';
     }
   }
