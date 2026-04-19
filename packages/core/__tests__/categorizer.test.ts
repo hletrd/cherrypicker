@@ -94,6 +94,39 @@ describe('CategoryTaxonomy - findCategory', () => {
     expect(result.confidence).toBe(0.0);
   });
 
+  test('reverse fuzzy match (merchant in keyword) selects shortest keyword — regression for C3-01', () => {
+    // When a merchant name is contained in multiple keywords, the shortest
+    // keyword should be selected (tightest fit = most likely correct).
+    // Use a fixture taxonomy to control the keyword set.
+    const fixtureNodes: CategoryNode[] = [
+      {
+        id: 'transportation',
+        labelKo: '교통',
+        labelEn: 'Transportation',
+        keywords: ['카카오택시', 'UBER택시', '택시', '버스'],
+      },
+      {
+        id: 'utilities',
+        labelKo: '공과금',
+        labelEn: 'Utilities',
+        keywords: ['전기요금', '가스요금'],
+      },
+    ];
+    const fixtureTaxonomy = new CategoryTaxonomy(fixtureNodes);
+
+    // "요금" is contained in both "전기요금" (5 chars) and "가스요금" (4 chars)
+    // Shortest keyword "가스요금" should win → category: utilities
+    const result = fixtureTaxonomy.findCategory('요금');
+    expect(result.category).toBe('utilities');
+    expect(result.confidence).toBe(0.6);
+
+    // Verify step 3 (fuzzy) returns 0.6 confidence, not step 2 (0.8) or step 1 (1.0)
+    // "카카오" is contained in "카카오택시" — only one keyword matches
+    const result2 = fixtureTaxonomy.findCategory('카카오');
+    expect(result2.category).toBe('transportation');
+    expect(result2.confidence).toBe(0.6);
+  });
+
   test('case-insensitive matching', () => {
     // 'cgv' lowercase — keyword is 'CGV' in yaml, stored lowercase in map
     const result = taxonomy.findCategory('cgv');
