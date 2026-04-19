@@ -251,7 +251,22 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     let rawReward = 0;
     let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
     const hasFixedReward = (tierRate.fixedAmount ?? 0) > 0;
-    if (normalizedRate !== null && normalizedRate > 0) {
+    if (normalizedRate !== null && normalizedRate > 0 && hasFixedReward) {
+      // Both rate and fixedAmount are present on the same tier — this is
+      // unusual for Korean card rules (none of the current 81 YAML files
+      // use both). Warn and use rate-based reward as the primary, since
+      // the if/else structure can only apply one. Future schema-level
+      // enforcement should make these mutually exclusive.
+      console.warn(
+        `[cherrypicker] Rule for "${buildRuleKey(rule)}" tier "${tierId}" has both rate (${tierRate.rate}) ` +
+        `and fixedAmount (${tierRate.fixedAmount}) — using rate-based reward only. ` +
+        `Make rate and fixedAmount mutually exclusive in the YAML.`
+      );
+      const calcFn = getCalcFn(rule.type);
+      const effectiveAmount = perTxCap !== null ? Math.min(tx.amount, perTxCap) : tx.amount;
+      rawReward = calcFn(effectiveAmount, normalizedRate, null, 0).reward;
+      ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
+    } else if (normalizedRate !== null && normalizedRate > 0) {
       const calcFn = getCalcFn(rule.type);
       const effectiveAmount = perTxCap !== null ? Math.min(tx.amount, perTxCap) : tx.amount;
       rawReward = calcFn(effectiveAmount, normalizedRate, null, 0).reward;
