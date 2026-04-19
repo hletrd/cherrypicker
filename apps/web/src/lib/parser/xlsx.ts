@@ -191,8 +191,8 @@ function inferYear(month: number, day: number): number {
 
 function parseDateToISO(raw: unknown): string {
   if (typeof raw === 'number') {
-    // Guard against numbers that are clearly NOT dates (< 1 or > 100000)
-    if (raw < 1 || raw > 100000) return String(raw);
+    // Guard against NaN, Infinity, and numbers that are clearly NOT dates
+    if (!Number.isFinite(raw) || raw < 1 || raw > 100000) return String(raw);
     // Excel serial date number
     const date = XLSX.SSF.parse_date_code(raw);
     if (date) {
