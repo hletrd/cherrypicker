@@ -155,7 +155,7 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
       const merchant = merchantIdx !== -1 ? (row[merchantIdx] ?? '').trim() : '';
       const amount = parseAmount(amountCell.value);
 
-      if (Number.isNaN(amount) || (!merchant && amount === 0)) continue;
+      if (amount <= 0) continue;
 
       const tx: RawTransaction = {
         date: parseDateToISO(dateCell.value),
