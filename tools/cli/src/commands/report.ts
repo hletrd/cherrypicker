@@ -48,6 +48,9 @@ function parseArgs(args: string[]): {
       i++;
     } else if (args[i] === '--prev-spending' && args[i + 1]) {
       prevSpending = parseInt(args[i + 1]!, 10);
+      if (Number.isNaN(prevSpending) || prevSpending < 0) {
+        throw new Error(`전월실적은 0 이상의 숫자여야 합니다: ${args[i + 1]}`);
+      }
       i++;
     } else if (args[i] === '--bank' && args[i + 1]) {
       bank = args[i + 1];
@@ -133,7 +136,7 @@ export async function runReport(args: string[]): Promise<void> {
       cardPreviousSpending.set(rule.card.id, prevSpending);
     }
   }
-  const constraints = buildConstraints(categorized, cardPreviousSpending);
+  const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
   const result = optimize(constraints, cardRules);
 
   // Print terminal summary
