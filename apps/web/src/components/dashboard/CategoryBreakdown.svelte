@@ -50,6 +50,16 @@
 
   const OTHER_COLOR = '#cbd5e1';
 
+  /** Look up the color for a category key, handling dot-notation subcategory
+   *  keys like "dining.cafe" — try the full key first, then the leaf ID
+   *  ("cafe"), then fall back to the uncategorized color. */
+  function getCategoryColor(category: string): string {
+    return CATEGORY_COLORS[category]
+      ?? CATEGORY_COLORS[category.split('.').pop() ?? '']
+      ?? CATEGORY_COLORS.uncategorized
+      ?? OTHER_COLOR;
+  }
+
   interface CategoryData {
     category: string;
     labelKo: string;
@@ -84,7 +94,7 @@
           labelKo: a.categoryNameKo,
           amount: a.spending,
           percentage: pct,
-          color: CATEGORY_COLORS[a.category] ?? CATEGORY_COLORS.uncategorized,
+          color: getCategoryColor(a.category),
         });
       }
     }
