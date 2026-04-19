@@ -1,62 +1,55 @@
-# Review Aggregate — 2026-04-19 (Cycle 13)
+# Review Aggregate — 2026-04-19 (Cycle 14)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle13-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle14-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-12 per-agent and aggregate files
+- All cycle 1-13 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-All cycle 1-12 findings have been verified as fixed or deferred. Cycle 12 HIGH-priority findings (C12-14, C12-10, C12-11) are all confirmed fixed in this cycle.
+All cycle 1-13 findings have been verified as fixed or deferred. Cycle 13 HIGH-priority findings (C13-01, C13-02, C13-12, C13-13, C13-16) are all confirmed fixed in this cycle.
 
 Deferred items D-01 through D-85 remain unchanged and are not re-listed here.
 
 ---
 
-## Verification of Cycle 12 Fixes
+## Verification of Cycle 13 Fixes
 
-All 3 implemented cycle 12 HIGH-priority fixes verified as correctly implemented:
-- C12-14: XLSX `parseAmount` now uses `Math.round(raw)` for numeric amounts (xlsx.ts:245)
-- C12-10: Multi-month handling tests added (analyzer-adapter.test.ts:208-296)
-- C12-11: Subcategory handling tests added (analyzer-adapter.test.ts:298-371)
+All 5 implemented cycle 13 HIGH-priority fixes verified as correctly implemented:
+- C13-01: CSV `parseDateToISO` short-year branch now uses `padStart(2, '0')` (csv.ts:54)
+- C13-02: PDF `parseDateToISO` short-year branch now uses `padStart(2, '0')` (pdf.ts:150)
+- C13-12: `parser-date.test.ts` exists with comprehensive date parsing tests
+- C13-13: `reward-cap-rollback.test.ts` exists with 6 tests for global cap rollback
+- C13-16: FileDropzone help text now says "전월" instead of "전전월" (FileDropzone.svelte:401)
 
 ---
 
-## Active Findings (New in Cycle 13, Deduplicated)
+## Active Findings (New in Cycle 14, Deduplicated)
 
 | ID | Severity | Confidence | File | Description | Cross-ref |
 |---|---|---|---|---|---|
-| C13-01 | MEDIUM | High | `csv.ts:54` | CSV short-year date missing zero-padding — produces non-ISO dates | New |
-| C13-02 | MEDIUM | High | `pdf.ts:150` | PDF short-year date missing zero-padding — same as C13-01 | New |
-| C13-03 | LOW | High | `csv.ts:82-91` | CSV parseAmount returns NaN vs XLSX returns null — inconsistent API | Extends C12-03/C12-04 |
-| C13-04 | LOW | High | `greedy.ts:84-109` | Greedy optimizer O(n*m*k) — acceptable for typical use | New |
-| C13-05 | LOW | Medium | `matcher.ts:8-13` | ALL_KEYWORDS spread at module load — negligible cost | New |
-| C13-06 | MEDIUM | High | Layout.astro CSP | CSP allows 'unsafe-inline' in script-src — reduces XSS protection | Same as C11-07/C12-06 |
-| C13-07 | LOW | Medium | astro.config.ts | No SRI for external resources — none exist, not needed | New |
-| C13-08 | LOW | High | `constraints.ts:20-24` | `categorySpending` map is dead code — never read by optimizer | New |
-| C13-09 | LOW | High | `greedy.ts:7-50` | `CATEGORY_NAMES_KO` duplicates `categoryLabels` — maintenance burden | Extends C12-07 |
-| C13-10 | LOW | Medium | `reward.ts:87` | findRule specificity tie-breaking undefined — unlikely in practice | New |
-| C13-11 | LOW | High | `types.ts:52` | Math.floor in calculatePercentageReward — correct behavior | New (confirmed correct) |
-| C13-12 | MEDIUM | High | `__tests__/` | No tests for parseDateToISO — would have caught C13-01/C13-02 | New |
-| C13-13 | MEDIUM | High | `__tests__/` | No tests for global cap rollback in calculateRewards | New |
-| C13-14 | LOW | Medium | SpendingSummary.svelte | Missing helper text for single-month upload | New |
-| C13-15 | LOW | Medium | FileDropzone.svelte | Total size check rejects entire batch instead of partial | Extends C12-12 |
-| C13-16 | LOW | Medium | FileDropzone.svelte:401 | "전전월" should be "전월" in help text | New |
-| C13-17 | LOW | Medium | store.svelte.ts:144 | isValidTx doesn't validate date format | Extends C12-16 |
+| C14-01 | MEDIUM | High | `greedy.ts:117` | `buildAssignments` groups by `tx.category` instead of `categoryKey` — subcategory breakdown lost | New |
+| C14-02 | LOW | Medium | `store.svelte.ts:139-151` | `isValidTx` doesn't check for duplicate IDs — defense-in-depth | New |
+| C14-03 | LOW | High | `TransactionReview.svelte:151` | Search doesn't normalize full-width Latin characters | New |
+| C14-04 | LOW | High | `analyzer.ts:47, 194-196` | `cachedCoreRules` never invalidates — by design | Extends C12-02 |
+| C14-05 | LOW | High | `greedy.ts:235-237` | Array mutation via push is side effect — documented, not current bug | New |
+| C14-06 | LOW | Medium | `csv.ts:88` | `parseInt` silently truncates scientific notation | New |
+| C14-07 | LOW | Medium | `Layout.astro:15-24` | Hardcoded fallback stats in catch block will become stale | New |
+| C14-08 | LOW | Medium | `FileDropzone.svelte:12-43` | Page-level drag listeners could leak dragCount | New |
+| C14-09 | MEDIUM->LOW | Medium | `reward.ts:113-117` | `normalizeRate` divides mileage rates by 100 — confirmed correct (Won-equiv % convention) | New (confirmed correct) |
+| C14-10 | LOW | Medium | `reward.ts:63-88` | Wildcard rule matching — confirmed correct | New (confirmed correct) |
 
 ---
 
-## Cross-Agent Agreement (Cycle 13)
+## Cross-Agent Agreement (Cycle 14)
 
 | Finding | Signal |
 |---|---|
-| C13-01/C13-02 | HIGH signal — date format bug in CSV and PDF parsers. Zero-padding missing in short-year branch produces non-ISO dates that break month extraction. Both parsers have the same bug; XLSX parser is correct. |
-| C13-12/C13-13 | HIGH signal — missing test coverage for critical parsing and reward calculation logic. Tests would have caught C13-01/C13-02. |
-| C13-06 | CARRIED from C11-07/C12-06 — CSP 'unsafe-inline'. MEDIUM signal, deferred. |
-| C13-16 | LOW but concrete — incorrect Korean help text that could mislead users. Easy fix. |
+| C14-01 | MEDIUM signal — subcategory information is lost in assignment display. The reward calculation is correct (uses categoryKey), but the assignment grouping collapses subcategories into parent categories. Users would see "dining" instead of "dining/cafe" in the card assignment view. |
+| C14-09 | RESOLVED — mileage rates use Won-equivalent percentage convention, not literal miles per 1,500 Won. Documented in normalizeRate. |
 
 ---
 
@@ -66,18 +59,15 @@ All 3 implemented cycle 12 HIGH-priority fixes verified as correctly implemented
 - None — all prior criticals are fixed
 
 ### HIGH (should fix this cycle)
-1. C13-01: Add `padStart(2, '0')` to CSV short-year date parsing
-2. C13-02: Add `padStart(2, '0')` to PDF short-year date parsing
-3. C13-12: Add unit tests for `parseDateToISO` across all formats
-4. C13-13: Add test for `calculateRewards` global cap rollback
-5. C13-16: Fix "전전월" → "전월" in FileDropzone help text
+1. C14-01: Fix `buildAssignments` to use `buildCategoryKey(tx.category, tx.subcategory)` for grouping key
+2. C14-09: Mileage rate convention confirmed correct — documented in normalizeRate (commit `0000000e0`)
 
 ### MEDIUM (plan for next cycles)
-6. C13-06: Migrate CSP to hash-based (carried from C11-07)
-7. C13-03: Unify parseAmount return type across parsers
+3. C14-06: Add scientific notation handling to CSV `parseAmount` (low priority)
+4. C14-07: Add warning log when Layout.astro falls back to hardcoded stats
 
 ### LOW (defer or accept)
-- C13-04 (acceptable for typical use), C13-05 (negligible), C13-07 (not needed), C13-08 (dead code, low risk), C13-09 (maintenance burden), C13-10 (unlikely), C13-11 (correct behavior), C13-14 (nice-to-have), C13-15 (UX improvement), C13-17 (defense-in-depth)
+- C14-02 (defense-in-depth), C14-03 (full-width Latin), C14-04 (by design), C14-05 (documented), C14-08 (not current issue), C14-10 (confirmed correct)
 
 ---
 
