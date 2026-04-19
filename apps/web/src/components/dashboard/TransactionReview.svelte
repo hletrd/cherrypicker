@@ -55,8 +55,12 @@
         options.push({ id: node.id, label: node.labelKo });
         if (node.subcategories) {
           for (const sub of node.subcategories) {
-            options.push({ id: sub.id, label: `  ${sub.labelKo}` });
-            parentMap.set(sub.id, node.id);
+            // Use fully-qualified IDs (e.g. "dining.cafe") for subcategories
+            // to avoid duplicate option values when a subcategory ID also
+            // exists as a standalone top-level category.
+            const fqId = `${node.id}.${sub.id}`;
+            options.push({ id: fqId, label: `  ${sub.labelKo}` });
+            parentMap.set(fqId, node.id);
           }
         }
       }
@@ -162,9 +166,11 @@
     if (tx) {
       const parentCategory = subcategoryToParent.get(newCategory);
       if (parentCategory) {
-        // User selected a subcategory — set both parent and child
+        // User selected a subcategory (fully-qualified ID like "dining.cafe")
+        // — set both parent category and subcategory
+        const subId = newCategory.includes('.') ? newCategory.split('.')[1] ?? newCategory : newCategory;
         tx.category = parentCategory;
-        tx.subcategory = newCategory;
+        tx.subcategory = subId;
       } else {
         // User selected a top-level category
         tx.category = newCategory;
@@ -284,7 +290,7 @@
                   </td>
                   <td class="px-3 py-2">
                     <select
-                      value={tx.subcategory ?? tx.category}
+                      value={tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category}
                       aria-label={tx.merchant + " 카테고리"}
                       onchange={(e) => changeCategory(tx.id, (e.target as HTMLSelectElement).value)}
                       class="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-xs outline-none focus:border-[var(--color-primary)] cursor-pointer
