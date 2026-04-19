@@ -54,7 +54,7 @@
         <span>총 지출</span>
       </div>
       <div class="mt-1 text-2xl font-bold text-[var(--color-primary)]">
-        {formatWon(analysisStore.optimization?.totalSpending ?? 0)}
+        {formatWon(analysisStore.result?.monthlyBreakdown ? analysisStore.result.monthlyBreakdown.reduce((sum, m) => sum + m.spending, 0) : (analysisStore.optimization?.totalSpending ?? 0))}
       </div>
     </div>
 
