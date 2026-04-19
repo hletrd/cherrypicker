@@ -47,26 +47,36 @@
   </div>
 {:else if analysisStore.result}
   <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
-    <!-- 총 지출 -->
+    <!-- 최근 월 지출 (optimization covers latest month only) -->
     <div class="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm dark:from-blue-950 dark:to-blue-900/50">
       <div class="flex items-center gap-1.5 text-sm text-blue-500 dark:text-blue-400">
         <Icon name="credit-card" size={15} />
-        <span>총 지출</span>
+        <span>최근 월 지출</span>
       </div>
       <div class="mt-1 text-2xl font-bold text-[var(--color-primary)]">
-        {formatWon(analysisStore.result?.monthlyBreakdown ? analysisStore.result.monthlyBreakdown.reduce((sum, m) => sum + m.spending, 0) : (analysisStore.optimization?.totalSpending ?? 0))}
+        {formatWon(analysisStore.optimization?.totalSpending ?? 0)}
       </div>
+      {#if analysisStore.result?.monthlyBreakdown && analysisStore.result.monthlyBreakdown.length > 1}
+        <div class="mt-0.5 text-xs text-blue-400 dark:text-blue-300">
+          전체 {formatWon(analysisStore.result.monthlyBreakdown.reduce((sum, m) => sum + m.spending, 0))}
+        </div>
+      {/if}
     </div>
 
-    <!-- 거래 건수 -->
+    <!-- 거래 건수 (latest month primary, total secondary) -->
     <div class="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 p-4 shadow-sm dark:from-amber-950 dark:to-amber-900/50">
       <div class="flex items-center gap-1.5 text-sm text-amber-500 dark:text-amber-400">
         <Icon name="receipt" size={15} />
         <span>거래 건수</span>
       </div>
       <div class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
-        {analysisStore.totalTransactionCount}건
+        {analysisStore.transactionCount}건
       </div>
+      {#if analysisStore.result?.monthlyBreakdown && analysisStore.result.monthlyBreakdown.length > 1}
+        <div class="mt-0.5 text-xs text-amber-400 dark:text-amber-300">
+          전체 {analysisStore.totalTransactionCount}건
+        </div>
+      {/if}
     </div>
 
     <!-- 분석 기간 -->
