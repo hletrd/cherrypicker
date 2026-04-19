@@ -1,61 +1,62 @@
-# Review Aggregate — 2026-04-19 (Cycle 12)
+# Review Aggregate — 2026-04-19 (Cycle 13)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle12-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle13-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-11 per-agent and aggregate files
+- All cycle 1-12 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-All cycle 1-11 findings have been verified as fixed or deferred. Cycle 11 HIGH-priority findings (C11-12, C11-13, C11-16, C11-17) are all confirmed fixed in this cycle.
+All cycle 1-12 findings have been verified as fixed or deferred. Cycle 12 HIGH-priority findings (C12-14, C12-10, C12-11) are all confirmed fixed in this cycle.
 
 Deferred items D-01 through D-85 remain unchanged and are not re-listed here.
 
 ---
 
-## Verification of Cycle 11 Fixes
+## Verification of Cycle 12 Fixes
 
-All 4 implemented cycle 11 HIGH-priority fixes verified as correctly implemented:
-- C11-12: `monthlyBreakdown` is now recalculated from `editedTransactions` after reoptimize (store.svelte.ts:352-365)
-- C11-13: Merchant name length guard now has 6 dedicated test cases (categorizer.test.ts:249-306)
-- C11-16: SpendingSummary checks `monthlyBreakdown.length > 1` before showing previous-month spending (SpendingSummary.svelte:101)
-- C11-17: TransactionReview correctly uses `subcategoryToParent` map to set both `category` and `subcategory` (TransactionReview.svelte:160-175)
+All 3 implemented cycle 12 HIGH-priority fixes verified as correctly implemented:
+- C12-14: XLSX `parseAmount` now uses `Math.round(raw)` for numeric amounts (xlsx.ts:245)
+- C12-10: Multi-month handling tests added (analyzer-adapter.test.ts:208-296)
+- C12-11: Subcategory handling tests added (analyzer-adapter.test.ts:298-371)
 
 ---
 
-## Active Findings (New in Cycle 12, Deduplicated)
+## Active Findings (New in Cycle 13, Deduplicated)
 
 | ID | Severity | Confidence | File | Description | Cross-ref |
 |---|---|---|---|---|---|
-| C12-01 | LOW | High | `cards.ts:144-157` | Promise caching never invalidates for stale data | New |
-| C12-02 | LOW | Medium | `analyzer.ts:47-48` | `cachedCoreRules` never invalidated | New |
-| C12-03 | LOW | High | `csv.ts:29`, `xlsx.ts:183`, `pdf.ts:132` | `inferYear` duplicated 3 times | Extends D-01 |
-| C12-04 | LOW | High | `csv.ts:39`, `xlsx.ts:192`, `pdf.ts:141` | `parseDateToISO` duplicated 3 times | Extends D-01 |
-| C12-05 | LOW | Medium | `parser/index.ts:19,43,48` | No size validation in `parseFile` before buffer read | New |
-| C12-06 | MEDIUM | Medium | `astro.config.ts` | No CSP headers | Same as C11-07 |
-| C12-07 | LOW | High | `cards.ts`, `rules/types.ts` | `CardRuleSet` type drift across packages | New |
-| C12-08 | LOW | Medium | `store.svelte.ts:146` | `isValidTx` allows `amount: 0` | Extends C11-20 |
-| C12-09 | LOW | High | `reward.ts:193-289` | Bucket get-mutate-set pattern confusing | New |
-| C12-10 | MEDIUM | High | `apps/web/__tests__/` | Missing integration test for multi-file upload | Extends C11-14 |
-| C12-11 | MEDIUM | High | `apps/web/__tests__/` | Missing test for reoptimize with subcategory changes | New |
-| C12-12 | LOW | High | `FileDropzone.svelte:211` | Full page reload after success | Extends D-47/C5-04 |
-| C12-13 | LOW | Medium | `TransactionReview.svelte:150` | Korean search is case-exact (correct behavior) | New |
-| C12-14 | MEDIUM | High | `xlsx.ts:241-243` | XLSX parseAmount returns raw float — no rounding | Extends C11-19/D-67 |
-| C12-16 | LOW | Medium | `store.svelte.ts:146` | `isValidTx` doesn't check `Number.isFinite` | Same as C11-20 |
+| C13-01 | MEDIUM | High | `csv.ts:54` | CSV short-year date missing zero-padding — produces non-ISO dates | New |
+| C13-02 | MEDIUM | High | `pdf.ts:150` | PDF short-year date missing zero-padding — same as C13-01 | New |
+| C13-03 | LOW | High | `csv.ts:82-91` | CSV parseAmount returns NaN vs XLSX returns null — inconsistent API | Extends C12-03/C12-04 |
+| C13-04 | LOW | High | `greedy.ts:84-109` | Greedy optimizer O(n*m*k) — acceptable for typical use | New |
+| C13-05 | LOW | Medium | `matcher.ts:8-13` | ALL_KEYWORDS spread at module load — negligible cost | New |
+| C13-06 | MEDIUM | High | Layout.astro CSP | CSP allows 'unsafe-inline' in script-src — reduces XSS protection | Same as C11-07/C12-06 |
+| C13-07 | LOW | Medium | astro.config.ts | No SRI for external resources — none exist, not needed | New |
+| C13-08 | LOW | High | `constraints.ts:20-24` | `categorySpending` map is dead code — never read by optimizer | New |
+| C13-09 | LOW | High | `greedy.ts:7-50` | `CATEGORY_NAMES_KO` duplicates `categoryLabels` — maintenance burden | Extends C12-07 |
+| C13-10 | LOW | Medium | `reward.ts:87` | findRule specificity tie-breaking undefined — unlikely in practice | New |
+| C13-11 | LOW | High | `types.ts:52` | Math.floor in calculatePercentageReward — correct behavior | New (confirmed correct) |
+| C13-12 | MEDIUM | High | `__tests__/` | No tests for parseDateToISO — would have caught C13-01/C13-02 | New |
+| C13-13 | MEDIUM | High | `__tests__/` | No tests for global cap rollback in calculateRewards | New |
+| C13-14 | LOW | Medium | SpendingSummary.svelte | Missing helper text for single-month upload | New |
+| C13-15 | LOW | Medium | FileDropzone.svelte | Total size check rejects entire batch instead of partial | Extends C12-12 |
+| C13-16 | LOW | Medium | FileDropzone.svelte:401 | "전전월" should be "전월" in help text | New |
+| C13-17 | LOW | Medium | store.svelte.ts:144 | isValidTx doesn't validate date format | Extends C12-16 |
 
 ---
 
-## Cross-Agent Agreement (Cycle 12)
+## Cross-Agent Agreement (Cycle 13)
 
 | Finding | Signal |
 |---|---|
-| C12-14 | NEW — XLSX parseAmount returns raw float. This is a concrete correctness issue: non-integer Won amounts will produce incorrect reward calculations. HIGH signal — should be fixed this cycle. |
-| C12-10/C12-11 | NEW — Missing test coverage for multi-file and subcategory reoptimize. HIGH signal — test gaps should be filled to prevent regression. |
-| C12-06 | CARRIED from C11-07 — No CSP headers. MEDIUM signal. Defense-in-depth improvement. |
-| C12-03/C12-04 | Same class as D-01 (parser code duplication). Specific callout for `inferYear` and `parseDateToISO` as particularly sensitive duplications. No new signal beyond D-01. |
+| C13-01/C13-02 | HIGH signal — date format bug in CSV and PDF parsers. Zero-padding missing in short-year branch produces non-ISO dates that break month extraction. Both parsers have the same bug; XLSX parser is correct. |
+| C13-12/C13-13 | HIGH signal — missing test coverage for critical parsing and reward calculation logic. Tests would have caught C13-01/C13-02. |
+| C13-06 | CARRIED from C11-07/C12-06 — CSP 'unsafe-inline'. MEDIUM signal, deferred. |
+| C13-16 | LOW but concrete — incorrect Korean help text that could mislead users. Easy fix. |
 
 ---
 
@@ -65,16 +66,18 @@ All 4 implemented cycle 11 HIGH-priority fixes verified as correctly implemented
 - None — all prior criticals are fixed
 
 ### HIGH (should fix this cycle)
-1. C12-14: Add `Math.round()` in XLSX `parseAmount` numeric path to ensure Won amounts are always integers
-2. C12-10: Add integration test for multi-file upload with different months
-3. C12-11: Add test for reoptimize with subcategory changes
+1. C13-01: Add `padStart(2, '0')` to CSV short-year date parsing
+2. C13-02: Add `padStart(2, '0')` to PDF short-year date parsing
+3. C13-12: Add unit tests for `parseDateToISO` across all formats
+4. C13-13: Add test for `calculateRewards` global cap rollback
+5. C13-16: Fix "전전월" → "전월" in FileDropzone help text
 
 ### MEDIUM (plan for next cycles)
-4. C12-06: Add Content-Security-Policy headers (same as C11-07)
-5. C12-16/C12-08: Strengthen `isValidTx` to check `Number.isFinite` and positive amount
+6. C13-06: Migrate CSP to hash-based (carried from C11-07)
+7. C13-03: Unify parseAmount return type across parsers
 
 ### LOW (defer or accept)
-- C12-01 (acceptable for static site), C12-02 (acceptable — rules are static), C12-03/C12-04 (extends D-01), C12-05 (defense-in-depth), C12-07 (type drift is bridged by adapter), C12-09 (code clarity), C12-12 (extends D-47), C12-13 (correct behavior)
+- C13-04 (acceptable for typical use), C13-05 (negligible), C13-07 (not needed), C13-08 (dead code, low risk), C13-09 (maintenance burden), C13-10 (unlikely), C13-11 (correct behavior), C13-14 (nice-to-have), C13-15 (UX improvement), C13-17 (defense-in-depth)
 
 ---
 
