@@ -32,6 +32,12 @@ export class MerchantMatcher {
   match(merchantName: string, rawCategory?: string): MatchResult {
     const lower = merchantName.toLowerCase().trim();
 
+    // Guard: empty or single-character merchant names cannot be meaningfully
+    // categorized by keyword matching. Return uncategorized immediately.
+    if (lower.length < 2) {
+      return { category: 'uncategorized', confidence: 0.0 };
+    }
+
     // 1. Exact match against static MERCHANT_KEYWORDS (confidence 1.0)
     const staticExact = ALL_KEYWORDS[lower];
     if (staticExact !== undefined) {
@@ -45,7 +51,13 @@ export class MerchantMatcher {
     let bestStaticKw: { category: string; subcategory?: string; kwLen: number } | undefined;
     for (const [kw, categoryStr] of Object.entries(ALL_KEYWORDS)) {
       if (!isSubstringSafeKeyword(kw)) continue;
-      if (lower.includes(kw) || kw.includes(lower)) {
+      // lower.includes(kw): merchant name contains keyword — always meaningful
+      // kw.includes(lower): keyword contains merchant name — only meaningful when
+      // the merchant name is >= 3 chars to avoid false positives (e.g., "스타"
+      // matching "스타벅스" — "스타" could be short for many non-cafe words)
+      const merchantContainsKw = lower.includes(kw);
+      const kwContainsMerchant = kw.includes(lower) && lower.length >= 3;
+      if (merchantContainsKw || kwContainsMerchant) {
         const [category, subcategory] = categoryStr.includes('.')
           ? categoryStr.split('.') as [string, string]
           : [categoryStr, undefined];
