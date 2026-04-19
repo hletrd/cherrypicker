@@ -144,6 +144,8 @@ function isValidTx(tx: any): tx is CategorizedTx {
     typeof tx.date === 'string' && tx.date.length > 0 &&
     typeof tx.merchant === 'string' &&
     typeof tx.amount === 'number' &&
+    Number.isFinite(tx.amount) &&
+    tx.amount > 0 &&
     typeof tx.category === 'string' && tx.category.length > 0
   );
 }
