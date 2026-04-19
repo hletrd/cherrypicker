@@ -67,14 +67,14 @@ function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabe
   let grandTotal = 0;
 
   for (const tx of transactions) {
-    const existing = byCategory.get(tx.category);
+    const categoryKey = tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category;
+    const existing = byCategory.get(categoryKey);
     if (existing) {
       existing.total += tx.amount;
       existing.count += 1;
     } else {
-      const categoryKey = tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category;
-      byCategory.set(tx.category, {
-        labelKo: categoryLabels?.get(categoryKey) ?? categoryLabels?.get(tx.category) ?? CATEGORY_NAMES_KO[categoryKey] ?? CATEGORY_NAMES_KO[tx.category] ?? tx.category,
+      byCategory.set(categoryKey, {
+        labelKo: categoryLabels?.get(categoryKey) ?? categoryLabels?.get(tx.category) ?? CATEGORY_NAMES_KO[categoryKey] ?? CATEGORY_NAMES_KO[tx.category] ?? categoryKey,
         total: tx.amount,
         count: 1,
       });
