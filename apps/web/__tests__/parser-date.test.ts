@@ -27,19 +27,38 @@ function inferYear(month: number, day: number): number {
 function parseDateToISO(raw: string): string {
   const cleaned = raw.trim();
 
-  // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD
+  // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD — validate month/day ranges to
+  // avoid producing invalid date strings from corrupted data (e.g., "2026/13/99").
   const fullMatch = cleaned.match(/^(\d{4})[.\-\/\s](\d{1,2})[.\-\/\s](\d{1,2})/);
-  if (fullMatch) return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
+  if (fullMatch) {
+    const month = parseInt(fullMatch[2]!, 10);
+    const day = parseInt(fullMatch[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
+    }
+  }
 
-  // YYYYMMDD
-  if (/^\d{8}$/.test(cleaned)) return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+  // YYYYMMDD — validate month/day ranges to avoid producing invalid date
+  // strings from corrupted data (e.g., "20261399" → "2026-13-99").
+  if (/^\d{8}$/.test(cleaned)) {
+    const month = parseInt(cleaned.slice(4, 6), 10);
+    const day = parseInt(cleaned.slice(6, 8), 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+    }
+  }
 
-  // YY-MM-DD or YY.MM.DD — with zero-padding (C13-01/C13-02 fix)
+  // YY-MM-DD or YY.MM.DD — validate month/day ranges to avoid producing
+  // invalid date strings from corrupted data (e.g., "99/13/99").
   const shortYearMatch = cleaned.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})$/);
   if (shortYearMatch) {
     const year = parseInt(shortYearMatch[1]!, 10);
     const fullYear = year >= 50 ? 1900 + year : 2000 + year;
-    return `${fullYear}-${shortYearMatch[2]!.padStart(2, '0')}-${shortYearMatch[3]!.padStart(2, '0')}`;
+    const month = parseInt(shortYearMatch[2]!, 10);
+    const day = parseInt(shortYearMatch[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${fullYear}-${shortYearMatch[2]!.padStart(2, '0')}-${shortYearMatch[3]!.padStart(2, '0')}`;
+    }
   }
 
   // MM/DD or MM.DD — infer year with look-back heuristic
@@ -262,5 +281,53 @@ describe('parseDateToISO — invalid date range validation', () => {
   test('valid boundary: month 1 day 1 passes', () => {
     const result = parseDateToISO('1/1');
     expect(result).toMatch(/^\d{4}-01-01$/);
+  });
+
+  test('YYYYMMDD with month > 12 is rejected', () => {
+    expect(parseDateToISO('20261399')).toBe('20261399');
+  });
+
+  test('YYYYMMDD with day > 31 is rejected', () => {
+    expect(parseDateToISO('20260132')).toBe('20260132');
+  });
+
+  test('YYYYMMDD with month 0 is rejected', () => {
+    expect(parseDateToISO('20260015')).toBe('20260015');
+  });
+
+  test('YYYYMMDD with day 0 is rejected', () => {
+    expect(parseDateToISO('20260100')).toBe('20260100');
+  });
+
+  test('full-date with month > 12 is rejected', () => {
+    expect(parseDateToISO('2026/13/99')).toBe('2026/13/99');
+  });
+
+  test('full-date with day > 31 is rejected', () => {
+    expect(parseDateToISO('2026/01/32')).toBe('2026/01/32');
+  });
+
+  test('full-date with month 0 is rejected', () => {
+    expect(parseDateToISO('2026/0/15')).toBe('2026/0/15');
+  });
+
+  test('full-date with day 0 is rejected', () => {
+    expect(parseDateToISO('2026/1/0')).toBe('2026/1/0');
+  });
+
+  test('short-year with month > 12 is rejected', () => {
+    expect(parseDateToISO('99/13/99')).toBe('99/13/99');
+  });
+
+  test('short-year with day > 31 is rejected', () => {
+    expect(parseDateToISO('99/01/32')).toBe('99/01/32');
+  });
+
+  test('short-year with month 0 is rejected', () => {
+    expect(parseDateToISO('99/00/15')).toBe('99/00/15');
+  });
+
+  test('short-year with day 0 is rejected', () => {
+    expect(parseDateToISO('99/01/00')).toBe('99/01/00');
   });
 });
