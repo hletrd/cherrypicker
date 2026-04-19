@@ -231,6 +231,9 @@ function createAnalysisStore() {
       ? (_loadPersistWarningKind ?? 'truncated')
       : null
   );
+  // Consume and reset the load-time warning kind so it doesn't leak
+  // across store re-creation (e.g. HMR) or stale after reset.
+  _loadPersistWarningKind = null;
 
   return {
     get result() {
@@ -332,6 +335,7 @@ function createAnalysisStore() {
       loading = false;
       persistWarningKind = null;
       _persistWarningKind = null;
+      _loadPersistWarningKind = null;
       clearStorage();
     },
   };
