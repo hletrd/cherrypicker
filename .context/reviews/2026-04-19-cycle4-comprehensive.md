@@ -178,43 +178,68 @@ All 5 high-priority and 8 medium-priority cycle 3 fixes verified as correctly im
 
 ---
 
-## Summary of New Findings
+## Verification Status of Prior C4 Findings
 
-| ID | Severity | Confidence | Category | Description |
-|----|----------|------------|----------|-------------|
-| C4-01 | MEDIUM | High | debugger | SavingsComparison division by zero → NaN display |
-| C4-02 | LOW | High | perf | loadCategories() called twice per optimization |
-| C4-03 | LOW | High | perf | monthlyBreakdown O(n*m) filter |
-| C4-04 | MEDIUM | High | designer/a11y | CategoryBreakdown tooltip keyboard/touch inaccessible |
-| C4-05 | LOW | High | architect | constraints.categoryLabels mutation after build |
-| C4-06 | LOW | High | designer | Annual savings projection misleading |
-| C4-07 | LOW | High | designer | localStorage vs sessionStorage inconsistency |
-| C4-08 | MEDIUM | Medium | debugger | editedTxs effect over-broad re-sync risk |
-| C4-09 | LOW | High | code-quality | CategoryBreakdown hardcoded colors |
-| C4-10 | MEDIUM | High | test | E2E test depends on stale dist/ |
-| C4-11 | MEDIUM | High | test | No regression test for findCategory fuzzy fix |
-| C4-12 | LOW | High | debugger | parseInt NaN (D-28 re-evaluation) |
-| C4-13 | LOW | Medium | designer | Small-percentage bars nearly invisible |
-| C4-14 | LOW | High | code-quality | Stale fallback values in Layout footer |
-| C4-15 | LOW | High | perf | toCoreCardRuleSets not cached |
+All HIGH-priority findings from the original cycle 4 review have been fixed in prior cycles:
+
+| Finding | Status | Evidence |
+|---|---|---|
+| C4-01 | **FIXED** | `SavingsComparison.svelte:90` has `Number.isFinite(raw)` guard |
+| C4-02 | **FIXED** | `analyzeMultipleFiles` passes prebuilt `categoryLabels` to `optimizeFromTransactions` |
+| C4-03 | **FIXED** | Single-pass `monthlyTxCount` map used in `analyzer.ts:298-302` |
+| C4-04 | **FIXED** | `CategoryBreakdown.svelte:154-155` has `role="button"` and `tabindex="0"`, line 161 has `onkeydown` handler |
+| C4-05 | **FIXED** | `analyzer.ts:225` passes `categoryLabels` directly to `buildConstraints` as parameter |
+| C4-06 | **STILL OPEN** | Annual savings projection label unchanged (LOW priority) |
+| C4-07 | **STILL OPEN** | `localStorage` vs `sessionStorage` inconsistency in SpendingSummary (LOW priority) |
+| C4-08 | **FIXED** | `TransactionReview.svelte:142-150` uses `lastSyncedGeneration` counter to guard re-sync |
+| C4-09 | **STILL OPEN** | Hardcoded `CATEGORY_COLORS` in CategoryBreakdown (LOW priority) |
+| C4-10 | **STILL OPEN** | E2E test stale dist/ dependency (MEDIUM priority) |
+| C4-11 | **STILL OPEN** | No regression test for findCategory fuzzy match (MEDIUM priority) |
+| C4-12 | **FIXED** | `FileDropzone.svelte:206` uses `Math.round(Number(v))` with `Number.isFinite` guard |
+| C4-13 | **STILL OPEN** | Small-percentage bars nearly invisible (LOW priority) |
+| C4-14 | **STILL OPEN** | Stale fallback values in Layout footer (LOW priority) |
+| C4-15 | **FIXED** | `analyzer.ts:47,167-168` caches `cachedCoreRules` |
 
 ---
 
-## Prioritized Action Items
+## New Findings (This Re-review)
 
-### HIGH (should fix this cycle)
-1. C4-01: Fix SavingsComparison division by zero (NaN display)
-2. C4-04: Fix CategoryBreakdown a11y (keyboard/touch access to tooltip)
-3. C4-11: Add regression test for findCategory fuzzy match
-4. C4-10: Add pre-build step or warning in E2E tests for stale dist/
-5. C4-08: Add generation counter to prevent over-broad editedTxs re-sync
+### C4R-M01: `printSpendingSummary` is never called from CLI report command
 
-### MEDIUM (plan for next cycles)
-6. C4-12: Fix parseInt → Number with isFinite guard (trivial fix for D-28)
-7. C4-05: Pass categoryLabels into buildConstraints instead of mutating
-8. C4-02: Eliminate redundant loadCategories() call
-9. C4-03: Compute monthlyBreakdown in single pass
-10. C4-15: Cache toCoreCardRuleSets result
+- **Severity:** MEDIUM (missing functionality)
+- **Confidence:** High
+- **File+line:** `tools/cli/src/commands/report.ts:143`
+- **Description:** The CLI `runReport` function calls `printOptimizationResult(result)` at line 143 and `generateHTMLReport(result, categorized, categoryLabels)` at line 147. However, `printSpendingSummary` from `@cherrypicker/viz` (which shows the spending-by-category breakdown table) is never called. The function was updated in cycle 50 to accept `categoryLabels`, but the CLI never invokes it.
 
-### LOW (defer or accept)
-- C4-06, C4-07, C4-09, C4-13, C4-14
+  The HTML report includes the category table via `buildCategoryTable`, but terminal output has no spending summary. Users who only look at terminal output miss the spending breakdown.
+
+- **Concrete failure scenario:** Run `cherrypicker report statement.csv`. Terminal shows card assignments and optimization results but no spending-by-category table. The HTML report has the category table.
+- **Fix:** Import `printSpendingSummary` from `@cherrypicker/viz` and add `printSpendingSummary(categorized, categoryLabels);` before `printOptimizationResult(result);` in `report.ts`.
+
+### C4R-M02: Server-side CSV adapters' `parseAmount` returns NaN instead of 0
+
+- **Severity:** LOW (consistency)
+- **Confidence:** High
+- **File+line:** `packages/parser/src/csv/shinhan.ts:29`, and similarly in other adapter files in that directory
+- **Description:** The server-side CSV adapter files (shinhan, etc.) have `parseAmount` functions that return `NaN` when parsing fails. The PDF parsers (both web and server-side) return `0` instead of `NaN` to prevent NaN propagation. While each adapter's `parseCSV` loop catches NaN with `isNaN()` checks before adding transactions, this is inconsistent with the defensive `return 0` pattern used elsewhere.
+- **Concrete failure scenario:** If `parseAmount` were ever called outside the adapter's validation loop (e.g., by a future refactoring), NaN would propagate. Currently, NaN is caught.
+- **Fix:** Change `if (isNaN(n)) return NaN;` to `if (isNaN(n)) return 0;` in all server-side CSV adapter `parseAmount` functions for consistency.
+
+### C4R-L01: Content-signature adapter failures logged only to console.warn, not collected into ParseResult.errors
+
+- **Severity:** LOW (observability gap, extends D-107)
+- **Confidence:** High
+- **File+line:** `packages/parser/src/csv/index.ts:60-62`
+- **Description:** When a content-signature adapter fails (line 60-62), the error is only logged via `console.warn` and not collected into the ParseResult's errors array. In contrast, the bank-specific adapter failure at line 44-49 does prepend an error message to the fallback result. This extends D-107.
+- **Concrete failure scenario:** A Samsung card CSV has a format change. The Samsung adapter's `detect()` returns true but `parseCSV()` throws. The error only appears in console.warn; the user sees the generic parser result with no warning.
+- **Fix:** When a content-signature adapter fails, collect the failure into the result's errors array.
+
+---
+
+## Summary of Active Findings (This Re-review)
+
+| ID | Severity | Confidence | File | Description | Status |
+|---|---|---|---|---|---|
+| C4R-M01 | MEDIUM | High | `tools/cli/src/commands/report.ts:143` | `printSpendingSummary` never called from CLI -- terminal missing spending-by-category table | NEW, needs fix |
+| C4R-M02 | LOW | High | `packages/parser/src/csv/shinhan.ts:29` | Server-side CSV adapters' `parseAmount` returns NaN instead of 0 (inconsistent with PDF parsers) | NEW, consistency |
+| C4R-L01 | LOW | High | `packages/parser/src/csv/index.ts:60-62` | Content-signature adapter failures only in console.warn, not ParseResult.errors | NEW, extends D-107 |

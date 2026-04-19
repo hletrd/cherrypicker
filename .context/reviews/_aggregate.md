@@ -1,34 +1,51 @@
-# Review Aggregate -- 2026-04-19 (Cycle 3)
+# Review Aggregate -- 2026-04-19 (Cycle 4 Re-review)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle3-comprehensive.md` (multi-angle comprehensive review)
+- `.context/reviews/2026-04-19-cycle4-comprehensive.md` (multi-angle comprehensive re-review)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-50 per-agent and aggregate files
+- Cycle 3 aggregate (`.context/reviews/_aggregate.md` prior version)
 
 ---
 
-## Deduplication with Prior Reviews
+## Verification of Prior Cycle Fixes
 
-C3-M01 (CLI report missing categoryLabels in buildConstraints) is a new finding. C50-M01 fixed the viz package to accept `categoryLabels`, but the CLI's `buildConstraints` call was not updated to pass the labels through. This means the `cardResults.byCategory[].categoryNameKo` values in the CLI report still use the `CATEGORY_NAMES_KO` static fallback rather than the taxonomy-derived labels.
-
-C3-M02 (loadFromStorage cardResults validation) extends D-91 (shallow validation of nested optimization data) by focusing on the rendering consequence of malformed cardResults entries. D-91 was deferred with "if malformed sessionStorage data causes UI rendering errors, add deeper validation" -- this finding provides that triggering scenario.
-
-C3-L01 (CLI prevSpending NaN) is a new finding not reported in any prior cycle. The similar D-28 (FileDropzone parseInt NaN) was promoted and fixed in cycle 4, but the CLI path was not checked.
-
-C3-L02 (getCardById O(n) scan) is a new finding not reported in any prior cycle.
-
----
-
-## Verification of Cycle 47-50 Fixes
+All prior cycle 3, 47-50 findings are confirmed fixed:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C3-M01 | **FIXED** | CLI `report.ts:139` passes `categoryLabels` to `buildConstraints` |
+| C3-L01 | **FIXED** | CLI `report.ts:50-52` validates `Number.isNaN(prevSpending) \|\| prevSpending < 0` |
+| C3-M02 | **PARTIALLY FIXED** | Shallow validation of cardResults entries added (`store.svelte.ts:179-188`) |
+| C3-L02 | **STILL DEFERRED** | `getCardById` O(n) scan -- low priority |
 | C47-L01 | **STILL FIXED** | Terminal `formatWon` has `Number.isFinite` guard + negative-zero normalization |
 | C47-L02 | **STILL FIXED** | Terminal `formatRate` has `Number.isFinite` guard |
 | C49-M01 | **STILL FIXED** | `llm-fallback.ts:84` has `let parsed: LLMTransaction[] = [];` |
 | C50-M01 | **STILL FIXED** | Viz report generator and terminal summary accept `categoryLabels` parameter |
 | C50-L01 | **STILL FIXED** | Report generator uses `replaceAll()` for template placeholder substitution |
+
+---
+
+## Verification of Prior C4 Findings (from original cycle 4)
+
+| Finding | Status | Evidence |
+|---|---|---|
+| C4-01 | **FIXED** | `SavingsComparison.svelte:90` has `Number.isFinite(raw)` guard |
+| C4-02 | **FIXED** | `analyzeMultipleFiles` passes prebuilt `categoryLabels` to `optimizeFromTransactions` |
+| C4-03 | **FIXED** | Single-pass `monthlyTxCount` map in `analyzer.ts:298-302` |
+| C4-04 | **FIXED** | `CategoryBreakdown.svelte:154-155` has `role="button"` and `tabindex="0"`, line 161 has `onkeydown` |
+| C4-05 | **FIXED** | `analyzer.ts:225` passes `categoryLabels` directly to `buildConstraints` |
+| C4-06 | **STILL OPEN** | Annual savings projection label unchanged (LOW) |
+| C4-07 | **STILL OPEN** | localStorage vs sessionStorage inconsistency in SpendingSummary (LOW) |
+| C4-08 | **FIXED** | `TransactionReview.svelte:142-150` uses `lastSyncedGeneration` counter |
+| C4-09 | **STILL OPEN** | Hardcoded `CATEGORY_COLORS` in CategoryBreakdown (LOW) |
+| C4-10 | **STILL OPEN** | E2E test stale dist/ dependency (MEDIUM) |
+| C4-11 | **STILL OPEN** | No regression test for findCategory fuzzy match (MEDIUM) |
+| C4-12 | **FIXED** | `FileDropzone.svelte:206` uses `Math.round(Number(v))` with `Number.isFinite` guard |
+| C4-13 | **STILL OPEN** | Small-percentage bars nearly invisible (LOW) |
+| C4-14 | **STILL OPEN** | Stale fallback values in Layout footer (LOW) |
+| C4-15 | **FIXED** | `analyzer.ts:47,167-168` caches `cachedCoreRules` |
 
 ---
 
@@ -39,19 +56,18 @@ C3-L02 (getCardById O(n) scan) is a new finding not reported in any prior cycle.
 | D-99 | **STILL FIXED** | `store.svelte.ts:147-148` has `Number.isFinite(tx.amount) && tx.amount > 0` |
 | D-102 | **STILL FIXED** | `packages/core/src/index.ts:18` exports `buildCategoryKey` |
 | D-106 | **STILL DEFERRED** | `apps/web/src/lib/parser/pdf.ts:284` bare `catch {}` |
-| D-107 | **PARTIALLY ADDRESSED** | Server-side CSV adapter loop logs warnings, but `catch { continue; }` still doesn't collect errors into ParseResult |
+| D-107 | **PARTIALLY ADDRESSED** | Server-side CSV adapter loop logs warnings, but content-signature adapter failures still not collected into ParseResult (see C4R-L01) |
 | D-110 | **STILL DEFERRED** | Non-latest month edits have no visible optimization effect |
 
 ---
 
-## Active Findings (New in Cycle 3)
+## Active Findings (New in Cycle 4 Re-review)
 
 | ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C3-M01 | MEDIUM | High | `tools/cli/src/commands/report.ts:136` | CLI report does not pass `categoryLabels` to `buildConstraints` -- `cardResults.byCategory[].categoryNameKo` uses `CATEGORY_NAMES_KO` fallback instead of taxonomy labels | NEW, needs fix |
-| C3-M02 | MEDIUM | Medium | `apps/web/src/lib/store.svelte.ts:159-213` | `loadFromStorage` does not validate `cardResults` entries -- malformed nested data can crash dashboard components | NEW, deferred per D-91 exit criterion |
-| C3-L01 | LOW | High | `tools/cli/src/commands/report.ts:50` | `--prev-spending` CLI argument parsed with `parseInt` without NaN validation | NEW, needs fix |
-| C3-L02 | LOW | High | `apps/web/src/lib/cards.ts:214-240` | `getCardById` performs O(n) linear scan of all issuers and cards | NEW, low priority |
+| C4R-M01 | MEDIUM | High | `tools/cli/src/commands/report.ts:143` | `printSpendingSummary` is never called from CLI report command -- terminal output missing spending-by-category table | NEW, needs fix |
+| C4R-M02 | LOW | High | `packages/parser/src/csv/shinhan.ts:29` | Server-side CSV adapters' `parseAmount` returns NaN instead of 0 (inconsistent with PDF parsers' `return 0` pattern) | NEW, consistency |
+| C4R-L01 | LOW | High | `packages/parser/src/csv/index.ts:60-62` | Content-signature adapter failures logged only to console.warn, not collected into ParseResult.errors (extends D-107) | NEW, observability |
 
 ---
 
