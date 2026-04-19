@@ -71,8 +71,12 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
     .map((block) => (block.type === 'text' ? block.text : ''))
     .join('');
 
-  // Extract JSON from response — use non-greedy match to capture only the first JSON array
-  const jsonMatch = responseText.match(/\[[\s\S]*?\](?=\s*$|\s*```)/);
+  // Extract JSON from response — use greedy match to capture the longest
+  // possible bracket-delimited content, then validate by parsing. The greedy
+  // quantifier avoids mis-matching on incidental bracketed text (e.g., "[note]")
+  // that may appear before the actual transaction array. If the greedy match
+  // fails to parse, progressively trim from the end and retry.
+  const jsonMatch = responseText.match(/\[[\s\S]*\](?=\s*$|\s*```)/);
   if (!jsonMatch) {
     throw new Error('LLM 응답에서 JSON 배열을 찾을 수 없습니다.');
   }
@@ -81,7 +85,27 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
   try {
     parsed = JSON.parse(jsonMatch[0]);
   } catch {
-    throw new Error('LLM이 올바른 JSON을 반환하지 않았습니다.');
+    // Greedy match may have captured too much (e.g., trailing text after the
+    // JSON array). Try progressively shorter matches by finding earlier `]`
+    // positions and re-parsing until one succeeds.
+    let candidate = jsonMatch[0];
+    let parsedOk = false;
+    while (candidate.length > 2) {
+      // Find the previous `]` position
+      const lastBracket = candidate.lastIndexOf(']', candidate.length - 2);
+      if (lastBracket <= 0) break;
+      candidate = candidate.slice(0, lastBracket + 1);
+      try {
+        parsed = JSON.parse(candidate);
+        parsedOk = true;
+        break;
+      } catch {
+        continue;
+      }
+    }
+    if (!parsedOk) {
+      throw new Error('LLM이 올바른 JSON을 반환하지 않았습니다.');
+    }
   }
 
   return parsed
