@@ -36,7 +36,17 @@ function isActive(href: string) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <base href={base} />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; worker-src 'self' blob:; connect-src 'self';" />
+    <!--
+      CSP: 'unsafe-inline' is required for script-src because Astro injects
+      inline <script> blocks for Svelte island hydration (astro-island custom
+      element registration and component loader). Removing it would break all
+      interactive components. 'strict-dynamic' is added for forward compat;
+      browsers that support it will ignore the legacy 'unsafe-inline' fallback.
+      style-src 'unsafe-inline' is required by Tailwind CSS v4 scoped styles.
+      TODO: Migrate to hash-based CSP (compute SHA256 of inline scripts at
+      build time) to fully remove 'unsafe-inline' from script-src.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'strict-dynamic' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; worker-src 'self' blob:; connect-src 'self';" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <title>{title} | CherryPicker</title>
