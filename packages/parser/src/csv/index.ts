@@ -58,7 +58,8 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
       try {
         return adapter.parseCSV(content);
       } catch (err) {
-        // Try next adapter, but record the failure
+        // Try next adapter, but log the failure for debugging
+        console.warn(`[cherrypicker] Bank adapter ${adapter.bankId} (detect) failed:`, err);
         continue;
       }
     }
