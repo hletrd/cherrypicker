@@ -59,4 +59,4 @@ Additionally, SavingsComparison changes its label from "추가 절약" to "추�
 
 | Task | Status |
 |---|---|
-| 1 | TODO |
+| 1 | DONE — commit 000000041b |

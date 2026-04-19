@@ -51,4 +51,4 @@ The short-date formats were fixed in C29-03/C29-04 with range validation, but th
 
 | Task | Status |
 |---|---|
-| 1 | TODO |
+| 1 | DONE — commit 0000000e0a |
