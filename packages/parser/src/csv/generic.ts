@@ -27,6 +27,18 @@ function isMerchantLike(header: string): boolean {
   return merchantKeywords.some((k) => header.includes(k));
 }
 
+/** Infer the year for a short-date (month/day only) using a look-back
+ *  heuristic: if the date would be more than 3 months in the future,
+ *  assume it belongs to the previous year. */
+function inferYear(month: number, day: number): number {
+  const now = new Date();
+  const candidate = new Date(now.getFullYear(), month - 1, day);
+  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
+    return now.getFullYear() - 1;
+  }
+  return now.getFullYear();
+}
+
 function parseDateToISO(raw: string): string {
   const cleaned = raw.trim();
 
@@ -53,17 +65,21 @@ function parseDateToISO(raw: string): string {
   const koreanFull = cleaned.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
   if (koreanFull) return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
 
-  // MM/DD or MM.DD — assume current year
+  // MM/DD or MM.DD — infer year with look-back heuristic
   const shortMatch = cleaned.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
   if (shortMatch) {
-    const year = new Date().getFullYear();
+    const month = parseInt(shortMatch[1]!, 10);
+    const day = parseInt(shortMatch[2]!, 10);
+    const year = inferYear(month, day);
     return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
   }
 
   // Korean short: 1월 15일
   const koreanShort = cleaned.match(/(\d{1,2})월\s*(\d{1,2})일/);
   if (koreanShort) {
-    const year = new Date().getFullYear();
+    const month = parseInt(koreanShort[1]!, 10);
+    const day = parseInt(koreanShort[2]!, 10);
+    const year = inferYear(month, day);
     return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
   }
 

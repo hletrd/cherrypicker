@@ -177,6 +177,18 @@ function getBankColumnConfig(bankId: BankId): ColumnConfig {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Infer the year for a short-date (month/day only) using a look-back
+ *  heuristic: if the date would be more than 3 months in the future,
+ *  assume it belongs to the previous year. */
+function inferYear(month: number, day: number): number {
+  const now = new Date();
+  const candidate = new Date(now.getFullYear(), month - 1, day);
+  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
+    return now.getFullYear() - 1;
+  }
+  return now.getFullYear();
+}
+
 function parseDateToISO(raw: unknown): string {
   if (typeof raw === 'number') {
     // Guard against numbers that are clearly NOT dates (< 1 or > 100000)
@@ -215,7 +227,9 @@ function parseDateToISO(raw: unknown): string {
     // 1월 15일
     const koreanShort = cleaned.match(/(\d{1,2})월\s*(\d{1,2})일/);
     if (koreanShort) {
-      const year = new Date().getFullYear();
+      const month = parseInt(koreanShort[1]!, 10);
+      const day = parseInt(koreanShort[2]!, 10);
+      const year = inferYear(month, day);
       return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
     }
 

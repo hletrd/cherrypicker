@@ -59,10 +59,16 @@ function parseDateToISO(raw: unknown): string {
     const koreanFull = cleaned.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
     if (koreanFull) return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
 
-    // Korean short: 1월 15일
+    // Korean short: 1월 15일 — infer year with look-back heuristic
     const koreanShort = cleaned.match(/(\d{1,2})월\s*(\d{1,2})일/);
     if (koreanShort) {
-      const year = new Date().getFullYear();
+      const month = parseInt(koreanShort[1]!, 10);
+      const day = parseInt(koreanShort[2]!, 10);
+      const now = new Date();
+      const candidate = new Date(now.getFullYear(), month - 1, day);
+      const year = (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000)
+        ? now.getFullYear() - 1
+        : now.getFullYear();
       return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
     }
 

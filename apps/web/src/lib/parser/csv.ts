@@ -22,6 +22,20 @@ function splitLine(line: string, delimiter: string): string[] {
   return result;
 }
 
+/** Infer the year for a short-date (month/day only) using a look-back
+ *  heuristic: if the date would be more than 3 months in the future,
+ *  assume it belongs to the previous year. This handles the common case
+ *  of uploading a December statement in January. */
+function inferYear(month: number, day: number): number {
+  const now = new Date();
+  const candidate = new Date(now.getFullYear(), month - 1, day);
+  // If the candidate is more than ~3 months in the future, use previous year
+  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
+    return now.getFullYear() - 1;
+  }
+  return now.getFullYear();
+}
+
 function parseDateToISO(raw: string): string {
   const cleaned = raw.trim();
 
@@ -40,13 +54,13 @@ function parseDateToISO(raw: string): string {
     return `${fullYear}-${shortYearMatch[2]}-${shortYearMatch[3]}`;
   }
 
-  // MM/DD or MM.DD — assume current year
+  // MM/DD or MM.DD — infer year with look-back heuristic
   const shortMatch = cleaned.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
   if (shortMatch) {
-    const year = new Date().getFullYear();
-    const month = shortMatch[1]!.padStart(2, '0');
-    const day = shortMatch[2]!.padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const month = parseInt(shortMatch[1]!, 10);
+    const day = parseInt(shortMatch[2]!, 10);
+    const year = inferYear(month, day);
+    return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
   }
 
   // 2024년 1월 15일
@@ -56,7 +70,9 @@ function parseDateToISO(raw: string): string {
   // 1월 15일
   const koreanShort = cleaned.match(/(\d{1,2})월\s*(\d{1,2})일/);
   if (koreanShort) {
-    const year = new Date().getFullYear();
+    const month = parseInt(koreanShort[1]!, 10);
+    const day = parseInt(koreanShort[2]!, 10);
+    const year = inferYear(month, day);
     return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
   }
 
