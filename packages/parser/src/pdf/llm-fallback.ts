@@ -81,7 +81,7 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
     throw new Error('LLM 응답에서 JSON 배열을 찾을 수 없습니다.');
   }
 
-  let parsed: LLMTransaction[];
+  let parsed: LLMTransaction[] = [];
   try {
     parsed = JSON.parse(jsonMatch[0]);
   } catch {
