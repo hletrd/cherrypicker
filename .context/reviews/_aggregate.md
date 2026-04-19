@@ -1,62 +1,62 @@
-# Review Aggregate — 2026-04-19 (Cycle 26)
+# Review Aggregate — 2026-04-19 (Cycle 27)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle26-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle27-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-25 per-agent and aggregate files
+- All cycle 1-26 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-All cycle 1-25 findings have been verified as fixed or deferred. Cycle 25 findings C25-01, C25-03, C25-04, C25-05 are now CONFIRMED FIXED. C25-02 remains deferred.
+All cycle 1-25 findings have been verified as fixed or deferred. Cycle 26 findings C26-01, C26-02, C26-03 are now CONFIRMED FIXED. C26-04 and C26-05 remain deferred.
 
-C26-01 is a new finding (rewardType overwrite in bucket). Not previously reported.
+C27-01 is a new finding (savingsPct division by zero in SavingsComparison). Not previously reported.
 
-C26-02 is a new finding (CATEGORY_COLORS missing dot-notation keys). Not previously reported.
+C27-02 is a new finding (annual projection from single month). Not previously reported.
 
-C26-03 is a new finding (stale monthlyBreakdown in reoptimize). Not previously reported.
+C27-03 is a new finding (AI categorization clears subcategory). Not previously reported.
 
-C26-04 is a re-flag of D-03/D-43 (inferYear/parseDateToISO duplication). Still present, now formally tracked as an active finding.
+C27-04 is a new finding (file duplicate detection by name only). Not previously reported.
 
-C26-05 is a new finding (전월실적 display mismatch). Not previously reported.
+C27-05 is a new finding (RegExp.test() fragility in bank detection). Not previously reported.
 
 Deferred items D-01 through D-105 remain unchanged and are not re-listed here.
 
 ---
 
-## Verification of Cycle 25 Fixes
+## Verification of Cycle 26 Fixes
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C25-01 | FIXED | `reward.ts:254-264` — explicit branch with warn; `schema.ts:21-24` — Zod refine enforcing mutual exclusivity |
-| C25-02 | DEFERRED | Deferred per cycle 25 plan — O(N*M*K) performance acceptable for typical inputs |
-| C25-03 | FIXED | `TransactionReview.svelte:153-167` — search matches category/subcategory labels |
-| C25-04 | FIXED | `analyzer.ts:86-103,243` — sharedMatcher passed to parseAndCategorize |
-| C25-05 | FIXED | `SpendingSummary.svelte:57` — uses monthlyBreakdown reduce for total spending |
+| C26-01 | FIXED | `reward.ts:214-328` — `rewardTypeAccum` map tracks cumulative reward per rewardType, dominant type selected at lines 344-362 |
+| C26-02 | FIXED | `CategoryBreakdown.svelte:56-61` — `getCategoryColor()` tries full key, then leaf ID, then uncategorized fallback |
+| C26-03 | FIXED | `store.svelte.ts:358-384` — `reoptimize` computes fresh `updatedMonthlyBreakdown` from `editedTransactions` before computing `previousMonthSpending` |
+| C26-04 | DEFERRED | `inferYear`/`parseDateToISO` duplication — refactoring effort deferred |
+| C26-05 | DEFERRED | 전월실적 display mismatch — UX clarification deferred |
 
 ---
 
-## Active Findings (New in Cycle 26, Deduplicated)
+## Active Findings (New in Cycle 27, Deduplicated)
 
 | ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C26-01 | MEDIUM | High | `packages/core/src/calculator/reward.ts:220-231,318` | Bucket `rewardType` overwritten by last transaction's type instead of tracking dominant reward type | OPEN |
-| C26-02 | LOW | High | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:87` | `CATEGORY_COLORS` lookup misses dot-notation subcategory keys — subcategorized categories get gray fallback color | OPEN |
-| C26-03 | LOW | Medium | `apps/web/src/lib/store.svelte.ts:359-368` | `reoptimize` uses stale `monthlyBreakdown` for `previousMonthSpending` before recalculating | OPEN |
-| C26-04 | LOW | High | Multiple files in `apps/web/src/lib/parser/` | `inferYear` and `parseDateToISO` duplicated 4+ times — maintenance hazard | OPEN |
-| C26-05 | LOW | Medium | `apps/web/src/components/dashboard/SpendingSummary.svelte:108` | "전월실적" display uses raw spending, not actual optimizer `previousMonthSpending` | OPEN |
+| C27-01 | MEDIUM | High | `apps/web/src/components/dashboard/SavingsComparison.svelte:73-76` | `savingsPct` division by zero when `bestSingleCard.totalReward` is 0 — Infinity mapped to 0 hides legitimate improvement | OPEN |
+| C27-02 | LOW | Medium | `apps/web/src/components/dashboard/SavingsComparison.svelte:189` | Annual projection multiplies single-month savings by 12 without clarification | OPEN |
+| C27-03 | LOW | High | `apps/web/src/components/dashboard/TransactionReview.svelte:114` | AI categorization clears subcategory, losing specificity that could affect reward matching | OPEN |
+| C27-04 | LOW | High | `apps/web/src/components/upload/FileDropzone.svelte:129` | Duplicate file detection by name only — silently drops same-named different files | OPEN |
+| C27-05 | LOW | Medium | `packages/parser/src/detect.ts:116`, `apps/web/src/lib/parser/detect.ts:134` | `RegExp.test()` in loop is safe now but fragile — adding `/g` flag to patterns would break bank detection | OPEN |
 
 ---
 
 ## Prioritized Action Items
 
-1. **C26-01**: Track dominant rewardType per category bucket — preserve the type that contributes the most reward, not the last one
-2. **C26-02**: Add dot-notation subcategory keys to `CATEGORY_COLORS` or extract leaf ID for lookup — prevents subcategorized categories from showing as gray
-3. **C26-03**: Compute `previousMonthSpending` from editedTransactions in reoptimize, not from stale monthlyBreakdown
-4. **C26-04**: Extract `inferYear`/`parseDateToISO` into shared utility module (deferred — refactoring effort)
-5. **C26-05**: Display actual `previousMonthSpending` or clarify label as "전월 지출" vs "전월실적" (deferred — UX clarification)
+1. **C27-01**: Add special case for zero `bestSingleCard.totalReward` with positive `savingsVsSingleCard` — show "최적" badge instead of computing percentage
+2. **C27-02**: Add clarifying note to annual projection text that it is based on the latest month (deferred — UX polish)
+3. **C27-03**: Preserve subcategory after AI categorization when category is unchanged, or re-run matcher (deferred — AI integration complexity)
+4. **C27-04**: Add warning when file is skipped due to name collision (deferred — minor UX)
+5. **C27-05**: Document or guard against `/g` flag in BANK_SIGNATURES patterns (deferred — latent risk, not currently triggered)
 
 ---
 
