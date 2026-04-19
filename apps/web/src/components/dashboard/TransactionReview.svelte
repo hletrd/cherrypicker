@@ -120,8 +120,9 @@
     }
   }
 
-  // Sync from store when transactions change — always re-sync on new upload
+  // Sync from store when transactions change — re-sync on new upload (generation change)
   $effect(() => {
+    const gen = analysisStore.generation;
     const txs = analysisStore.transactions;
     if (txs.length > 0) {
       editedTxs = txs.map(tx => ({ ...tx }));

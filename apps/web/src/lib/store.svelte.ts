@@ -168,6 +168,7 @@ function createAnalysisStore() {
   let result = $state<AnalysisResult | null>(loadFromStorage());
   let loading = $state(false);
   let error = $state<string | null>(null);
+  let generation = $state(0);
 
   return {
     get result() {
@@ -178,6 +179,9 @@ function createAnalysisStore() {
     },
     get error() {
       return error;
+    },
+    get generation() {
+      return generation;
     },
 
     // Derived helpers
@@ -211,6 +215,7 @@ function createAnalysisStore() {
 
     setResult(r: AnalysisResult): void {
       result = r;
+      generation++;
       error = null;
       persistToStorage(r);
     },
@@ -223,6 +228,7 @@ function createAnalysisStore() {
         const fileArray = Array.isArray(files) ? files : [files];
         const analysisResult = await analyzeMultipleFiles(fileArray, options);
         result = analysisResult;
+        generation++;
         persistToStorage(analysisResult);
       } catch (e) {
         error = e instanceof Error ? e.message : '분석 중 문제가 생겼어요';
