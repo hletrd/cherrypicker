@@ -1,5 +1,16 @@
 // Load card data from static JSON files served by GitHub Pages
 
+/** Conditions that may apply to a reward rule. Matches the rules package
+ *  RewardConditions shape with specific known fields plus an index signature
+ *  for forward compatibility. */
+interface WebRewardConditions {
+  minTransaction?: number;
+  excludeOnline?: boolean;
+  specificMerchants?: string[];
+  note?: string;
+  [key: string]: unknown;
+}
+
 export interface CardRuleSet {
   card: {
     id: string;
@@ -32,7 +43,7 @@ export interface CardRuleSet {
       monthlyCap: number | null;
       perTransactionCap: number | null;
     }>;
-    conditions?: Record<string, unknown>;
+    conditions?: WebRewardConditions;
   }>;
   globalConstraints: {
     monthlyTotalDiscountCap: number | null;
