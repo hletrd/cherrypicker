@@ -164,7 +164,12 @@
     reoptimizing = true;
     try {
       await analysisStore.reoptimize(editedTxs);
-      hasEdits = false;
+      if (analysisStore.error) {
+        // Reoptimize failed — keep edits visible so user can retry
+        hasEdits = true;
+      } else {
+        hasEdits = false;
+      }
     } finally {
       reoptimizing = false;
     }

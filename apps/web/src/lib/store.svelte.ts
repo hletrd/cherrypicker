@@ -342,6 +342,9 @@ function createAnalysisStore() {
           generation++;
           persistToStorage(result);
           persistWarningKind = _persistWarningKind;
+        } else {
+          // Store was reset while reoptimizing — cannot apply edits
+          error = '분석 결과가 없어요. 다시 분석해 보세요.';
         }
       } catch (e) {
         error = e instanceof Error ? e.message : '재계산 중 문제가 생겼어요';
