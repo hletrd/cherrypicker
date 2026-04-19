@@ -255,7 +255,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
 
     if (installmentsCol !== -1 && cells[installmentsCol]) {
       const inst = parseInt(cells[installmentsCol] ?? '', 10);
-      if (!isNaN(inst) && inst > 0) tx.installments = inst;
+      if (!isNaN(inst) && inst > 1) tx.installments = inst;
     }
 
     if (categoryCol !== -1 && cells[categoryCol]) {
