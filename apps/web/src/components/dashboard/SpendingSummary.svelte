@@ -113,9 +113,13 @@
     </div>
   </div>
   {#if analysisStore.result?.monthlyBreakdown && analysisStore.result.monthlyBreakdown.length > 1}
+    {@const mb = analysisStore.result.monthlyBreakdown}
+    {@const prevMonth = mb[mb.length - 2]}
+    {@const latestMonth = mb[mb.length - 1]}
+    {@const prevLabel = (prevMonth && latestMonth && Math.abs(parseInt(latestMonth.month.slice(5, 7) ?? '0', 10) - parseInt(prevMonth.month.slice(5, 7) ?? '0', 10)) <= 1) ? '전월실적' : '이전 달 실적'}
     <div class="col-span-full mt-2 rounded-lg bg-[var(--color-bg)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
-      {analysisStore.result.monthlyBreakdown.length}개월 데이터 분석 ·
-      전월실적 {formatWon(analysisStore.result.monthlyBreakdown[analysisStore.result.monthlyBreakdown.length - 2]?.spending ?? 0)} 기준
+      {mb.length}개월 데이터 분석 ·
+      {prevLabel} {formatWon(prevMonth?.spending ?? 0)} 기준
     </div>
   {/if}
   {#if analysisStore.result && !dismissed}
