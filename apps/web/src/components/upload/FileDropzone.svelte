@@ -398,7 +398,7 @@
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)]">원</span>
         </div>
         {#if uploadedFiles.length >= 2}
-          <p class="mt-1 text-xs text-[var(--color-text-muted)]">여러 달 업로드 시 전전월 실적이 자동으로 사용돼요. 직접 입력하면 덮어써요.</p>
+          <p class="mt-1 text-xs text-[var(--color-text-muted)]">여러 달 업로드 시 전월 실적이 자동으로 사용돼요. 직접 입력하면 덮어써요.</p>
         {:else}
           <p class="mt-1 text-xs text-[var(--color-text-muted)]">입력하지 않으면 50만원으로 계산해요</p>
         {/if}

@@ -147,7 +147,7 @@ function parseDateToISO(raw: string): string {
   if (shortMatch) {
     const year = parseInt(shortMatch[1]!, 10);
     const fullYear = year >= 50 ? 1900 + year : 2000 + year;
-    return `${fullYear}-${shortMatch[2]}-${shortMatch[3]}`;
+    return `${fullYear}-${shortMatch[2]!.padStart(2, '0')}-${shortMatch[3]!.padStart(2, '0')}`;
   }
 
   // Korean date formats
