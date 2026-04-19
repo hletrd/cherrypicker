@@ -31,6 +31,10 @@ interface LLMTransaction {
 }
 
 export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
+  if (typeof window !== 'undefined') {
+    throw new Error('LLM fallback is not available in browser environments');
+  }
+
   const apiKey = process.env['ANTHROPIC_API_KEY'];
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다. LLM 폴백을 사용할 수 없습니다.');
@@ -47,17 +51,20 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
   const timeout = setTimeout(() => controller.abort(), 30_000);
 
   try {
-  const message = await client.messages.create({
-    model,
-    max_tokens: 4096,
-    system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: 'user',
-        content: `다음은 신용카드 명세서에서 추출한 텍스트입니다. 거래 내역을 JSON 배열로 파싱해 주세요:\n\n${truncated}`,
-      },
-    ],
-  });
+  const message = await client.messages.create(
+    {
+      model,
+      max_tokens: 4096,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: 'user',
+          content: `다음은 신용카드 명세서에서 추출한 텍스트입니다. 거래 내역을 JSON 배열로 파싱해 주세요:\n\n${truncated}`,
+        },
+      ],
+    },
+    { signal: controller.signal },
+  );
 
   const responseText = message.content
     .filter((block) => block.type === 'text')
