@@ -97,9 +97,12 @@ type PersistedAnalysisResult = Pick<
  *  1MB headroom for other keys within the typical 5MB per-origin limit). */
 const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
 
-/** Set to true when sessionStorage persistence partially or fully failed.
+/** Set when sessionStorage persistence partially or fully failed.
+ *  - 'truncated': transactions omitted due to size limit
+ *  - 'corrupted': save failed entirely (quota exceeded) or loaded data failed validation
  *  Read by the store to inform the user that their data may not survive a tab close. */
-let _persistWarning = false;
+type PersistWarningKind = 'truncated' | 'corrupted' | null;
+let _persistWarningKind: PersistWarningKind = null;
 
 function persistToStorage(data: AnalysisResult): void {
   try {
@@ -121,14 +124,14 @@ function persistToStorage(data: AnalysisResult): void {
         // Transactions are the largest field — omit them if over budget
         const withoutTxs: PersistedAnalysisResult = { ...persisted, transactions: undefined };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(withoutTxs));
-        _persistWarning = true; // Data was truncated — transactions not saved
+        _persistWarningKind = 'truncated'; // Data was truncated — transactions not saved
       } else {
         sessionStorage.setItem(STORAGE_KEY, serialized);
-        _persistWarning = false; // Full save succeeded
+        _persistWarningKind = null; // Full save succeeded
       }
     }
   } catch {
-    _persistWarning = true; // quota exceeded or SSR — save failed entirely
+    _persistWarningKind = 'corrupted'; // quota exceeded or SSR — save failed entirely
   }
 }
 
@@ -143,6 +146,12 @@ function isValidTx(tx: any): tx is CategorizedTx {
     typeof tx.category === 'string'
   );
 }
+
+/** Track the persist warning kind detected during loadFromStorage.
+ *  - 'truncated': transactions key was absent (omitted during save due to size)
+ *  - 'corrupted': transactions key existed but all entries failed validation
+ */
+let _loadPersistWarningKind: PersistWarningKind = null;
 
 function loadFromStorage(): AnalysisResult | null {
   try {
@@ -165,6 +174,11 @@ function loadFromStorage(): AnalysisResult | null {
         if (Array.isArray(parsed.transactions)) {
           const validTxs = parsed.transactions.filter(isValidTx);
           transactions = validTxs.length > 0 ? validTxs : undefined;
+          // If the transactions array existed but all entries failed validation,
+          // that's data corruption rather than truncation
+          if (validTxs.length === 0 && parsed.transactions.length > 0) {
+            _loadPersistWarningKind = 'corrupted';
+          }
         }
 
         return {
@@ -212,7 +226,11 @@ function createAnalysisStore() {
   let generation = $state(0);
   // Set when sessionStorage persistence was partial (transactions truncated)
   // or failed entirely (quota exceeded). Reset on successful full save.
-  let persistWarning = $state(result !== null && result.transactions === undefined);
+  let persistWarningKind = $state<PersistWarningKind>(
+    result !== null && result.transactions === undefined
+      ? (_loadPersistWarningKind ?? 'truncated')
+      : null
+  );
 
   return {
     get result() {
@@ -228,7 +246,10 @@ function createAnalysisStore() {
       return generation;
     },
     get persistWarning(): boolean {
-      return persistWarning;
+      return persistWarningKind !== null;
+    },
+    get persistWarningKind(): PersistWarningKind {
+      return persistWarningKind;
     },
 
     // Derived helpers
@@ -265,7 +286,7 @@ function createAnalysisStore() {
       generation++;
       error = null;
       persistToStorage(r);
-      persistWarning = _persistWarning;
+      persistWarningKind = _persistWarningKind;
     },
 
     async analyze(files: File | File[], options?: AnalyzeOptions): Promise<void> {
@@ -278,7 +299,7 @@ function createAnalysisStore() {
         result = analysisResult;
         generation++;
         persistToStorage(analysisResult);
-        persistWarning = _persistWarning;
+        persistWarningKind = _persistWarningKind;
       } catch (e) {
         error = e instanceof Error ? e.message : '분석 중 문제가 생겼어요';
         result = null;
@@ -296,7 +317,7 @@ function createAnalysisStore() {
           result = { ...result, transactions: editedTransactions, optimization };
           generation++;
           persistToStorage(result);
-          persistWarning = _persistWarning;
+          persistWarningKind = _persistWarningKind;
         }
       } catch (e) {
         error = e instanceof Error ? e.message : '재계산 중 문제가 생겼어요';
@@ -309,8 +330,8 @@ function createAnalysisStore() {
       result = null;
       error = null;
       loading = false;
-      persistWarning = false;
-      _persistWarning = false;
+      persistWarningKind = null;
+      _persistWarningKind = null;
       clearStorage();
     },
   };
