@@ -872,3 +872,25 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `packages/parser/src/csv/index.ts:56-65`
 - **Reason for deferral:** The content-signature detection loop uses `catch { continue; }` which silently drops errors from bank-specific adapters. The web-side equivalent at `apps/web/src/lib/parser/csv.ts:974-980` logs the error with `console.warn`. If all adapters fail, the user gets no feedback about why bank-specific parsing failed, but the generic parser provides a reasonable fallback. Adding diagnostic logging is a minor improvement with no functional impact.
 - **Exit criterion:** If users report confusion about why bank-specific parsing failed with no diagnostic output, add `console.warn` or error collection in the catch block to match the web-side behavior.
+
+---
+
+## Deferred Findings (Cycle 43)
+
+### D-108: `calculateRewards` applies `perTxCap` to rate-based reward when both rate and fixedAmount are present
+
+- **Original finding:** C43-L01
+- **Severity:** LOW (edge case)
+- **Confidence:** Medium
+- **File+line:** `packages/core/src/calculator/reward.ts:259-273`
+- **Reason for deferral:** When a rule has both `normalizedRate > 0` AND `hasFixedReward`, the code logs a warning and uses rate-based reward only. The `perTxCap` is applied to the rate-based reward, but may have been calibrated for a fixed-amount reward. In practice, none of the 81 YAML files have both `rate` and `fixedAmount` on the same tier, so this is a theoretical concern. The existing warning at line 265-269 already flags this case.
+- **Exit criterion:** If a YAML file is created with both rate and fixedAmount on the same tier, either add both rewards before applying perTxCap, or make the Zod schema enforce mutual exclusivity.
+
+### D-109: Web-side encoding detection silently swallows errors with `catch { continue; }`
+
+- **Original finding:** C43-L04 (same class as D-107/C42-L02)
+- **Severity:** LOW (diagnostics)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/index.ts:34`
+- **Reason for deferral:** The web-side `parseFile` tries multiple encodings (utf-8, euc-kr, cp949) in a loop with `catch { continue; }`. If all decodings fail, the fallback at line 37 uses utf-8 which may produce garbled text. The user gets no feedback that encoding detection failed. Same class as D-107 (silent error swallowing).
+- **Exit criterion:** If users report garbled transaction data with no error message after uploading, add a warning error to the ParseResult when `bestReplacements` is still very high after all encoding attempts.

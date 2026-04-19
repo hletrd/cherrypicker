@@ -7,10 +7,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 function formatWon(amount: number): string {
+  if (!Number.isFinite(amount)) return '0원';
   return `${amount.toLocaleString('ko-KR')}원`;
 }
 
 function formatRate(rate: number): string {
+  if (!Number.isFinite(rate)) return '0.00%';
   return `${(rate * 100).toFixed(2)}%`;
 }
 

@@ -1,27 +1,27 @@
-# Review Aggregate -- 2026-04-19 (Cycle 42)
+# Review Aggregate -- 2026-04-19 (Cycle 43)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle42-comprehensive.md` (multi-angle comprehensive review)
+- `.context/reviews/2026-04-19-cycle43-comprehensive.md` (multi-angle comprehensive review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-41 per-agent and aggregate files
+- All cycle 1-42 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-C42-L01 is a carry-over from C41 sweep item 17 (web-side PDF bare catch). Already tracked as a known inconsistency.
-C42-L02 is a carry-over from C41 sweep item 19 (server-side CSV silent error swallowing). Already tracked as a known limitation.
-
-No new findings that were not already identified in prior cycles.
+C43-L01 is a refinement of the existing warning at `reward.ts:265-269` (both rate and fixedAmount). Not previously tracked as a separate finding.
+C43-L02/C43-L03 are new findings about `formatWon`/`formatRate` NaN guards in the report generator. Not previously reported.
+C43-L04 is same class as C42-L02 (silent error swallowing). Not a duplicate but similar pattern.
 
 ---
 
-## Verification of Cycle 41 Fixes
+## Verification of Cycle 42 Fixes
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C41-01 | **FIXED** | All 10 server-side CSV bank adapters now have `if (isNaN(amount))` guard with `continue` before `transactions.push()`. Verified: hyundai.ts:99, samsung.ts:101, shinhan.ts:98, kb.ts:98, lotte.ts:98, hana.ts:98, woori.ts:98, nh.ts:98, ibk.ts:98, bc.ts:98. |
+| C42-L01 | **STILL DEFERRED** | Web-side PDF `tryStructuredParse` bare `catch {}` still at `apps/web/src/lib/parser/pdf.ts:284` |
+| C42-L02 | **STILL DEFERRED** | Server-side CSV `parseCSV` silent error swallowing still at `packages/parser/src/csv/index.ts:56-65` |
 
 ---
 
@@ -30,15 +30,19 @@ No new findings that were not already identified in prior cycles.
 | Finding | Status | Evidence |
 |---|---|---|
 | D-99 | **STILL FIXED** | `apps/web/src/lib/store.svelte.ts:147-148` has `Number.isFinite(tx.amount) && tx.amount > 0` |
+| D-28 | **STILL FIXED** | `apps/web/src/components/upload/FileDropzone.svelte:206` uses `Math.round(Number(v))` with guards |
+| D-102 | **RESOLVED** | `packages/core/src/index.ts:18` now exports `buildCategoryKey` |
 
 ---
 
-## Active Findings (New in Cycle 42)
+## Active Findings (New in Cycle 43)
 
 | ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C42-L01 | LOW | High | `apps/web/src/lib/parser/pdf.ts:284` | Web-side PDF tryStructuredParse catches all exceptions (bare catch {}) while server-side only catches specific types | DEFERRED (carry-over) |
-| C42-L02 | LOW | High | `packages/parser/src/csv/index.ts:56-65` | Server-side CSV parseCSV silently swallows adapter errors during content-signature detection | DEFERRED (carry-over) |
+| C43-L01 | LOW | Medium | `packages/core/src/calculator/reward.ts:259-273` | When both rate and fixedAmount are present, perTxCap applied to rate-based reward may be miscalibrated -- no current YAML files trigger this | DEFERRED (theoretical) |
+| C43-L02 | LOW | High | `packages/viz/src/report/generator.ts:9-11` | Server-side `formatWon` lacks `Number.isFinite` guard | NEW -- trivial fix |
+| C43-L03 | LOW | High | `packages/viz/src/report/generator.ts:13-15` | Server-side `formatRate` lacks `Number.isFinite` guard | NEW -- trivial fix |
+| C43-L04 | LOW | High | `apps/web/src/lib/parser/index.ts:34` | Web-side encoding detection silently swallows errors | DEFERRED (same class as C42-L02) |
 
 ---
 
