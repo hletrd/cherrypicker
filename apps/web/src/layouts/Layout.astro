@@ -46,7 +46,7 @@ function isActive(href: string) {
       TODO: Migrate to hash-based CSP (compute SHA256 of inline scripts at
       build time) to fully remove 'unsafe-inline' from script-src.
     -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'strict-dynamic' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; worker-src 'self' blob:; connect-src 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; worker-src 'self' blob:; connect-src 'self';" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <title>{title} | CherryPicker</title>
