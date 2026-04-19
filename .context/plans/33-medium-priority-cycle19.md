@@ -89,5 +89,5 @@ function formatPeriod(period: { start: string; end: string } | undefined): strin
 
 ## Progress
 
-- [ ] Task 1: Derive availableIssuers from filtered cards
-- [ ] Task 2: Use date.slice for period formatting robustness
+- [x] Task 1: Derive availableIssuers from filtered cards
+- [x] Task 2: Use date.slice for period formatting robustness

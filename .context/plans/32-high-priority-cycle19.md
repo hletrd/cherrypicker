@@ -112,5 +112,5 @@ for (const node of parsed.categoryNodes) {
 
 ## Progress
 
-- [ ] Task 1: Fix reoptimize previousMonthSpending
-- [ ] Task 2: Add dot-notation subcategory keys to categoryLabels
+- [x] Task 1: Fix reoptimize previousMonthSpending
+- [x] Task 2: Add dot-notation subcategory keys to categoryLabels
