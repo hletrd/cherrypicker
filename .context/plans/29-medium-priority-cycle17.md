@@ -117,7 +117,7 @@ Note: This requires a prior `astro build` step. The `test:e2e` script already ru
 
 ## Progress
 
-- [ ] Task 1: Downgrade ILP stub warning to debug level
-- [ ] Task 2: Add g-flag safety comment on fallbackAmountPattern
-- [ ] Task 3: Add rate source clarification comment in buildAssignments
-- [ ] Task 4: Switch E2E tests to production preview server
+- [x] Task 1: Downgrade ILP stub warning to debug level
+- [x] Task 2: Add g-flag safety comment on fallbackAmountPattern (included in US-001 commit)
+- [x] Task 3: Add rate source clarification comment in buildAssignments
+- [x] Task 4: Switch E2E tests to production preview server

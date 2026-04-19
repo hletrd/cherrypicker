@@ -103,6 +103,6 @@ Then use `this.knownCategories.has(normalised)` for O(1) lookup.
 
 ## Progress
 
-- [ ] Task 1: Fix parseAmount to return 0 instead of NaN
-- [ ] Task 2: Add warning when no performance tier is matched
-- [ ] Task 3: Validate rawCategory normalization against taxonomy
+- [x] Task 1: Fix parseAmount to return 0 instead of NaN
+- [x] Task 2: Add warning when no performance tier is matched
+- [x] Task 3: Validate rawCategory normalization against taxonomy
