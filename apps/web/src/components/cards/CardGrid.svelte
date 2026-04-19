@@ -60,9 +60,9 @@
     if (sortOrder === 'name') {
       result.sort((a, b) => a.nameKo.localeCompare(b.nameKo, 'ko'));
     } else if (sortOrder === 'fee-asc') {
-      result.sort((a, b) => a.annualFee.domestic - b.annualFee.domestic);
+      result.sort((a, b) => a.annualFee.domestic - b.annualFee.domestic || a.annualFee.international - b.annualFee.international);
     } else if (sortOrder === 'fee-desc') {
-      result.sort((a, b) => b.annualFee.domestic - a.annualFee.domestic);
+      result.sort((a, b) => b.annualFee.domestic - a.annualFee.domestic || b.annualFee.international - a.annualFee.international);
     } else if (sortOrder === 'rewards') {
       result.sort((a, b) => b.rewardCategories.length - a.rewardCategories.length);
     }
