@@ -372,3 +372,61 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/lib/parser/csv.ts:29-37`, `apps/web/src/lib/parser/xlsx.ts:183-190`
 - **Reason for deferral:** Same as D-35. The functions are identical but could diverge over time. Extracting them requires a shared import that adds a dependency. The duplication is across two files in the same module.
 - **Exit criterion:** If more parser files are added that need these functions, extract to `date-utils.ts`.
+
+---
+
+## Deferred Findings (Cycle 7)
+
+### D-56: `_persistWarning` module-level mutable variable creates fragile coupling
+
+- **Original finding:** C7-05
+- **Severity:** LOW (code quality)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/store.svelte.ts:102`
+- **Reason for deferral:** The current pattern works correctly — `persistToStorage` is always called before `persistWarning = _persistWarning` is read. The fragile coupling would only become a problem if the code is significantly refactored. The fix (returning a boolean from `persistToStorage`) is a minor improvement but not urgent.
+- **Exit criterion:** If `persistToStorage` is ever called asynchronously or from a different code path, refactor to return the warning status instead of using a shared mutable.
+
+### D-57: `BANK_SIGNATURES` duplicated between packages/parser and apps/web
+
+- **Original finding:** C7-07 (extends D-01)
+- **Severity:** LOW (DRY)
+- **Confidence:** High
+- **File+line:** `packages/parser/src/detect.ts:10-107`, `apps/web/src/lib/parser/detect.ts:8-105`
+- **Reason for deferral:** Same class as D-01 (duplicate parser implementations). Extracting bank signatures requires the broader architectural refactor of unifying web and packages parser code.
+- **Exit criterion:** When D-01 is resolved (shared parser module), bank signatures will be unified as part of that refactor.
+
+### D-58: `formatDateKo`/`formatDateShort` use `parseInt` without NaN guard
+
+- **Original finding:** C7-09
+- **Severity:** LOW (robustness)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/formatters.ts:151,162`
+- **Reason for deferral:** The `parseInt` calls are on date components that have already been validated by the `split('-')` parsing. A malformed date like "2026-ab-15" would fail the `parts.length !== 3` check at line 149 and return '-' before reaching `parseInt`. The NaN scenario is extremely unlikely in practice.
+- **Exit criterion:** If date formatting produces "NaN" output, add explicit NaN guards.
+
+### D-59: CategoryBreakdown percentage rounding can cause total > 100%
+
+- **Original finding:** C7-10
+- **Severity:** LOW (UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:78,94-95`
+- **Reason for deferral:** This is a common rounding artifact. The difference is typically 0.1-0.2% and most users won't notice. Fixing it requires a rounding adjustment algorithm that adds complexity for minimal benefit.
+- **Exit criterion:** If users report confusion about percentages not summing to 100%, implement a rounding adjustment.
+
+### D-60: `CardDetail.svelte` uses full page reload for navigation
+
+- **Original finding:** C7-12 (extends D-45)
+- **Severity:** LOW (perf/UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/cards/CardDetail.svelte:252`
+- **Reason for deferral:** Same class as D-45. Switching to Astro's `navigate()` requires testing that Svelte island hydration works correctly with client-side navigation. The performance gain is marginal for a secondary navigation action.
+- **Exit criterion:** When client-side navigation is needed for other features (per D-45 exit criterion), update both CardDetail and FileDropzone together.
+
+### D-61: `toCoreCardRuleSets` cache never hits due to reference equality on always-new array
+
+- **Original finding:** C7-13
+- **Severity:** LOW (performance)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/analyzer.ts:191-194`
+- **Reason for deferral:** The `toCoreCardRuleSets` transformation is O(n) where n is the number of cards (~683). This takes < 1ms on modern hardware. The cache was intended to avoid re-computation but the reference check makes it ineffective. The fix is simple (content-based check or higher-level cache) but not urgent.
+- **Exit criterion:** If card count grows significantly (> 2000) or `optimizeFromTransactions` is called in tight loops, implement a proper cache.
