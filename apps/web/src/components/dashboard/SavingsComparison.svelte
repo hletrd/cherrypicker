@@ -170,9 +170,9 @@
     <!-- Right: Savings -->
     <div class="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-emerald-100 p-5 dark:from-green-950 dark:to-emerald-900/50">
       <div class="mb-3 text-xs font-medium text-green-700 dark:text-green-400">추가 절약</div>
-      <div class="text-3xl font-bold text-green-700 dark:text-green-400">+{formatWon(displayedSavings)}</div>
+      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 0 ? '+' : ''}{formatWon(displayedSavings)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
-        연간 약 {formatWon(opt.savingsVsSingleCard * 12)} 절약
+        연간 약 {formatWon(opt.savingsVsSingleCard * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'}
       </div>
       {#if savingsPct > 0}
         <div class="mt-2 inline-block rounded-full bg-green-200 dark:bg-green-800 px-2 py-0.5 text-xs font-semibold text-green-800 dark:text-green-200">
