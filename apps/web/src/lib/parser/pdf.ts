@@ -23,7 +23,7 @@ interface Column {
 function detectColumnBoundaries(lines: string[]): Column[] {
   if (lines.length === 0) return [];
 
-  const maxLen = Math.max(...lines.map((l) => l.length));
+  const maxLen = lines.reduce((max, l) => Math.max(max, l.length), 0);
   const charCount = new Array<number>(maxLen).fill(0);
 
   for (const line of lines) {
@@ -67,6 +67,7 @@ function parseTable(text: string): string[][] {
 
   const tableLines: string[] = [];
   let inTable = false;
+  let consecutiveBlankLines = 0;
 
   for (const line of lines) {
     const hasDate = DATE_PATTERN.test(line);
@@ -74,14 +75,18 @@ function parseTable(text: string): string[][] {
 
     if (hasDate || hasAmount) {
       inTable = true;
+      consecutiveBlankLines = 0;
     }
 
     if (inTable && line.trim()) {
       tableLines.push(line);
-    }
-
-    if (inTable && !line.trim()) {
-      if (tableLines.length > 3) break;
+      consecutiveBlankLines = 0;
+    } else if (inTable && !line.trim()) {
+      consecutiveBlankLines++;
+      // Only break after 2+ consecutive blank lines — a single blank line
+      // may be a gap within the table (e.g., between monthly groups in
+      // Korean credit card PDFs), not the end of the table.
+      if (consecutiveBlankLines >= 2 && tableLines.length > 3) break;
     }
   }
 
