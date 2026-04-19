@@ -4,6 +4,8 @@ export function getIssuerFromCardId(cardId: string): string {
 
 export function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
+  // Normalize negative zero to positive zero so we never render "-0원"
+  if (amount === 0) amount = 0;
   return amount.toLocaleString('ko-KR') + '원';
 }
 
