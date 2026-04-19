@@ -112,7 +112,11 @@ function getCalcFn(type: string): RewardCalcFn {
 
 function normalizeRate(ruleType: string, rate: number | null): number | null {
   if (rate === null) return null;
-  // All YAML rates are stored in percentage form (e.g., 1.5 means 1.5%)
+  // All YAML rates are stored in percentage form (e.g., 1.5 means 1.5%).
+  // For mileage rules, the rate represents Won-equivalent percentage return
+  // rather than literal "miles per 1,500 Won". For example, rate: 1.0 means
+  // "1% Won-equivalent return as mileage value" which yields ~15 Won per
+  // 1,500 Won transaction (approximately 1 mile at ~15 Won/mile valuation).
   return rate / 100;
 }
 
