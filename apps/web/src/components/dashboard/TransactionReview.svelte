@@ -110,8 +110,14 @@
         if (result.category !== 'uncategorized') {
           const tx = editedTxs.find(t => t.id === txId);
           if (tx) {
+            // Only clear subcategory when the AI changes the category to a
+            // different one — if the category is unchanged, the existing
+            // subcategory (from keyword matching) is still valid and more
+            // specific than the AI's category-only result.
+            if (tx.category !== result.category) {
+              tx.subcategory = undefined;
+            }
             tx.category = result.category;
-            tx.subcategory = undefined; // Previous subcategory is invalid after category change
             tx.confidence = result.confidence;
             changed++;
           }
