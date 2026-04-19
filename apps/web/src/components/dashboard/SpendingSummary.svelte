@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon } from '../../lib/formatters.js';
+  import { formatWon, formatRatePrecise } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let dismissed = $state(false);
@@ -91,7 +91,7 @@
         <span>실효 혜택률</span>
       </div>
       <div class="mt-1 text-2xl font-bold text-purple-700 dark:text-purple-400">
-        {analysisStore.optimization ? (analysisStore.optimization.effectiveRate * 100).toFixed(2) + '%' : '-'}
+        {analysisStore.optimization ? formatRatePrecise(analysisStore.optimization.effectiveRate) : '-'}
       </div>
     </div>
   </div>
@@ -107,9 +107,13 @@
       <button class="ml-auto shrink-0 text-amber-500 hover:text-amber-700" onclick={() => { dismissed = true; try { localStorage.setItem('cherrypicker:dismissed-warning', '1'); } catch {} }}>닫기</button>
     </div>
   {/if}
-  {#if analysisStore.persistWarning}
+  {#if analysisStore.persistWarningKind === 'truncated'}
     <div class="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800">
       <span>데이터가 커서 거래 내역이 저장되지 않았어요. 탭을 닫으면 분석 결과도 사라져요.</span>
+    </div>
+  {:else if analysisStore.persistWarningKind === 'corrupted'}
+    <div class="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800">
+      <span>거래 내역을 불러오지 못했어요. 다시 분석해 보세요.</span>
     </div>
   {/if}
 {:else}
