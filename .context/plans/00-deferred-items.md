@@ -788,3 +788,43 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/lib/store.svelte.ts:139-149`
 - **Reason for deferral:** `isValidTx` checks that `amount` is of type `number` but doesn't validate that it's finite or positive. A restored transaction with `amount: NaN` would pass validation and potentially display "NaN원" in the UI. However, `loadFromStorage` validates the broader structure before reaching `isValidTx`, and the parsing code already guards against NaN amounts. The risk of NaN reaching `isValidTx` is very low.
 - **Exit criterion:** If `NaN원` is ever displayed in the UI after sessionStorage restoration, add `Number.isFinite(tx.amount)` to the validation check.
+
+---
+
+## Deferred Findings (Cycle 16)
+
+### D-100: `Taxonomy.findCategory` iterates all keywords for every substring/fuzzy search
+
+- **Original finding:** C16-05
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `packages/core/src/categorizer/taxonomy.ts:68-74, 90-98`
+- **Reason for deferral:** Same class as D-09. With ~2000 keywords and typical transaction counts, the O(n*m) per-merchant cost is acceptable. A trie-based prefix index would optimize this but adds significant complexity.
+- **Exit criterion:** If keyword count exceeds 10,000 or categorization latency becomes noticeable, implement a trie-based prefix index.
+
+### D-101: `SavingsComparison` count-up animation can flicker on rapid re-renders
+
+- **Original finding:** C16-07
+- **Severity:** LOW (UX)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/SavingsComparison.svelte:53-69`
+- **Reason for deferral:** The `$effect` cleanup correctly cancels the previous animation frame. The flicker is only noticeable during rapid reoptimize cycles, which are user-initiated and infrequent. The animation restart from the current displayed value is correct behavior.
+- **Exit criterion:** If users report janky animation during reoptimize, add a debounce or transition smoothing.
+
+### D-102: `buildCategoryKey` not re-exported from `@cherrypicker/core` index
+
+- **Original finding:** C16-08
+- **Severity:** LOW (API gap)
+- **Confidence:** High
+- **File+line:** `packages/core/src/index.ts`
+- **Reason for deferral:** Scheduled for implementation in Plan 27 Task 2. Deferring in case that plan is not completed this cycle.
+- **Exit criterion:** When Plan 27 Task 2 is implemented, this is automatically resolved.
+
+### D-103: `conditions` typed as `Record<string, unknown>` in web but `RewardConditions` in core
+
+- **Original finding:** C16-09
+- **Severity:** LOW (typing)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/cards.ts:35`
+- **Reason for deferral:** Scheduled for implementation in Plan 27 Task 3. The loose typing is safe because `cards.json` is validated by the Zod schema at build time. Deferring in case that plan is not completed this cycle.
+- **Exit criterion:** When Plan 27 Task 3 is implemented, this is automatically resolved.
