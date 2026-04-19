@@ -176,6 +176,22 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
   const tier = selectTier(performanceTiers, previousMonthSpending);
   const tierId = tier?.id ?? 'none';
 
+  // Warn when the card has performance tiers but none matched — this means
+  // the user's previousMonthSpending is below the lowest tier's threshold
+  // and all rewards will be 0. This is most likely to affect CLI/standalone
+  // usage where previousMonthSpending defaults to 0.
+  if (tierId === 'none' && performanceTiers.length > 0) {
+    const minRequired = performanceTiers.reduce(
+      (min, t) => Math.min(min, t.minSpending),
+      Infinity,
+    );
+    console.warn(
+      `[cherrypicker] No performance tier matched for card "${card.id}" ` +
+        `with previousMonthSpending=${previousMonthSpending}. ` +
+        `All rewards will be 0. Minimum tier requires ${minRequired} Won.`,
+    );
+  }
+
   // 2. Track monthly caps per rule and global while accumulating per-category outputs
   const ruleMonthUsed = new Map<string, number>();
   const dayRewardTracker = new Set<string>();
