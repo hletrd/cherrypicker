@@ -49,6 +49,7 @@
   let errorMessage = $state('');
   let bank = $state('');
   let previousSpending = $state<string>('');
+  let showAllBanks = $state(false);
 
   // Step 1=파일선택, 2=카드사선택, 3=분석중, 4=완료
   let currentStep = $derived.by(() => {
@@ -94,6 +95,10 @@
     { value: 'kdb', label: 'KDB산업' },
     { value: 'epost', label: '우체국' },
   ];
+
+  // Top 8 banks shown by default; rest revealed via "더보기" button
+  const TOP_BANKS = ALL_BANKS.slice(0, 8);
+  const displayedBanks = $derived(showAllBanks ? ALL_BANKS : TOP_BANKS);
 
   function fileIconName(file: File): string {
     const name = file.name.toLowerCase();
@@ -350,7 +355,7 @@
           >
             자동 인식
           </button>
-          {#each ALL_BANKS as b}
+          {#each displayedBanks as b}
             <button
               class="rounded-full border px-3 py-1.5 text-xs font-medium transition-all
                 {bank === b.value
@@ -361,6 +366,14 @@
               {b.label}
             </button>
           {/each}
+          {#if !showAllBanks && ALL_BANKS.length > TOP_BANKS.length}
+            <button
+              class="rounded-full border border-dashed border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all"
+              onclick={() => (showAllBanks = true)}
+            >
+              더보기 ({ALL_BANKS.length - TOP_BANKS.length})
+            </button>
+          {/if}
         </div>
       </div>
 
