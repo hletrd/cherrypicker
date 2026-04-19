@@ -2,10 +2,14 @@ import Table from 'cli-table3';
 import type { OptimizationResult } from '@cherrypicker/core';
 
 function formatWon(amount: number): string {
+  if (!Number.isFinite(amount)) return '0원';
+  // Normalize negative zero to positive zero so we never render "-0원"
+  if (amount === 0) amount = 0;
   return `${amount.toLocaleString('ko-KR')}원`;
 }
 
 function formatRate(rate: number): string {
+  if (!Number.isFinite(rate)) return '0.00%';
   return `${(rate * 100).toFixed(2)}%`;
 }
 
