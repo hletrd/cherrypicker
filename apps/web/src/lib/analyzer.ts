@@ -282,6 +282,12 @@ export async function analyzeMultipleFiles(
     ? { start: optimizedDates[0]!, end: optimizedDates[optimizedDates.length - 1]! }
     : undefined;
 
+  // Note: `transactions` includes ALL months for display/editing, but the
+  // optimization only covers the latest month. When reoptimize is called
+  // with edited transactions, it includes all months. This is acceptable
+  // because non-latest-month transactions still contribute to per-card
+  // previousMonthSpending calculations and don't distort the optimization
+  // — they just add more data for the optimizer to consider.
   return {
     success: true,
     bank,
