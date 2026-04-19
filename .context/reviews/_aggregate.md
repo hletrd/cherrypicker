@@ -29,6 +29,9 @@ All prior cycle 3, 4, 47-50 findings are confirmed fixed:
 | C4R-M01 | **FIXED** | `report.ts:143` calls `printSpendingSummary(categorized, categoryLabels)` |
 | C4R-M02 | **FIXED** | Server-side CSV adapter `parseAmount` returns 0 instead of NaN |
 | C4R-L01 | **FIXED** | Content-signature adapter failures collected into `ParseResult.errors` |
+| C5-M01 | **FIXED** | Server-side CSV `parseAmount` now returns NaN on parse failure, callers use `Number.isNaN()` |
+| C5-M02 | **FIXED** | All `isNaN()` replaced with `Number.isNaN()` in server-side CSV adapters |
+| C5-L02 | **FIXED** | Unused `nextCount` variable removed from `table-parser.ts` |
 | C47-L01 | **STILL FIXED** | Terminal `formatWon` has `Number.isFinite` guard + negative-zero normalization |
 | C47-L02 | **STILL FIXED** | Terminal `formatRate` has `Number.isFinite` guard |
 | C49-M01 | **STILL FIXED** | `llm-fallback.ts:84` has `let parsed: LLMTransaction[] = [];` |
@@ -69,10 +72,10 @@ All prior cycle 3, 4, 47-50 findings are confirmed fixed:
 
 | ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C5-M01 | MEDIUM | High | `packages/parser/src/csv/*.ts` (all 10 adapters) | Server-side CSV `parseAmount` returns 0 on NaN but callers still check `isNaN()` -- dead code, invalid amounts silently become 0-amount transactions | NEW, needs fix |
-| C5-M02 | MEDIUM | High | `packages/parser/src/csv/*.ts` (all 10 adapters) | `isNaN()` used instead of `Number.isNaN()` -- inconsistent with PDF parser and web-side | NEW, consistency fix |
+| C5-M01 | MEDIUM | High | `packages/parser/src/csv/*.ts` (all 10 adapters) | Server-side CSV `parseAmount` returns 0 on NaN but callers still check `isNaN()` -- dead code, invalid amounts silently become 0-amount transactions | **FIXED** -- parseAmount now returns NaN, callers use Number.isNaN |
+| C5-M02 | MEDIUM | High | `packages/parser/src/csv/*.ts` (all 10 adapters) | `isNaN()` used instead of `Number.isNaN()` -- inconsistent with PDF parser and web-side | **FIXED** -- all isNaN() replaced with Number.isNaN() |
 | C5-L01 | LOW | High | `packages/parser/src/csv/*.ts` vs `apps/web/src/lib/parser/csv.ts` | Duplicate parser logic with inconsistent date coverage (already D-01) | Already deferred |
-| C5-L02 | LOW | High | `packages/parser/src/pdf/table-parser.ts:37` | Unused `nextCount` variable (dead code) | NEW, low priority |
+| C5-L02 | LOW | High | `packages/parser/src/pdf/table-parser.ts:37` | Unused `nextCount` variable (dead code) | **FIXED** -- removed unused variable |
 
 ---
 
