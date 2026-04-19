@@ -82,10 +82,22 @@ export class CategoryTaxonomy {
     }
 
     // 3. Fuzzy match — merchant name is contained in keyword (partial reverse)
+    // Prefer the shortest keyword that contains the merchant name
+    // (shorter keyword = tighter fit, more likely correct)
+    let bestFuzzy: { category: string; subcategory?: string; kwLen: number } | undefined;
     for (const [kw, mapping] of this.keywordMap) {
       if (kw.includes(lower)) {
-        return { ...mapping, confidence: 0.6 };
+        if (!bestFuzzy || kw.length < bestFuzzy.kwLen) {
+          bestFuzzy = { ...mapping, kwLen: kw.length };
+        }
       }
+    }
+    if (bestFuzzy) {
+      return {
+        category: bestFuzzy.category,
+        subcategory: bestFuzzy.subcategory,
+        confidence: 0.6,
+      };
     }
 
     return { category: 'uncategorized', confidence: 0.0 };
