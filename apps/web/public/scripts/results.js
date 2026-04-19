@@ -11,10 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const cardsNeeded = document.getElementById('stat-cards-needed');
 
         if (totalSpending) totalSpending.textContent = formatWon(opt.totalSpending);
-        if (totalSavings) totalSavings.textContent = '+' + formatWon(opt.savingsVsSingleCard);
+        if (totalSavings) totalSavings.textContent = (opt.savingsVsSingleCard >= 0 ? '+' : '') + formatWon(opt.savingsVsSingleCard);
         if (cardsNeeded) {
           const uniqueCards = new Set(opt.assignments.map((assignment) => assignment.assignedCardId)).size;
           cardsNeeded.textContent = uniqueCards + '장';
+        }
+
+        // Update savings label to "추가 비용" when cherry-picking is worse
+        const savingsLabel = document.getElementById('stat-savings-label');
+        if (savingsLabel && opt.savingsVsSingleCard < 0) {
+          savingsLabel.textContent = '추가 비용';
         }
 
         // Show data content, hide empty state
