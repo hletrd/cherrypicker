@@ -828,3 +828,25 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/lib/cards.ts:35`
 - **Reason for deferral:** Scheduled for implementation in Plan 27 Task 3. The loose typing is safe because `cards.json` is validated by the Zod schema at build time. Deferring in case that plan is not completed this cycle.
 - **Exit criterion:** When Plan 27 Task 3 is implemented, this is automatically resolved.
+
+---
+
+## Deferred Findings (Cycle 19)
+
+### D-104: Dashboard renders both empty state and data content divs — unnecessary hydration
+
+- **Original finding:** C19-05 (extends D-38)
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `apps/web/src/pages/dashboard.astro:31-119`
+- **Reason for deferral:** Same as D-38. The fix requires restructuring the dashboard page to conditionally render the data content section. Using `client:visible` would avoid unnecessary hydration but requires testing that Svelte island hydration works correctly with lazy loading. The performance impact is minimal (one extra `loadCategories()` fetch) and the user experience is not affected.
+- **Exit criterion:** If the dashboard page has noticeable load time issues or unnecessary network requests, switch to `client:visible` or conditional rendering.
+
+### D-105: CardDetail fetch has no AbortController cleanup
+
+- **Original finding:** C19-06 (extends D-62)
+- **Severity:** LOW (robustness)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/cards/CardDetail.svelte:55-70`
+- **Reason for deferral:** Same as D-62. The `fetchGeneration` counter correctly prevents stale responses. Adding AbortController would be a nice improvement but the network waste is minimal (one fetch per card navigation).
+- **Exit criterion:** If CardDetail fetches cause noticeable performance issues, add AbortController cleanup.
