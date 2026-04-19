@@ -350,19 +350,35 @@ function createAnalysisStore() {
           ? editedTransactions.filter(tx => tx.date.startsWith(latestMonth))
           : editedTransactions;
 
-        // Compute previousMonthSpending from monthlyBreakdown to match the
-        // initial analysis behavior (previous month's spending determines
-        // performance tier, not the same month being optimized). Without this,
-        // optimizeFromTransactions would compute previousMonthSpending from
-        // the same transactions being optimized — a circular dependency that
-        // produces incorrect tier qualification for multi-month uploads.
+        // Recalculate monthlyBreakdown from the edited transactions FIRST so
+        // that previousMonthSpending reflects the user's edits (not stale data
+        // from the initial analysis). Without this, editing a previous month's
+        // transaction wouldn't affect the previousMonthSpending used for the
+        // optimizer's performance tier calculation.
+        const monthlySpending = new Map<string, number>();
+        const monthlyTxCount = new Map<string, number>();
+        for (const tx of editedTransactions) {
+          const month = tx.date.slice(0, 7);
+          monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
+          monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
+        }
+        const updatedMonthlyBreakdown = [...monthlySpending.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([month, spending]) => ({
+            month,
+            spending,
+            transactionCount: monthlyTxCount.get(month) ?? 0,
+          }));
+
+        // Compute previousMonthSpending from the FRESH monthly breakdown
+        // (derived from editedTransactions), not from the stale result.monthlyBreakdown.
         let previousMonthSpending: number | undefined;
-        if (result?.monthlyBreakdown && latestMonth) {
-          const months = result.monthlyBreakdown.map(m => m.month).sort();
+        if (latestMonth) {
+          const months = updatedMonthlyBreakdown.map(m => m.month).sort();
           const latestIdx = months.indexOf(latestMonth);
           if (latestIdx > 0) {
             const prevMonth = months[latestIdx - 1];
-            const prevData = result.monthlyBreakdown.find(m => m.month === prevMonth);
+            const prevData = updatedMonthlyBreakdown.find(m => m.month === prevMonth);
             previousMonthSpending = prevData?.spending;
           }
         }
@@ -374,22 +390,6 @@ function createAnalysisStore() {
         if (result) {
           // Keep all months in the transactions field for display/editing,
           // but the optimization only covers the latest month.
-          // Recalculate monthlyBreakdown from the edited transactions so
-          // per-month spending totals reflect any user edits (not stale).
-          const monthlySpending = new Map<string, number>();
-          const monthlyTxCount = new Map<string, number>();
-          for (const tx of editedTransactions) {
-            const month = tx.date.slice(0, 7);
-            monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
-            monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
-          }
-          const updatedMonthlyBreakdown = [...monthlySpending.entries()]
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([month, spending]) => ({
-              month,
-              spending,
-              transactionCount: monthlyTxCount.get(month) ?? 0,
-            }));
           result = {
             ...result,
             transactions: editedTransactions,
