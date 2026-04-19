@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import type { OptimizationResult, CategorizedTransaction } from '@cherrypicker/core';
+import { CATEGORY_NAMES_KO } from '@cherrypicker/core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,7 +62,7 @@ function buildSummary(result: OptimizationResult): string {
   `;
 }
 
-function buildCategoryTable(transactions: CategorizedTransaction[]): string {
+function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabels?: Map<string, string>): string {
   const byCategory = new Map<string, { labelKo: string; total: number; count: number }>();
   let grandTotal = 0;
 
@@ -71,8 +72,9 @@ function buildCategoryTable(transactions: CategorizedTransaction[]): string {
       existing.total += tx.amount;
       existing.count += 1;
     } else {
+      const categoryKey = tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category;
       byCategory.set(tx.category, {
-        labelKo: tx.category,
+        labelKo: categoryLabels?.get(categoryKey) ?? categoryLabels?.get(tx.category) ?? CATEGORY_NAMES_KO[categoryKey] ?? CATEGORY_NAMES_KO[tx.category] ?? tx.category,
         total: tx.amount,
         count: 1,
       });
@@ -218,16 +220,17 @@ function buildAssignments(result: OptimizationResult): string {
 export function generateHTMLReport(
   result: OptimizationResult,
   transactions: CategorizedTransaction[],
+  categoryLabels?: Map<string, string>,
 ): string {
   const templatePath = join(__dirname, 'templates', 'report.html');
   const template = readFileSync(templatePath, 'utf-8');
 
   const html = template
-    .replace('{{GENERATED_DATE}}', esc(formatDate(new Date())))
-    .replace('{{SUMMARY}}', buildSummary(result))
-    .replace('{{CATEGORY_TABLE}}', buildCategoryTable(transactions))
-    .replace('{{CARD_COMPARISON}}', buildCardComparison(result))
-    .replace('{{ASSIGNMENTS}}', buildAssignments(result));
+    .replaceAll('{{GENERATED_DATE}}', esc(formatDate(new Date())))
+    .replaceAll('{{SUMMARY}}', buildSummary(result))
+    .replaceAll('{{CATEGORY_TABLE}}', buildCategoryTable(transactions, categoryLabels))
+    .replaceAll('{{CARD_COMPARISON}}', buildCardComparison(result))
+    .replaceAll('{{ASSIGNMENTS}}', buildAssignments(result));
 
   return html;
 }

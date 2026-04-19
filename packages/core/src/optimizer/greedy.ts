@@ -4,7 +4,7 @@ import type { OptimizationResult, CardAssignment, CardRewardResult, CategoryRewa
 import type { OptimizationConstraints } from './constraints.js';
 import { calculateRewards, buildCategoryKey } from '../calculator/reward.js';
 
-const CATEGORY_NAMES_KO: Record<string, string> = {
+export const CATEGORY_NAMES_KO: Record<string, string> = {
   // Parent categories
   dining: '외식',
   restaurant: '음식점',

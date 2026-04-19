@@ -87,6 +87,21 @@ export async function runReport(args: string[]): Promise<void> {
   const categories = await loadCategories(catPath);
   const matcher = new MerchantMatcher(categories);
 
+  // Build category labels map for Korean display in reports
+  const categoryLabels = new Map<string, string>();
+  for (const node of categories) {
+    categoryLabels.set(node.id, node.labelKo);
+    if (node.subcategories) {
+      for (const sub of node.subcategories) {
+        categoryLabels.set(sub.id, sub.labelKo);
+        // Dot-notation key for optimizer lookups — buildCategoryKey
+        // produces "dining.cafe" but the taxonomy only has "cafe" as
+        // the sub ID; without this entry, categoryLabels.get() misses.
+        categoryLabels.set(`${node.id}.${sub.id}`, sub.labelKo);
+      }
+    }
+  }
+
   const categorized: CategorizedTransaction[] = parseResult.transactions.map((tx: RawTransaction, idx: number) => {
     const match = matcher.match(tx.merchant, tx.category);
     return {
@@ -126,7 +141,7 @@ export async function runReport(args: string[]): Promise<void> {
 
   // Generate and write HTML report
   console.log(`\nHTML 보고서 생성 중...`);
-  const html = generateHTMLReport(result, categorized);
+  const html = generateHTMLReport(result, categorized, categoryLabels);
   writeFileSync(output, html, 'utf-8');
   console.log(`보고서 저장 완료: ${output}`);
 }
