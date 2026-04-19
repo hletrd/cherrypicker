@@ -261,8 +261,11 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
           actualReward: rewardAfterMonthlyCap,
           appliedReward,
         });
-        // Sync ruleMonthUsed to reflect actual applied amount so subsequent
-        // transactions aren't under-rewarded at the rule level
+        // When the global cap clips a reward, the rule-level tracker was
+        // advanced by the full pre-clip amount (rewardAfterMonthlyCap).
+        // We must roll it back to reflect only what was actually applied,
+        // so subsequent transactions see the correct remaining rule-level
+        // cap relative to the global constraint.
         const overcount = rewardAfterMonthlyCap - appliedReward;
         ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed - overcount);
       }
