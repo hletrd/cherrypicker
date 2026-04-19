@@ -208,6 +208,11 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
   const categoryRewards = new Map<string, CategoryReward>();
   const capsHit: CapInfo[] = [];
 
+  // Track cumulative reward per rewardType within each category bucket,
+  // so the dominant type (highest cumulative reward) is reported rather
+  // than the type of the last transaction processed.
+  const rewardTypeAccum = new Map<string, Map<string, number>>();
+
   for (const tx of transactions) {
     // Skip negative-amount transactions (refunds, reversals)
     if (tx.amount <= 0) continue;
@@ -315,7 +320,12 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     }
 
     bucket.reward += appliedReward;
-    bucket.rewardType = rule.type;
+    // Accumulate reward per rewardType so we can determine the dominant
+    // type (highest cumulative reward) at the end of the loop, rather than
+    // unconditionally overwriting with the last transaction's type.
+    const typeMap = rewardTypeAccum.get(categoryKey) ?? new Map<string, number>();
+    typeMap.set(rule.type, (typeMap.get(rule.type) ?? 0) + appliedReward);
+    rewardTypeAccum.set(categoryKey, typeMap);
     bucket.capAmount = monthlyCap ?? undefined;
 
     if (ruleResult.capReached && monthlyCap !== null) {
@@ -331,10 +341,26 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     categoryRewards.set(categoryKey, bucket);
   }
 
-  const categoryRewardList = [...categoryRewards.values()].map((bucket) => ({
-    ...bucket,
-    rate: bucket.spending > 0 ? bucket.reward / bucket.spending : 0,
-  }));
+  const categoryRewardList = [...categoryRewards.values()].map((bucket) => {
+    // Determine the dominant rewardType for this category — the type that
+    // contributed the most cumulative reward, not just the last one seen.
+    const typeMap = rewardTypeAccum.get(bucket.category);
+    let dominantType = bucket.rewardType;
+    if (typeMap && typeMap.size > 0) {
+      let bestAmount = -1;
+      for (const [type, amount] of typeMap) {
+        if (amount > bestAmount) {
+          bestAmount = amount;
+          dominantType = type;
+        }
+      }
+    }
+    return {
+      ...bucket,
+      rewardType: dominantType,
+      rate: bucket.spending > 0 ? bucket.reward / bucket.spending : 0,
+    };
+  });
 
   const totalReward = categoryRewardList.reduce((sum, categoryReward) => sum + categoryReward.reward, 0);
   const totalSpending = categoryRewardList.reduce((sum, categoryReward) => sum + categoryReward.spending, 0);
