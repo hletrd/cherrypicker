@@ -5,51 +5,29 @@
   import type { CategorizedTx } from '../../lib/analyzer.js';
   import * as aiCategorizer from '../../lib/categorizer-ai.js';
   import { onMount } from 'svelte';
+  import { loadCategories } from '../../lib/cards.js';
 
-  // Category options for dropdown
-  const CATEGORIES = [
+  // Category options loaded dynamically from categories.yaml taxonomy
+  let categoryOptions = $state<{ id: string; label: string }[]>([]);
+
+  // Fallback used if categories fail to load
+  const FALLBACK_CATEGORIES = [
     { id: 'dining', label: '외식' },
-    { id: 'restaurant', label: '음식점' },
-    { id: 'cafe', label: '카페' },
-    { id: 'fast_food', label: '패스트푸드' },
-    { id: 'delivery', label: '배달' },
     { id: 'grocery', label: '식료품' },
-    { id: 'supermarket', label: '대형마트' },
-    { id: 'traditional_market', label: '전통시장' },
-    { id: 'online_grocery', label: '온라인장보기' },
     { id: 'convenience_store', label: '편의점' },
-    { id: 'public_transit', label: '대중교통' },
-    { id: 'taxi', label: '택시' },
-    { id: 'fuel', label: '주유' },
-    { id: 'parking', label: '주차' },
-    { id: 'toll', label: '통행료' },
-    { id: 'online_shopping', label: '온라인쇼핑' },
-    { id: 'offline_shopping', label: '오프라인쇼핑' },
-    { id: 'department_store', label: '백화점' },
-    { id: 'fashion', label: '패션' },
     { id: 'telecom', label: '통신' },
-    { id: 'insurance', label: '보험' },
+    { id: 'online_shopping', label: '온라인쇼핑' },
+    { id: 'transportation', label: '교통' },
+    { id: 'fuel', label: '주유' },
     { id: 'medical', label: '의료' },
-    { id: 'hospital', label: '병원' },
-    { id: 'pharmacy', label: '약국' },
     { id: 'education', label: '교육' },
-    { id: 'academy', label: '학원' },
-    { id: 'books', label: '도서' },
     { id: 'entertainment', label: '엔터테인먼트' },
-    { id: 'movie', label: '영화' },
-    { id: 'streaming', label: '스트리밍' },
-    { id: 'subscription', label: '구독' },
     { id: 'travel', label: '여행' },
-    { id: 'airline', label: '항공' },
-    { id: 'hotel', label: '숙박' },
     { id: 'utilities', label: '공과금' },
-    { id: 'electricity', label: '전기' },
-    { id: 'gas', label: '가스' },
-    { id: 'water', label: '수도' },
     { id: 'uncategorized', label: '미분류' },
   ];
 
-  const categoryMap = new Map(CATEGORIES.map(c => [c.id, c.label]));
+  let categoryMap = $state<Map<string, string>>(new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label])));
 
   let expanded = $state(false);
   let editedTxs = $state<CategorizedTx[]>([]);
@@ -62,9 +40,27 @@
   let aiRunning = $state(false);
   let aiAvailable = $state(false);
 
-  // Check if AI is available on mount (browser only)
-  onMount(() => {
+  // Load categories and check AI availability on mount (browser only)
+  onMount(async () => {
     aiAvailable = aiCategorizer.isAvailable();
+    try {
+      const nodes = await loadCategories();
+      const options: { id: string; label: string }[] = [];
+      for (const node of nodes) {
+        options.push({ id: node.id, label: node.labelKo });
+        if (node.subcategories) {
+          for (const sub of node.subcategories) {
+            options.push({ id: sub.id, label: `  ${sub.labelKo}` });
+          }
+        }
+      }
+      categoryOptions = options;
+      categoryMap = new Map(options.map(c => [c.id, c.label]));
+    } catch {
+      // Fall back to hardcoded list
+      categoryOptions = FALLBACK_CATEGORIES;
+      categoryMap = new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label]));
+    }
   });
 
   async function runAICategorization() {
@@ -269,7 +265,7 @@
                         {tx.confidence < 0.5 ? 'border-amber-300 bg-amber-50 text-amber-700' : ''}
                         {tx.category === 'uncategorized' ? 'border-red-300 bg-red-50 text-red-700' : ''}"
                     >
-                      {#each CATEGORIES as cat}
+                      {#each categoryOptions as cat}
                         <option value={cat.id}>{cat.label}</option>
                       {/each}
                     </select>
