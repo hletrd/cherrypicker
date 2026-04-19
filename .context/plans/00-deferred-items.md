@@ -430,3 +430,79 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/lib/analyzer.ts:191-194`
 - **Reason for deferral:** The `toCoreCardRuleSets` transformation is O(n) where n is the number of cards (~683). This takes < 1ms on modern hardware. The cache was intended to avoid re-computation but the reference check makes it ineffective. The fix is simple (content-based check or higher-level cache) but not urgent.
 - **Exit criterion:** If card count grows significantly (> 2000) or `optimizeFromTransactions` is called in tight loops, implement a proper cache.
+
+---
+
+## Deferred Findings (Cycle 8)
+
+### D-62: `CardDetail.svelte` fetch has no cleanup on component destroy
+
+- **Original finding:** C8-04
+- **Severity:** LOW (robustness)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/cards/CardDetail.svelte:57-72`
+- **Reason for deferral:** The stale-response guard (`fetchGeneration` counter) correctly prevents out-of-order responses from corrupting state. The lack of cleanup on component destroy means a pending fetch may complete after destruction, but this only sets local state that is discarded — no memory leak. Adding an AbortController would be a nice improvement but is not urgent.
+- **Exit criterion:** If `CardDetail` fetches cause noticeable performance issues (e.g., large data downloads continuing after navigation), add AbortController cleanup.
+
+### D-63: `savingsPct` divides by zero (NaN path) when `bestSingleCard.totalReward` is 0
+
+- **Original finding:** C8-05
+- **Severity:** LOW (robustness)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/SavingsComparison.svelte:71-75`
+- **Reason for deferral:** The `Number.isFinite(raw)` check at line 74 correctly handles the NaN result from `0 / 0`, clamping `savingsPct` to 0. The behavior is correct; the NaN computation is misleading for debugging but has no visible impact.
+- **Exit criterion:** If `savingsPct` computation needs to handle the zero-reward case more explicitly, add a guard before the division.
+
+### D-64: CategoryBreakdown CATEGORY_COLORS missing many categories from taxonomy
+
+- **Original finding:** C8-06 (extends D-42/D-46)
+- **Severity:** LOW (UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:7-49`
+- **Reason for deferral:** Same class as D-42/D-46. Missing categories fall through to `uncategorized` gray. The hardcoded map covers all current top-level categories but not all subcategories from the core taxonomy. The long-term fix is a dynamic color generator.
+- **Exit criterion:** When D-42 is resolved (dynamic color generation), this will be automatically fixed.
+
+### D-65: `detectBank` confidence score misleading with single-pattern banks
+
+- **Original finding:** C8-07
+- **Severity:** LOW (logic)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/parser/detect.ts:114-137`
+- **Reason for deferral:** The current confidence scoring (ratio of matched patterns) works correctly for the common case. Single-pattern banks getting 1.0 confidence is misleading but doesn't cause wrong bank detection in practice because the pattern matching is specific enough. Changing the scoring algorithm could break existing behavior.
+- **Exit criterion:** If users report incorrect bank detection due to confidence scoring, implement absolute-score weighting or a minimum pattern threshold.
+
+### D-66: CardGrid issuer filter shows issuers with 0 cards after type filter
+
+- **Original finding:** C8-08
+- **Severity:** LOW (UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/cards/CardGrid.svelte:22`
+- **Reason for deferral:** Showing all issuers even when they have no cards in the current filter set is a minor UX issue. The user sees "검색 결과가 없어요" when they click an issuer with no matching cards, which is clear feedback. Deriving `availableIssuers` from the filtered list would improve this but is not urgent.
+- **Exit criterion:** If users report confusion about empty issuer filter results, derive `availableIssuers` from the type-filtered card list.
+
+### D-67: PDF `parseAmount` uses `parseInt` which truncates instead of rounding
+
+- **Original finding:** C8-10
+- **Severity:** LOW (robustness)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/parser/pdf.ts:177-180`
+- **Reason for deferral:** Korean Won amounts are always integers. The `parseInt` truncation is effectively the same as rounding for integer values. Foreign-currency-converted amounts with decimal remainders are extremely rare in Korean credit card statements. The same pattern is used in csv.ts and xlsx.ts.
+- **Exit criterion:** If foreign-currency-converted amounts with decimal remainders appear in PDF statements, switch to `Math.round(parseFloat(...))`.
+
+### D-68: AI categorizer import is dead code
+
+- **Original finding:** C8-12 (extends D-10)
+- **Severity:** LOW (dead-code)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:6`
+- **Reason for deferral:** Same as D-10. The import adds minimal bundle weight. Removing it would require also removing AI-related UI code. Cleaner to leave as feature flag until the self-hosted AI runtime is implemented.
+- **Exit criterion:** When the self-hosted AI runtime is implemented, either re-enable or remove.
+
+### D-69: `buildConstraints` shallow-copies transactions — latent mutation risk
+
+- **Original finding:** C8-13
+- **Severity:** LOW (latent-risk)
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/constraints.ts:17`
+- **Reason for deferral:** The optimizer does not currently mutate transaction objects. The shallow copy protects against array-level mutations (push, splice) but not against object-level mutations. Deep-copying would add a performance cost for large transaction sets. Adding a documentation comment is a sufficient safeguard for now.
+- **Exit criterion:** If the optimizer or calculator is refactored to mutate transaction objects, deep-copy transactions in `buildConstraints` or add a runtime freeze.
