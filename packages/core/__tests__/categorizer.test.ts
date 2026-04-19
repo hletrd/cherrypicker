@@ -114,14 +114,16 @@ describe('CategoryTaxonomy - findCategory', () => {
     ];
     const fixtureTaxonomy = new CategoryTaxonomy(fixtureNodes);
 
-    // "요금" is contained in both "전기요금" (5 chars) and "가스요금" (4 chars)
-    // Shortest keyword "가스요금" should win → category: utilities
-    const result = fixtureTaxonomy.findCategory('요금');
+    // Fuzzy match requires merchant length >= 3 to avoid false positives.
+    // "기요금" (3 chars) is contained in both "전기요금" (4 chars) and "가스요금" (4 chars)
+    // — both have the same length, so the first one encountered wins.
+    // Use "스요금" (3 chars) which is only in "가스요금" for a clean test.
+    const result = fixtureTaxonomy.findCategory('스요금');
     expect(result.category).toBe('utilities');
     expect(result.confidence).toBe(0.6);
 
     // Verify step 3 (fuzzy) returns 0.6 confidence, not step 2 (0.8) or step 1 (1.0)
-    // "카카오" is contained in "카카오택시" — only one keyword matches
+    // "카카오" (3 chars) is contained in "카카오택시" — only one keyword matches
     const result2 = fixtureTaxonomy.findCategory('카카오');
     expect(result2.category).toBe('transportation');
     expect(result2.confidence).toBe(0.6);
