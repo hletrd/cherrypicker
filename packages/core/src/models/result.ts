@@ -15,7 +15,7 @@ export interface CategoryReward {
   spending: number;
   reward: number;
   rate: number;                 // Effective rate for this category
-  rewardType: string;           // discount/points/cashback/mileage
+  rewardType: string;           // discount/points/cashback/mileage/none
   capReached: boolean;
   capAmount?: number;
 }

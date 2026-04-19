@@ -198,7 +198,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         spending: 0,
         reward: 0,
         rate: 0,
-        rewardType: rule?.type ?? 'discount',
+        rewardType: rule?.type ?? 'none',
         capReached: false,
       };
 
