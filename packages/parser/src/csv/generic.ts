@@ -42,45 +42,75 @@ function inferYear(month: number, day: number): number {
 function parseDateToISO(raw: string): string {
   const cleaned = raw.trim();
 
-  // YYYYMMDD
+  // YYYYMMDD — validate month/day ranges to avoid producing invalid date
+  // strings from corrupted data (e.g., "20261399" → "2026-13-99").
   if (/^\d{8}$/.test(cleaned)) {
-    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+    const month = parseInt(cleaned.slice(4, 6), 10);
+    const day = parseInt(cleaned.slice(6, 8), 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
+    }
   }
 
   // YYYY.MM.DD / YYYY-MM-DD / YYYY/MM/DD (allow single-digit month/day)
+  // Validate month/day ranges to avoid producing invalid date strings from
+  // corrupted data (e.g., "2026/13/99").
   const fullMatch = cleaned.match(/^(\d{4})[.\-\/\s](\d{1,2})[.\-\/\s](\d{1,2})/);
   if (fullMatch) {
-    return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
+    const month = parseInt(fullMatch[2]!, 10);
+    const day = parseInt(fullMatch[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
+    }
   }
 
-  // YY-MM-DD or YY.MM.DD
+  // YY-MM-DD or YY.MM.DD — validate month/day ranges to avoid producing
+  // invalid date strings from corrupted data (e.g., "99/13/99").
   const shortYearMatch = cleaned.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})$/);
   if (shortYearMatch) {
     const year = parseInt(shortYearMatch[1]!, 10);
     const fullYear = year >= 50 ? 1900 + year : 2000 + year;
-    return `${fullYear}-${shortYearMatch[2]}-${shortYearMatch[3]}`;
+    const month = parseInt(shortYearMatch[2]!, 10);
+    const day = parseInt(shortYearMatch[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${fullYear}-${shortYearMatch[2]!.padStart(2, '0')}-${shortYearMatch[3]!.padStart(2, '0')}`;
+    }
   }
 
-  // Korean: 2025년 11월 30일
+  // Korean: 2025년 11월 30일 — validate month/day ranges to avoid producing
+  // invalid date strings from corrupted text (e.g., "2026년 99월 99일").
   const koreanFull = cleaned.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-  if (koreanFull) return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
+  if (koreanFull) {
+    const month = parseInt(koreanFull[2]!, 10);
+    const day = parseInt(koreanFull[3]!, 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
+    }
+  }
 
   // MM/DD or MM.DD — infer year with look-back heuristic
+  // Validate month/day ranges to avoid producing invalid date strings from
+  // misidentified non-date columns (e.g., "13/45" would produce "2026-13-45").
   const shortMatch = cleaned.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
   if (shortMatch) {
     const month = parseInt(shortMatch[1]!, 10);
     const day = parseInt(shortMatch[2]!, 10);
-    const year = inferYear(month, day);
-    return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const year = inferYear(month, day);
+      return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
+    }
   }
 
-  // Korean short: 1월 15일
+  // Korean short: 1월 15일 — validate month/day ranges to avoid producing
+  // invalid date strings from corrupted text (e.g., "99월 99일").
   const koreanShort = cleaned.match(/(\d{1,2})월\s*(\d{1,2})일/);
   if (koreanShort) {
     const month = parseInt(koreanShort[1]!, 10);
     const day = parseInt(koreanShort[2]!, 10);
-    const year = inferYear(month, day);
-    return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const year = inferYear(month, day);
+      return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
+    }
   }
 
   return cleaned;
