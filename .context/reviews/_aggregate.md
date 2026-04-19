@@ -1,78 +1,59 @@
-# Review Aggregate — 2026-04-19 (Cycle 3)
+# Review Aggregate — 2026-04-19 (Cycle 4)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle3-code-reviewer.md`
-- `.context/reviews/2026-04-19-cycle3-debugger.md`
-- `.context/reviews/2026-04-19-cycle3-security-reviewer.md`
-- `.context/reviews/2026-04-19-cycle3-perf-reviewer.md`
-- `.context/reviews/2026-04-19-cycle3-test-engineer.md`
-- `.context/reviews/2026-04-19-cycle3-architect.md`
-- `.context/reviews/2026-04-19-cycle3-designer.md`
+- `.context/reviews/2026-04-19-cycle4-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- `.context/reviews/_aggregate.md` (cycle 2)
-- All cycle 1 + cycle 2 per-agent files
+- `.context/reviews/_aggregate.md` (cycle 3)
+- All cycle 1-3 per-agent files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-All cycle 1 and cycle 2 findings have been verified as fixed or deferred. They are not re-listed here unless a cycle 3 finding extends or revisits them.
+All cycle 1-3 findings have been verified as fixed or deferred. They are not re-listed here unless a cycle 4 finding extends or revisits them.
 
-Deferred items D-01 through D-25 remain unchanged and are not re-listed here.
+Deferred items D-01 through D-39 remain unchanged and are not re-listed here.
 
----
-
-## Cross-Agent Agreement (Cycle 3)
-
-| Finding | Flagged by | Consensus |
-|---|---|---|
-| `CATEGORY_NAMES_KO` hardcoded in optimizer | code-reviewer (C3-03), architect (C3-A01) | **2 reviewers agree** — stronger signal |
-| `SpendingSummary.svelte` UTC/local timezone bug | code-reviewer (C3-04), designer (C3-U01) | **2 reviewers agree** — strong signal |
-| `loadCategories` separate fetch for data already in cards.json | perf-reviewer (C3-P04), architect (C3-A02) | **2 reviewers agree** |
-| `inferYear` / `parseDateToISO` duplicated | architect (C3-A04) | Single reviewer |
-| Transaction review renders all DOM at once | perf-reviewer (C3-P02), designer (C3-U04) | **2 reviewers agree** — already deferred as D-25 |
-| E2E `waitForTimeout` flakiness | test-engineer (C3-T04) | Single reviewer |
-| No unit tests for `calculateRewards` | test-engineer (C3-T01) | Single reviewer — HIGH severity |
+Cycle 4 revisits C4-12 (D-28 re-evaluation) — the `parseInt` NaN issue is trivially fixable and should be promoted from deferred.
 
 ---
 
-## Active Findings (New in Cycle 3, Deduplicated)
+## Verification of Cycle 3 Fixes
 
-| ID | Severity | Confidence | File | Description | Origin |
+All 13 cycle 3 fixes verified as correctly implemented. See cycle 4 review for details.
+
+---
+
+## Active Findings (New in Cycle 4, Deduplicated)
+
+| ID | Severity | Confidence | File | Description | Cross-ref |
 |---|---|---|---|---|---|
-| C3-01 | MEDIUM | High | `taxonomy.ts:85-89` | `findCategory` fuzzy match returns first instead of longest match | code-reviewer |
-| C3-02 | MEDIUM | High | `reward.ts:113-117` | `normalizeRate` silently returns null; misconfigured YAML produces 0 reward with no warning | code-reviewer |
-| C3-03 | MEDIUM | High | `greedy.ts:7-50` | `CATEGORY_NAMES_KO` incomplete and not sourced from taxonomy (also C3-A01) | code-reviewer, architect |
-| C3-04 | MEDIUM | High | `SpendingSummary.svelte:15-21` | `formatPeriod` uses `new Date()` with UTC/local mismatch (also C3-U01) | code-reviewer, designer |
-| C3-05 | LOW | Medium | `llm-fallback.ts:75` | JSON regex can match nested arrays incorrectly | code-reviewer |
-| C3-06 | LOW | High | `analyzer.ts:98` | Transaction IDs use array index — duplicates across multi-file uploads | code-reviewer |
-| C3-07 | MEDIUM | High | `TransactionReview.svelte:124-129` | `editedTxs` sync only runs once — stale data after re-upload | code-reviewer |
-| C3-08 | LOW | High | `FileDropzone.svelte:176-177` | `parseInt` for previousMonthSpending without NaN validation | code-reviewer |
-| C3-D01 | MEDIUM | High | `store.svelte.ts:140` | `loadFromStorage` does not validate `monthlyBreakdown` shape | debugger |
-| C3-D02 | MEDIUM | Medium | `greedy.ts:84-110` | Marginal reward is 0 when cap hit — misleading assignment | debugger |
-| C3-D03 | MEDIUM | High | `analyzer.ts:214-218` | Single-file previousMonthSpending bypasses exclusion filtering | debugger |
-| C3-D06 | MEDIUM | Medium | `store.svelte.ts:229-243` | `reoptimize` can set result to stale state after page navigation | debugger |
-| C3-S01 | MEDIUM | High | `llm-fallback.ts:39-41` | Error message reveals `ANTHROPIC_API_KEY` env var name | security-reviewer |
-| C3-S02 | MEDIUM | High | `FileDropzone.svelte:110-132` | No file size limit on uploads — OOM risk | security-reviewer |
-| C3-S03 | LOW | Medium | `store.svelte.ts:119-120` | sessionStorage parse errors silently swallowed | security-reviewer |
-| C3-S04 | LOW | Medium | `Layout.astro:53` | No Subresource Integrity on external script | security-reviewer |
-| C3-P01 | MEDIUM | High | `greedy.ts:84-110` | O(N^2*M) optimizer (already deferred as D-09) | perf-reviewer |
-| C3-P02 | MEDIUM | High | `TransactionReview.svelte:236-295` | All transactions in DOM simultaneously (already deferred as D-25) | perf-reviewer |
-| C3-P03 | LOW | High | `pdf.ts:236-244` | String concatenation in PDF extraction (already deferred as D-16) | perf-reviewer |
-| C3-P04 | LOW | Medium | `cards.ts:159-173` | Separate fetch for categories.json when data is in cards.json | perf-reviewer, architect |
-| C3-T01 | HIGH | High | `calculator/reward.ts` | No unit tests for `calculateRewards` | test-engineer |
-| C3-T02 | HIGH | High | `optimizer/greedy.ts` | No unit tests for `greedyOptimize` | test-engineer |
-| C3-T03 | MEDIUM | High | `parser/xlsx.ts` | No unit tests for web-side XLSX parser | test-engineer |
-| C3-T04 | MEDIUM | High | `ui-ux-review.spec.js` | E2E tests use `waitForTimeout` instead of condition-based waits | test-engineer |
-| C3-T05 | MEDIUM | High | `analyzer.ts:42-63` | No test for `toCoreCardRuleSets` type adapter | test-engineer |
-| C3-A01 | MEDIUM | High | `greedy.ts:7-50` | Korean strings in core package (same as C3-03, C2-A01) | architect |
-| C3-A02 | LOW | High | `cards.ts:159-173` | Redundant categories.json fetch (same as C3-P04) | architect |
-| C3-A03 | LOW | Medium | `analyzer.ts` | Mixing parsing, categorization, and optimization orchestration | architect |
-| C3-A04 | LOW | High | `csv.ts`, `xlsx.ts` | `inferYear` and `parseDateToISO` duplicated | architect |
-| C3-U01 | MEDIUM | High | `SpendingSummary.svelte:15-21` | UTC/local timezone bug (same as C3-04) | designer |
-| C3-U02 | MEDIUM | High | `FileDropzone.svelte:324-346` | 25 bank buttons on mobile — overwhelming | designer |
-| C3-U05 | LOW | Medium | `cards/index.astro` | No loading skeleton for card list page | designer |
+| C4-01 | MEDIUM | High | `SavingsComparison.svelte:70-73` | Division by zero when `bestSingleCard.totalReward` is 0 — displays NaN | New |
+| C4-02 | LOW | High | `analyzer.ts:88,167` | `loadCategories()` called twice per optimization flow — redundant map construction | Related to C3-P04 |
+| C4-03 | LOW | High | `analyzer.ts:267-271` | `monthlyBreakdown` computed with O(n*m) filter per month | New (perf) |
+| C4-04 | MEDIUM | High | `CategoryBreakdown.svelte:147-148` | Tooltip inaccessible via keyboard/touch — wrong ARIA role, no tabindex | New (a11y) |
+| C4-05 | LOW | High | `analyzer.ts:164-177` | `constraints.categoryLabels` mutated after `buildConstraints` returns | New (arch) |
+| C4-06 | LOW | High | `SavingsComparison.svelte:172-173` | Annual savings projection (monthly * 12) is misleading | New (UX) |
+| C4-07 | LOW | High | `SpendingSummary.svelte:10-12,107` | `localStorage` for dismissed warning vs `sessionStorage` for data — inconsistency | New (UX) |
+| C4-08 | MEDIUM | Medium | `TransactionReview.svelte:124-129` | `editedTxs` sync effect may re-fire on any reactive update, risking in-progress edit loss | Extends C3-07 |
+| C4-09 | LOW | High | `CategoryBreakdown.svelte:7-49` | Hardcoded `CATEGORY_COLORS` not sourced from taxonomy | Same class as C3-03 |
+| C4-10 | MEDIUM | High | `e2e/core-regressions.spec.js:16-24` | E2E test depends on pre-built `dist/` — tests stale code if not rebuilt | New (test) |
+| C4-11 | MEDIUM | High | `packages/core/__tests__/` (missing) | No regression test for `findCategory` fuzzy match fix (C3-01) | Missing test for C3-01 |
+| C4-12 | LOW | High | `FileDropzone.svelte:200` | `parseInt` produces NaN/wrong value for "1e5" input (D-28 re-evaluation — fix is trivial) | Re-opens D-28 |
+| C4-13 | LOW | Medium | `CategoryBreakdown.svelte:114` | Small-percentage bars nearly invisible (minimum width issue) | New (UX) |
+| C4-14 | LOW | High | `Layout.astro:15-24` | Stale fallback values (683, 24, 45) in footer when `cards.json` read fails | New (data) |
+| C4-15 | LOW | High | `analyzer.ts:181` | `toCoreCardRuleSets` creates new array copies on every optimization — not cached | New (perf) |
+
+---
+
+## Cross-Agent Agreement (Cycle 4)
+
+| Finding | Signal |
+|---|---|
+| C4-09 / C3-03 | Hardcoded maps not sourced from taxonomy — 3 findings across cycles (strong signal) |
+| C4-08 / C3-07 | `editedTxs` sync issues — 2 findings (C3-07 fixed, C4-08 identifies residual risk) |
+| C4-12 / D-28 | `parseInt` NaN — 2 findings, trivial fix, should be promoted from deferred |
 
 ---
 
@@ -82,30 +63,24 @@ Deferred items D-01 through D-25 remain unchanged and are not re-listed here.
 - None — all prior criticals are fixed
 
 ### HIGH (should fix this cycle)
-1. C3-T01: Add unit tests for `calculateRewards` (monthly caps, tiers, fixed rewards, global caps)
-2. C3-T02: Add unit tests for `greedyOptimize` (basic flow, edge cases)
-3. C3-04/C3-U01: Fix `formatPeriod` timezone bug in `SpendingSummary.svelte`
-4. C3-D03: Fix single-file previousMonthSpending bypassing exclusion filtering
-5. C3-S02: Add file size limit on uploads
+1. C4-01: Fix SavingsComparison division by zero (NaN display)
+2. C4-04: Fix CategoryBreakdown a11y (keyboard/touch access to tooltip)
+3. C4-11: Add regression test for `findCategory` fuzzy match
+4. C4-10: Add pre-build step or warning in E2E tests for stale dist/
+5. C4-08: Add generation counter to prevent over-broad `editedTxs` re-sync
 
 ### MEDIUM (plan for next cycles or fix if time allows)
-6. C3-07: Fix `editedTxs` sync to re-run on store result change
-7. C3-01: Fix `findCategory` fuzzy match to select longest/best match
-8. C3-02: Add warning for rules with null rate and null fixedAmount
-9. C3-03/C3-A01: Pass category labels from taxonomy to optimizer
-10. C3-D01: Validate `monthlyBreakdown` shape in `loadFromStorage`
-11. C3-D06: Add version tracking to prevent stale `reoptimize` updates
-12. C3-S01: Remove env var name from error message in LLM fallback
-13. C3-T03: Add unit tests for web-side XLSX parser
-14. C3-T04: Replace `waitForTimeout` with condition-based waits in E2E tests
-15. C3-T05: Add tests for `toCoreCardRuleSets` type adapter
-16. C3-U02: Improve bank selector UX for mobile
+6. C4-12: Fix `parseInt` -> `Number` with `isFinite` guard (promote from D-28)
+7. C4-05: Pass `categoryLabels` into `buildConstraints` instead of mutating
+8. C4-02: Eliminate redundant `loadCategories()` call
+9. C4-03: Compute `monthlyBreakdown` in single pass
+10. C4-15: Cache `toCoreCardRuleSets` result
 
 ### LOW (defer or accept)
-- C3-05, C3-06, C3-08, C3-D02, C3-D04, C3-S03, C3-S04, C3-P01 (D-09), C3-P02 (D-25), C3-P03 (D-16), C3-P04, C3-A02, C3-A03, C3-A04, C3-U03 (D-21), C3-U04, C3-U05
+- C4-06, C4-07, C4-09, C4-13, C4-14
 
 ---
 
 ## Agent Failures
 
-No agent failures. All 7 review angles completed successfully.
+No agent failures. Single comprehensive review completed successfully.

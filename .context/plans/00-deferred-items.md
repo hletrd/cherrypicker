@@ -110,14 +110,13 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **Reason for deferral:** The `changeCategory` function in `TransactionReview.svelte` uses `tx.id` to find transactions, but the current upload flow doesn't allow uploading a second file while the first is being edited. The duplicate ID issue only manifests if the user uploads multiple files in a single batch AND the per-file transaction indices happen to collide AND the user edits categories. The `editedTxs` array is a flat merge from all files, so IDs are actually unique within the merged array (each file's `tx-${idx}` is unique because idx is relative to the merged array). The only risk is if `analyzeMultipleFiles` creates separate `parseAndCategorize` calls that each start from `tx-0`, but the current implementation merges all transactions into a single array before assigning IDs.
 - **Exit criterion:** If multi-file upload with category editing causes ID collisions, use `crypto.randomUUID()` or a file-scoped prefix.
 
-### D-28: `parseInt` for previousMonthSpending without NaN validation
+### D-28: `parseInt` for previousMonthSpending without NaN validation — PROMOTED
 
-- **Original finding:** C3-08 (code-reviewer)
+- **Original finding:** C3-08 (code-reviewer), re-evaluated as C4-12
 - **Severity:** LOW (input validation)
 - **Confidence:** High
-- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:176-177`
-- **Reason for deferral:** The HTML `<input type="number">` already prevents non-numeric input in most browsers. The `parseInt` call only receives strings from this input element, so NaN is extremely unlikely. The worst case (NaN → no tier matches → 0 rewards) is recoverable by re-entering a valid number.
-- **Exit criterion:** If users report 0-reward results after entering spending amounts, add `Number.isFinite` validation.
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:200`
+- **Status:** PROMOTED to Plan 09 Task 1 (C4-12). `parseInt("1e5", 10)` returns 1 on iOS Safari; fix is trivial.
 
 ### D-29: Marginal reward is 0 when cap hit — misleading assignment
 
@@ -217,3 +216,52 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/pages/cards/index.astro`, `apps/web/src/components/cards/CardGrid.svelte`
 - **Reason for deferral:** The cards.json fetch typically completes in < 500ms. Adding a loading skeleton is a nice-to-have, not a critical UX issue.
 - **Exit criterion:** If the cards page has noticeable blank time on slow connections, add a loading skeleton.
+
+---
+
+## Deferred Findings (Cycle 4)
+
+### D-40: Annual savings projection (monthly * 12) is misleading
+
+- **Original finding:** C4-06 (designer)
+- **Severity:** LOW (UX clarity)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/SavingsComparison.svelte:172-173`
+- **Reason for deferral:** The projection is labeled with "약" (approximately), making it clear it's an estimate. Changing the label or removing the projection entirely is a UX design decision, not a bug. Multiplying by 12 is the simplest and most commonly-understood annualization approach.
+- **Exit criterion:** If users report confusion about annual savings numbers, change the label to "월 기준 연간 추정" or remove the annual projection.
+
+### D-41: localStorage vs sessionStorage inconsistency for dismissed warning
+
+- **Original finding:** C4-07 (designer)
+- **Severity:** LOW (state consistency)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/SpendingSummary.svelte:10-12,107`
+- **Reason for deferral:** The warning dismissal is intentionally persisted across sessions to avoid annoying repeat users. The data-loss warning is most important for first-time users, and returning users likely understand the data lifecycle. Moving to sessionStorage would cause the warning to reappear every new tab, which is unnecessarily intrusive.
+- **Exit criterion:** If users report data loss after dismissing the warning, move the dismissed state to sessionStorage or tie it to the analysis lifecycle.
+
+### D-42: CategoryBreakdown hardcoded CATEGORY_COLORS not sourced from taxonomy
+
+- **Original finding:** C4-09 (code-quality)
+- **Severity:** LOW (data freshness)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:7-49`
+- **Reason for deferral:** Same class as C3-03 (hardcoded CATEGORY_NAMES_KO). New categories fall through to `uncategorized` color which is visually distinct (gray). The hardcoded map covers all current categories. Adding a dynamic color generator requires design work to ensure colors are distinguishable and accessible.
+- **Exit criterion:** When new categories are added to the taxonomy, update the color map. If categories are frequently added, implement a hash-based color function.
+
+### D-43: Small-percentage bars nearly invisible in CategoryBreakdown
+
+- **Original finding:** C4-13 (designer)
+- **Severity:** LOW (UX)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:114`
+- **Reason for deferral:** The current "other" grouping (< 2% threshold) already mitigates this for very small categories. Categories at exactly 2-3% have thin but visible bars. Adding a minimum bar width would distort the visual proportions. A logarithmic scale would add complexity and reduce readability.
+- **Exit criterion:** If users report difficulty seeing category bars, add a minimum width of 4px or increase the "other" threshold to 5%.
+
+### D-44: Stale fallback values in Layout footer when cards.json read fails
+
+- **Original finding:** C4-14 (code-quality)
+- **Severity:** LOW (data accuracy)
+- **Confidence:** High
+- **File+line:** `apps/web/src/layouts/Layout.astro:15-24`
+- **Reason for deferral:** The fallback values (683, 24, 45) are only shown if `cards.json` can't be read at build time, which means the build is broken anyway. Making the build fail would add friction to the development workflow. The values will be correct on the next successful build.
+- **Exit criterion:** If stale numbers are seen in production, remove fallback values and show "—" instead, or make the build fail on missing cards.json.
