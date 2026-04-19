@@ -55,12 +55,16 @@ function parseDateToISO(raw: string): string {
   }
 
   // MM/DD or MM.DD — infer year with look-back heuristic
+  // Validate month/day ranges to avoid producing invalid date strings from
+  // misidentified non-date columns (e.g., "13/45" would produce "2026-13-45").
   const shortMatch = cleaned.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
   if (shortMatch) {
     const month = parseInt(shortMatch[1]!, 10);
     const day = parseInt(shortMatch[2]!, 10);
-    const year = inferYear(month, day);
-    return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const year = inferYear(month, day);
+      return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
+    }
   }
 
   // 2024년 1월 15일
@@ -72,8 +76,10 @@ function parseDateToISO(raw: string): string {
   if (koreanShort) {
     const month = parseInt(koreanShort[1]!, 10);
     const day = parseInt(koreanShort[2]!, 10);
-    const year = inferYear(month, day);
-    return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const year = inferYear(month, day);
+      return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
+    }
   }
 
   return cleaned;

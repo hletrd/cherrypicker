@@ -164,8 +164,10 @@ function parseDateToISO(raw: string): string {
   if (koreanShort) {
     const month = parseInt(koreanShort[1]!, 10);
     const day = parseInt(koreanShort[2]!, 10);
-    const year = inferYear(month, day);
-    return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const year = inferYear(month, day);
+      return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
+    }
   }
 
   // MM/DD or MM.DD — infer year with look-back heuristic
