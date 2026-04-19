@@ -68,8 +68,9 @@
   });
 
   let savingsPct = $derived.by(() => {
-    if (!opt || !opt.bestSingleCard || !opt.bestSingleCard.totalReward) return 0;
-    return Math.round((opt.savingsVsSingleCard / opt.bestSingleCard.totalReward) * 100);
+    if (!opt || !opt.bestSingleCard) return 0;
+    const raw = opt.savingsVsSingleCard / opt.bestSingleCard.totalReward;
+    return Number.isFinite(raw) ? Math.round(raw * 100) : 0;
   });
 
   // Bar comparison widths (proportional)
