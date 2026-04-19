@@ -284,8 +284,8 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
       if (amountStart > dateEnd) {
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
-          const amount = parseInt(amountMatch[1]!.replace(/,/g, ''), 10);
-          if (amount > 0) {
+          const amount = parseAmount(amountMatch[1]!);
+          if (!Number.isNaN(amount) && amount > 0) {
             fallbackTransactions.push({
               date: parseDateToISO(dateMatch[1]!),
               merchant: between.replace(/\s+/g, ' ').trim(),
