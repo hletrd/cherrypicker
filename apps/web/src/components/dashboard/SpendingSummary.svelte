@@ -17,8 +17,11 @@
     const [sy, sm] = period.start.split('-');
     const [ey, em] = period.end.split('-');
     if (!sy || !sm || !ey || !em) return '-';
-    const startStr = `${sy}년 ${parseInt(sm, 10)}월`;
-    const endStr = `${ey}년 ${parseInt(em, 10)}월`;
+    const smNum = parseInt(sm, 10);
+    const emNum = parseInt(em, 10);
+    if (Number.isNaN(smNum) || Number.isNaN(emNum)) return '-';
+    const startStr = `${sy}년 ${smNum}월`;
+    const endStr = `${ey}년 ${emNum}월`;
     return startStr === endStr ? startStr : `${startStr} ~ ${endStr}`;
   }
 
