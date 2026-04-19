@@ -153,6 +153,12 @@ function buildAssignments(txAssignments: TxAssignment[], categoryLabels?: Map<st
     if (current) {
       current.spending += assignment.tx.amount;
       current.reward += assignment.reward;
+      // Recalculate effective rate from accumulated spending/reward.
+      // For the first transaction in a category, assignment.rate (marginal
+      // rate from scoreCardsForTransaction) equals reward/spending — the
+      // two sources are equivalent for a single entry. For accumulated
+      // entries, the effective rate must be recalculated because marginal
+      // rates may differ across transactions (e.g., due to cap interactions).
       current.rate = current.spending > 0 ? current.reward / current.spending : 0;
     } else {
       assignmentMap.set(key, {
