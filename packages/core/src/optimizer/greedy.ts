@@ -233,6 +233,9 @@ export function greedyOptimize(
     const best = scores[0];
     if (!best) continue;
 
+    // Mutation contract: assignedTransactionsByCard stores arrays that are
+    // mutated in-place via push. The .set() call is redundant on cache hit
+    // (same reference) but needed when the Map returns a new empty array.
     const currentTransactions = assignedTransactionsByCard.get(best.cardId) ?? [];
     currentTransactions.push(transaction);
     assignedTransactionsByCard.set(best.cardId, currentTransactions);
