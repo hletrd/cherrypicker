@@ -14,7 +14,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `cd apps/web && bunx astro dev --host ${host} --port ${port}`,
+    command: `cd apps/web && bunx astro preview --host ${host} --port ${port}`,
     url: `http://${host}:${port}${basePath}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
