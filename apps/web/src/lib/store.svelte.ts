@@ -140,11 +140,11 @@ function isValidTx(tx: any): tx is CategorizedTx {
   return (
     tx &&
     typeof tx === 'object' &&
-    typeof tx.id === 'string' &&
-    typeof tx.date === 'string' &&
+    typeof tx.id === 'string' && tx.id.length > 0 &&
+    typeof tx.date === 'string' && tx.date.length > 0 &&
     typeof tx.merchant === 'string' &&
     typeof tx.amount === 'number' &&
-    typeof tx.category === 'string'
+    typeof tx.category === 'string' && tx.category.length > 0
   );
 }
 
