@@ -186,9 +186,18 @@ export async function optimizeFromTransactions(
       cardPreviousSpending.set(rule.card.id, options.previousMonthSpending);
     } else {
       // 카드별 performanceExclusions에 따라 전월실적 개별 계산
+      // Match against three key forms: parent category (e.g. "tax_payment"),
+      // subcategory leaf ID (e.g. "cafe"), and dot-notation key (e.g. "dining.cafe").
+      // This ensures that subcategory-level exclusions work correctly even when
+      // the transaction's category is the parent (e.g. tx.category="dining",
+      // tx.subcategory="cafe", exclusion entry="cafe").
       const exclusions = new Set(rule.performanceExclusions);
       const qualifying = transactions
-        .filter(tx => !exclusions.has(tx.category))
+        .filter(tx =>
+          !exclusions.has(tx.category) &&
+          !(tx.subcategory && exclusions.has(tx.subcategory)) &&
+          !(tx.subcategory && exclusions.has(`${tx.category}.${tx.subcategory}`))
+        )
         .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
       cardPreviousSpending.set(rule.card.id, qualifying);
     }
