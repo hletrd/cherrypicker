@@ -5,6 +5,7 @@ import type { OptimizationConstraints } from './constraints.js';
 import { calculateRewards, buildCategoryKey } from '../calculator/reward.js';
 
 const CATEGORY_NAMES_KO: Record<string, string> = {
+  // Parent categories
   dining: '외식',
   restaurant: '음식점',
   cafe: '카페',
@@ -47,6 +48,37 @@ const CATEGORY_NAMES_KO: Record<string, string> = {
   gas: '가스',
   water: '수도',
   uncategorized: '미분류',
+
+  // Subcategory keys (dot notation) — fallback for CLI/standalone usage
+  // when categoryLabels Map is not provided
+  'dining.cafe': '카페',
+  'dining.restaurant': '음식점',
+  'dining.fast_food': '패스트푸드',
+  'dining.delivery': '배달',
+  'grocery.supermarket': '대형마트',
+  'grocery.traditional_market': '전통시장',
+  'grocery.online_grocery': '온라인장보기',
+  'grocery.convenience_store': '편의점',
+  'online_shopping.fashion': '패션',
+  'offline_shopping.department_store': '백화점',
+  'public_transit.subway': '지하철',
+  'public_transit.bus': '버스',
+  'public_transit.taxi': '택시',
+  'transportation.fuel': '주유',
+  'transportation.parking': '주차',
+  'transportation.toll': '통행료',
+  'medical.hospital': '병원',
+  'medical.pharmacy': '약국',
+  'education.academy': '학원',
+  'education.books': '도서',
+  'entertainment.movie': '영화',
+  'entertainment.streaming': '스트리밍',
+  'entertainment.subscription': '구독',
+  'travel.hotel': '숙박',
+  'travel.airline': '항공',
+  'utilities.electricity': '전기',
+  'utilities.gas': '가스',
+  'utilities.water': '수도',
 };
 
 interface CardScore {
