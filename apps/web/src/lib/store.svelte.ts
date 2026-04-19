@@ -3,6 +3,7 @@
 
 import { analyzeMultipleFiles, optimizeFromTransactions } from './analyzer.js';
 import type { CategorizedTx } from './analyzer.js';
+import { loadCategories } from './cards.js';
 
 // --- Types matching the API response shape ---
 
@@ -235,6 +236,25 @@ function createAnalysisStore() {
   // across store re-creation (e.g. HMR) or stale after reset.
   _loadPersistWarningKind = null;
 
+  // Cache category labels to avoid rebuilding the Map on every reoptimize call.
+  let cachedCategoryLabels: Map<string, string> | undefined;
+
+  async function getCategoryLabels(): Promise<Map<string, string>> {
+    if (cachedCategoryLabels) return cachedCategoryLabels;
+    const nodes = await loadCategories();
+    const labels = new Map<string, string>();
+    for (const node of nodes) {
+      labels.set(node.id, node.labelKo);
+      if (node.subcategories) {
+        for (const sub of node.subcategories) {
+          labels.set(sub.id, sub.labelKo);
+        }
+      }
+    }
+    cachedCategoryLabels = labels;
+    return labels;
+  }
+
   return {
     get result() {
       return result;
@@ -315,7 +335,8 @@ function createAnalysisStore() {
       loading = true;
       error = null;
       try {
-        const optimization = await optimizeFromTransactions(editedTransactions, options);
+        const categoryLabels = await getCategoryLabels();
+        const optimization = await optimizeFromTransactions(editedTransactions, options, categoryLabels);
         if (result) {
           result = { ...result, transactions: editedTransactions, optimization };
           generation++;
@@ -336,6 +357,7 @@ function createAnalysisStore() {
       persistWarningKind = null;
       _persistWarningKind = null;
       _loadPersistWarningKind = null;
+      cachedCategoryLabels = undefined;
       clearStorage();
     },
   };
