@@ -506,3 +506,70 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `packages/core/src/optimizer/constraints.ts:17`
 - **Reason for deferral:** The optimizer does not currently mutate transaction objects. The shallow copy protects against array-level mutations (push, splice) but not against object-level mutations. Deep-copying would add a performance cost for large transaction sets. Adding a documentation comment is a sufficient safeguard for now.
 - **Exit criterion:** If the optimizer or calculator is refactored to mutate transaction objects, deep-copy transactions in `buildConstraints` or add a runtime freeze.
+
+---
+
+## Deferred Findings (Cycle 9)
+
+### D-70: `savingsPct` is 0 when optimization is identical — redundant comparison UI
+
+- **Original finding:** C9-02
+- **Severity:** LOW (UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/SavingsComparison.svelte:71-75,176-180`
+- **Reason for deferral:** When cherry-picking gives the same reward as the best single card, the comparison section shows redundant data. The "+0원" value is correct but the bar comparison is visually unhelpful. Adding a special "동일" message is a UX enhancement, not a bug fix.
+- **Exit criterion:** If users find the identical-reward comparison confusing, replace the comparison section with a "카드 한 장과 동일해요" message.
+
+### D-71: PDF fallback date regex is complex and hard to maintain
+
+- **Original finding:** C9-04
+- **Severity:** LOW (maintainability)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/pdf.ts:312-331`
+- **Reason for deferral:** The mega-regex works correctly but is difficult to read and extend. Refactoring to use separate pattern tests (like `findDateCell`) would improve maintainability but is a refactor with no functional change.
+- **Exit criterion:** If the fallback date pattern needs to support additional formats, refactor to use separate pattern tests.
+
+### D-72: CategoryBreakdown percentage rounding can shift the "other" threshold by 0.05%
+
+- **Original finding:** C9-06 (extends D-59/C7-10)
+- **Severity:** LOW (UX)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:78-79`
+- **Reason for deferral:** Same class as D-59/C7-10 (percentage rounding). The threshold-shifting is a visual artifact — categories at 1.95% are included while 1.94% goes to "other". The difference is imperceptible to users.
+- **Exit criterion:** When D-59 is resolved (rounding adjustment), verify the threshold comparison uses the un-rounded value.
+
+### D-73: `Math.max(...array)` stack overflow risk for very large arrays in OptimalCardMap
+
+- **Original finding:** C9-07
+- **Severity:** LOW (edge-case)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/OptimalCardMap.svelte:18-19`
+- **Reason for deferral:** `Math.max(...array)` can cause a stack overflow for arrays > ~100K entries. Typical usage has < 50 assignments, so this is not a realistic concern.
+- **Exit criterion:** If assignments ever exceed 10,000 entries, replace with `array.reduce((a, b) => Math.max(a, b), 0)`.
+
+### D-74: SavingsComparison bars misleading when both rewards are 0
+
+- **Original finding:** C9-08
+- **Severity:** LOW (UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/SavingsComparison.svelte:78-82`
+- **Reason for deferral:** When `totalReward` is 0 (all transactions uncategorized), the comparison shows a misleading bar chart. This is an edge case — most uploads have at least some categorized transactions. Hiding the section or showing a message is a UX enhancement.
+- **Exit criterion:** If users are confused by the zero-reward comparison, hide the section or show "혜택이 없어요" instead.
+
+### D-75: HTML-as-XLS double-decode and unnecessary re-encode in xlsx parser
+
+- **Original finding:** C9-10 (extends D-52/C6-06)
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/xlsx.ts:290-294`
+- **Reason for deferral:** Same class as D-52/C6-06. The double decode only affects HTML-as-XLS files. The performance impact is negligible for files under 10MB. Passing `{ type: 'string' }` to XLSX.read would avoid the re-encode.
+- **Exit criterion:** If HTML-as-XLS parsing becomes a performance bottleneck, pass the HTML string directly to XLSX.read with `{ type: 'string' }`.
+
+### D-76: Module-level `cachedCoreRules` persists across store resets
+
+- **Original finding:** C9-12
+- **Severity:** LOW (consistency)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/analyzer.ts:43-44`
+- **Reason for deferral:** `cachedCoreRules` is never cleared even when the store's `reset()` method is called. This is inconsistent with `cachedCategoryLabels` being cleared on reset. However, the underlying `cards.json` data never changes within a session, so stale cache is not a practical concern.
+- **Exit criterion:** If the card data source ever changes dynamically within a session, add a `clearAnalyzerCaches()` function and call it from `store.reset()`.
