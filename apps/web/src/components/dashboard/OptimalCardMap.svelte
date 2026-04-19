@@ -89,8 +89,13 @@
           {@const isExpanded = expandedRows.has(a.category)}
           {@const rateBarWidth = Math.round((a.rate / maxRate) * 100)}
           <tr
-            class="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)] transition-colors cursor-pointer"
+            class="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)] transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-1"
+            role="button"
+            tabindex="0"
+            aria-label={`${a.categoryNameKo} — ${a.assignedCardName}`}
+            aria-expanded={isExpanded}
             onclick={() => toggleRow(a.category)}
+            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRow(a.category); } }}
           >
             <!-- Left border accent by issuer color -->
             <td class="py-3 font-medium" style="border-left: 3px solid {issuerColor}; padding-left: 8px;">
