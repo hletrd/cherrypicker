@@ -1,51 +1,74 @@
-# Review Aggregate -- 2026-04-19 (Cycle 6 Re-review)
+# Review Aggregate -- 2026-04-19 (Cycle 7 Deep Re-review)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle6-comprehensive.md` (multi-angle comprehensive re-review)
+- `.context/reviews/2026-04-19-cycle7-comprehensive.md` (prior C7 review, many findings since fixed)
+- Full re-read of all 40+ source files in this cycle
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-50 per-agent and aggregate files
+- All cycle 1-48 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 3-5, 47-50 findings are confirmed fixed:
+All prior cycle 1-6, 47-50 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C3-M01 | **FIXED** | CLI `report.ts:139` passes `categoryLabels` to `buildConstraints` |
-| C3-L01 | **FIXED** | CLI `report.ts:50-52` validates `Number.isNaN(prevSpending)` |
-| C3-M02 | **PARTIALLY FIXED** | Shallow validation of cardResults entries added (`store.svelte.ts:179-188`) |
-| C3-L02 | **STILL DEFERRED** | `getCardById` O(n) scan -- low priority |
-| C4-01 | **FIXED** | `SavingsComparison.svelte` has `Number.isFinite(raw)` guard |
-| C4-02 | **FIXED** | `analyzeMultipleFiles` passes prebuilt `categoryLabels` to `optimizeFromTransactions` |
-| C4-03 | **FIXED** | Single-pass `monthlyTxCount` map in `analyzer.ts:298-302` |
-| C4-04 | **FIXED** | `CategoryBreakdown.svelte:154-155` has `role="button"` and `tabindex="0"`, line 161 has `onkeydown` |
-| C4-05 | **FIXED** | `analyzer.ts:225` passes `categoryLabels` directly to `buildConstraints` |
-| C4-08 | **FIXED** | `TransactionReview.svelte:142-150` uses `lastSyncedGeneration` counter |
-| C4-12 | **FIXED** | `FileDropzone.svelte:206` uses `Math.round(Number(v))` with `Number.isFinite` guard |
-| C4-15 | **FIXED** | `analyzer.ts:47,167-168` caches `cachedCoreRules` |
-| C4R-M01 | **FIXED** | `report.ts:143` calls `printSpendingSummary(categorized, categoryLabels)` |
-| C4R-M02 | **FIXED** | Server-side CSV adapters `parseAmount` returns NaN, callers use `Number.isNaN()` |
-| C4R-L01 | **FIXED** | Content-signature adapter failures collected into `ParseResult.errors` |
-| C5-M01 | **FIXED** | Server-side CSV `parseAmount` returns NaN, callers use `Number.isNaN()` |
-| C5-M02 | **FIXED** | All server-side CSV adapters use `Number.isNaN()` instead of `isNaN()` |
-| C5-L02 | **FIXED** | Unused `nextCount` variable removed from `table-parser.ts` |
+| C7-01 | **FIXED** | `SavingsComparison.svelte:262` uses `formatRate(card.rate)` |
+| C7-02 | **FIXED** | `SpendingSummary.svelte:111` uses `formatRatePrecise()` |
+| C7-03 | **FIXED** | `SavingsComparison.svelte:179` uses `formatRatePrecise()` |
+| C7-08 | **FIXED** | `pdf.ts` now has `inferYear()` and handles short Korean dates + MM/DD |
+| C7-13 | **FIXED** | `analyzer.ts:167-168` caches by null check, not reference equality |
+| C6R-M01 | **FIXED** | Server-side XLSX uses `Number.isNaN()` |
+| C6R-M02 | **FIXED** | Web-side CSV/XLSX use `Number.isNaN()` |
 | C47-L01 | **STILL FIXED** | Terminal `formatWon` has `Number.isFinite` guard + negative-zero normalization |
 | C47-L02 | **STILL FIXED** | Terminal `formatRate` has `Number.isFinite` guard |
-| C49-M01 | **STILL FIXED** | `llm-fallback.ts:84` has `let parsed: LLMTransaction[] = [];` |
-| C50-M01 | **STILL FIXED** | Viz report generator and terminal summary accept `categoryLabels` parameter |
-| C50-L01 | **STILL FIXED** | Report generator uses `replaceAll()` for template placeholder substitution |
-| C6-01 | **FIXED** | `SavingsComparison.svelte` no longer stores stale `rate`, only computed in `.map()` |
-| C6-02 | **FIXED** | `persistWarningKind` implemented in `store.svelte.ts`, UI in `SpendingSummary.svelte` |
-| C6-03 | **FIXED** | Count-up animation starts from current displayed value instead of 0 |
-| C6-07 | **FIXED** | AI categorizer clears subcategory when changing category |
-| C6-11 | **FIXED** | `formatRatePrecise` added to formatters.ts and used in SavingsComparison |
 
 ---
 
-## Still-Open Prior Findings (carried forward, not new)
+## Still-Open Findings (New and Carried Forward)
+
+### C7R-M01: Category aggregation bug in spending summary -- subcategories merged with wrong label
+
+- **Severity:** MEDIUM
+- **Confidence:** High
+- **Files:**
+  - `packages/viz/src/terminal/summary.ts:36-39`
+  - `packages/viz/src/report/generator.ts:75-77`
+- **Description:** The `byCategory` Map is keyed by `tx.category` (parent ID), but the `categoryKey` includes the subcategory (e.g., `"dining.cafe"`). The label is resolved from `categoryKey` (which may resolve to `"카페"`) rather than the parent key `"dining"` (which resolves to `"외식"`). This means all subcategories under a parent are summed into one row, but the label is the first subcategory's label, not the parent's. Example: cafe and restaurant transactions merge into one row labeled "카페" instead of "외식".
+- **Failure scenario:** Upload a statement with both cafe and restaurant transactions. The spending summary shows one merged row with the wrong category name.
+- **Fix:** Change the Map key from `tx.category` to `categoryKey` to produce separate rows for each subcategory, matching the optimization result granularity.
+
+### C7R-L01: Unused `bank` parameter in web-side `tryStructuredParse`
+
+- **Severity:** LOW
+- **Confidence:** High
+- **File:** `apps/web/src/lib/parser/pdf.ts:236`
+- **Description:** The `bank: BankId | null` parameter is declared but never referenced. Produces a lint warning.
+- **Fix:** Prefix with underscore: `_bank: BankId | null`.
+
+### C7R-L02: Lint gate failure -- `bun:test` type declaration errors in web app test files
+
+- **Severity:** LOW (lint gate, not runtime)
+- **Confidence:** High
+- **Files:**
+  - `apps/web/__tests__/analyzer-adapter.test.ts:7`
+  - `apps/web/__tests__/parser-date.test.ts:8`
+- **Description:** The `@cherrypicker/web` lint task reports 5 errors because `bun:test` module is not found during type-checking. Tests run fine with `bun test` but the `svelte-check` lint step fails.
+- **Fix:** Add `@types/bun` to the web app's devDependencies, or exclude test files from the lint/typecheck configuration.
+
+### C7R-L03: `formatDateKo`/`formatDateShort` use `parseInt` without NaN guard
+
+- **Severity:** LOW
+- **Confidence:** High
+- **File:** `apps/web/src/lib/formatters.ts:153,164`
+- **Description:** `parseInt(m!, 10)` without NaN check. If date parts are malformed (e.g., "2026-ab-15"), the function would produce "2026년 NaN월 NaN일".
+- **Fix:** Add NaN guard with fallback to `'-'`.
+
+---
+
+## Still-Open Prior Deferred Findings (carried forward, not new)
 
 | Finding | Severity | Note |
 |---|---|---|
@@ -56,27 +79,9 @@ All prior cycle 3-5, 47-50 findings are confirmed fixed:
 | C4-11 | MEDIUM | No regression test for findCategory fuzzy match |
 | C4-13 | LOW | Small-percentage bars nearly invisible |
 | C4-14 | LOW | Stale fallback values in Layout footer |
-
----
-
-## Verification of Prior Deferred Fixes
-
-| Finding | Status | Evidence |
-|---|---|---|
-| D-99 | **STILL FIXED** | `store.svelte.ts:147-148` has `Number.isFinite(tx.amount) && tx.amount > 0` |
-| D-102 | **STILL FIXED** | `packages/core/src/index.ts:18` exports `buildCategoryKey` |
-| D-106 | **STILL DEFERRED** | `apps/web/src/lib/parser/pdf.ts:284` bare `catch {}` |
-| D-107 | **PARTIALLY ADDRESSED** | Server-side CSV adapter loop logs warnings and collects failures, but web-side CSV adapter failures still not collected into ParseResult |
-| D-110 | **STILL DEFERRED** | Non-latest month edits have no visible optimization effect |
-
----
-
-## Active Findings (New in Cycle 6)
-
-| ID | Severity | Confidence | File | Description | Status |
-|---|---|---|---|---|---|
-| C6R-M01 | MEDIUM | High | `packages/parser/src/xlsx/index.ts:137,147` | Server-side XLSX parser uses `isNaN()` instead of `Number.isNaN()` | NEW, needs fix |
-| C6R-M02 | LOW | High | `apps/web/src/lib/parser/csv.ts` (11 occurrences), `apps/web/src/lib/parser/xlsx.ts:304` | Web-side CSV/XLSX adapters use `isNaN()` for installment parsing | NEW, consistency fix |
+| D-106 | LOW | `apps/web/src/lib/parser/pdf.ts:284` bare `catch {}` |
+| D-107 | LOW | CSV adapter error collection (partially addressed) |
+| D-110 | LOW | Non-latest month edits have no visible optimization effect |
 
 ---
 
