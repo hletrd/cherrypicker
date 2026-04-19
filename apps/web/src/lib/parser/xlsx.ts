@@ -233,6 +233,19 @@ function parseDateToISO(raw: unknown): string {
       return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
     }
 
+    // MM/DD or MM.DD — infer year with look-back heuristic
+    // Handles short dates in HTML-as-XLS files where Excel stores text
+    // rather than serial date numbers (e.g., "01/15" for January 15th).
+    const mdMatch = cleaned.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
+    if (mdMatch) {
+      const month = parseInt(mdMatch[1]!, 10);
+      const day = parseInt(mdMatch[2]!, 10);
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        const year = inferYear(month, day);
+        return `${year}-${mdMatch[1]!.padStart(2, '0')}-${mdMatch[2]!.padStart(2, '0')}`;
+      }
+    }
+
     return cleaned;
   }
   return String(raw ?? '');
