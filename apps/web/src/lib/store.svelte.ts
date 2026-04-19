@@ -347,7 +347,28 @@ function createAnalysisStore() {
         if (result) {
           // Keep all months in the transactions field for display/editing,
           // but the optimization only covers the latest month.
-          result = { ...result, transactions: editedTransactions, optimization };
+          // Recalculate monthlyBreakdown from the edited transactions so
+          // per-month spending totals reflect any user edits (not stale).
+          const monthlySpending = new Map<string, number>();
+          const monthlyTxCount = new Map<string, number>();
+          for (const tx of editedTransactions) {
+            const month = tx.date.slice(0, 7);
+            monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
+            monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
+          }
+          const updatedMonthlyBreakdown = [...monthlySpending.entries()]
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([month, spending]) => ({
+              month,
+              spending,
+              transactionCount: monthlyTxCount.get(month) ?? 0,
+            }));
+          result = {
+            ...result,
+            transactions: editedTransactions,
+            optimization,
+            monthlyBreakdown: updatedMonthlyBreakdown,
+          };
           generation++;
           persistToStorage(result);
           persistWarningKind = _persistWarningKind;
