@@ -1,32 +1,32 @@
-# Review Aggregate -- 2026-04-19 (Cycle 39)
+# Review Aggregate -- 2026-04-19 (Cycle 41)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-19-cycle39-comprehensive.md` (multi-angle review)
+- `.context/reviews/2026-04-19-cycle41-comprehensive.md` (multi-angle review)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-38 per-agent and aggregate files
+- All cycle 1-40 per-agent and aggregate files
 
 ---
 
 ## Deduplication with Prior Reviews
 
-C38-01 is CONFIRMED ALREADY FIXED in the current codebase (FileDropzone text updated). C39-01 is NEW and requires implementation. No duplicate findings with prior cycles.
+C40-01 is CONFIRMED ALREADY FIXED in the current codebase (server-side PDF `amount <= 0` filter). C41-01 is NEW and requires implementation. No duplicate findings with prior cycles.
 
 ---
 
-## Verification of Cycle 38 Fixes
+## Verification of Cycle 40 Fixes
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C38-01 | **FIXED** | `apps/web/src/components/upload/FileDropzone.svelte:409` now says "이번 달 지출액을 기준으로 자동 계산해요" instead of "50만원으로 계산해요" |
+| C40-01 | **FIXED** | `packages/parser/src/pdf/index.ts:158` now reads `if (amount <= 0) continue;` |
 
 ---
 
-## Active Findings (New in Cycle 39)
+## Active Findings (New in Cycle 41)
 
 | ID | Severity | Confidence | File | Description | Status |
 |---|---|---|---|---|---|
-| C39-01 | MEDIUM | High | `packages/parser/src/pdf/index.ts:11,104-109` + `packages/parser/src/pdf/table-parser.ts:2` | Server-side PDF `findDateCell` DATE_PATTERN only matches YYYY-MM-DD -- silently drops rows with Korean/short-year dates while web-side correctly parses them | PENDING |
+| C41-01 | HIGH | High | `packages/parser/src/csv/{hyundai,samsung,shinhan,kb,lotte,hana,woori,nh,ibk,bc}.ts` | Server-side CSV bank adapters return NaN from parseAmount but never check for it before pushing transactions -- NaN amounts propagate through the optimizer and corrupt reward calculations | PENDING |
 
 ---
 
