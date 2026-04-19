@@ -197,7 +197,7 @@
     try {
       await analysisStore.analyze(uploadedFiles, {
         bank: bank || undefined,
-        previousMonthSpending: previousSpending ? parseInt(previousSpending, 10) : undefined,
+        previousMonthSpending: (() => { const v = Number(previousSpending); return Number.isFinite(v) && v >= 0 ? v : undefined; })(),
       });
 
       uploadStatus = 'success';
