@@ -573,3 +573,88 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/lib/analyzer.ts:43-44`
 - **Reason for deferral:** `cachedCoreRules` is never cleared even when the store's `reset()` method is called. This is inconsistent with `cachedCategoryLabels` being cleared on reset. However, the underlying `cards.json` data never changes within a session, so stale cache is not a practical concern.
 - **Exit criterion:** If the card data source ever changes dynamically within a session, add a `clearAnalyzerCaches()` function and call it from `store.reset()`.
+
+---
+
+## Deferred Findings (Cycle 10)
+
+### D-77: Global cap over-count correction in `calculateRewards` is subtle and needs documentation
+
+- **Original finding:** C10-01
+- **Severity:** LOW (maintainability)
+- **Confidence:** High
+- **File+line:** `packages/core/src/calculator/reward.ts:265-268`
+- **Reason for deferral:** The behavior is correct — when the global cap clips a reward, the rule-level tracker must be rolled back to reflect only the actually-applied amount. Adding a documentation comment would help but is not urgent. This is addressed in Plan 19 Task 2 but marked LOW priority.
+- **Exit criterion:** If the over-count correction logic is modified or a developer is confused by it, add the documentation comment.
+
+### D-78: Subcategory color fallback goes to gray instead of parent category color
+
+- **Original finding:** C10-04 (extends D-42/D-46/D-64)
+- **Severity:** LOW (UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:87`
+- **Reason for deferral:** Same class as D-42/D-46/D-64. Missing subcategories fall through to `uncategorized` gray. The fix requires either adding all subcategories to the hardcoded map (brittle) or implementing a dynamic color generator (requires design work).
+- **Exit criterion:** When D-42 is resolved (dynamic color generation), this will be automatically fixed.
+
+### D-79: `bestSingleCard` computation is O(n*m) — acceptable at current scale
+
+- **Original finding:** C10-05 (extends D-09/D-51)
+- **Severity:** LOW (performance)
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/greedy.ts:256-268`
+- **Reason for deferral:** Same class as D-09/D-51. With 683 cards and typical transaction counts (< 1000), the bestSingleCard computation takes < 1ms. Pre-filtering cards would add complexity without measurable benefit.
+- **Exit criterion:** If card count exceeds 5000 or optimization latency becomes noticeable, pre-filter cards by matching reward rules before computing bestSingleCard.
+
+### D-80: `as const` type assertion in `OptimalCardMap` sort buttons is fragile
+
+- **Original finding:** C10-07
+- **Severity:** LOW (maintainability)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/OptimalCardMap.svelte:62`
+- **Reason for deferral:** The pattern is idiomatic Svelte 5 and works correctly. TypeScript would catch a type mismatch at compile time. The fragility is theoretical — adding a new sort key requires updating both the `SortKey` type and the button array, which is a normal development task.
+- **Exit criterion:** No action needed unless a sort key mismatch causes a runtime error.
+
+### D-81: AI categorizer import is dead code
+
+- **Original finding:** C10-08 (same as D-10/D-68)
+- **Severity:** LOW (dead-code)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:6`
+- **Reason for deferral:** Same as D-10/D-68. The import adds minimal bundle weight. Removing it would require also removing AI-related UI code. Cleaner to leave as feature flag until the self-hosted AI runtime is implemented.
+- **Exit criterion:** When the self-hosted AI runtime is implemented, either re-enable or remove.
+
+### D-82: Annual savings projection multiplies by 12 regardless of data span
+
+- **Original finding:** C10-10 (same as D-40)
+- **Severity:** LOW (UX)
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/SavingsComparison.svelte:174`
+- **Reason for deferral:** Same as D-40. The "약" label makes it clear this is an estimate. Multiplying by 12 is the simplest annualization.
+- **Exit criterion:** If users report confusion about annual savings numbers, change the label or remove the projection.
+
+### D-83: BANK_SIGNATURES patterns should not use `g` flag — latent risk
+
+- **Original finding:** C10-11
+- **Severity:** LOW (latent-risk)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/detect.ts:8-105`
+- **Reason for deferral:** No current patterns use the `g` flag. The risk is theoretical — a developer adding a new pattern might add `g` out of habit. Adding a comment to the BANK_SIGNATURES declaration would help but is not urgent.
+- **Exit criterion:** If a developer adds a `g` flag pattern and `detectBank` produces wrong results on repeated calls, remove the `g` flag and add a comment.
+
+### D-84: Empty merchant name matches first keyword with 0.8 confidence
+
+- **Original finding:** C10-13
+- **Severity:** LOW (edge-case)
+- **Confidence:** Medium
+- **File+line:** `packages/core/src/categorizer/matcher.ts:32-79`
+- **Reason for deferral:** This is addressed by Plan 18 Task 3 (adding `lower.length < 2` guard). If that fix is implemented, empty and single-character merchant names will return `uncategorized` with 0.0 confidence. Deferring this separately in case Plan 18 Task 3 is not implemented.
+- **Exit criterion:** If Plan 18 Task 3 is implemented, this is automatically fixed. If not, add the empty-string guard directly.
+
+### D-85: SessionStorage truncation only omits transactions but optimization object can also be large
+
+- **Original finding:** C10-12 (extends D-48)
+- **Severity:** LOW (robustness)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/store.svelte.ts:124-127`
+- **Reason for deferral:** The optimization object is typically < 100KB. The 4MB budget leaves ample headroom even with a large optimization object. The scenario where optimization alone exceeds 4MB requires extreme inputs (> 50 cards with > 30 categories each). The current truncation strategy handles the common case (large transaction lists) correctly.
+- **Exit criterion:** If users report `persistWarning = 'corrupted'` with normal-sized uploads, also truncate `optimization.cardResults` when the payload is still too large after omitting transactions.

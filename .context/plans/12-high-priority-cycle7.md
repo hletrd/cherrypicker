@@ -2,7 +2,7 @@
 
 **Priority:** HIGH
 **Findings addressed:** C7-08, C7-02, C7-01, C7-03
-**Status:** PENDING
+**Status:** DONE
 
 ---
 
@@ -138,7 +138,7 @@ import { formatWon, formatRate, formatRatePrecise, getIssuerColor, getIssuerFrom
 
 ## Progress
 
-- [ ] Task 1: Add short-date handling to PDF parser
-- [ ] Task 2: Use formatRatePrecise in SpendingSummary
-- [ ] Task 3: Use formatRate in SavingsComparison breakdown
-- [ ] Task 4: Use formatRatePrecise in SavingsComparison best single card
+- [x] Task 1: Add short-date handling to PDF parser
+- [x] Task 2: Use formatRatePrecise in SpendingSummary
+- [x] Task 3: Use formatRate in SavingsComparison breakdown
+- [x] Task 4: Use formatRatePrecise in SavingsComparison best single card

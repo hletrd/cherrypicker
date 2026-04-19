@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM
 **Findings addressed:** C7-11, C7-04, C7-06
-**Status:** PENDING
+**Status:** DONE
 
 ---
 
@@ -143,6 +143,6 @@ Prefer Option A for this cycle (documentation only) since Option B could break t
 
 ## Progress
 
-- [ ] Task 1: Differentiate persistWarning between truncation and corruption
-- [ ] Task 2: Guard TransactionReview effect against unnecessary re-syncs
-- [ ] Task 3: Document all-month transactions behavior in analyzeMultipleFiles
+- [x] Task 1: Differentiate persistWarning between truncation and corruption
+- [x] Task 2: Guard TransactionReview effect against unnecessary re-syncs
+- [x] Task 3: Document all-month transactions behavior in analyzeMultipleFiles
