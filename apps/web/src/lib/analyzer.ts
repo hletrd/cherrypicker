@@ -86,6 +86,7 @@ export interface CategorizedTx {
 export async function parseAndCategorize(
   file: File,
   options?: AnalyzeOptions,
+  fileIndex?: number,
 ): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string }[]; categoryNodes: CategoryNode[] }> {
   const parseResult = await parseFile(file, options?.bank as BankId | undefined);
   if (parseResult.transactions.length === 0) {
@@ -98,11 +99,17 @@ export async function parseAndCategorize(
   // type (which has an extra `label` field) to the rules shape via the adapter.
   const matcher = new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
 
+  // Include fileIndex in the ID to prevent collisions when multiple files
+  // are uploaded — without it, each file produces tx-0 through tx-N and
+  // the merged list has duplicate IDs, breaking Svelte keyed-each and
+  // the changeCategory function in TransactionReview.
+  const idPrefix = fileIndex !== undefined ? `f${fileIndex}-` : '';
+
   const transactions: CategorizedTx[] = parseResult.transactions.map(
     (tx: RawTransaction, idx: number) => {
       const match = matcher.match(tx.merchant, tx.category);
       return {
-        id: `tx-${idx}`,
+        id: `tx-${idPrefix}${idx}`,
         date: tx.date,
         merchant: tx.merchant,
         amount: tx.amount,
@@ -229,7 +236,7 @@ export async function analyzeMultipleFiles(
 ): Promise<AnalysisResult> {
   // 1. Parse and categorize ALL files
   const allParsed = await Promise.all(
-    files.map(f => parseAndCategorize(f, options))
+    files.map((f, i) => parseAndCategorize(f, options, i))
   );
 
   // 2. Merge all transactions and build category labels from the first parsed result
