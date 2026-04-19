@@ -2,7 +2,7 @@
 
 **Priority:** HIGH
 **Findings addressed:** C10-06, C10-09, C10-02
-**Status:** PENDING
+**Status:** DONE
 
 ---
 
@@ -168,6 +168,6 @@ if (lower.length >= 3) {
 
 ## Progress
 
-- [ ] Task 1: Fix `handleUpload` error check
-- [ ] Task 2: Filter reoptimize transactions to latest month
-- [ ] Task 3: Add minimum merchant name length guard
+- [x] Task 1: Fix `handleUpload` error check
+- [x] Task 2: Filter reoptimize transactions to latest month
+- [x] Task 3: Add minimum merchant name length guard

@@ -1,0 +1,61 @@
+{
+  "title": "Cycle 10 Fixes — Plans 18 & 19",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Fix handleUpload to check analysisStore.error before setting success",
+      "priority": 1,
+      "passes": true,
+      "acceptanceCriteria": [
+        "FileDropzone.svelte handleUpload checks analysisStore.error after await analysisStore.analyze()",
+        "If analysisStore.error is set, uploadStatus = 'error' and errorMessage shows the error",
+        "If analysisStore.error is null, uploadStatus = 'success' and navigation proceeds",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "Filter reoptimize transactions to latest month",
+      "priority": 2,
+      "passes": true,
+      "acceptanceCriteria": [
+        "getLatestMonth helper exported from analyzer.ts returns the latest month string from a transaction list",
+        "store.svelte.ts reoptimize filters editedTransactions to latest month before passing to optimizeFromTransactions",
+        "All-month transactions are still stored in result.transactions for display/editing",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Add minimum merchant name length guard for reverse substring matching",
+      "priority": 3,
+      "passes": true,
+      "acceptanceCriteria": [
+        "MerchantMatcher.match returns uncategorized for merchant names shorter than 2 characters",
+        "kw.includes(lower) direction only matches when lower.length >= 3 in matcher.ts",
+        "kw.includes(lower) direction only matches when lower.length >= 3 in taxonomy.ts",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Add Number.isFinite guard in XLSX parseDateToISO",
+      "priority": 4,
+      "passes": true,
+      "acceptanceCriteria": [
+        "parseDateToISO in xlsx.ts guards against Infinity and NaN via Number.isFinite before range check",
+        "TypeScript compiles without errors"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Add documentation comment for global cap over-count correction",
+      "priority": 5,
+      "passes": true,
+      "acceptanceCriteria": [
+        "reward.ts lines 265-268 have a documentation comment explaining why the over-count correction is necessary",
+        "TypeScript compiles without errors"
+      ]
+    }
+  ]
+}

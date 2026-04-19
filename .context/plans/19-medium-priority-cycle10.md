@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM
 **Findings addressed:** C10-12, C10-01, C10-03, C10-13
-**Status:** PENDING
+**Status:** DONE
 
 ---
 
@@ -62,6 +62,6 @@ ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed - overcount);
 
 ## Progress
 
-- [ ] Task 1: Guard against Infinity/NaN in XLSX date parsing
-- [ ] Task 2: Document global cap over-count correction
-- [ ] Task 3: (Covered by Plan 18 Task 3)
+- [x] Task 1: Guard against Infinity/NaN in XLSX date parsing
+- [x] Task 2: Document global cap over-count correction
+- [x] Task 3: (Covered by Plan 18 Task 3)
