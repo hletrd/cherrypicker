@@ -301,11 +301,13 @@ export async function analyzeMultipleFiles(
     parseErrors: allErrors,
     transactions: allTransactions,
     optimization,
-    monthlyBreakdown: [...monthlySpending.entries()].map(([month, spending]) => ({
-      month,
-      spending,
-      transactionCount: monthlyTxCount.get(month) ?? 0,
-    })),
+    monthlyBreakdown: [...monthlySpending.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, spending]) => ({
+        month,
+        spending,
+        transactionCount: monthlyTxCount.get(month) ?? 0,
+      })),
   };
 }
 
