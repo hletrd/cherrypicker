@@ -15,8 +15,7 @@ interface Column {
 function detectColumnBoundaries(lines: string[]): Column[] {
   if (lines.length === 0) return [];
 
-  const lengths = lines.map((l) => l.length);
-  const maxLen = lengths.length > 0 ? Math.max(...lengths) : 0;
+  const maxLen = lines.reduce((max, l) => Math.max(max, l.length), 0);
   if (maxLen === 0) return [];
   // Count non-space characters at each position
   const charCount = new Array<number>(maxLen).fill(0);
@@ -73,6 +72,7 @@ export function parseTable(text: string): string[][] {
   // Find lines that look like table rows (contain dates or amounts)
   const tableLines: string[] = [];
   let inTable = false;
+  let consecutiveBlankLines = 0;
 
   for (const line of lines) {
     const hasDate = DATE_PATTERN.test(line);
@@ -80,15 +80,18 @@ export function parseTable(text: string): string[][] {
 
     if (hasDate || hasAmount) {
       inTable = true;
+      consecutiveBlankLines = 0;
     }
 
     if (inTable && line.trim()) {
       tableLines.push(line);
-    }
-
-    // End of table: blank line after content
-    if (inTable && !line.trim()) {
-      if (tableLines.length > 3) break;
+      consecutiveBlankLines = 0;
+    } else if (inTable && !line.trim()) {
+      consecutiveBlankLines++;
+      // End of table: 2+ consecutive blank lines after content.
+      // A single blank line may be a gap within the table (e.g., between
+      // monthly groups in Korean credit card PDFs), not the end.
+      if (consecutiveBlankLines >= 2 && tableLines.length > 3) break;
     }
   }
 
