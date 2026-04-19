@@ -66,8 +66,12 @@ export interface AnalysisResult {
   success: boolean;
   bank: string | null;
   format: string;
+  /** Period and count for the optimized month only */
   statementPeriod?: { start: string; end: string };
   transactionCount: number;
+  /** Period and count spanning all uploaded months */
+  fullStatementPeriod?: { start: string; end: string };
+  totalTransactionCount?: number;
   parseErrors: { line?: number; message: string; raw?: string }[];
   transactions?: CategorizedTx[];
   optimization: OptimizationResult;
@@ -86,7 +90,7 @@ const STORAGE_KEY = 'cherrypicker:analysis';
 
 type PersistedAnalysisResult = Pick<
   AnalysisResult,
-  'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'optimization' | 'monthlyBreakdown'
+  'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown'
 >;
 
 function persistToStorage(data: AnalysisResult): void {
@@ -98,6 +102,8 @@ function persistToStorage(data: AnalysisResult): void {
         format: data.format,
         statementPeriod: data.statementPeriod,
         transactionCount: data.transactionCount,
+        fullStatementPeriod: data.fullStatementPeriod,
+        totalTransactionCount: data.totalTransactionCount,
         optimization: data.optimization,
         monthlyBreakdown: data.monthlyBreakdown,
       };
@@ -184,6 +190,12 @@ function createAnalysisStore() {
     },
     get statementPeriod(): { start: string; end: string } | undefined {
       return result?.statementPeriod;
+    },
+    get totalTransactionCount(): number {
+      return result?.totalTransactionCount ?? result?.transactionCount ?? 0;
+    },
+    get fullStatementPeriod(): { start: string; end: string } | undefined {
+      return result?.fullStatementPeriod ?? result?.statementPeriod;
     },
     get transactions(): CategorizedTx[] {
       return result?.transactions ?? [];

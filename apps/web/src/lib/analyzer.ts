@@ -224,10 +224,17 @@ export async function analyzeMultipleFiles(
     previousMonthSpending,
   });
 
-  // 8. Calculate statement period from all transactions
-  const dates = allTransactions.map(tx => tx.date).filter(Boolean).sort();
-  const statementPeriod = dates.length > 0
-    ? { start: dates[0]!, end: dates[dates.length - 1]! }
+  // 8. Calculate statement periods from transactions
+  // - fullStatementPeriod / totalTransactionCount: all uploaded months
+  // - statementPeriod / transactionCount: optimized month only
+  const allDates = allTransactions.map(tx => tx.date).filter(Boolean).sort();
+  const fullStatementPeriod = allDates.length > 0
+    ? { start: allDates[0]!, end: allDates[allDates.length - 1]! }
+    : undefined;
+
+  const optimizedDates = latestTransactions.map(tx => tx.date).filter(Boolean).sort();
+  const statementPeriod = optimizedDates.length > 0
+    ? { start: optimizedDates[0]!, end: optimizedDates[optimizedDates.length - 1]! }
     : undefined;
 
   return {
@@ -235,7 +242,9 @@ export async function analyzeMultipleFiles(
     bank,
     format,
     statementPeriod,
-    transactionCount: allTransactions.length,
+    transactionCount: latestTransactions.length,
+    fullStatementPeriod,
+    totalTransactionCount: allTransactions.length,
     parseErrors: allErrors,
     transactions: allTransactions,
     optimization,

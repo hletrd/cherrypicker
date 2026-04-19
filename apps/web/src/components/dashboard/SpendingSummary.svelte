@@ -57,7 +57,7 @@
         <span>거래 건수</span>
       </div>
       <div class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
-        {analysisStore.transactionCount}건
+        {analysisStore.totalTransactionCount}건
       </div>
     </div>
 
@@ -68,7 +68,7 @@
         <span>분석 기간</span>
       </div>
       <div class="mt-1 text-lg font-semibold text-[var(--color-text)]">
-        {formatPeriod(analysisStore.statementPeriod)}
+        {formatPeriod(analysisStore.fullStatementPeriod)}
       </div>
     </div>
 
