@@ -16,7 +16,11 @@
 
   let maxRate = $derived.by(() => {
     if (!assignments.length) return 1;
-    return assignments.reduce((max, a) => Math.max(max, a.rate), 0.001);
+    const computed = assignments.reduce((max, a) => Math.max(max, a.rate), 0);
+    // Guard against division by zero in bar width calculation; use a small
+    // epsilon proportional to typical rate magnitudes rather than a fixed 0.001
+    // to avoid inflating bars when all rates are very small (< 0.1%).
+    return computed > 0 ? computed : 0.0001;
   });
 
   let sortedAssignments = $derived.by(() => {
