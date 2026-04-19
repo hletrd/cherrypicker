@@ -120,11 +120,12 @@
     }
   }
 
-  // Sync from store when transactions change
+  // Sync from store when transactions change — always re-sync on new upload
   $effect(() => {
     const txs = analysisStore.transactions;
-    if (txs.length > 0 && editedTxs.length === 0) {
+    if (txs.length > 0) {
       editedTxs = txs.map(tx => ({ ...tx }));
+      hasEdits = false;
     }
   });
 
