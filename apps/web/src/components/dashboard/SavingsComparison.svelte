@@ -74,6 +74,14 @@
     // When the best single card earns 0 but cherry-picking earns more, the
     // improvement is "infinite" — return a sentinel so the template can show
     // a special badge instead of hiding the improvement behind 0%.
+    //
+    // Defensive note (C28-04): In the current optimizer, this branch is
+    // unreachable because bestSingleCard.totalReward === 0 implies the
+    // optimizer also produces 0 totalReward (both use the same card rules),
+    // making savingsVsSingleCard === 0. However, if the optimizer's card
+    // selection logic changes (e.g., cards excluded from "best single card"
+    // but used by cherry-pick), this guard would become reachable. Kept as a
+    // defensive measure.
     if (opt.bestSingleCard.totalReward === 0 && opt.savingsVsSingleCard > 0) {
       return Infinity;
     }
@@ -196,6 +204,7 @@
         연간 약 {formatWon((opt.savingsVsSingleCard >= 0 ? opt.savingsVsSingleCard : Math.abs(opt.savingsVsSingleCard)) * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준)
       </div>
       {#if savingsPct === Infinity}
+        <!-- Defensive badge (C28-04): currently unreachable — see savingsPct comment -->
         <div class="mt-2 inline-block rounded-full bg-green-200 dark:bg-green-800 px-2 py-0.5 text-xs font-semibold text-green-800 dark:text-green-200">
           최적 조합만 혜택
         </div>
