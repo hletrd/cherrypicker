@@ -60,7 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
     summaryTable.appendChild(summaryRow('분석 기간', period));
     summaryTable.appendChild(summaryRow('총 지출', formatWon(opt.totalSpending)));
     summaryTable.appendChild(summaryRow('체리피킹 혜택', formatWon(opt.totalReward)));
-    summaryTable.appendChild(summaryRow(opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용', formatWon(opt.savingsVsSingleCard)));
+    const savingsDisplay = (opt.savingsVsSingleCard >= 0 ? '+' : '') + formatWon(opt.savingsVsSingleCard);
+    summaryTable.appendChild(summaryRow(opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용', savingsDisplay));
     summaryTable.appendChild(summaryRow('사용 카드 수', uniqueCards + '장'));
     reportContent.appendChild(summaryTable);
 
