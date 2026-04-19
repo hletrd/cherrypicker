@@ -24,9 +24,12 @@ interface MatchResult {
 
 export class MerchantMatcher {
   private readonly taxonomy: CategoryTaxonomy;
+  /** Cached set of known taxonomy category IDs for O(1) rawCategory validation. */
+  private readonly knownCategories: Set<string>;
 
   constructor(categoryNodes: CategoryNode[]) {
     this.taxonomy = new CategoryTaxonomy(categoryNodes);
+    this.knownCategories = new Set(this.taxonomy.getAllCategories());
   }
 
   match(merchantName: string, rawCategory?: string): MatchResult {
@@ -81,9 +84,15 @@ export class MerchantMatcher {
     }
 
     // 4. Use rawCategory from bank as a weak signal (confidence 0.5)
+    //    Validate that the normalized value matches a known taxonomy ID.
+    //    Korean text labels (e.g., "온라인 쇼핑") would create phantom
+    //    categories that match no reward rules — better to fall through
+    //    to uncategorized than to assign a category that yields 0 reward.
     if (rawCategory && rawCategory.trim().length > 0) {
       const normalised = rawCategory.trim().toLowerCase().replace(/\s+/g, '_');
-      return { category: normalised, confidence: 0.5 };
+      if (this.knownCategories.has(normalised)) {
+        return { category: normalised, confidence: 0.5 };
+      }
     }
 
     // 5. Fallback

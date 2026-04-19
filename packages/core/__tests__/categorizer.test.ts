@@ -227,10 +227,18 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
 });
 
 describe('MerchantMatcher - rawCategory fallback', () => {
-  test('uses rawCategory when no static or taxonomy match', () => {
-    const result = matcher.match('완전히알수없는가맹점999', '카페');
-    expect(result.category).toBe('카페');
+  test('uses rawCategory when it matches a known taxonomy ID', () => {
+    const result = matcher.match('완전히알수없는가맹점999', 'cafe');
+    expect(result.category).toBe('cafe');
     expect(result.confidence).toBe(0.5);
+  });
+
+  test('rejects rawCategory that does not match a known taxonomy ID', () => {
+    // "카페" is a Korean label, not a taxonomy ID — should fall through
+    // to uncategorized instead of creating a phantom category
+    const result = matcher.match('완전히알수없는가맹점999', '카페');
+    expect(result.category).toBe('uncategorized');
+    expect(result.confidence).toBe(0.0);
   });
 
   test('ignores empty rawCategory', () => {
