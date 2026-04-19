@@ -39,9 +39,12 @@ function toRulesCategoryNodes(nodes: CategoryNode[]): RulesCategoryNode[] {
 const VALID_SOURCES = new Set(['manual', 'llm-scrape', 'web']);
 const VALID_REWARD_TYPES = new Set(['discount', 'points', 'cashback', 'mileage']);
 
-// Cache for toCoreCardRuleSets — rules from static JSON don't change per session
+// Cache for toCoreCardRuleSets — rules from static JSON don't change per session.
+// The cache is keyed by existence only (not reference equality) because
+// getAllCardRules() returns a new array via flatMap on every call, making
+// reference comparisons always fail. Since the underlying cards.json data
+// never changes within a session, caching the first transformation is safe.
 let cachedCoreRules: CoreCardRuleSet[] | null = null;
-let cachedRulesRef: CardRuleSet[] | null = null;
 
 function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
   return rules.map((rule) => ({
@@ -188,9 +191,8 @@ export async function optimizeFromTransactions(
   // cardRules from static JSON are validated and narrowed to the core
   // CardRuleSet shape via the adapter function. Cache the result since
   // the rules don't change within a session.
-  if (cachedRulesRef !== cardRules || !cachedCoreRules) {
+  if (!cachedCoreRules) {
     cachedCoreRules = toCoreCardRuleSets(cardRules);
-    cachedRulesRef = cardRules;
   }
   const optimizationResult = greedyOptimize(constraints, cachedCoreRules);
 
