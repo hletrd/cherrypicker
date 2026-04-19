@@ -199,6 +199,19 @@ export async function optimizeFromTransactions(
   return optimizationResult;
 }
 
+/** Determine the latest month (YYYY-MM) from a list of categorized transactions. */
+export function getLatestMonth(transactions: CategorizedTx[]): string | null {
+  if (transactions.length === 0) return null;
+  const months = new Set<string>();
+  for (const tx of transactions) {
+    if (tx.date && tx.date.length >= 7) {
+      months.add(tx.date.slice(0, 7));
+    }
+  }
+  const sorted = [...months].sort();
+  return sorted[sorted.length - 1] ?? null;
+}
+
 export async function analyzeMultipleFiles(
   files: File[],
   options?: AnalyzeOptions,

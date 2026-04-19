@@ -1,7 +1,7 @@
 // Shared Svelte 5 state store for analysis results across dashboard components
 // Must be .svelte.ts so that $state runes are compiled properly
 
-import { analyzeMultipleFiles, optimizeFromTransactions } from './analyzer.js';
+import { analyzeMultipleFiles, optimizeFromTransactions, getLatestMonth } from './analyzer.js';
 import type { CategorizedTx } from './analyzer.js';
 import { loadCategories } from './cards.js';
 
@@ -336,8 +336,17 @@ function createAnalysisStore() {
       error = null;
       try {
         const categoryLabels = await getCategoryLabels();
-        const optimization = await optimizeFromTransactions(editedTransactions, options, categoryLabels);
+        // Filter to the latest month to match the initial optimization behavior.
+        // analyzeMultipleFiles only optimizes the latest month; reoptimize must
+        // do the same to avoid cap distortion from non-latest-month transactions.
+        const latestMonth = getLatestMonth(editedTransactions);
+        const latestTransactions = latestMonth
+          ? editedTransactions.filter(tx => tx.date.startsWith(latestMonth))
+          : editedTransactions;
+        const optimization = await optimizeFromTransactions(latestTransactions, options, categoryLabels);
         if (result) {
+          // Keep all months in the transactions field for display/editing,
+          // but the optimization only covers the latest month.
           result = { ...result, transactions: editedTransactions, optimization };
           generation++;
           persistToStorage(result);
