@@ -111,7 +111,7 @@
   });
 
   let topCategoryName = $derived(categories.length > 0 ? categories[0].labelKo : '-');
-  let maxPercentage = $derived(categories.length > 0 ? (categories[0].percentage || 100) : 100);
+  let maxPercentage = $derived(categories.length > 0 ? categories.reduce((max, c) => Math.max(max, c.percentage), 1) : 100);
 </script>
 
 {#if analysisStore.loading}
