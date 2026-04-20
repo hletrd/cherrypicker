@@ -116,8 +116,11 @@ function isAmountLike(value: string): boolean {
 }
 
 function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
-  const delimiter = detectCSVDelimiter(content);
-  const lines = content.split('\n').filter((l) => l.trim());
+  // Strip UTF-8 BOM defensively — parseCSV() already strips before calling
+  // here, but this guards against direct calls from other code paths (C52-01).
+  const cleanContent = content.replace(/^\uFEFF/, '');
+  const delimiter = detectCSVDelimiter(cleanContent);
+  const lines = cleanContent.split('\n').filter((l) => l.trim());
   const errors: ParseError[] = [];
   const transactions: RawTransaction[] = [];
 
@@ -904,10 +907,17 @@ const ADAPTERS: BankAdapter[] = [
 ];
 
 export function parseCSV(content: string, bank?: BankId): ParseResult {
+  // Strip UTF-8 BOM if present — Windows-generated CSV exports commonly
+  // include a BOM character (0xEF 0xBB 0xBF / U+FEFF) that would cause
+  // header detection to fail because indexOf('이용일') won't match
+  // '\uFEFF이용일'. The XLSX parser handles BOM in isHTMLContent(); the
+  // CSV parser needs the same treatment at the entry point (C52-01).
+  const cleanContent = content.replace(/^\uFEFF/, '');
+
   let resolvedBank: BankId | null = bank ?? null;
 
   if (!resolvedBank) {
-    const { bank: detected } = detectBank(content);
+    const { bank: detected } = detectBank(cleanContent);
     resolvedBank = detected;
   }
 
@@ -916,11 +926,11 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
     const adapter = ADAPTERS.find((a) => a.bankId === resolvedBank);
     if (adapter?.parseCSV) {
       try {
-        return adapter.parseCSV(content);
+        return adapter.parseCSV(cleanContent);
       } catch (err) {
         // Fall through to generic parser, but record the failure in the result
         // (matching the server-side pattern in packages/parser/src/csv/index.ts)
-        const fallbackResult = parseGenericCSV(content, resolvedBank);
+        const fallbackResult = parseGenericCSV(cleanContent, resolvedBank);
         fallbackResult.errors.unshift({
           message: `${adapter.bankId} 어댑터 파싱 실패: ${err instanceof Error ? err.message : String(err)}`,
         });
@@ -932,9 +942,9 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
   // Detect by content signature
   const signatureFailures: string[] = [];
   for (const adapter of ADAPTERS) {
-    if (adapter.detect(content) && adapter.parseCSV) {
+    if (adapter.detect(cleanContent) && adapter.parseCSV) {
       try {
-        return adapter.parseCSV(content);
+        return adapter.parseCSV(cleanContent);
       } catch (err) {
         const msg = `${adapter.bankId} 어댑터(자동 감지) 파싱 실패: ${err instanceof Error ? err.message : String(err)}`;
         console.warn(`[cherrypicker] Bank adapter ${adapter.bankId} (detect) failed:`, err);
@@ -946,7 +956,7 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
   // Fall back to generic parser — wrap in try/catch for defensive consistency
   // with the bank-specific adapter path above (C30-02).
   try {
-    const result = parseGenericCSV(content, resolvedBank);
+    const result = parseGenericCSV(cleanContent, resolvedBank);
     // Collect any signature-detection adapter failures into the result
     for (const msg of signatureFailures) {
       result.errors.unshift({ message: msg });
