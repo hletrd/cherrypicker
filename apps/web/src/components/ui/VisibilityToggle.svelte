@@ -19,6 +19,7 @@
   let cachedStatTotalSavings: HTMLElement | null = null;
   let cachedStatCardsNeeded: HTMLElement | null = null;
   let cachedStatSavingsLabel: HTMLElement | null = null;
+  let originalSavingsLabelText: string | null = null;
 
   function getOrRefreshElement(
     cached: HTMLElement | null,
@@ -97,6 +98,11 @@
         cachedStatCardsNeeded.textContent = uniqueCards + '장';
       }
 
+      // Capture original label text before any modification (C59-03)
+      if (cachedStatSavingsLabel && originalSavingsLabelText === null) {
+        originalSavingsLabelText = cachedStatSavingsLabel.textContent;
+      }
+
       // Update savings label to "추가 비용" when cherry-picking is worse
       if (cachedStatSavingsLabel && opt.savingsVsSingleCard < 0) {
         cachedStatSavingsLabel.textContent = '추가 비용';
@@ -116,7 +122,7 @@
       if (cachedStatTotalSpending && cachedStatTotalSpending.isConnected) cachedStatTotalSpending.textContent = '—';
       if (cachedStatTotalSavings && cachedStatTotalSavings.isConnected) cachedStatTotalSavings.textContent = '—';
       if (cachedStatCardsNeeded && cachedStatCardsNeeded.isConnected) cachedStatCardsNeeded.textContent = '—';
-      if (cachedStatSavingsLabel && cachedStatSavingsLabel.isConnected) cachedStatSavingsLabel.textContent = '예상 절약액';
+      if (cachedStatSavingsLabel && cachedStatSavingsLabel.isConnected) cachedStatSavingsLabel.textContent = originalSavingsLabelText ?? '예상 절약액';
     };
   });
 </script>
