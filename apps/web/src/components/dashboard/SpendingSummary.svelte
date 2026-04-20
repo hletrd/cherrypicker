@@ -135,7 +135,7 @@
     {@const y1 = parseInt(latestMonth.month.slice(0, 4), 10)}
     {@const y2 = parseInt(prevMonth.month.slice(0, 4), 10)}
     {@const monthDiff = (Number.isFinite(y1) && Number.isFinite(y2) && Number.isFinite(m1) && Number.isFinite(m2)) ? (y1 - y2) * 12 + (m1 - m2) : NaN}
-    {@const prevLabel = monthDiff === 1 ? '전월실적' : `${monthDiff}개월 전 실적`}
+    {@const prevLabel = !Number.isFinite(monthDiff) ? '이전 실적' : monthDiff === 1 ? '전월실적' : `${monthDiff}개월 전 실적`}
     <div class="col-span-full mt-2 rounded-lg bg-[var(--color-bg)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
       {mb.length}개월 데이터 분석 ·
       {prevLabel} {formatWon(prevMonth?.spending ?? 0)} 기준
