@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { getCardDetail } from '../../lib/api.js';
   import type { CardDetail, RewardTier } from '../../lib/api.js';
-  import { formatWon, formatPercent, getCategoryIconName, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
+  import { formatWon, formatPercent, getCategoryIconName, getIssuerColor, formatIssuerNameKo, buildPageUrl } from '../../lib/formatters.js';
   import { loadCategories } from '../../lib/cards.js';
   import Icon from '../ui/Icon.svelte';
 
@@ -273,7 +273,7 @@
       <button
         class="mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline cursor-pointer"
         style="color: {issuerColor};"
-        onclick={() => { window.location.href = import.meta.env.BASE_URL + 'cards'; }}
+        onclick={() => { window.location.href = buildPageUrl('cards'); }}
       >
         카드 목록으로 돌아가기
       </button>

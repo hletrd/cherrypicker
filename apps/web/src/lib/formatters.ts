@@ -178,3 +178,14 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/**
+ * Build a page URL from a path segment, handling BASE_URL with or without
+ * a trailing slash.  Astro guarantees BASE_URL ends with `/`, but defensive
+ * coding ensures it works regardless.
+ * Example: buildPageUrl('dashboard') → '/cherrypicker/dashboard'
+ */
+export function buildPageUrl(path: string): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  return `${base}${base.endsWith('/') ? '' : '/'}${path}`;
+}

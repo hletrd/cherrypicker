@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatFileSize } from '../../lib/formatters.js';
+  import { formatFileSize, buildPageUrl } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let navigateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -214,7 +214,7 @@
       } else {
         uploadStatus = 'success';
         navigateTimeout = setTimeout(() => {
-          window.location.href = import.meta.env.BASE_URL + 'dashboard';
+          window.location.href = buildPageUrl('dashboard');
         }, 1200);
       }
     } catch (e) {
