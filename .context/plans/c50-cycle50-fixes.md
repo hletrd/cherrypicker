@@ -21,7 +21,7 @@
   ```
   The `|| 1` fallback ensures we never divide by zero when all percentages are 0.
 - **Verification:** Open dashboard with a dataset that has only tiny categories (< 1% each). Bars should be proportionally small, not filling 100% width. Run `bun test` and `vitest` to ensure no regressions.
-- **Status:** PENDING
+- **Status:** DONE — commit `0000000f6b0a9ed927f44a31625b3514ab94d4a4`
 
 ---
 
@@ -42,7 +42,7 @@
   Actually, since the template already checks `savingsPct === Infinity` and only the badge text is rendered, and the branch is currently unreachable per C28-04, the risk is theoretical. The simplest fix is to add a comment documenting that `Infinity` is intentionally used as a sentinel and should not be consumed as a numeric value by other code paths.
 - **Revised fix:** Add documentation comment. The actual `Infinity` value is only compared via `===` and never rendered as text, so the accessibility risk is minimal. If a future code path needs to announce `savingsPct`, it should check for `Infinity` first.
 - **Verification:** Run `vitest` to ensure no regressions.
-- **Status:** PENDING
+- **Status:** DONE — documented in commit `0000000e0546b7f53f9db223ccd545979e1f58b5`
 
 ---
 
@@ -69,7 +69,7 @@
   ```
   This eliminates the `CardBreakdown` interface (use inline types or the existing `CardRewardResult` shape) and the manual aggregation loop.
 - **Verification:** Run `vitest` to ensure no regressions. Visually verify that the "카드별 상세 보기" breakdown table shows the same values as before.
-- **Status:** PENDING
+- **Status:** DONE — commit `0000000e0546b7f53f9db223ccd545979e1f58b5`
 
 ---
 
@@ -96,7 +96,7 @@
   return bestResult ?? { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트 데이터를 읽을 수 없습니다.' }] };
   ```
 - **Verification:** Run `vitest` to ensure no regressions. Test with a single-sheet XLSX file (common case) to verify behavior is unchanged.
-- **Status:** PENDING
+- **Status:** DONE — commit `0000000891f243cdef31d44f68cf7a1d9aa45ca7`
 
 ---
 
