@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-20 (Cycle 35)
+# Review Aggregate -- 2026-04-22 (Cycle 36)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle35-comprehensive.md` (full re-read of all source files, re-verified all prior findings, cross-verified parseAmount consistency across ALL parsers including bank adapters)
+- `.context/reviews/2026-04-22-cycle36-comprehensive.md` (full re-read of all source files, re-verified all prior findings, cross-verified parseAmount consistency across ALL parsers including web-side PDF)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-34 per-agent and aggregate files
+- All cycle 1-35 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-34 findings are confirmed fixed except as noted below:
+All prior cycle 1-35 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -34,13 +34,12 @@ All prior cycle 1-34 findings are confirmed fixed except as noted below:
 | C22-05 | OPEN (LOW) | TransactionReview changeCategory O(n) array copy (deferred) |
 | C24-06 | OPEN (LOW) | buildCardResults totalSpending no negative amount guard (safe in practice) |
 | C27-02 | OPEN (LOW) | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
-| C33-01 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
-| C33-02 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction |
-| C34-01 | FIXED | Server-side PDF parseAmount now returns null for NaN, uses Math.round(parseFloat(...)), handles parenthesized negatives |
-| C34-02 | FIXED | Server-side XLSX parseAmount string path now uses Math.round(parseFloat(...)) |
-| C34-03 | FIXED | Server-side PDF findDateCell now has isValidShortDate() |
+| C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed with SUBSTRING_SAFE_ENTRIES |
+| C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
 | C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner -- architectural gap |
-| C34-05 | FIXED | inferYear centralized into date-utils.ts, shared across CSV/XLSX/PDF |
+| C35-01 | FIXED | All 10 bank-specific CSV adapters now use Math.round(parseFloat(...)), return null for NaN, handle parenthesized negatives |
+| C35-02 | FIXED | All 10 bank-specific CSV adapters now filter zero-amount rows |
+| C35-03 | FIXED | All 10 bank-specific CSV adapters now import parseDateStringToISO from shared date-utils.ts |
 
 ---
 
@@ -48,9 +47,9 @@ All prior cycle 1-34 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C35-01 | MEDIUM | High | `packages/parser/src/csv/{hyundai,kb,shinhan,woori,samsung,hana,nh,lotte,ibk,bc}.ts:28` | All 10 bank-specific CSV adapters use `parseInt(cleaned, 10)` instead of `Math.round(parseFloat(...))` for amount parsing and return `NaN` instead of `null` -- parity bug with all fixed parsers (same class as C34-01/C34-02) |
-| C35-02 | LOW | High | All 10 bank-specific CSV adapters | Bank adapters don't filter zero-amount rows -- generic CSV does `if (amount === 0) continue;` but bank adapters pass zero amounts through |
-| C35-03 | LOW | High | All 10 bank-specific CSV adapters | Bank adapters have duplicated `parseDateToISO` without `inferYear` support -- missing Korean dates, short dates, and short-year dates that the generic CSV handles |
+| C36-01 | MEDIUM | High | `apps/web/src/lib/parser/pdf.ts:169-179` | Web-side PDF `parseAmount` does not handle parenthesized negative amounts like `(1,234)` -- parity bug with all other parsers (web CSV, web XLSX, server CSV, server XLSX, server PDF all handle it) |
+| C36-02 | LOW | High | `packages/parser/src/csv/{hyundai,kb,shinhan,woori,samsung,hana,nh,lotte,ibk,bc}.ts:15-30` + `generic.ts:49-71` | `splitLine` / `splitCSVLine` and `parseAmount` are copy-pasted identically across 11 files -- DRY violation (same class as C7-07, C34-05) |
+| C36-03 | LOW | High | `apps/web/src/lib/store.svelte.ts:316-329`, `apps/web/src/lib/analyzer.ts:218-231`, `apps/web/src/lib/analyzer.ts:274-295`, `apps/web/src/components/cards/CardDetail.svelte:23-30` | `categoryLabels` Map construction (id + sub.id + dot-notation key) duplicated 4 times -- maintenance risk |
 
 ---
 
