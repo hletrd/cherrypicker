@@ -163,17 +163,19 @@ function parseDateToISO(raw: string): string {
   return parseDateStringToISO(raw);
 }
 
-function parseAmount(raw: string): number {
+/** Parse an amount string from PDF text. Returns null for unparseable inputs
+ *  so callers can distinguish between genuinely zero amounts and parse failures,
+ *  matching the CSV parser's isValidAmount() pattern (C33-03). */
+function parseAmount(raw: string): number | null {
   const cleaned = raw.replace(/원$/, '').replace(/,/g, '');
+  if (!cleaned.trim()) return null;
   // Use Math.round(parseFloat(...)) to match the csv.ts (C21-03) and xlsx.ts
   // (C20-01) parsers' rounding behavior. Korean Won amounts are always
   // integers, but PDF-extracted strings may contain decimal remainders from
   // formula cells; rounding is more correct than truncation.
   const n = Math.round(parseFloat(cleaned));
-  // Return 0 instead of NaN so callers never have to guard against NaN
-  // propagation. Amounts of 0 are correctly filtered out by the > 0
-  // checks in both the structured and fallback parsing paths.
-  return Number.isNaN(n) ? 0 : n;
+  if (Number.isNaN(n)) return null;
+  return n;
 }
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
@@ -225,16 +227,18 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
       const amountRaw = amountCell.value;
       const amount = parseAmount(amountRaw);
 
-      // Skip zero-amount rows. When parseAmount returns 0 from a non-empty
-      // input, the amount was unparseable — report an error to match the
-      // CSV parser's behavior (which returns NaN and reports via isValidAmount).
-      if (amount === 0) {
+      // parseAmount returns null for unparseable inputs — report an error
+      // matching the CSV parser's isValidAmount() pattern (C33-03).
+      if (amount === null) {
         const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
         if (cleaned && !/^0+$/.test(cleaned)) {
           parseErrors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
         }
         continue;
       }
+      // Skip zero-amount rows (e.g., balance inquiries, declined transactions)
+      // which don't contribute to spending optimization.
+      if (amount === 0) continue;
       // Allow negative amounts (refund/cancellation entries).
 
       const tx: RawTransaction = {
@@ -340,21 +344,22 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
         if (between) {
           const amountRaw = amountMatch[1]!;
           const amount = parseAmount(amountRaw);
-          // Allow non-zero amounts including negative (refund/cancellation entries)
-          if (amount !== 0) {
+          // parseAmount returns null for unparseable inputs (C33-03).
+          if (amount === null) {
+            const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
+            if (cleaned && !/^0+$/.test(cleaned)) {
+              errors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
+            }
+            // Skip unparseable amounts
+          } else if (amount !== 0) {
+            // Allow non-zero amounts including negative (refund/cancellation entries)
             fallbackTransactions.push({
               date: parseDateToISO(dateMatch[1]!),
               merchant: between.replace(/\s+/g, ' ').trim(),
               amount,
             });
-          } else {
-            // If the raw value was non-empty and not just zeroes, report an
-            // error — matching the structured path's behavior (C10-03/C11-03).
-            const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
-            if (cleaned && !/^0+$/.test(cleaned)) {
-              errors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
-            }
           }
+          // amount === 0: skip zero-amount rows (balance inquiries, etc.)
         }
       }
     }
