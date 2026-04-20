@@ -4,10 +4,13 @@
   import Icon from '../ui/Icon.svelte';
   import type { CategorizedTx } from '../../lib/analyzer.js';
   // NOTE: AI categorization is disabled until a self-hosted runtime is ready.
-  // See categorizer-ai.ts for details. The import and related code below
-  // (isAvailable, runAICategorization, AI button) are kept for when the
-  // feature is re-enabled — they are currently unreachable dead code.
-  import * as aiCategorizer from '../../lib/categorizer-ai.js';
+  // See categorizer-ai.ts for details. To re-enable:
+  // 1. Update categorizer-ai.ts isAvailable() to return true
+  // 2. Re-add: import * as aiCategorizer from '../../lib/categorizer-ai.js'
+  // 3. Re-add state: aiAvailable, aiStatus, aiProgress, aiRunning
+  // 4. Re-add: aiAvailable = aiCategorizer.isAvailable() in onMount
+  // 5. Re-add: runAICategorization() function
+  // 6. Re-add AI button block in the template (search for "AI 분류")
   import { onMount } from 'svelte';
   import { loadCategories } from '../../lib/cards.js';
 
@@ -43,14 +46,9 @@
   let reoptimizing = $state(false);
   let filterUncategorized = $state(false);
   let searchQuery = $state('');
-  let aiStatus = $state<string>('');
-  let aiProgress = $state<number>(0);
-  let aiRunning = $state(false);
-  let aiAvailable = $state(false);
 
-  // Load categories and check AI availability on mount (browser only)
+  // Load categories on mount (browser only)
   onMount(async () => {
-    aiAvailable = aiCategorizer.isAvailable();
     try {
       const nodes = await loadCategories();
       const options: { id: string; label: string }[] = [];
@@ -77,78 +75,6 @@
       categoryMap = new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label]));
     }
   });
-
-  // DISABLED: AI categorization is not available until a self-hosted runtime
-  // is ready. This function is unreachable because aiAvailable is always false.
-  // Re-enable by updating categorizer-ai.ts isAvailable() to return true.
-  async function runAICategorization() {
-    aiRunning = true;
-    aiStatus = '모델 불러오는 중';
-    aiProgress = 0;
-
-    try {
-      await aiCategorizer.initialize((p) => {
-        aiStatus = p.status;
-        if (p.progress) aiProgress = p.progress;
-      });
-
-      // Get uncategorized/low-confidence items
-      const targets = editedTxs.filter(tx => tx.category === 'uncategorized' || tx.confidence < 0.5);
-
-      if (targets.length === 0) {
-        aiStatus = '분류할 항목이 없어요';
-        setTimeout(() => { aiStatus = ''; }, 2000);
-        return;
-      }
-
-      aiStatus = `${targets.length}건 분류 중`;
-
-      const results = await aiCategorizer.categorizeBatch(
-        targets.map(tx => ({ id: tx.id, name: tx.merchant })),
-        (done, total) => {
-          aiProgress = Math.round((done / total) * 100);
-          aiStatus = `${done}/${total}건 분류 중`;
-        },
-      );
-
-      // Apply results — replace array entries instead of mutating in-place
-      // to ensure Svelte 5 reactivity correctly detects the changes.
-      let changed = 0;
-      let updatedTxs = editedTxs;
-      for (const [txId, result] of results) {
-        if (result.category !== 'uncategorized') {
-          const idx = editedTxs.findIndex(t => t.id === txId);
-          if (idx !== -1) {
-            const tx = editedTxs[idx];
-            if (tx) {
-              // Only clear subcategory when the AI changes the category to a
-              // different one — if the category is unchanged, the existing
-              // subcategory (from keyword matching) is still valid and more
-              // specific than the AI's category-only result.
-              const updated = tx.category !== result.category
-                ? { ...tx, category: result.category, subcategory: undefined, confidence: result.confidence }
-                : { ...tx, category: result.category, confidence: result.confidence };
-              updatedTxs = updatedTxs.map((t, i) => i === idx ? updated : t);
-              changed++;
-            }
-          }
-        }
-      }
-      editedTxs = updatedTxs;
-
-      if (changed > 0) {
-        hasEdits = true;
-        aiStatus = `${changed}건 분류 완료`;
-      } else {
-        aiStatus = '새로 분류된 항목이 없어요';
-      }
-      setTimeout(() => { aiStatus = ''; }, 3000);
-    } catch (e) {
-      aiStatus = e instanceof Error ? e.message : '분류 중 문제가 생겼어요';
-    } finally {
-      aiRunning = false;
-    }
-  }
 
   // Sync from store when transactions change — re-sync on new upload (generation change)
   let lastSyncedGeneration = $state(0);
@@ -266,25 +192,6 @@
             <input type="checkbox" bind:checked={filterUncategorized} class="rounded" />
             미분류만 보기
           </label>
-          {#if aiAvailable && uncategorizedCount > 0}
-            <button
-              onclick={runAICategorization}
-              disabled={aiRunning}
-              class="flex items-center gap-1 rounded-lg border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950 dark:bg-purple-950 px-3 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-400 hover:bg-purple-100 disabled:opacity-50 transition-colors"
-            >
-              {#if aiRunning}
-                <svg class="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                {aiStatus}
-                {#if aiProgress > 0}({aiProgress}%){/if}
-              {:else}
-                <Icon name="sparkles" size={12} />
-                미분류 항목 AI 분류
-              {/if}
-            </button>
-          {/if}
           {#if hasEdits}
             <button
               onclick={applyEdits}
