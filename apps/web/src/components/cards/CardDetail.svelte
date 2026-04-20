@@ -219,7 +219,7 @@
               {#each groupedByPerf as group}
                 <!-- Performance tier header row -->
                 <tr class="border-b border-[var(--color-border)] bg-[var(--color-primary-light)]">
-                  <td colspan="4" class="px-4 py-1.5 text-xs font-semibold text-blue-700">
+                  <td colspan="4" class="px-4 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">
                     {group.perfLabel}
                   </td>
                 </tr>
