@@ -1,17 +1,16 @@
-# Review Aggregate -- 2026-04-20 (Cycle 16)
+# Review Aggregate -- 2026-04-20 (Cycle 17)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle16-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle17-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-53 per-agent and aggregate files
-- Cycle 15 aggregate (previously `_aggregate.md`)
+- All cycle 1-16 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-15 findings are confirmed fixed except as noted below:
+All prior cycle 1-16 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -30,18 +29,23 @@ All prior cycle 1-15 findings are confirmed fixed except as noted below:
 | C10-01 | **FIXED** | `SpendingSummary.svelte:10-18` has try/catch around sessionStorage reads in onMount; `SpendingSummary.svelte:139` has try/catch around sessionStorage writes in dismiss handler |
 | C11-01 | **FIXED** | `analyzer.ts:304` now uses `Math.abs(tx.amount)` matching `store.svelte.ts:378` |
 | C11-03 | **FIXED** | `pdf.ts:382-389` now reports errors for unparseable amounts in fallback path |
-| C12-01 | **FIXED** | `OptimalCardMap.svelte:19-25` maxRate floor lowered from 0.5% to 0.1% -- better proportional accuracy |
-| C12-04 | **FIXED** | `SavingsComparison.svelte:205` removed redundant `Object.is(-0)` guard; `formatWon` handles normalization |
-| C13-01 | **FIXED** | `cards.ts:160-167` now has `chainAbortSignal` -- second caller's signal is chained to active AbortController |
-| C13-02 | **FIXED** | `cards.ts:199-226` `loadCategories` now accepts optional `signal` parameter with same chain pattern |
-| C13-03 | **FIXED** | `SpendingSummary.svelte:12-15` now uses `$derived` for `totalAllSpending` instead of inline reduce |
-| C13-04 | **FIXED** | `CardPage.svelte:14-30` now uses AbortController + generation counter pattern matching CardDetail |
-| C14-01 | **FIXED** | `cards.ts:193-203,229-236` catch blocks now use `isAbortError` to distinguish AbortError from real errors; AbortError resets cache but does not propagate. Downstream callers have null guards. |
-| C52-02 | **FIXED** | `TransactionReview.svelte:108-130` uses `updatedTxs.map()` to replace entries instead of mutating in-place |
-| C53-01 | **FIXED** | `TransactionReview.svelte:120-139` `changeCategory` now uses replacement pattern (`editedTxs.map(...)`) |
-| C8-02/C9R-02 | **FIXED** | `CardDetail.svelte:82-95` now has AbortController cleanup on unmount via `$effect` return cleanup |
-| C10-03 | **FIXED** | PDF parseAmount now reports errors in both structured and fallback paths (C11-03 completed the fallback fix) |
-| C7-04 | OPEN (LOW) | TransactionReview $effect re-sync fragile -- no change since cycle 7 |
+| C12-01 | **FIXED** | `OptimalCardMap.svelte:19-25` maxRate floor lowered from 0.5% to 0.1% |
+| C12-04 | **FIXED** | `SavingsComparison.svelte:205` removed redundant `Object.is(-0)` guard |
+| C13-01 | **FIXED** | `cards.ts:160-167` now has `chainAbortSignal` |
+| C13-02 | **FIXED** | `cards.ts:199-226` `loadCategories` now accepts optional `signal` parameter |
+| C13-03 | **FIXED** | `SpendingSummary.svelte:12-15` now uses `$derived` for `totalAllSpending` |
+| C13-04 | **FIXED** | `CardPage.svelte:14-30` now has AbortController + generation counter pattern |
+| C14-01 | **FIXED** | `cards.ts` catch blocks use `isAbortError` to distinguish AbortError |
+| C15-01 | **FIXED** | `cards.ts` no longer has `undefined as unknown as` type escapes |
+| C16-01 | **FIXED** | `store.svelte.ts:148` `isValidTx` now uses `tx.amount !== 0` allowing refunds |
+| C16-02 | **FIXED** | `csv.ts:246` now uses Korean error message |
+| C16-03 | **FIXED** | `SpendingSummary.svelte:138` now shows actual month gap |
+| C16-04 | **FIXED** | `CardGrid.svelte:73-78` now has AbortController cleanup |
+| C52-02 | **FIXED** | `TransactionReview.svelte:108-130` uses `updatedTxs.map()` replacement pattern |
+| C53-01 | **FIXED** | `TransactionReview.svelte:120-139` `changeCategory` uses replacement pattern |
+| C8-02/C9R-02 | **FIXED** | `CardDetail.svelte:82-95` has AbortController cleanup via `$effect` return |
+| C10-03 | **FIXED** | PDF parseAmount reports errors in both structured and fallback paths |
+| C7-04 | OPEN (LOW) | TransactionReview $effect re-sync fragile — no change since cycle 7 |
 | C7-06 | OPEN (LOW) | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
 | C7-07 | OPEN (LOW) | BANK_SIGNATURES duplicated between packages/parser and apps/web |
 | C7-10 | OPEN (LOW) | CategoryBreakdown percentage rounding can cause total > 100% |
@@ -54,8 +58,10 @@ All prior cycle 1-15 findings are confirmed fixed except as noted below:
 | C8-09 | OPEN (LOW) | Test duplicates production code instead of testing it directly |
 | C8-10 | OPEN (LOW) | csv.ts installment NaN implicitly filtered by `> 1` comparison |
 | C8-11 | OPEN (LOW) | pdf.ts fallback date regex could match decimal numbers like "3.5" |
-| C9R-03 | OPEN (LOW) | pdf.ts negative amounts (refunds) silently dropped |
-| C15-01 | OPEN (LOW) | `undefined as unknown as` type escape in cards.ts AbortError path |
+| C9R-03/C16-01 | OPEN (LOW→MEDIUM, now FIXED path works) | pdf.ts negative amounts now pass through; store allows !== 0. Both ends fixed. |
+| D-106 | OPEN (LOW) | `apps/web/src/lib/parser/pdf.ts:296` bare `catch {}` |
+| D-110 | OPEN (LOW) | Non-latest month edits have no visible optimization effect |
+| D-66 | OPEN (LOW) | CardGrid issuer filter shows issuers with 0 cards after type filter |
 
 ---
 
@@ -63,10 +69,11 @@ All prior cycle 1-15 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C16-01 | MEDIUM | High | `store.svelte.ts:148` | `isValidTx` requires `tx.amount > 0`, dropping negative-amount (refund) transactions on sessionStorage restore. Extends C9R-03 — even if the parser passes refunds through, they are lost on page reload. |
-| C16-02 | LOW | High | `csv.ts:246` | Generic CSV parser uses English error messages (`Cannot parse amount`) while all bank-specific adapters use Korean (`금액을 해석할 수 없습니다`). Inconsistent UX for a Korean-language app. |
-| C16-03 | LOW | Medium | `SpendingSummary.svelte:138` | "이전 달 실적" label misleading for multi-month gaps (e.g., 3-month gap shows "previous month" when it's actually 3 months prior). |
-| C16-04 | LOW | High | `CardGrid.svelte:73-78` | CardGrid fetches cards in onMount without AbortController cleanup, inconsistent with CardDetail/CardPage patterns. Minor — cached data prevents duplicate requests, but state is set on detached components. |
+| C17-01 | MEDIUM | High | `pdf.ts:323` | `(item: any)` type annotation for pdfjs TextItem bypasses type checking. Should use proper interface or narrowing. |
+| C17-02 | LOW | High | `store.svelte.ts:248-250` | `persistWarningKind` defaults to `'truncated'` when transactions are undefined but `_loadPersistWarningKind` is null (freshly computed data, not restored from storage). Only actual storage loads should trigger the warning. |
+| C17-03 | LOW | Medium | `FileDropzone.svelte:217`, `CardDetail.svelte:276` | `import.meta.env.BASE_URL + 'dashboard'` does not handle BASE_URL with/without trailing slash consistently. `getBaseUrl()` in cards.ts handles this but components don't use it. |
+| C17-04 | LOW | High | `results.astro:80`, `dashboard.astro:121` | Inline `<script is:inline>` toggles container visibility independently from Svelte store state. Split-brain: Svelte components read from store but container is managed by plain JS. |
+| C17-05 | LOW | Medium | `CategoryBreakdown.svelte:88-89` | `< 2` threshold for "other" grouping applied after rounding (1.95% → 2.0% visible, 1.94% → 1.9% hidden). Asymmetric boundary. |
 
 ---
 
@@ -92,15 +99,10 @@ All prior cycle 1-15 findings are confirmed fixed except as noted below:
 | C8-09 | LOW | Test duplicates production code |
 | C8-10 | LOW | csv.ts installment NaN fragile implicit filter |
 | C8-11 | LOW | pdf.ts fallback date regex could match decimals |
-| C9R-03/C16-01 | LOW/MEDIUM | pdf.ts negative amounts dropped at parse AND on sessionStorage restore (C16-01 extends C9R-03) |
-| D-106 | LOW | `apps/web/src/lib/parser/pdf.ts:296` bare `catch {}` |
-| D-110 | LOW | Non-latest month edits have no visible optimization effect |
-| D-66 | LOW | CardGrid issuer filter shows issuers with 0 cards after type filter |
 | C11-02 | LOW | BASE_URL trailing slash assumption in CardDetail and FileDropzone |
 | C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro |
 | C53-03 | LOW | CardDetail performance tier header dark mode contrast |
 | C14-03 | LOW | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
-| C15-01 | LOW | `undefined as unknown as` type escape in cards.ts AbortError path |
 | D-01 through D-111 | Various | See deferred items file for full list |
 
 ---
