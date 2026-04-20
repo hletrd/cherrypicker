@@ -68,7 +68,7 @@ const DATE_PATTERNS = [
 
 const AMOUNT_PATTERNS = [
   /^-?[\d,]+원?$/,
-  /^-?[\d,]+\.?\d*$/,
+  /^-?[\d,]+$/,       // Integer amounts only — Korean Won has no subunits
 ];
 
 function isDateLike(value: string): boolean {
