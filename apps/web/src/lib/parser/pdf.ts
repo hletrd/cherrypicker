@@ -233,7 +233,7 @@ function findAmountCell(row: string[]): { idx: number; value: string } | null {
   return null;
 }
 
-function tryStructuredParse(text: string, _bank: BankId | null): RawTransaction[] | null {
+function tryStructuredParse(text: string, _bank: BankId | null): { transactions: RawTransaction[]; errors: ParseError[] } | null {
   try {
     const rows = parseTable(text);
     const txRows = filterTransactionRows(rows);
@@ -241,6 +241,7 @@ function tryStructuredParse(text: string, _bank: BankId | null): RawTransaction[
     if (txRows.length === 0) return null;
 
     const transactions: RawTransaction[] = [];
+    const parseErrors: ParseError[] = [];
 
     for (const row of txRows) {
       const dateCell = findDateCell(row);
@@ -257,12 +258,20 @@ function tryStructuredParse(text: string, _bank: BankId | null): RawTransaction[
       }
 
       const merchant = merchantIdx !== -1 ? (row[merchantIdx] ?? '').trim() : '';
-      const amount = parseAmount(amountCell.value);
+      const amountRaw = amountCell.value;
+      const amount = parseAmount(amountRaw);
 
-      // Skip zero-amount rows and rows with no merchant AND zero amount.
+      // Skip zero-amount rows. When parseAmount returns 0 from a non-empty
+      // input, the amount was unparseable — report an error to match the
+      // CSV parser's behavior (which returns NaN and reports via isValidAmount).
+      if (amount === 0) {
+        const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
+        if (cleaned && !/^0+$/.test(cleaned)) {
+          parseErrors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
+        }
+        continue;
+      }
       // Allow negative amounts (refund/cancellation entries).
-      if (amount === 0) continue;
-      if (!merchant && amount === 0) continue;
 
       const tx: RawTransaction = {
         date: parseDateToISO(dateCell.value),
@@ -283,7 +292,7 @@ function tryStructuredParse(text: string, _bank: BankId | null): RawTransaction[
       transactions.push(tx);
     }
 
-    return transactions.length > 0 ? transactions : null;
+    return transactions.length > 0 ? { transactions, errors: parseErrors } : null;
   } catch {
     return null;
   }
@@ -330,12 +339,12 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
 
   // Try structured table parsing
   const structured = tryStructuredParse(text, resolvedBank);
-  if (structured && structured.length > 0) {
+  if (structured && structured.transactions.length > 0) {
     return {
       bank: resolvedBank,
       format: 'pdf',
-      transactions: structured,
-      errors,
+      transactions: structured.transactions,
+      errors: [...structured.errors, ...errors],
     };
   }
 
