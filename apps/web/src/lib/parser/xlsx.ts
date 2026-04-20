@@ -304,7 +304,13 @@ function parseInstallments(raw: unknown): number | undefined {
 // ---------------------------------------------------------------------------
 
 function isHTMLContent(buffer: ArrayBuffer): boolean {
-  const head = new TextDecoder('utf-8').decode(buffer.slice(0, 512)).trimStart().toLowerCase();
+  // Decode first 512 bytes as UTF-8. Strip UTF-8 BOM (0xEF 0xBB 0xBF) if
+  // present — some Korean card exports include a BOM, which would otherwise
+  // prevent the startsWith checks from matching.
+  // Known limitation: files encoded in EUC-KR (rare for .xls exports from
+  // Korean card companies, which typically use UTF-8) will not be detected.
+  const raw = new TextDecoder('utf-8').decode(buffer.slice(0, 512));
+  const head = raw.replace(/^\uFEFF/, '').trimStart().toLowerCase();
   return head.startsWith('<!doctype') || head.startsWith('<html') || /<table[\s>]/.test(head);
 }
 
