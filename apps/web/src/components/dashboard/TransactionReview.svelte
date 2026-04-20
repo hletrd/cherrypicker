@@ -39,33 +39,48 @@
   let filterUncategorized = $state(false);
   let searchQuery = $state('');
 
-  // Load categories on mount (browser only)
-  onMount(async () => {
-    try {
-      const nodes = await loadCategories();
-      const options: { id: string; label: string }[] = [];
-      const parentMap = new Map<string, string>();
-      for (const node of nodes) {
-        options.push({ id: node.id, label: node.labelKo });
-        if (node.subcategories) {
-          for (const sub of node.subcategories) {
-            // Use fully-qualified IDs (e.g. "dining.cafe") for subcategories
-            // to avoid duplicate option values when a subcategory ID also
-            // exists as a standalone top-level category.
-            const fqId = `${node.id}.${sub.id}`;
-            options.push({ id: fqId, label: `  ${sub.labelKo}` });
-            parentMap.set(fqId, node.id);
+  // Load categories on mount (browser only). Pass an AbortSignal so the
+  // fetch is cancelled if the component unmounts during an Astro View
+  // Transition, preventing orphaned network requests and state updates
+  // on a torn-down component (C73-02).
+  onMount(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const nodes = await loadCategories(controller.signal);
+        // Guard against empty categories — loadCategories() returns [] on
+        // AbortError. Using empty categories would produce an empty dropdown,
+        // so fall back to the hardcoded list (C73-02).
+        if (nodes.length === 0) {
+          categoryOptions = FALLBACK_CATEGORIES;
+          categoryMap = new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label]));
+          return;
+        }
+        const options: { id: string; label: string }[] = [];
+        const parentMap = new Map<string, string>();
+        for (const node of nodes) {
+          options.push({ id: node.id, label: node.labelKo });
+          if (node.subcategories) {
+            for (const sub of node.subcategories) {
+              // Use fully-qualified IDs (e.g. "dining.cafe") for subcategories
+              // to avoid duplicate option values when a subcategory ID also
+              // exists as a standalone top-level category.
+              const fqId = `${node.id}.${sub.id}`;
+              options.push({ id: fqId, label: `  ${sub.labelKo}` });
+              parentMap.set(fqId, node.id);
+            }
           }
         }
+        subcategoryToParent = parentMap;
+        categoryOptions = options;
+        categoryMap = new Map(options.map(c => [c.id, c.label]));
+      } catch {
+        // Fall back to hardcoded list
+        categoryOptions = FALLBACK_CATEGORIES;
+        categoryMap = new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label]));
       }
-      subcategoryToParent = parentMap;
-      categoryOptions = options;
-      categoryMap = new Map(options.map(c => [c.id, c.label]));
-    } catch {
-      // Fall back to hardcoded list
-      categoryOptions = FALLBACK_CATEGORIES;
-      categoryMap = new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label]));
-    }
+    })();
+    return () => controller.abort();
   });
 
   // Sync from store when transactions change — re-sync on new upload (generation change)
