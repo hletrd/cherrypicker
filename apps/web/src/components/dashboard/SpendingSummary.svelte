@@ -138,7 +138,7 @@
   {#if analysisStore.result && !dismissed}
     <div class="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800">
       <span>탭을 닫으면 결과가 사라져요. 저장하려면 리포트를 PDF로 내려받으세요.</span>
-      <button class="ml-auto shrink-0 text-amber-500 hover:text-amber-700" onclick={() => { dismissed = true; try { sessionStorage.setItem('cherrypicker:dismissed-warning', '1'); } catch (err) { /* Dismissal won't persist -- non-critical, but log when sessionStorage is available and the failure isn't an expected SSR/sandbox scenario, matching the pattern in clearStorage() (C24-02/C27-01/C30-03/C31-01). */ if (typeof sessionStorage !== 'undefined') { console.warn('[cherrypicker] Failed to persist dismiss state:', err); } } }}>닫기</button>
+      <button class="ml-auto shrink-0 text-amber-500 hover:text-amber-700" onclick={() => { dismissed = true; try { sessionStorage.setItem('cherrypicker:dismissed-warning', '1'); } catch (err) { /* Dismissal won't persist -- non-critical, but log when sessionStorage is available and the failure isn't an expected SSR/sandbox/private-browsing scenario (C24-02/C27-01/C30-03/C31-01/C61-03). */ if (typeof sessionStorage !== 'undefined' && !(err instanceof DOMException && (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED'))) { console.warn('[cherrypicker] Failed to persist dismiss state:', err); } } }}>닫기</button>
     </div>
   {/if}
   {#if analysisStore.persistWarningKind === 'truncated'}
