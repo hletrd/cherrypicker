@@ -164,7 +164,12 @@ function parseDateToISO(raw: string): string {
 }
 
 function parseAmount(raw: string): number {
-  const n = parseInt(raw.replace(/원$/, '').replace(/,/g, ''), 10);
+  const cleaned = raw.replace(/원$/, '').replace(/,/g, '');
+  // Use Math.round(parseFloat(...)) to match the csv.ts (C21-03) and xlsx.ts
+  // (C20-01) parsers' rounding behavior. Korean Won amounts are always
+  // integers, but PDF-extracted strings may contain decimal remainders from
+  // formula cells; rounding is more correct than truncation.
+  const n = Math.round(parseFloat(cleaned));
   // Return 0 instead of NaN so callers never have to guard against NaN
   // propagation. Amounts of 0 are correctly filtered out by the > 0
   // checks in both the structured and fallback parsing paths.
