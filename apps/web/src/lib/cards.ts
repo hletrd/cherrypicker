@@ -152,9 +152,9 @@ function getBaseUrl(): string {
   return import.meta.env.BASE_URL ?? '/';
 }
 
-export async function loadCardsData(): Promise<CardsJson> {
+export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson> {
   if (!cardsPromise) {
-    cardsPromise = fetch(`${getBaseUrl()}data/cards.json`)
+    cardsPromise = fetch(`${getBaseUrl()}data/cards.json`, { signal })
       .then(res => {
         if (!res.ok) throw new Error('카드 데이터를 불러올 수 없습니다');
         return res.json() as Promise<CardsJson>;
@@ -211,8 +211,8 @@ export async function getCardList(filters?: { issuer?: string; type?: string }):
   return cards;
 }
 
-export async function getCardById(cardId: string): Promise<CardDetail | null> {
-  const data = await loadCardsData();
+export async function getCardById(cardId: string, options?: { signal?: AbortSignal }): Promise<CardDetail | null> {
+  const data = await loadCardsData(options?.signal);
   for (const issuer of data.issuers) {
     const card = issuer.cards.find(c => c.card.id === cardId);
     if (card) {

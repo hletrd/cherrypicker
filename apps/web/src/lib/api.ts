@@ -24,8 +24,8 @@ export async function getCards(filters?: {
   return getCardList(filters);
 }
 
-export async function getCardDetail(cardId: string) {
-  const card = await getCardById(cardId);
+export async function getCardDetail(cardId: string, options?: { signal?: AbortSignal }) {
+  const card = await getCardById(cardId, options);
   if (!card) throw new Error('카드를 찾을 수 없어요');
   return card;
 }

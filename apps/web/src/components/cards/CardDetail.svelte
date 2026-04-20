@@ -79,18 +79,20 @@
     loading = true;
     error = null;
     const gen = ++fetchGeneration;
-    let cancelled = false;
-    getCardDetail(cardId)
+    const controller = new AbortController();
+    getCardDetail(cardId, { signal: controller.signal })
       .then((result) => {
-        if (!cancelled && gen === fetchGeneration) card = result;
+        if (!controller.signal.aborted && gen === fetchGeneration) card = result;
       })
       .catch((e) => {
-        if (!cancelled && gen === fetchGeneration) error = e instanceof Error ? e.message : '카드 정보를 불러올 수 없어요';
+        if (!controller.signal.aborted && gen === fetchGeneration) {
+          error = e instanceof Error && e.name !== 'AbortError' ? e.message : '카드 정보를 불러올 수 없어요';
+        }
       })
       .finally(() => {
-        if (!cancelled && gen === fetchGeneration) loading = false;
+        if (!controller.signal.aborted && gen === fetchGeneration) loading = false;
       });
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   });
 </script>
 
