@@ -2,6 +2,7 @@ import { readFile } from 'fs/promises';
 import type { BankId, ParseResult } from '../types.js';
 import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
+import { inferYear } from '../date-utils.js';
 
 // SheetJS is imported as a CommonJS module
 import xlsx from 'xlsx';
@@ -24,18 +25,6 @@ function normalizeHTML(html: string): string {
 // ---------------------------------------------------------------------------
 // Field parsers
 // ---------------------------------------------------------------------------
-
-/** Infer the year for a short-date (month/day only) using a look-back
- *  heuristic: if the date would be more than 3 months in the future,
- *  assume it belongs to the previous year. */
-function inferYear(month: number, day: number): number {
-  const now = new Date();
-  const candidate = new Date(now.getFullYear(), month - 1, day);
-  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
-    return now.getFullYear() - 1;
-  }
-  return now.getFullYear();
-}
 
 function parseDateToISO(raw: unknown): string {
   if (typeof raw === 'number') {
@@ -133,7 +122,10 @@ function parseAmount(raw: unknown): number | null {
     const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
     if (isNeg) cleaned = cleaned.slice(1, -1);
     if (!cleaned) return null;
-    const n = parseInt(cleaned, 10);
+    // Use Math.round(parseFloat(...)) to match the numeric path's rounding
+    // behavior and the web-side parser (C21-03/C34-02). parseInt truncates
+    // decimal remainders which can produce off-by-1 Won errors.
+    const n = Math.round(parseFloat(cleaned));
     if (Number.isNaN(n)) return null;
     return isNeg ? -n : n;
   }
