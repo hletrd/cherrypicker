@@ -221,7 +221,9 @@ function buildCardResults(
 
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
     const output = calculateCardOutput(assignedTransactions, previousMonthSpending, rule);
-    const totalSpending = assignedTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+    // Optimizer only assigns positive-amount transactions (filtered at line 270),
+    // so Math.abs() is unnecessary — use tx.amount directly (C33-06).
+    const totalSpending = assignedTransactions.reduce((sum, tx) => sum + tx.amount, 0);
     // Replace English categoryKey in categoryNameKo with the Korean label
     // from the taxonomy (if available). calculateRewards sets categoryNameKo
     // to the raw categoryKey (e.g. "dining.cafe"); we want "카페" instead.
