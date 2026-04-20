@@ -4,9 +4,9 @@
 
 | ID | Severity | Description | Status |
 |---|---|---|---|
-| C40-01 | MEDIUM | SavingsComparison annual projection uses animated `displayedSavings` instead of actual value — shows 0원 on mount | TODO |
-| C40-02 | LOW | TransactionReview changeCategory index mutation lacks explanatory comment | TODO |
-| C40-04 | LOW | buildCardResults totalSpending raw tx.amount needs positive-amount documentation | TODO |
+| C40-01 | MEDIUM | SavingsComparison annual projection uses animated `displayedSavings` instead of actual value — shows 0원 on mount | DONE |
+| C40-02 | LOW | TransactionReview changeCategory index mutation lacks explanatory comment | DONE |
+| C40-04 | LOW | buildCardResults totalSpending raw tx.amount needs positive-amount documentation | DONE |
 
 ### Deferred (no action this cycle)
 
