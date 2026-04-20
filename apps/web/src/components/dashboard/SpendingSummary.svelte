@@ -7,8 +7,14 @@
   let dismissed = $state(false);
 
   onMount(() => {
-    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cherrypicker:dismissed-warning')) {
-      dismissed = true;
+    try {
+      if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cherrypicker:dismissed-warning')) {
+        dismissed = true;
+      }
+    } catch {
+      // SecurityError in restricted environments (strict private browsing,
+      // cross-origin iframes). Dismissal state won't persist, but the
+      // component still renders without crashing.
     }
   });
 
