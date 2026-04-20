@@ -276,7 +276,10 @@ export function parseXLSX(buffer: ArrayBuffer, bank?: BankId): ParseResult {
     return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트를 찾을 수 없습니다.' }] };
   }
 
-  // Try all sheets, use the first one that yields transactions
+  // Try all sheets, select the one with the most transactions (C50-07).
+  // This handles multi-sheet workbooks where a summary sheet might have
+  // fewer transactions than a detail sheet. For typical single-sheet Korean
+  // credit card exports, behavior is unchanged.
   let bestResult: ParseResult | null = null;
 
   for (const sheetName of workbook.SheetNames) {
@@ -285,9 +288,12 @@ export function parseXLSX(buffer: ArrayBuffer, bank?: BankId): ParseResult {
 
     const result = parseXLSXSheet(sheet, bank, htmlBankHint);
     if (result.transactions.length > 0) {
-      return result; // Found transactions, use this sheet
+      if (!bestResult || result.transactions.length > bestResult.transactions.length) {
+        bestResult = result;
+      }
+    } else if (!bestResult) {
+      bestResult = result; // Keep first empty sheet as fallback
     }
-    if (!bestResult) bestResult = result; // Keep first sheet as fallback
   }
 
   return bestResult ?? { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트 데이터를 읽을 수 없습니다.' }] };
