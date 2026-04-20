@@ -29,8 +29,8 @@
 
   function rateColorClass(rate: number): string {
     const pct = rate * 100;
-    if (pct >= 5) return 'text-green-600 font-semibold';
-    if (pct >= 2) return 'text-blue-600 font-medium';
+    if (pct >= 5) return 'text-green-600 dark:text-green-400 font-semibold';
+    if (pct >= 2) return 'text-blue-600 dark:text-blue-400 font-medium';
     return 'text-[var(--color-text-muted)]';
   }
 
