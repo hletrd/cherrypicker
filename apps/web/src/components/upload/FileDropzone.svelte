@@ -174,6 +174,8 @@
     if (uploadedFiles.length === 0) {
       uploadStatus = 'idle';
       errorMessage = '';
+      bank = '';
+      previousSpending = '';
       if (primaryFileInputEl) primaryFileInputEl.value = '';
       if (addFileInputEl) addFileInputEl.value = '';
     }
@@ -183,6 +185,8 @@
     uploadedFiles = [];
     uploadStatus = 'idle';
     errorMessage = '';
+    bank = '';
+    previousSpending = '';
     if (primaryFileInputEl) primaryFileInputEl.value = '';
     if (addFileInputEl) addFileInputEl.value = '';
   }
