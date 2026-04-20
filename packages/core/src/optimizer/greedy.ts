@@ -130,7 +130,13 @@ function scoreCardsForTransaction(
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
 
     const before = calculateCardOutput(currentTransactions, previousMonthSpending, rule).totalReward;
-    const after = calculateCardOutput([...currentTransactions, transaction], previousMonthSpending, rule).totalReward;
+    // Push transaction in-place instead of spreading a new array — avoids
+    // O(m*n) temporary array allocations across all cards and transactions
+    // (C68-02). calculateCardOutput only reads the array, so the temporary
+    // mutation is safe as long as we pop before the next iteration.
+    currentTransactions.push(transaction);
+    const after = calculateCardOutput(currentTransactions, previousMonthSpending, rule).totalReward;
+    currentTransactions.pop();
     const reward = Math.max(0, after - before);
     const rate = transaction.amount > 0 ? reward / transaction.amount : 0;
 
