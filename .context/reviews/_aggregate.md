@@ -1,29 +1,29 @@
-# Review Aggregate -- 2026-04-22 (Cycle 68)
+# Review Aggregate -- 2026-04-22 (Cycle 69)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle68-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle69-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-67 per-agent and aggregate files
+- All cycle 1-68 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-67 findings are confirmed fixed except as noted below.
-New in cycle 68: C67-04 and C67-05 confirmed **FIXED**.
+All prior cycle 1-68 findings are confirmed fixed except as noted below.
+No new fix verifications this cycle.
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C67-04 | **FIXED** | Web-side XLSX parser serial-date path now uses `isValidDayForMonth()`. |
-| C67-05 | **FIXED** | Server-side XLSX parser serial-date path now uses `isValidDayForMonth()`. |
+| C68-01 | **FIXED** | Server-side PDF `isValidShortDate` uses `MAX_DAYS_PER_MONTH` table. |
+| C68-02 | **FIXED** | `scoreCardsForTransaction` uses push/pop instead of spread array. |
 | C67-01 | OPEN (MEDIUM) | Greedy optimizer O(m*n*k) quadratic behavior unchanged. |
-| C66-02 | OPEN (MEDIUM) | `cachedCategoryLabels` stale across redeployments. 12 cycles agree. |
-| C66-03 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction. 10 cycles agree. |
-| C66-04 | OPEN (LOW) | `persistToStorage` returns 'corrupted' for non-quota errors. 7 cycles agree. |
-| C66-05 | OPEN (LOW) | `FALLBACK_CATEGORIES` hardcoded 13 categories vs 40+ in taxonomy. 5 cycles agree. |
-| C66-08 | OPEN (LOW) | `formatIssuerNameKo` and `CATEGORY_COLORS` hardcoded maps will drift. 5 cycles agree. |
-| C66-10 | OPEN (LOW) | `BANK_SIGNATURES` duplicated between server and web. 4 cycles agree. |
+| C66-02 | OPEN (MEDIUM) | `cachedCategoryLabels` stale across redeployments. 13 cycles agree. |
+| C66-03 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction. 11 cycles agree. |
+| C66-04 | OPEN (LOW) | `persistToStorage` returns 'corrupted' for non-quota errors. 8 cycles agree. |
+| C66-05 | OPEN (LOW) | `FALLBACK_CATEGORIES` hardcoded 13 categories vs 40+ in taxonomy. 6 cycles agree. |
+| C66-08 | OPEN (LOW) | `formatIssuerNameKo` and `CATEGORY_COLORS` hardcoded maps will drift. 6 cycles agree. |
+| C66-10 | OPEN (LOW) | `BANK_SIGNATURES` duplicated between server and web. 5 cycles agree. |
 
 ---
 
@@ -31,8 +31,8 @@ New in cycle 68: C67-04 and C67-05 confirmed **FIXED**.
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C68-01 | LOW | HIGH | `packages/parser/src/pdf/index.ts:24-31` | Server-side PDF `isValidShortDate` uses `day <= 31` instead of month-aware `MAX_DAYS_PER_MONTH` table. Parity bug with web-side (which was fixed in C65-01). Production `parseDateStringToISO()` catches invalid dates downstream, but `findDateCell` pre-filter inconsistency can cause different row-identification behavior between server and web. |
-| C68-02 | LOW | HIGH | `packages/core/src/optimizer/greedy.ts:133` | `scoreCardsForTransaction` creates a new spread array `[...currentTransactions, transaction]` per card per transaction, producing O(m*n) temporary array allocations. Push/pop pattern would eliminate this GC pressure. Related to C67-01 but distinct (allocation vs computation). |
+| C69-01 | LOW | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:217` | During count-up animation, tiny savings (1-2 won) could show brief "+1원" flicker before stabilizing. The `Math.abs(displayedSavings) >= 1` guard mostly prevents this. Sub-second visual artifact only. |
+| C69-02 | LOW | MEDIUM | `packages/parser/src/csv/shared.ts` | Web-side CSV `parseAmount` handles parenthesized negatives `(1,234)` but server-side shared CSV parser may not, creating parse-result parity gap for negative-amount rows. Needs verification. |
 
 ---
 
@@ -42,18 +42,18 @@ The following findings have been flagged by multiple cycles, indicating high sig
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| MerchantMatcher/taxonomy O(n) scan | C16, C33, C50, C62, C63, C64, C65, C66, C67, C68 | OPEN (MEDIUM) -- 10 cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21, C23, C25, C26, C33, C62, C63, C64, C65, C66, C67, C68 | OPEN (MEDIUM) -- 12 cycles agree |
-| persistToStorage bare catch / 'corrupted' for all non-quota | C62, C63, C64, C65, C66, C67, C68 | OPEN (LOW) -- 7 cycles agree |
-| Annual savings simple *12 projection | C7, C18, C62, C63, C64, C65, C66, C67, C68 | OPEN (LOW) -- 9 cycles agree |
-| date-utils unparseable passthrough | C56, C62, C63, C64, C65, C66, C67, C68 | OPEN (LOW) -- 8 cycles agree |
-| CSV DATE_PATTERNS divergence risk | C20, C25, C62, C64, C65, C66, C67, C68 | OPEN (LOW) -- 8 cycles agree |
-| Hardcoded fallback drift (CATEGORY_NAMES_KO / build-stats) | C8, C64, C65, C66, C67, C68 | OPEN (LOW) -- 6 cycles agree |
-| BANK_SIGNATURES duplication | C7, C66, C67, C68 | OPEN (LOW) -- 4 cycles agree |
-| inferYear() timezone dependence | C8, C67, C68 | OPEN (LOW) -- 3 cycles agree (60+ cycles deferred) |
-| Greedy optimizer O(m*n*k) quadratic | C67, C68 | OPEN (MEDIUM) -- 2 cycles agree |
-| Server-side PDF isValidShortDate parity | C68 | NEW (LOW) |
-| Greedy optimizer O(m*n) temp array alloc | C68 | NEW (LOW) |
+| MerchantMatcher/taxonomy O(n) scan | C16, C33, C50, C62, C63, C64, C65, C66, C67, C68, C69 | OPEN (MEDIUM) -- 11 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21, C23, C25, C26, C33, C62, C63, C64, C65, C66, C67, C68, C69 | OPEN (MEDIUM) -- 13 cycles agree |
+| persistToStorage bare catch / 'corrupted' for all non-quota | C62, C63, C64, C65, C66, C67, C68, C69 | OPEN (LOW) -- 8 cycles agree |
+| Annual savings simple *12 projection | C7, C18, C62, C63, C64, C65, C66, C67, C68, C69 | OPEN (LOW) -- 10 cycles agree |
+| date-utils unparseable passthrough | C56, C62, C63, C64, C65, C66, C67, C68, C69 | OPEN (LOW) -- 9 cycles agree |
+| CSV DATE_PATTERNS divergence risk | C20, C25, C62, C64, C65, C66, C67, C68, C69 | OPEN (LOW) -- 9 cycles agree |
+| Hardcoded fallback drift (CATEGORY_NAMES_KO / build-stats) | C8, C64, C65, C66, C67, C68, C69 | OPEN (LOW) -- 7 cycles agree |
+| BANK_SIGNATURES duplication | C7, C66, C67, C68, C69 | OPEN (LOW) -- 5 cycles agree |
+| inferYear() timezone dependence | C8, C67, C68, C69 | OPEN (LOW) -- 4 cycles agree (60+ cycles deferred) |
+| Greedy optimizer O(m*n*k) quadratic | C67, C68, C69 | OPEN (MEDIUM) -- 3 cycles agree |
+| Server-side PDF isValidShortDate parity | C68 | FIXED |
+| Greedy optimizer O(m*n) temp array alloc | C68 | FIXED |
 
 ---
 
@@ -90,8 +90,8 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | C64-03/C66-05/C67-03 | LOW | CATEGORY_NAMES_KO hardcoded map can drift from YAML taxonomy |
 | C66-08 | LOW | formatIssuerNameKo and CATEGORY_COLORS hardcoded maps will drift |
 | C67-01 | MEDIUM | Greedy optimizer O(m*n*k) quadratic behavior |
-| C68-01 | LOW | Server-side PDF isValidShortDate uses day <= 31 instead of month-aware table |
-| C68-02 | LOW | Greedy optimizer scoreCardsForTransaction O(m*n) temp array allocations |
+| C69-01 | LOW | SavingsComparison tiny savings animation flicker (informational) |
+| C69-02 | LOW | Server-side CSV shared.ts may lack parenthesized-negative handling |
 
 ---
 
