@@ -1,19 +1,21 @@
-# Review Aggregate -- 2026-04-21 (Cycle 57)
+# Review Aggregate -- 2026-04-21 (Cycle 58)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle57-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle58-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-56 per-agent and aggregate files
+- All cycle 1-57 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-56 findings are confirmed fixed except as noted below:
+All prior cycle 1-57 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C57-01 | **FIXED** | `SavingsComparison.svelte:55,60` now uses `target * 12` (not `Math.abs(target) * 12`) for annual projection. Sign semantics are now consistent between monthly and annual displays. |
+| C57-02 | OPEN (LOW) | `ReportContent.svelte:48` uses `> 0` which is correct, but `VisibilityToggle.svelte:92` uses `>= 0` -- see C58-01 below |
 | C56-01 | **FIXED** | `SavingsComparison.svelte:217` now uses `displayedSavings > 0 && Math.abs(displayedSavings) >= 1 ? '+' : ''` -- zero-crossing flicker suppressed |
 | C56-04 | OPEN (LOW) | `date-utils.ts:112` still returns raw input for unparseable dates without error reporting |
 | C56-05 | OPEN (LOW) | Zero savings shows "0원" without plus sign -- minor visual inconsistency |
@@ -73,8 +75,8 @@ All prior cycle 1-56 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C57-01 | MEDIUM | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:55,60` | `displayedAnnualSavings` uses `Math.abs(target)` for negative savings, making the annual projection always positive while the label says "추가 비용". The monthly `displayedSavings` correctly preserves the sign (negative values render with minus via `formatWon`), but the annual value is always non-negative, creating an inconsistency in sign semantics between monthly and annual displays. |
-| C57-02 | LOW | MEDIUM | `apps/web/src/components/report/ReportContent.svelte:48` | Report shows "+0원" for zero savings due to `>= 0` ternary check instead of `> 0`, inconsistent with the dashboard which was fixed in C56-01 to suppress the plus sign at zero. |
+| C58-01 | MEDIUM | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte:92` | VisibilityToggle uses `>= 0` for savings sign prefix, producing "+0원" on the results page for zero savings. Inconsistent with ReportContent.svelte:48 (uses `> 0`) and SavingsComparison.svelte:217 (uses `> 0`). All three should use `> 0` to suppress the plus sign at zero. |
+| C58-07 | LOW | MEDIUM | `apps/web/src/lib/parser/index.ts:17-47` | No test coverage for the web-side parser encoding detection fallback path (EUC-KR/CP949). The threshold logic (lines 33, 42) could break silently without tests. |
 
 ---
 
@@ -96,7 +98,8 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | OptimalCardMap Set mutation | C51, C54 | **FIXED** |
 | CardDetail dark mode contrast | C55, C53 (partial), C56 | **FIXED** (rateColorClass now has dark: variants) |
 | SavingsComparison zero-crossing flicker | C55, C56 | **FIXED** (Math.abs guard added) |
-| Annual savings Math.abs sign inconsistency | C57 | NEW (MEDIUM) -- 1 cycle |
+| Annual savings Math.abs sign inconsistency | C57 | **FIXED** (C57-01 fixed: removed Math.abs, now uses target * 12) |
+| Savings zero-prefix inconsistency | C57, C58 | OPEN (MEDIUM) -- 2 cycles agree (C57-02 and C58-01 flag the same root cause from different components) |
 
 ---
 
