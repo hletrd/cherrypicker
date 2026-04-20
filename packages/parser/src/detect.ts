@@ -131,7 +131,16 @@ export function detectBank(content: string): { bank: BankId | null; confidence: 
   }
 
   const bestBankPatterns = bestBank ? bestBank.patterns.length : 1;
-  const confidence = bestScore > 0 ? bestScore / bestBankPatterns : 0;
+  let confidence = bestScore > 0 ? bestScore / bestBankPatterns : 0;
+
+  // Cap confidence for single-pattern banks (C70-01). Banks with only one
+  // generic pattern (e.g., cu/신협, kdb/산업은행) achieve 1.0 confidence on
+  // a single match, which can cause false-positive bank detection when the
+  // keyword appears in transaction text rather than statement headers.
+  // Limiting to 0.5 ensures multi-pattern banks with higher scores win ties.
+  if (bestBank && bestBank.patterns.length < 2 && bestScore < 2) {
+    confidence = Math.min(confidence, 0.5);
+  }
 
   return { bank: bestMatch, confidence };
 }
