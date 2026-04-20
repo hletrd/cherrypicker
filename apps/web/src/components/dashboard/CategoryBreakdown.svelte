@@ -157,6 +157,13 @@
         aria-expanded={hoveredIndex === i}
         onmouseenter={() => (hoveredIndex = i)}
         onmouseleave={() => (hoveredIndex = null)}
+        onfocusin={() => (hoveredIndex = i)}
+        onfocusout={(e) => {
+          // Only collapse if focus is leaving this row entirely (not moving to a child)
+          if (!e.currentTarget?.contains(e.relatedTarget as Node)) {
+            hoveredIndex = null;
+          }
+        }}
         onclick={() => (hoveredIndex = hoveredIndex === i ? null : i)}
         onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hoveredIndex = hoveredIndex === i ? null : i; } }}
       >
