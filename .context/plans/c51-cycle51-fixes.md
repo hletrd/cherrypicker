@@ -23,20 +23,20 @@
      - Keep the print button with `onclick="window.print()"` 
   3. The old `public/scripts/report.js` can remain for backward compatibility but is no longer loaded.
 - **Verification:** After analyzing a file, navigate to the report page. It should show analysis data with proper dark mode support. Click "print" to verify print output. Run `npx tsc --noEmit` and `npx vitest run` to ensure no regressions.
-- **Status:** PENDING
+- **Status:** DONE -- commit `0000000b1064e9ce559178c0b626054db6598825`
 
 ---
 
-### 2. [LOW] Remove dead `isSubstringSafeKeyword` function (C49-01)
+### 2. [LOW] Remove dead `isSubstringSafeKeyword` reference from comment (C49-01)
 
 - **Finding:** C49-01
 - **Severity:** LOW
 - **Confidence:** HIGH
-- **File:** `packages/core/src/categorizer/matcher.ts:21-23`
-- **Description:** The function `isSubstringSafeKeyword` is defined but never called. The filtering it would perform is done inline at module level via `SUBSTRING_SAFE_ENTRIES` (line 18-19), which pre-computes the filtered entries. The function serves no purpose and adds confusion.
-- **Fix:** Remove the dead function and any associated comment.
+- **File:** `packages/core/src/categorizer/matcher.ts:15-17`
+- **Description:** The function `isSubstringSafeKeyword` was already removed in a prior cycle, but the comment on line 17 still referenced it by name. Updated the comment to remove the stale reference.
+- **Fix:** Updated comment to remove `isSubstringSafeKeyword` reference.
 - **Verification:** Run `npx vitest run` and `bun test` to ensure no regressions.
-- **Status:** PENDING
+- **Status:** DONE -- commit `000000000236f757cfa218dce59f3b217ae9dcd5`
 
 ---
 
@@ -58,7 +58,7 @@
   }
   ```
 - **Verification:** Click category rows in the OptimalCardMap table to expand/collapse. Verify that expanding one row does not collapse others. Run `npx vitest run`.
-- **Status:** PENDING
+- **Status:** DONE -- commit `000000019c3aae00ad09b0213b58482a0d1c28d2`
 
 ---
 
