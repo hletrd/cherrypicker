@@ -255,11 +255,15 @@ function parseInstallments(raw: unknown): number | undefined {
 // Korean card companies often export HTML tables with .xls extension.
 // ---------------------------------------------------------------------------
 
-/** Check if the buffer contains HTML content (HTML-as-XLS) and return the
- *  decoded 512-byte prefix so the caller can avoid re-decoding the same bytes.
- *  Returns `{ isHTML, prefix }` where `prefix` is the raw decoded prefix
- *  string (before BOM stripping/trimming) (C74-03). */
-function checkHTMLContent(buffer: ArrayBuffer): { isHTML: boolean; prefix: string } {
+/** Check if the buffer contains HTML content (HTML-as-XLS).
+ *  Decodes the first 512 bytes as UTF-8 and checks for HTML signatures.
+ *  Korean card companies often export HTML tables with .xls extension.
+ *
+ *  Known limitation: the full buffer is decoded again in the caller when
+ *  HTML is detected. TextDecoder doesn't support partial streaming in all
+ *  browsers, so the 512-byte overlap is accepted as minor overhead bounded
+ *  by the file size limit (C75-01/C74-03). */
+function isHTMLContent(buffer: ArrayBuffer): boolean {
   // Decode first 512 bytes as UTF-8. Strip UTF-8 BOM (0xEF 0xBB 0xBF) if
   // present — some Korean card exports include a BOM, which would otherwise
   // prevent the startsWith checks from matching.
@@ -267,8 +271,7 @@ function checkHTMLContent(buffer: ArrayBuffer): { isHTML: boolean; prefix: strin
   // Korean card companies, which typically use UTF-8) will not be detected.
   const raw = new TextDecoder('utf-8').decode(buffer.slice(0, 512));
   const head = raw.replace(/^\uFEFF/, '').trimStart().toLowerCase();
-  const isHTML = head.startsWith('<!doctype') || head.startsWith('<html') || /<table[\s>]/.test(head);
-  return { isHTML, prefix: raw };
+  return head.startsWith('<!doctype') || head.startsWith('<html') || /<table[\s>]/.test(head);
 }
 
 /** Fix malformed closing tags like </td   > commonly found in Korean card exports */
@@ -285,15 +288,11 @@ export function parseXLSX(buffer: ArrayBuffer, bank?: BankId): ParseResult {
   let workbook: XLSX.WorkBook;
   let htmlBankHint: BankId | null = null;
 
-  const htmlCheck = checkHTMLContent(buffer);
-  if (htmlCheck.isHTML) {
-    // Decode the full buffer, reusing the already-decoded prefix to avoid
-    // re-decoding the first 512 bytes (C74-03). The prefix is the raw
-    // decoded string including any BOM; we decode the remainder separately
-    // and concatenate. However, TextDecoder doesn't support partial decoding
-    // with streaming for all browsers, so we decode the full buffer once
-    // and accept the minor overhead of the 512-byte overlap. The primary
-    // savings come from not calling TextDecoder twice on the same slice.
+  if (isHTMLContent(buffer)) {
+    // Decode the full buffer. TextDecoder doesn't reliably support partial
+    // streaming across all browsers, so the 512 bytes already decoded by
+    // isHTMLContent are decoded again here — the overhead is bounded by
+    // the file size limit (C75-01).
     const fullDecoded = new TextDecoder('utf-8').decode(buffer);
     const html = normalizeHTML(fullDecoded.replace(/^\uFEFF/, ''));
     htmlBankHint = detectBank(html).bank;
