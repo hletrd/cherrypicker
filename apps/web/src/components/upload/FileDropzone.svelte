@@ -156,15 +156,21 @@
       errorMessage = `전체 파일 크기가 50MB를 초과합니다. 일부 파일이 느리게 처리될 수 있어요.`;
       // Don't set uploadStatus to 'error' — let user proceed
     }
-    // Show individual file errors (these are hard blocks)
+    // Show individual file errors — accumulate ALL error types so the user
+    // can see all issues at once instead of discovering them one retry at a
+    // time (C72-04).
+    const errorParts: string[] = [];
     if (oversized.length > 0) {
-      errorMessage = `파일 크기는 10MB 이하여야 합니다 (초과: ${oversized.join(', ')})`;
-      uploadStatus = 'error';
-    } else if (invalid.length > 0) {
-      errorMessage = `CSV, Excel, PDF 파일만 지원합니다 (제외됨: ${invalid.join(', ')})`;
-      uploadStatus = 'error';
-    } else if (duplicateNames.length > 0) {
-      errorMessage = `같은 이름의 파일이 이미 있어요 (제외됨: ${duplicateNames.join(', ')})`;
+      errorParts.push(`파일 크기는 10MB 이하여야 합니다 (초과: ${oversized.join(', ')})`);
+    }
+    if (invalid.length > 0) {
+      errorParts.push(`CSV, Excel, PDF 파일만 지원합니다 (제외됨: ${invalid.join(', ')})`);
+    }
+    if (duplicateNames.length > 0) {
+      errorParts.push(`같은 이름의 파일이 이미 있어요 (제외됨: ${duplicateNames.join(', ')})`);
+    }
+    if (errorParts.length > 0) {
+      errorMessage = errorParts.join(' / ');
       uploadStatus = 'error';
     }
   }
@@ -257,6 +263,7 @@
   }
 
   function handleRetry() {
+    if (navigateTimeout) { clearTimeout(navigateTimeout); navigateTimeout = null; }
     uploadStatus = 'idle';
     errorMessage = '';
   }
