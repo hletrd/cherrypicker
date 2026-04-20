@@ -34,12 +34,13 @@
     });
   });
 
+  // Use immutable Set pattern for reliable Svelte 5 reactivity —
+  // direct .add()/.delete() mutations on $state Set may not trigger
+  // re-renders in all code paths (C54-03).
   function toggleRow(category: string) {
-    if (expandedRows.has(category)) {
-      expandedRows.delete(category);
-    } else {
-      expandedRows.add(category);
-    }
+    expandedRows = expandedRows.has(category)
+      ? new Set([...expandedRows].filter(c => c !== category))
+      : new Set([...expandedRows, category]);
   }
 </script>
 
