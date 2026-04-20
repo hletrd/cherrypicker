@@ -53,6 +53,6 @@ onMount(() => {
 
 ## Progress
 
-- [ ] Task 1: TransactionReview AbortController
-- [ ] Task 2: BOM stripping consolidation
-- [ ] Task 3: Quality gates
+- [x] Task 1: TransactionReview AbortController (commit `0000000e53`)
+- [x] Task 2: BOM stripping consolidation (commit `0000000e8c`)
+- [x] Task 3: Quality gates — all pass (tsc --noEmit: OK, bun test: 290/290 pass)
