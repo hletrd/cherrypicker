@@ -4,6 +4,7 @@
   import type { CardDetail, RewardTier } from '../../lib/api.js';
   import { formatWon, formatPercent, getCategoryIconName, getIssuerColor, formatIssuerNameKo, buildPageUrl } from '../../lib/formatters.js';
   import { loadCategories } from '../../lib/cards.js';
+  import { buildCategoryLabelMap } from '../../lib/category-labels.js';
   import Icon from '../ui/Icon.svelte';
 
   interface Props {
@@ -20,17 +21,7 @@
   onMount(async () => {
     try {
       const nodes = await loadCategories();
-      const map = new Map<string, string>();
-      for (const node of nodes) {
-        map.set(node.id, node.labelKo);
-        if (node.subcategories) {
-          for (const sub of node.subcategories) {
-            map.set(sub.id, sub.labelKo);
-            map.set(`${node.id}.${sub.id}`, sub.labelKo);
-          }
-        }
-      }
-      categoryLabels = map;
+      categoryLabels = buildCategoryLabelMap(nodes);
     } catch {
       // Fall back to showing raw IDs — non-critical
     }

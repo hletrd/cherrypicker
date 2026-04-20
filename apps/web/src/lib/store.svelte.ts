@@ -4,6 +4,7 @@
 import { analyzeMultipleFiles, optimizeFromTransactions, getLatestMonth, invalidateAnalyzerCaches } from './analyzer.js';
 import type { CategorizedTx } from './analyzer.js';
 import { loadCategories } from './cards.js';
+import { buildCategoryLabelMap } from './category-labels.js';
 
 // --- Types matching the API response shape ---
 
@@ -311,21 +312,8 @@ function createAnalysisStore() {
   async function getCategoryLabels(): Promise<Map<string, string>> {
     if (cachedCategoryLabels) return cachedCategoryLabels;
     const nodes = await loadCategories();
-    const labels = new Map<string, string>();
-    for (const node of nodes) {
-      labels.set(node.id, node.labelKo);
-      if (node.subcategories) {
-        for (const sub of node.subcategories) {
-          labels.set(sub.id, sub.labelKo);
-          // Dot-notation key for optimizer lookups — buildCategoryKey
-          // produces "dining.cafe" but the taxonomy only has "cafe" as
-          // the sub ID; without this entry, categoryLabels.get() misses.
-          labels.set(`${node.id}.${sub.id}`, sub.labelKo);
-        }
-      }
-    }
-    cachedCategoryLabels = labels;
-    return labels;
+    cachedCategoryLabels = buildCategoryLabelMap(nodes);
+    return cachedCategoryLabels;
   }
 
   return {

@@ -6,6 +6,7 @@ import type { RawTransaction } from './parser/types.js';
 import type { BankId } from './parser/types.js';
 import { getAllCardRules, loadCategories } from './cards.js';
 import type { CardRuleSet, CategoryNode } from './cards.js';
+import { buildCategoryLabelMap } from './category-labels.js';
 import type { AnalysisResult, AnalyzeOptions } from './store.svelte.js';
 
 // ---------------------------------------------------------------------------
@@ -215,19 +216,7 @@ export async function optimizeFromTransactions(
   let categoryLabels = prebuiltCategoryLabels;
   if (!categoryLabels) {
     const categoryNodes = await loadCategories();
-    categoryLabels = new Map<string, string>();
-    for (const node of categoryNodes) {
-      categoryLabels.set(node.id, node.labelKo);
-      if (node.subcategories) {
-        for (const sub of node.subcategories) {
-          categoryLabels.set(sub.id, sub.labelKo);
-          // Dot-notation key for optimizer lookups — buildCategoryKey
-          // produces "dining.cafe" but the taxonomy only has "cafe" as
-          // the sub ID; without this entry, categoryLabels.get() misses.
-          categoryLabels.set(`${node.id}.${sub.id}`, sub.labelKo);
-        }
-      }
-    }
+    categoryLabels = buildCategoryLabelMap(categoryNodes);
   }
 
   const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
@@ -271,26 +260,15 @@ export async function analyzeMultipleFiles(
   let format = 'csv';
 
   // Build category labels once from the taxonomy data returned by parseAndCategorize
-  const categoryLabels = new Map<string, string>();
+  let categoryLabels: Map<string, string> | undefined;
   for (const parsed of allParsed) {
     allTransactions.push(...parsed.transactions);
     allErrors.push(...parsed.parseErrors);
     if (parsed.bank) bank = parsed.bank;
     format = parsed.format;
     // Build labels from the first parsed result (all results use the same taxonomy)
-    if (categoryLabels.size === 0 && parsed.categoryNodes) {
-      for (const node of parsed.categoryNodes) {
-        categoryLabels.set(node.id, node.labelKo);
-        if (node.subcategories) {
-          for (const sub of node.subcategories) {
-            categoryLabels.set(sub.id, sub.labelKo);
-            // Dot-notation key for optimizer lookups — buildCategoryKey
-            // produces "dining.cafe" but the taxonomy only has "cafe" as
-            // the sub ID; without this entry, categoryLabels.get() misses.
-            categoryLabels.set(`${node.id}.${sub.id}`, sub.labelKo);
-          }
-        }
-      }
+    if (!categoryLabels && parsed.categoryNodes) {
+      categoryLabels = buildCategoryLabelMap(parsed.categoryNodes);
     }
   }
 
