@@ -16,7 +16,7 @@
   1. Add `previousMonthSpendingOption?: number` field to `AnalysisResult` to store the user's original input.
   2. In `analyze()`, store `options?.previousMonthSpending` in the result.
   3. In `reoptimize()`, forward `result.previousMonthSpendingOption` as the `previousMonthSpending` option.
-- **Status:** TODO
+- **Status:** DONE
 
 ---
 
@@ -28,7 +28,7 @@
 - **Files:** `apps/web/src/components/cards/CardGrid.svelte:124-128`
 - **Description:** When the user filters cards by issuer or type, the displayed card count changes dynamically. Screen reader users are not notified of the result count change because there is no `aria-live` region announcing the updated count.
 - **Fix:** Add `aria-live="polite"` attribute to the card count badge span at line 125 so screen readers announce the updated count when filters change.
-- **Status:** TODO
+- **Status:** DONE
 
 ---
 
