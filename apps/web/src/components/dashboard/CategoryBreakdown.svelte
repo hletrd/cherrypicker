@@ -126,7 +126,11 @@
   });
 
   let topCategoryName = $derived(categories.length > 0 ? categories[0].labelKo : '-');
-  let maxPercentage = $derived(categories.length > 0 ? categories.reduce((max, c) => Math.max(max, c.percentage), 1) : 100);
+  // Use 0 as the reduce initial value so that sub-1% categories get
+  // proportionally small bars instead of appearing full-width (the old
+  // initial value of 1 made bars fill 100% when all categories were < 1%).
+  // The `|| 1` fallback prevents division-by-zero when all percentages are 0.
+  let maxPercentage = $derived(categories.length > 0 ? categories.reduce((max, c) => Math.max(max, c.percentage), 0) || 1 : 100);
 </script>
 
 {#if analysisStore.loading}
