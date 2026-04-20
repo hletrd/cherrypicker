@@ -2,7 +2,7 @@
 
 **Priority:** HIGH
 **Findings addressed:** C8-01, C9R-02
-**Status:** PENDING
+**Status:** DONE
 
 ---
 
@@ -102,5 +102,5 @@
 
 ## Progress
 
-- [ ] Task 1: Gate dead AI categorization code
-- [ ] Task 2: Add AbortController to CardDetail fetch
+- [x] Task 1: Gate dead AI categorization code (commit: 0000000c39)
+- [x] Task 2: Add AbortController to CardDetail fetch (commit: 0000000912)

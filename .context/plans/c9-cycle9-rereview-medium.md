@@ -2,7 +2,7 @@
 
 **Priority:** MEDIUM
 **Findings addressed:** C8-10, C9R-03
-**Status:** PENDING
+**Status:** DONE
 
 ---
 
@@ -61,5 +61,5 @@
 
 ## Progress
 
-- [ ] Task 1: Add NaN guard to csv.ts installment parsing
-- [ ] Task 2: Handle negative amounts in PDF parser
+- [x] Task 1: Add NaN guard to csv.ts installment parsing (ALREADY FIXED in prior cycle — !Number.isNaN(inst) guard present)
+- [x] Task 2: Handle negative amounts in PDF parser (commit: 000000000e)
