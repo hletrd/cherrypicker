@@ -1,5 +1,6 @@
 import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
+import { inferYear } from '../date-utils.js';
 import { extractText } from './extractor.js';
 import { parseTable, filterTransactionRows } from './table-parser.js';
 import { parsePDFWithLLM } from './llm-fallback.js';
@@ -17,16 +18,16 @@ const KOREAN_SHORT_DATE_PATTERN = /\d{1,2}월\s*\d{1,2}일/;
 const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/]\d{1,2}$/;
 const AMOUNT_PATTERN = /^-?[\d,]+원?$/;
 
-/** Infer the year for a short-date (month/day only) using a look-back
- *  heuristic: if the date would be more than 3 months in the future,
- *  assume it belongs to the previous year. */
-function inferYear(month: number, day: number): number {
-  const now = new Date();
-  const candidate = new Date(now.getFullYear(), month - 1, day);
-  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
-    return now.getFullYear() - 1;
-  }
-  return now.getFullYear();
+/** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
+ *  values (month 1-12, day 1-31). This prevents decimal amounts like
+ *  "3.5" from being misidentified as MM.DD dates (C8-11/C34-03). */
+function isValidShortDate(cell: string): boolean {
+  const match = cell.match(SHORT_MD_DATE_PATTERN);
+  if (!match) return false;
+  const parts = cell.split(/[.\-\/]/);
+  const month = parseInt(parts[0] ?? '', 10);
+  const day = parseInt(parts[1] ?? '', 10);
+  return month >= 1 && month <= 12 && day >= 1 && day <= 31;
 }
 
 function parseDateToISO(raw: string): string {
@@ -99,12 +100,21 @@ function parseDateToISO(raw: string): string {
   return cleaned;
 }
 
-function parseAmount(raw: string): number {
-  const n = parseInt(raw.replace(/원$/, '').replace(/,/g, ''), 10);
-  // Return 0 instead of NaN so callers never have to guard against NaN
-  // propagation. Amounts of 0 are correctly filtered out by the > 0
-  // checks in both the structured and fallback parsing paths.
-  return Number.isNaN(n) ? 0 : n;
+/** Parse an amount string from PDF text. Returns null for unparseable inputs
+ *  so callers can distinguish between genuinely zero amounts and parse failures,
+ *  matching the CSV parser's isValidAmount() pattern (C33-03/C34-01). */
+function parseAmount(raw: string): number | null {
+  let cleaned = raw.replace(/원$/, '').replace(/,/g, '');
+  const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
+  if (isNeg) cleaned = cleaned.slice(1, -1);
+  if (!cleaned.trim()) return null;
+  // Use Math.round(parseFloat(...)) to match the web-side parser's rounding
+  // behavior (C21-03/C32-01). Korean Won amounts are always integers, but
+  // PDF-extracted strings may contain decimal remainders from formula cells;
+  // rounding is more correct than truncation via parseInt (C34-01).
+  const n = Math.round(parseFloat(cleaned));
+  if (Number.isNaN(n)) return null;
+  return isNeg ? -n : n;
 }
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
@@ -115,7 +125,7 @@ function findDateCell(row: string[]): { idx: number; value: string } | null {
       SHORT_YEAR_DATE_PATTERN.test(cell) ||
       KOREAN_FULL_DATE_PATTERN.test(cell) ||
       KOREAN_SHORT_DATE_PATTERN.test(cell) ||
-      SHORT_MD_DATE_PATTERN.test(cell)
+      isValidShortDate(cell)
     ) return { idx: i, value: cell };
   }
   return null;
@@ -155,6 +165,9 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
       const merchant = merchantIdx !== -1 ? (row[merchantIdx] ?? '').trim() : '';
       const amount = parseAmount(amountCell.value);
 
+      // parseAmount returns null for unparseable inputs — skip the row
+      // rather than silently treating it as 0 (C34-01).
+      if (amount === null) continue;
       if (amount <= 0) continue;
 
       const tx: RawTransaction = {
