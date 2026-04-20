@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-22 (Cycle 36)
+# Review Aggregate -- 2026-04-21 (Cycle 37)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle36-comprehensive.md` (full re-read of all source files, re-verified all prior findings, cross-verified parseAmount consistency across ALL parsers including web-side PDF)
+- `.context/reviews/2026-04-21-cycle37-comprehensive.md` (full re-read of all source files, re-verified all prior findings, cross-verified parseAmount consistency across ALL parsers)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-35 per-agent and aggregate files
+- All cycle 1-36 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-35 findings are confirmed fixed except as noted below:
+All prior cycle 1-36 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -37,9 +37,12 @@ All prior cycle 1-35 findings are confirmed fixed except as noted below:
 | C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed with SUBSTRING_SAFE_ENTRIES |
 | C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
 | C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner -- architectural gap |
-| C35-01 | FIXED | All 10 bank-specific CSV adapters now use Math.round(parseFloat(...)), return null for NaN, handle parenthesized negatives |
-| C35-02 | FIXED | All 10 bank-specific CSV adapters now filter zero-amount rows |
-| C35-03 | FIXED | All 10 bank-specific CSV adapters now import parseDateStringToISO from shared date-utils.ts |
+| C36-01 | FIXED | Web-side PDF parseAmount now handles parenthesized negatives |
+| C36-02 | FIXED | Server-side CSV adapters now use shared.ts utilities |
+| C36-03 | FIXED | categoryLabels Map construction centralized into buildCategoryLabelMap() |
+| C53-01 | FIXED | TransactionReview changeCategory now uses replacement pattern |
+| C53-02 | FIXED | Card stats reading logic centralized into build-stats.ts |
+| C53-03 | FIXED | CardDetail performance tier header dark mode contrast fixed |
 
 ---
 
@@ -47,9 +50,9 @@ All prior cycle 1-35 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C36-01 | MEDIUM | High | `apps/web/src/lib/parser/pdf.ts:169-179` | Web-side PDF `parseAmount` does not handle parenthesized negative amounts like `(1,234)` -- parity bug with all other parsers (web CSV, web XLSX, server CSV, server XLSX, server PDF all handle it) |
-| C36-02 | LOW | High | `packages/parser/src/csv/{hyundai,kb,shinhan,woori,samsung,hana,nh,lotte,ibk,bc}.ts:15-30` + `generic.ts:49-71` | `splitLine` / `splitCSVLine` and `parseAmount` are copy-pasted identically across 11 files -- DRY violation (same class as C7-07, C34-05) |
-| C36-03 | LOW | High | `apps/web/src/lib/store.svelte.ts:316-329`, `apps/web/src/lib/analyzer.ts:218-231`, `apps/web/src/lib/analyzer.ts:274-295`, `apps/web/src/components/cards/CardDetail.svelte:23-30` | `categoryLabels` Map construction (id + sub.id + dot-notation key) duplicated 4 times -- maintenance risk |
+| C37-01 | MEDIUM | High | `apps/web/src/lib/parser/csv.ts:33-45` | Web-side CSV `parseAmount` returns NaN (not null) for unparseable inputs -- inconsistent with all other parsers which return null. The `number` return type hides the risk of NaN propagation. |
+| C37-02 | LOW | High | `apps/web/src/lib/parser/csv.ts:49-61` | `isValidAmount` combines NaN check and zero-amount filter in one function, diverging from the separated pattern used by PDF/XLSX/server parsers |
+| C37-03 | MEDIUM | High | `apps/web/src/components/upload/FileDropzone.svelte:11-43` | Page-level drag handlers lack an `active` guard for unmount race -- stale closures could cause stuck drag-over state during Astro View Transitions |
 
 ---
 
@@ -64,7 +67,7 @@ All prior cycle 1-35 findings are confirmed fixed except as noted below:
 | C20-02/C25-03 | LOW | csv.ts DATE_PATTERNS/AMOUNT_PATTERNS divergence risk with date-utils.ts |
 | C20-04/C25-10 | LOW | pdf.ts module-level regex constants divergence risk with date-utils.ts |
 | C34-04 | LOW | Server-side PDF has no fallback line scanner |
-| C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro |
+| C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro -- NOW FIXED via build-stats.ts |
 | D-01 through D-111 | Various | See deferred items file for full list |
 
 ---
