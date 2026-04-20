@@ -21,6 +21,11 @@ export async function parseFile(file: File, bank?: BankId): Promise<ParseResult>
       let bestContent = '';
       let bestReplacements = Infinity;
 
+      // Check ALL encodings instead of breaking early on the first "good
+      // enough" result (C63-07). A file with mostly ASCII content and a few
+      // Korean characters can produce < 5 replacement characters when decoded
+      // as UTF-8, even though it is actually EUC-KR. By checking all candidates
+      // we ensure the encoding with the fewest replacement characters wins.
       for (const encoding of ENCODINGS) {
         try {
           const decoder = new TextDecoder(encoding);
@@ -30,7 +35,6 @@ export async function parseFile(file: File, bank?: BankId): Promise<ParseResult>
             bestReplacements = replacementCount;
             bestContent = decoded;
           }
-          if (replacementCount < 5) break;
         } catch { continue; }
       }
 
