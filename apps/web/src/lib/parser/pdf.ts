@@ -257,7 +257,11 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
     }
 
     return transactions.length > 0 ? { transactions, errors: parseErrors } : null;
-  } catch {
+  } catch (err) {
+    // Log structured parse failure for diagnostics — the fallback line scanner
+    // will still attempt recovery, but the structured parse failure should be
+    // visible in the console for debugging malformed PDFs (C25-06/D-106).
+    console.warn('[cherrypicker] Structured PDF table parse failed, falling back to line scan:', err instanceof Error ? err.message : String(err));
     return null;
   }
 }
