@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-21 (Cycle 40)
+# Review Aggregate -- 2026-04-21 (Cycle 41)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle40-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle41-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-39 per-agent and aggregate files
+- All cycle 1-40 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-39 findings are confirmed fixed except as noted below:
+All prior cycle 1-40 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -39,7 +39,10 @@ All prior cycle 1-39 findings are confirmed fixed except as noted below:
 | C39-03 | FIXED | Web-side parseFile now adds encoding quality warning when bestReplacements > 50 |
 | C39-05 | FIXED | FileDropzone addFiles now adds valid files first, then checks total size |
 | C39-04 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 -- theoretical edge case |
-| C39-06 | OPEN (LOW) | SavingsComparison annual projection jumps while monthly savings animates -- NOW EXTENDED by C40-01 |
+| C39-06/C40-01 | SUPERSEDED by C41-01 | SavingsComparison annual projection issue evolved — see C41-01 |
+| C40-02 | FIXED | TransactionReview changeCategory index mutation now has explanatory comment |
+| C40-03 | NO FIX NEEDED | formatDateKo/formatDateShort redundant parseInt validation — appropriate defensive coding |
+| C40-04 | FIXED | buildCardResults has explicit comment documenting pre-filtered positive-amount requirement |
 
 ---
 
@@ -47,10 +50,11 @@ All prior cycle 1-39 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | Description | File+line |
 |---|---|---|---|---|
-| C40-01 | MEDIUM | High | SavingsComparison annual projection uses animated `displayedSavings` instead of actual `opt.savingsVsSingleCard` — shows 0원 on mount during animation | `apps/web/src/components/dashboard/SavingsComparison.svelte:218` |
-| C40-02 | LOW | High | TransactionReview changeCategory index mutation lacks explanatory comment for future maintainers | `apps/web/src/components/dashboard/TransactionReview.svelte:128` |
-| C40-03 | LOW | High | formatDateKo/formatDateShort redundant parseInt validation (defensive but unnecessary for validated input) | `apps/web/src/lib/formatters.ts:153,169` |
-| C40-04 | LOW | High | buildCardResults totalSpending uses raw tx.amount without explicit positive-amount documentation | `packages/core/src/optimizer/greedy.ts:226` |
+| C41-01 | MEDIUM | High | SavingsComparison monthly/annual animation inconsistency — monthly animates but annual shows final value immediately, making values mathematically out of sync during 600ms animation | `apps/web/src/components/dashboard/SavingsComparison.svelte:216-218` |
+| C41-02 | LOW | High | SpendingSummary formatPeriod duplicates date parsing logic from formatters.ts | `apps/web/src/components/dashboard/SpendingSummary.svelte:30-43` |
+| C41-03 | LOW | High | FileDropzone handleUpload uses inline IIFE for previousMonthSpending parsing | `apps/web/src/components/upload/FileDropzone.svelte:217` |
+| C41-04 | LOW | Low | CategoryBreakdown maxPercentage initial value 1 causes misleading bar widths for sub-1% categories | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129` |
+| C41-05 | LOW | Medium | cards.ts loadCategories returns empty array on AbortError — silent category dropdown fallback | `apps/web/src/lib/cards.ts:246` |
 
 ---
 
