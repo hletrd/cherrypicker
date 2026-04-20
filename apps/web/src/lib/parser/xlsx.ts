@@ -214,7 +214,10 @@ function parseAmount(raw: unknown): number | null {
     const isNegative = cleaned.startsWith('(') && cleaned.endsWith(')');
     if (isNegative) cleaned = cleaned.slice(1, -1);
     if (!cleaned) return null;
-    const parsed = parseInt(cleaned, 10);
+    // Use Math.round(parseFloat(...)) to match the numeric path's rounding
+    // behavior (C20-01). Korean Won amounts are always integers, but
+    // formula cells may render as strings with decimal remainders.
+    const parsed = Math.round(parseFloat(cleaned));
     if (Number.isNaN(parsed)) return null;
     return isNegative ? -parsed : parsed;
   }
