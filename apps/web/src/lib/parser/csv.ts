@@ -26,6 +26,13 @@ function splitLine(line: string, delimiter: string): string[] {
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
 import { parseDateStringToISO } from './date-utils.js';
 
+// NOTE(C70-04): The helpers below (splitLine, parseAmount, parseInstallments,
+// isValidAmount) duplicate logic from packages/parser/src/csv/shared.ts.
+// Full dedup requires the D-01 architectural refactor (shared module between
+// Bun and browser environments). When that refactor lands, replace these with
+// imports from the shared module. The shared module has been updated to include
+// whitespace stripping in parseCSVAmount and the isValidCSVAmount type guard.
+
 function parseDateToISO(raw: string): string {
   return parseDateStringToISO(raw);
 }

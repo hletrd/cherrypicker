@@ -30,15 +30,38 @@ export function splitCSVLine(line: string, delimiter: string): string[] {
 /** Parse an amount string from CSV data. Returns null for unparseable inputs
  *  (NaN), handles parenthesized negatives like (1,234) → -1234, uses
  *  Math.round(parseFloat(...)) for correct rounding (C21-03/C35-01), and
- *  strips Korean Won suffix and comma separators. */
+ *  strips Korean Won suffix, comma separators, and internal whitespace
+ *  (C70-04 — matches the web CSV parser's behavior). */
 export function parseCSVAmount(raw: string): number | null {
-  let cleaned = raw.trim().replace(/원$/, '').replace(/,/g, '');
+  let cleaned = raw.trim().replace(/원$/, '').replace(/,/g, '').replace(/\s/g, '');
   const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNeg) cleaned = cleaned.slice(1, -1);
   if (!cleaned) return null;
   const n = Math.round(parseFloat(cleaned));
   if (Number.isNaN(n)) return null;
   return isNeg ? -n : n;
+}
+
+/** Validate that a parsed amount is usable for optimization: not null (parseable),
+ *  not zero (balance inquiries, declined transactions), and not negative (refunds).
+ *  Pushes an error and returns false if the amount is null (unparseable).
+ *  Zero/negative amounts are silently skipped — they don't contribute to spending.
+ *  Acts as a TypeScript type guard: when it returns true, `amount` is narrowed
+ *  from `number | null` to `number` (C70-04). */
+export function isValidCSVAmount(
+  amount: number | null,
+  amountRaw: string,
+  lineIdx: number,
+  errors: { line?: number; message: string; raw?: string }[],
+): amount is number {
+  if (amount === null) {
+    if (amountRaw.trim()) {
+      errors.push({ line: lineIdx + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}` });
+    }
+    return false;
+  }
+  if (amount <= 0) return false;
+  return true;
 }
 
 /** Parse an installment value from a CSV cell. Returns undefined for
