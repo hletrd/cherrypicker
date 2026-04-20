@@ -42,7 +42,7 @@ However, the INCONSISTENCY with the monthly display (which shows signed values) 
 4. Run all gates to confirm no regressions
 5. Commit with message: `fix(web): 🐛 fix SavingsComparison annual savings sign inconsistency for negative values`
 
-**Status:** PENDING
+**Status:** COMPLETED -- commit 000000083f3e0af73923777c9706bac2d85a10d2
 
 ---
 
@@ -64,7 +64,7 @@ However, the INCONSISTENCY with the monthly display (which shows signed values) 
 2. Run all gates to confirm no regressions
 3. Commit with message: `fix(web): 🐛 fix ReportContent showing +0원 for zero savings`
 
-**Status:** PENDING
+**Status:** COMPLETED -- commit 00000001f5e14d90a0f24df38fad561de771054d
 
 ---
 
