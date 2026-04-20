@@ -7,7 +7,7 @@
   let dismissed = $state(false);
 
   onMount(() => {
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('cherrypicker:dismissed-warning')) {
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cherrypicker:dismissed-warning')) {
       dismissed = true;
     }
   });
@@ -125,7 +125,7 @@
   {#if analysisStore.result && !dismissed}
     <div class="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800">
       <span>탭을 닫으면 결과가 사라져요. 저장하려면 리포트를 PDF로 내려받으세요.</span>
-      <button class="ml-auto shrink-0 text-amber-500 hover:text-amber-700" onclick={() => { dismissed = true; try { localStorage.setItem('cherrypicker:dismissed-warning', '1'); } catch {} }}>닫기</button>
+      <button class="ml-auto shrink-0 text-amber-500 hover:text-amber-700" onclick={() => { dismissed = true; try { sessionStorage.setItem('cherrypicker:dismissed-warning', '1'); } catch {} }}>닫기</button>
     </div>
   {/if}
   {#if analysisStore.persistWarningKind === 'truncated'}
