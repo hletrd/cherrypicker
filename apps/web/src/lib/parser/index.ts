@@ -37,7 +37,14 @@ export async function parseFile(file: File, bank?: BankId): Promise<ParseResult>
       content = bestContent || new TextDecoder('utf-8').decode(buffer);
       // Auto-detect bank from content if not specified
       const detectedBank = bank ?? detectBankFromText(content);
-      return parseCSV(content, detectedBank ?? undefined);
+      const result = parseCSV(content, detectedBank ?? undefined);
+      // Warn if encoding detection produced many replacement characters
+      if (bestReplacements > 50) {
+        result.errors.unshift({
+          message: `파일 인코딩을 정확히 감지하지 못했어요. 일부 가맹점명이 깨질 수 있습니다.`,
+        });
+      }
+      return result;
     }
     case 'xlsx': {
       const buffer = await file.arrayBuffer();
