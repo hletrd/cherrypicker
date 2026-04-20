@@ -31,11 +31,15 @@
 
 ## Implementation Order
 
-1. **C18-05** — Extract `inferYear` to shared utility (foundational — other date fixes depend on it)
-2. **C18-01 + C18-02** — Fix VisibilityToggle cleanup and optimize DOM queries (combined, same file)
-3. **C18-04** — isHTMLContent BOM handling (small targeted fix)
-4. **C18-03** — Annual savings text clarification (trivial text change)
+1. **C18-05** — Extract `inferYear` to shared utility (foundational — other date fixes depend on it) — **DONE** (commit `000000042e`)
+2. **C18-01 + C18-02** — Fix VisibilityToggle cleanup and optimize DOM queries (combined, same file) — **DONE** (commit `0000000a0`)
+3. **C18-04** — isHTMLContent BOM handling (small targeted fix) — **DONE** (commit `000000020`)
+4. **C18-03** — Annual savings text clarification (trivial text change) — **DONE** (commit `0000000dc`)
 
 ## Deferred Items
 
 All prior deferred items from `00-deferred-items.md` remain unchanged. No new deferrals this cycle.
+
+## Cycle 18 Results
+
+All 5 findings addressed. All gates green (typecheck clean, 266 tests pass, build succeeds).
