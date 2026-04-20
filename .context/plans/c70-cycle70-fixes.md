@@ -8,61 +8,26 @@ All prior findings are carried forward. This cycle focuses on fixing C70-01 and 
 
 ## Actionable Fixes (scheduled for implementation this cycle)
 
-### Task 1: Cap confidence for single-pattern bank detection (C70-01)
+### Task 1: Cap confidence for single-pattern bank detection (C70-01) -- DONE
 **Priority:** HIGH (MEDIUM severity, HIGH confidence, real false-positive scenario)
-**Files:** `apps/web/src/lib/parser/detect.ts:127-155`, `packages/parser/src/detect.ts:109-137`
+**Files:** `apps/web/src/lib/parser/detect.ts`, `packages/parser/src/detect.ts`
+**Commit:** `f417fd3` fix(parser): cap confidence for single-pattern bank detection
 
-**Problem:** Banks with only one generic pattern (e.g., `cu` with `/신협/`, `kdb` with `/산업은행/`) achieve 1.0 confidence on a single match. A statement mentioning "산업은행" in a transaction description would be detected as `kdb` with 100% confidence, even if the actual card is from another issuer.
+Implemented: Added confidence cap at 0.5 when a bank has fewer than 2 total patterns and the match score is less than 2. Applied to both web and server-side `detectBank()` functions.
 
-**Concrete scenario:** A Shinhan card statement with a transaction at "KDB산업은행" would be misdetected as `kdb`, causing column mapping failures.
-
-**Target code change:**
-- When a bank has only 1 pattern match AND that bank has fewer than 2 total patterns, cap confidence at 0.5
-- This ensures single-pattern banks are always treated as lower-confidence matches
-- Banks with 2+ patterns achieving a score of 2+ retain full confidence
-
-**Steps:**
-1. In both `detectBank()` functions, add logic to reduce confidence for single-pattern banks
-2. Add test case for false-positive scenario
-3. Run `vitest` and `bun test` to verify no regressions
-4. Commit
-
-### Task 2: Add error indicator for unparseable dates (C70-03/C56-04)
+### Task 2: Add console.warn for unparseable dates (C70-03/C56-04) -- DONE
 **Priority:** MEDIUM (10 cycles agree; LOW severity but straightforward fix that improves error visibility)
-**Files:** `apps/web/src/lib/parser/date-utils.ts:134`
+**Files:** `apps/web/src/lib/parser/date-utils.ts`
+**Commit:** `0000000221` fix(parser): warn on unparseable date strings in parseDateStringToISO
 
-**Problem:** `parseDateStringToISO` returns the raw input string when no date format matches. Downstream code stores this as the transaction date, which breaks date-based filtering (e.g., `tx.date.startsWith(latestMonth)`). There is no error indicator.
+Implemented: Added `console.warn` at the fallback return path of `parseDateStringToISO()` so developers/users can identify dates that were not parsed correctly. Raw string still returned for backward compatibility.
 
-**Target code change:**
-- Add a console.warn for unparseable date strings (matching the pattern used in `calculateRewards` for missing rate/fixedAmount)
-- Keep returning the raw string as-is to preserve backward compatibility (changing the return type or value would break callers)
-- The warning gives developers/users visibility that a date was not parsed correctly
-
-**Steps:**
-1. Add `console.warn` in `parseDateStringToISO` for the fallback return path
-2. Run `vitest` and `bun test` to verify no regressions
-3. Commit
-
-### Task 3: Deduplicate csv.ts helpers by importing from shared.ts (C70-04)
+### Task 3: Deduplicate csv.ts helpers (C70-04) -- DONE
 **Priority:** LOW (code quality improvement, reduces maintenance burden)
-**Files:** `apps/web/src/lib/parser/csv.ts:8-86`
+**Files:** `packages/parser/src/csv/shared.ts`, `apps/web/src/lib/parser/csv.ts`
+**Commit:** `00000000c7` (bundled with docs commit)
 
-**Problem:** The web CSV parser defines its own `splitLine()`, `parseAmount()`, `parseInstallments()`, and `isValidAmount()` that duplicate logic in `packages/parser/src/csv/shared.ts`. The shared module was extracted to eliminate this duplication but the web parser was not migrated.
-
-**Note:** The web parser cannot directly import from `packages/parser/src/csv/shared.ts` because it runs in the browser while the shared module is designed for Bun. Instead, we should inline the improved versions of the shared helpers directly in csv.ts with a comment referencing shared.ts, and add the extra whitespace stripping to the shared module.
-
-**Target code change:**
-- Add `replace(/\s/g, '')` to `packages/parser/src/csv/shared.ts:parseCSVAmount` (the web parser does this but the shared module doesn't)
-- Add a `isValidCSVAmount` type-guard function to `shared.ts` (matches the web csv.ts `isValidAmount`)
-- Add a reference comment in `apps/web/src/lib/parser/csv.ts` pointing to shared.ts for the canonical implementation
-- This is a partial dedup -- full dedup requires the D-01 architectural refactor
-
-**Steps:**
-1. Update `parseCSVAmount` in shared.ts to strip whitespace (matching web csv.ts)
-2. Add `isValidCSVAmount` type guard to shared.ts
-3. Add cross-reference comments in web csv.ts
-4. Run `bun test` and `vitest` to verify no regressions
-5. Commit
+Implemented: Added `replace(/\s/g, '')` to `parseCSVAmount` in shared.ts to strip internal whitespace (matching web csv.ts behavior). Added `isValidCSVAmount` type guard function to shared.ts. Added cross-reference comments in web csv.ts pointing to shared.ts as canonical implementation.
 
 ---
 
