@@ -169,10 +169,16 @@ function filterTransactionRows(rows: string[][]): string[][] {
 
 /** Shared date-parsing — delegates to the canonical implementation in
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
-import { parseDateStringToISO } from './date-utils.js';
+import { parseDateStringToISO, isValidISODate } from './date-utils.js';
 
-function parseDateToISO(raw: string): string {
-  return parseDateStringToISO(raw);
+function parseDateToISO(raw: string, errors?: ParseError[]): string {
+  const result = parseDateStringToISO(raw);
+  // Report unparseable dates as parse errors so users can see which
+  // transactions have malformed dates (C71-04/C56-04).
+  if (!isValidISODate(result) && raw.trim() && errors) {
+    errors.push({ message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
+  }
+  return result;
 }
 
 /** Parse an amount string from PDF text. Returns null for unparseable inputs
@@ -260,7 +266,7 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
       if (amount <= 0) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateCell.value),
+        date: parseDateToISO(dateCell.value, parseErrors),
         merchant,
         amount,
       };
@@ -374,7 +380,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
             // Negative amounts (refunds) and zero amounts (balance inquiries)
             // don't contribute to spending optimization.
             fallbackTransactions.push({
-              date: parseDateToISO(dateMatch[1]!),
+              date: parseDateToISO(dateMatch[1]!, errors),
               merchant: between.replace(/\s+/g, ' ').trim(),
               amount,
             });

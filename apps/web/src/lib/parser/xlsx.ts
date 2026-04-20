@@ -182,9 +182,9 @@ function getBankColumnConfig(bankId: BankId): ColumnConfig {
  *  across parsers (C19-01). The xlsx parser additionally handles
  *  Excel serial date numbers before falling through to the shared
  *  string parser. */
-import { parseDateStringToISO, isValidDayForMonth } from './date-utils.js';
+import { parseDateStringToISO, isValidDayForMonth, isValidISODate } from './date-utils.js';
 
-function parseDateToISO(raw: unknown): string {
+function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): string {
   if (typeof raw === 'number') {
     // Guard against NaN, Infinity, and numbers that are clearly NOT dates
     if (!Number.isFinite(raw) || raw < 1 || raw > 100000) return String(raw);
@@ -202,11 +202,20 @@ function parseDateToISO(raw: unknown): string {
       }
       // Invalid date from serial number — return as-is so the caller can detect
       // the malformed value, matching the string-path fallback behavior.
+      if (errors && lineIdx !== undefined) {
+        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });
+      }
       return String(raw);
     }
   }
   if (typeof raw === 'string') {
-    return parseDateStringToISO(raw);
+    const result = parseDateStringToISO(raw);
+    // Report unparseable dates as parse errors so users can see which
+    // transactions have malformed dates (C71-04/C56-04).
+    if (!isValidISODate(result) && raw.trim() && errors && lineIdx !== undefined) {
+      errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
+    }
+    return result;
   }
   return String(raw ?? '');
 }
@@ -413,7 +422,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     if (amount <= 0) continue;
 
     const tx: RawTransaction = {
-      date: parseDateToISO(dateRaw),
+      date: parseDateToISO(dateRaw, errors, i),
       merchant: String(merchantRaw ?? '').replace(/^"(.*)"$/, '$1').trim(),
       amount,
       ...(installCol !== -1 && row[installCol]

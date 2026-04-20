@@ -24,7 +24,7 @@ function splitLine(line: string, delimiter: string): string[] {
 
 /** Shared date-parsing — delegates to the canonical implementation in
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
-import { parseDateStringToISO } from './date-utils.js';
+import { parseDateStringToISO, isValidISODate } from './date-utils.js';
 
 // NOTE(C70-04): The helpers below (splitLine, parseAmount, parseInstallments,
 // isValidAmount) duplicate logic from packages/parser/src/csv/shared.ts.
@@ -33,8 +33,14 @@ import { parseDateStringToISO } from './date-utils.js';
 // imports from the shared module. The shared module has been updated to include
 // whitespace stripping in parseCSVAmount and the isValidCSVAmount type guard.
 
-function parseDateToISO(raw: string): string {
-  return parseDateStringToISO(raw);
+function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): string {
+  const result = parseDateStringToISO(raw);
+  // Report unparseable dates as parse errors so users can see which
+  // transactions have malformed dates (C71-04/C56-04).
+  if (!isValidISODate(result) && raw.trim() && errors && lineIdx !== undefined) {
+    errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
+  }
+  return result;
 }
 
 /** Parse an amount string from CSV data. Returns null for unparseable inputs
@@ -212,7 +218,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
     const tx: RawTransaction = {
-      date: parseDateToISO(dateRaw),
+      date: parseDateToISO(dateRaw, errors, i),
       merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
       amount,
     };
@@ -289,7 +295,7 @@ const samsungAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
@@ -354,7 +360,7 @@ const shinhanAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
@@ -420,7 +426,7 @@ const kbAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
@@ -486,7 +492,7 @@ const hyundaiAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
@@ -551,7 +557,7 @@ const lotteAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
@@ -616,7 +622,7 @@ const hanaAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
@@ -682,7 +688,7 @@ const wooriAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
@@ -747,7 +753,7 @@ const nhAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
@@ -813,7 +819,7 @@ const ibkAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
@@ -878,7 +884,7 @@ const bcAdapter: BankAdapter = {
       if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateToISO(dateRaw, errors, i),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
