@@ -36,7 +36,10 @@ function parseAmount(raw: string): number {
   const isNegative = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNegative) cleaned = cleaned.slice(1, -1);
   cleaned = cleaned.replace(/원$/, '').replace(/,/g, '').replace(/\s/g, '');
-  const parsed = parseInt(cleaned, 10);
+  // Use Math.round(parseFloat(...)) to match the xlsx parser's rounding behavior
+  // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
+  // cells may contain decimal remainders; rounding is more correct than truncation.
+  const parsed = Math.round(parseFloat(cleaned));
   if (Number.isNaN(parsed)) return NaN;
   return isNegative ? -parsed : parsed;
 }
