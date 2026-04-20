@@ -18,10 +18,11 @@
     if (!assignments.length) return 1;
     const computed = assignments.reduce((max, a) => Math.max(max, a.rate), 0);
     // Guard against division by zero in bar width calculation; use a minimum
-    // of 0.5% (0.005) so that when all rates are near-zero, bars are
+    // of 0.1% (0.001) so that when all rates are near-zero, bars are
     // proportionally small rather than appearing full-width due to a tiny
-    // denominator. A 0.01% epsilon would make any tiny rate fill the bar.
-    return computed > 0.005 ? computed : 0.005;
+    // denominator. Lowered from 0.5% (0.005) to 0.1% for better proportional
+    // accuracy at low rate ranges (C12-01).
+    return computed > 0.001 ? computed : 0.001;
   });
 
   let sortedAssignments = $derived.by(() => {
