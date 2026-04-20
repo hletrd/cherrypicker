@@ -1,10 +1,10 @@
-# Review Aggregate -- 2026-04-22 (Cycle 47)
+# Review Aggregate -- 2026-04-21 (Cycle 48)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle47-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle48-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-46 per-agent and aggregate files
+- All cycle 1-47 per-agent and aggregate files
 
 ---
 
@@ -14,6 +14,10 @@ All prior cycle 1-46 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C53-01 | **FIXED** | `TransactionReview.svelte:131` uses spread-copy `{ ...tx, ... }` + index assignment instead of in-place mutation |
+| C53-02 | **FIXED** | Both `index.astro` and `Layout.astro` now use shared `readCardStats()` from `build-stats.ts` |
+| C53-03 | **FIXED** | `CardDetail.svelte:217` now has `dark:text-blue-300` on performance tier header |
+| D-106 | **FIXED** | `pdf.ts:270-276` no longer uses bare `catch {}` -- now logs diagnostic `console.warn` on structured parse failure |
 | C45-01 | **FIXED** | `store.svelte.ts:420-424` early null guard before `result.previousMonthSpendingOption` access |
 | C45-02 | **FIXED** | Same early null guard eliminates wasted computation |
 | C44-03 | **FIXED** | CardGrid.svelte:125 has `aria-live="polite"` on filter result count |
@@ -22,8 +26,8 @@ All prior cycle 1-46 findings are confirmed fixed except as noted below:
 | C43-02 | FIXED | `analyzer.ts:210` uses `tx.amount` directly |
 | C42-01 | FIXED | All parsers now use `amount <= 0` |
 | C42-02 | FIXED | `analyzer.ts:290` and `store.svelte.ts:425` use `tx.amount` |
-| C53-01 | FIXED | `TransactionReview.svelte:131` now uses spread-copy + index assignment |
-| C53-03 | FIXED | `CardDetail.svelte:217` now has `dark:text-blue-300` on performance tier header |
+| C53-01 (prev) | FIXED | `TransactionReview.svelte:131` now uses spread-copy + index assignment |
+| C53-03 (prev) | FIXED | `CardDetail.svelte:217` now has `dark:text-blue-300` on performance tier header |
 | C7-04 | OPEN (LOW) | TransactionReview $effect re-sync fragile |
 | C7-06 | OPEN (LOW) | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
 | C7-07 | OPEN (LOW) | BANK_SIGNATURES duplicated between packages/parser and apps/web |
@@ -51,7 +55,7 @@ All prior cycle 1-46 findings are confirmed fixed except as noted below:
 
 ## New Findings (This Cycle)
 
-No new findings identified in cycle 47. The codebase is in a stable state with all HIGH and MEDIUM severity issues resolved.
+No new findings identified in cycle 48. The codebase is in a stable state with all HIGH and MEDIUM severity issues resolved.
 
 ---
 
