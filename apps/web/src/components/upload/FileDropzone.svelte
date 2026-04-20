@@ -8,20 +8,26 @@
   onDestroy(() => { if (navigateTimeout) clearTimeout(navigateTimeout); });
 
   // Page-wide drag & drop: 화면 아무 데나 파일을 던져도 작동
+  // Active guard prevents stale handlers from mutating isDragOver after
+  // the component is unmounted during Astro View Transitions (C37-03).
   onMount(() => {
+    let active = true;
     let dragCount = 0;
     function onDragEnter(e: DragEvent) {
+      if (!active) return;
       e.preventDefault();
       dragCount++;
       if (dragCount === 1) isDragOver = true;
     }
     function onDragLeave(e: DragEvent) {
+      if (!active) return;
       e.preventDefault();
       dragCount--;
       if (dragCount <= 0) { dragCount = 0; isDragOver = false; }
     }
-    function onDragOver(e: DragEvent) { e.preventDefault(); }
+    function onDragOver(e: DragEvent) { if (!active) return; e.preventDefault(); }
     function onPageDrop(e: DragEvent) {
+      if (!active) return;
       e.preventDefault();
       dragCount = 0;
       isDragOver = false;
@@ -35,6 +41,7 @@
     document.addEventListener('dragover', onDragOver);
     document.addEventListener('drop', onPageDrop);
     return () => {
+      active = false;
       document.removeEventListener('dragenter', onDragEnter);
       document.removeEventListener('dragleave', onDragLeave);
       document.removeEventListener('dragover', onDragOver);
