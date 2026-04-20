@@ -47,13 +47,24 @@
   let showBreakdown = $state(false);
 
   // Count-up animation for savings — smoothly transitions from current
-  // displayed value to the new target instead of resetting to 0
+  // displayed value to the new target instead of resetting to 0.
+  // Respects prefers-reduced-motion: skips animation and sets value
+  // immediately for users who have enabled reduced motion (C22-02).
   let displayedSavings = $state(0);
 
   $effect(() => {
     const target = opt?.savingsVsSingleCard ?? 0;
     if (target === 0 && displayedSavings === 0) return;
     if (target === displayedSavings) return;
+
+    // Skip animation when the user prefers reduced motion
+    const prefersReducedMotion = typeof window !== 'undefined'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      displayedSavings = target;
+      return;
+    }
+
     const startVal = displayedSavings;
     let cancelled = false;
     let rafId: number;
