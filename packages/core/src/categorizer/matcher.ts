@@ -18,10 +18,6 @@ const ALL_KEYWORDS: Record<string, string> = {
 const SUBSTRING_SAFE_ENTRIES: Array<[keyword: string, categoryStr: string]> = Object.entries(ALL_KEYWORDS)
   .filter(([kw]) => kw.trim().length >= 2);
 
-function isSubstringSafeKeyword(keyword: string): boolean {
-  return keyword.trim().length >= 2;
-}
-
 interface MatchResult {
   category: string;
   subcategory?: string;
