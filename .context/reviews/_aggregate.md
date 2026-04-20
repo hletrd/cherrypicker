@@ -61,7 +61,7 @@ All prior cycle 1-13 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C14-01 | MEDIUM | Medium | `apps/web/src/lib/cards.ts:186-190` and `:217-220` | `loadCardsData` and `loadCategories` catch blocks reset cache on AbortError -- a deliberate abort by one component clears the cache for all future callers, forcing a re-fetch. Should distinguish AbortError from real network errors. |
+| C14-01 | **FIXED** | `cards.ts:193-203,229-236` catch blocks now use `isAbortError` to distinguish AbortError from real errors; AbortError resets cache but does not propagate. Downstream callers (`loadCategories`, `getAllCardRules`, `getCardList`, `getCardById`) have null guards for undefined-after-abort. |
 
 ---
 
