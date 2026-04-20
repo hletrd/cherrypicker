@@ -17,6 +17,9 @@
   let card = $state<CardDetail | null>(null);
   let fetchGeneration = 0;
   let categoryLabels = $state<Map<string, string>>(new Map());
+  // Track whether category labels have been loaded (or attempted) so the
+  // rewards table doesn't briefly flash raw category IDs before labels arrive (C61-04).
+  let categoryLabelsReady = $state(false);
 
   onMount(async () => {
     try {
@@ -25,6 +28,7 @@
     } catch {
       // Fall back to showing raw IDs — non-critical
     }
+    categoryLabelsReady = true;
   });
 
   function rateColorClass(rate: number): string {
@@ -197,7 +201,7 @@
     {/if}
 
     <!-- Rewards table grouped by performance tier -->
-    {#if card.rewards.length > 0}
+    {#if card.rewards.length > 0 && categoryLabelsReady}
       <div>
         <h2 class="text-base font-semibold text-[var(--color-text)]">카테고리별 혜택</h2>
         <div class="mt-3 overflow-x-auto rounded-xl border border-[var(--color-border)]">
