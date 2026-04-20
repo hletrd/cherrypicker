@@ -21,10 +21,10 @@ Actually, let me reconsider. The function `isValidShortDate` is used in `findDat
 The simplest fix: replace `day >= 1 && day <= 31` with a month-aware check using a local `maxDaysInMonth` lookup table (non-leap year, since we don't have a year context). This ensures that short dates like "2/31" are rejected at the pre-filter level, matching the behavior of the production parser.
 
 **Steps:**
-1. [ ] Add a `MAX_DAYS_PER_MONTH` constant array in pdf.ts for non-leap year month lengths
-2. [ ] Update `isValidShortDate` to use the month-aware check instead of `day <= 31`
-3. [ ] Run all gates to confirm no regressions
-4. [ ] Commit with appropriate message
+1. [x] Add a `MAX_DAYS_PER_MONTH` constant array in pdf.ts for non-leap year month lengths
+2. [x] Update `isValidShortDate` to use the month-aware check instead of `day <= 31`
+3. [x] Run all gates to confirm no regressions (bun test: 95 pass, vitest: 189 pass, tsc: clean)
+4. [x] Commit: `fix(parser): 🐛 align PDF isValidShortDate pre-filter with month-aware day validation` (0000000b)
 
 ---
 
@@ -40,10 +40,10 @@ Actually, looking more carefully: `isValidDayForMonth(year, month, day)` already
 So the fix is: replace `day >= 1 && day <= 31` with just `day >= 1` in the pre-checks at lines 100 and 124, since `isValidDayForMonth` handles the upper bound correctly.
 
 **Steps:**
-1. [ ] Replace `day >= 1 && day <= 31` with `day >= 1` at line 100 (MM/DD branch)
-2. [ ] Replace `day >= 1 && day <= 31` with `day >= 1` at line 124 (Korean short date branch)
-3. [ ] Run all gates to confirm no regressions
-4. [ ] Commit with appropriate message
+1. [x] Replace `day >= 1 && day <= 31` with `day >= 1` at line 100 (MM/DD branch)
+2. [x] Replace `day >= 1 && day <= 31` with `day >= 1` at line 124 (Korean short date branch)
+3. [x] Run all gates to confirm no regressions (bun test: 95 pass, vitest: 189 pass, tsc: clean)
+4. [x] Commit: `refactor(parser): ♻️ remove redundant day<=31 pre-check before isValidDayForMonth` (00000000)
 
 ---
 
@@ -52,11 +52,11 @@ So the fix is: replace `day >= 1 && day <= 31` with just `day >= 1` in the pre-c
 **Gates:** eslint, tsc --noEmit, vitest, bun test
 
 **Steps:**
-1. [ ] Run eslint across the codebase
-2. [ ] Run `tsc --noEmit` for type checking
-3. [ ] Run vitest for web app tests
-4. [ ] Run bun test for parser tests
-5. [ ] Fix any gate failures
+1. [x] Run eslint -- no config in repo (known deferred D-04)
+2. [x] Run `tsc --noEmit` -- clean (packages/core, apps/web)
+3. [x] Run vitest -- 8 files, 189 tests passed
+4. [x] Run bun test -- 95 pass, 0 fail
+5. [x] No gate failures to fix
 
 ---
 
