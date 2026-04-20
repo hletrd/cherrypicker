@@ -185,22 +185,24 @@
   );
 
   function changeCategory(txId: string, newCategory: string) {
-    const tx = editedTxs.find(t => t.id === txId);
-    if (tx) {
-      const parentCategory = subcategoryToParent.get(newCategory);
-      if (parentCategory) {
-        // User selected a subcategory (fully-qualified ID like "dining.cafe")
-        // — set both parent category and subcategory
-        const subId = newCategory.includes('.') ? newCategory.split('.')[1] ?? newCategory : newCategory;
-        tx.category = parentCategory;
-        tx.subcategory = subId;
-      } else {
-        // User selected a top-level category
-        tx.category = newCategory;
-        tx.subcategory = undefined;
+    const idx = editedTxs.findIndex(t => t.id === txId);
+    if (idx !== -1) {
+      const tx = editedTxs[idx];
+      if (tx) {
+        const parentCategory = subcategoryToParent.get(newCategory);
+        let updated: CategorizedTx;
+        if (parentCategory) {
+          // User selected a subcategory (fully-qualified ID like "dining.cafe")
+          // — set both parent category and subcategory
+          const subId = newCategory.includes('.') ? newCategory.split('.')[1] ?? newCategory : newCategory;
+          updated = { ...tx, category: parentCategory, subcategory: subId, confidence: 1.0 };
+        } else {
+          // User selected a top-level category
+          updated = { ...tx, category: newCategory, subcategory: undefined, confidence: 1.0 };
+        }
+        editedTxs = editedTxs.map((t, i) => i === idx ? updated : t);
+        hasEdits = true;
       }
-      tx.confidence = 1.0; // manually set = full confidence
-      hasEdits = true;
     }
   }
 
