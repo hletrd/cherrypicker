@@ -5,7 +5,7 @@
 ### Task 1: Fix server-side PDF `isValidShortDate` parity bug (C68-01)
 **Priority:** HIGH (parity bug between server and web parsers)
 **Files:** `packages/parser/src/pdf/index.ts:24-31`
-**Status:** PENDING
+**Status:** COMMITTED (`00000004a19d`) -- Added MAX_DAYS_PER_MONTH table and replaced day <= 31 with month-aware validation.
 
 **Problem:** The server-side PDF `isValidShortDate()` uses `day <= 31` while the web-side was upgraded to use `MAX_DAYS_PER_MONTH` in cycle 65 (C65-01). This is a parity bug that can cause different row-identification behavior between server and web PDF parsing.
 
@@ -36,16 +36,16 @@ function isValidShortDate(cell: string): boolean {
 ```
 
 **Steps:**
-1. [ ] Add `MAX_DAYS_PER_MONTH` constant before `isValidShortDate` (matching `apps/web/src/lib/parser/pdf.ts:32`)
-2. [ ] Replace `day <= 31` with `day <= (MAX_DAYS_PER_MONTH[month] ?? 0)` at line 30
-3. [ ] Update comment to mention month-aware validation and C68-01
-4. [ ] Run `bun test` to verify no regressions
-5. [ ] Commit: `fix(parser): 🐛 align server-side PDF isValidShortDate with month-aware day validation`
+1. [x] Add `MAX_DAYS_PER_MONTH` constant before `isValidShortDate` (matching `apps/web/src/lib/parser/pdf.ts:32`)
+2. [x] Replace `day <= 31` with `day <= (MAX_DAYS_PER_MONTH[month] ?? 0)` at line 30
+3. [x] Update comment to mention month-aware validation and C68-01
+4. [x] Run `bun test` to verify no regressions
+5. [x] Commit: `fix(parser): 🐛 align server-side PDF isValidShortDate with month-aware day validation`
 
 ### Task 2: Reduce greedy optimizer temp array allocations (C68-02)
 **Priority:** MEDIUM (LOW severity but straightforward fix that eliminates O(m*n) allocations)
 **Files:** `packages/core/src/optimizer/greedy.ts:133`
-**Status:** PENDING
+**Status:** COMMITTED (`000000006dfa`) -- Replaced spread copy with push/pop in-place pattern.
 
 **Problem:** `scoreCardsForTransaction()` creates a new spread array `[...currentTransactions, transaction]` for every card on every transaction. This produces O(m*n) temporary array allocations, each copying the card's current transaction list.
 
@@ -70,10 +70,10 @@ This is safe because:
 4. The `before` computation happens first, so the array is in its original state
 
 **Steps:**
-1. [ ] Replace `[...currentTransactions, transaction]` with push/pop pattern
-2. [ ] Add comment explaining the push/pop in-place pattern vs spread copy
-3. [ ] Run `vitest` and `bun test` to verify no regressions
-4. [ ] Commit: `perf(optimizer): ⚡ replace spread copy with push/pop in scoreCardsForTransaction`
+1. [x] Replace `[...currentTransactions, transaction]` with push/pop pattern
+2. [x] Add comment explaining the push/pop in-place pattern vs spread copy
+3. [x] Run `vitest` and `bun test` to verify no regressions
+4. [x] Commit: `perf(optimizer): ⚡ replace spread copy with push/pop in scoreCardsForTransaction`
 
 ---
 
