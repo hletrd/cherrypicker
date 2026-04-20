@@ -1,101 +1,13 @@
 /**
- * Unit tests for parseDateToISO and inferYear date parsing logic.
+ * Unit tests for parseDateStringToISO and inferYear date parsing logic.
  *
- * The actual functions are private in csv.ts / pdf.ts / xlsx.ts, so we
- * reproduce the core logic locally (same pattern as analyzer-adapter.test.ts)
- * to verify date format handling across all supported patterns.
+ * Imports the production functions from date-utils.ts to ensure test
+ * coverage matches actual behavior. Previously duplicated the parsing
+ * logic locally, which diverged from production after the C63-04 fix
+ * added month-aware day validation (C64-01).
  */
 import { describe, test, expect } from 'bun:test';
-
-// ---------------------------------------------------------------------------
-// Reproduce inferYear from csv.ts / pdf.ts / xlsx.ts
-// ---------------------------------------------------------------------------
-
-function inferYear(month: number, day: number): number {
-  const now = new Date();
-  const candidate = new Date(now.getFullYear(), month - 1, day);
-  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
-    return now.getFullYear() - 1;
-  }
-  return now.getFullYear();
-}
-
-// ---------------------------------------------------------------------------
-// Reproduce parseDateToISO from csv.ts (string-based — covers CSV + PDF paths)
-// ---------------------------------------------------------------------------
-
-function parseDateToISO(raw: string): string {
-  const cleaned = raw.trim();
-
-  // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD — validate month/day ranges to
-  // avoid producing invalid date strings from corrupted data (e.g., "2026/13/99").
-  const fullMatch = cleaned.match(/^(\d{4})[.\-\/\s](\d{1,2})[.\-\/\s](\d{1,2})/);
-  if (fullMatch) {
-    const month = parseInt(fullMatch[2]!, 10);
-    const day = parseInt(fullMatch[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
-    }
-  }
-
-  // YYYYMMDD — validate month/day ranges to avoid producing invalid date
-  // strings from corrupted data (e.g., "20261399" → "2026-13-99").
-  if (/^\d{8}$/.test(cleaned)) {
-    const month = parseInt(cleaned.slice(4, 6), 10);
-    const day = parseInt(cleaned.slice(6, 8), 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
-    }
-  }
-
-  // YY-MM-DD or YY.MM.DD — validate month/day ranges to avoid producing
-  // invalid date strings from corrupted data (e.g., "99/13/99").
-  const shortYearMatch = cleaned.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})$/);
-  if (shortYearMatch) {
-    const year = parseInt(shortYearMatch[1]!, 10);
-    const fullYear = year >= 50 ? 1900 + year : 2000 + year;
-    const month = parseInt(shortYearMatch[2]!, 10);
-    const day = parseInt(shortYearMatch[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${fullYear}-${shortYearMatch[2]!.padStart(2, '0')}-${shortYearMatch[3]!.padStart(2, '0')}`;
-    }
-  }
-
-  // MM/DD or MM.DD — infer year with look-back heuristic
-  // Validate month/day ranges to avoid producing invalid date strings
-  const shortMatch = cleaned.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
-  if (shortMatch) {
-    const month = parseInt(shortMatch[1]!, 10);
-    const day = parseInt(shortMatch[2]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const year = inferYear(month, day);
-      return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
-    }
-  }
-
-  // 2024년 1월 15일 — validate month/day ranges
-  const koreanFull = cleaned.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-  if (koreanFull) {
-    const month = parseInt(koreanFull[2]!, 10);
-    const day = parseInt(koreanFull[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
-    }
-  }
-
-  // 1월 15일 — validate month/day ranges
-  const koreanShort = cleaned.match(/(\d{1,2})월\s*(\d{1,2})일/);
-  if (koreanShort) {
-    const month = parseInt(koreanShort[1]!, 10);
-    const day = parseInt(koreanShort[2]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const year = inferYear(month, day);
-      return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
-    }
-  }
-
-  return cleaned;
-}
+import { parseDateStringToISO, inferYear } from '../src/lib/parser/date-utils.js';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -103,41 +15,41 @@ function parseDateToISO(raw: string): string {
 
 describe('parseDateToISO — full year formats', () => {
   test('YYYY-MM-DD', () => {
-    expect(parseDateToISO('2024-01-15')).toBe('2024-01-15');
+    expect(parseDateStringToISO('2024-01-15')).toBe('2024-01-15');
   });
 
   test('YYYY.MM.DD', () => {
-    expect(parseDateToISO('2024.01.15')).toBe('2024-01-15');
+    expect(parseDateStringToISO('2024.01.15')).toBe('2024-01-15');
   });
 
   test('YYYY/MM/DD', () => {
-    expect(parseDateToISO('2024/01/15')).toBe('2024-01-15');
+    expect(parseDateStringToISO('2024/01/15')).toBe('2024-01-15');
   });
 
   test('YYYY.MM.DD with single-digit month/day', () => {
-    expect(parseDateToISO('2024.1.5')).toBe('2024-01-05');
+    expect(parseDateStringToISO('2024.1.5')).toBe('2024-01-05');
   });
 
   test('YYYY-MM-DD with single-digit month/day', () => {
-    expect(parseDateToISO('2024-1-5')).toBe('2024-01-05');
+    expect(parseDateStringToISO('2024-1-5')).toBe('2024-01-05');
   });
 
   test('YYYYMMDD', () => {
-    expect(parseDateToISO('20240115')).toBe('2024-01-15');
+    expect(parseDateStringToISO('20240115')).toBe('2024-01-15');
   });
 });
 
 describe('parseDateToISO — short year format (C13-01/C13-02 regression)', () => {
   test('YY-MM-DD with padding', () => {
-    expect(parseDateToISO('24-01-05')).toBe('2024-01-05');
+    expect(parseDateStringToISO('24-01-05')).toBe('2024-01-05');
   });
 
   test('YY.MM.DD with padding', () => {
-    expect(parseDateToISO('24.01.05')).toBe('2024-01-05');
+    expect(parseDateStringToISO('24.01.05')).toBe('2024-01-05');
   });
 
   test('YY/MM/DD with padding', () => {
-    expect(parseDateToISO('24/01/05')).toBe('2024-01-05');
+    expect(parseDateStringToISO('24/01/05')).toBe('2024-01-05');
   });
 
   test('YY.MM.DD without zero-padding in input', () => {
@@ -148,45 +60,45 @@ describe('parseDateToISO — short year format (C13-01/C13-02 regression)', () =
   });
 
   test('YY >= 50 maps to 1900s', () => {
-    expect(parseDateToISO('99-12-31')).toBe('1999-12-31');
+    expect(parseDateStringToISO('99-12-31')).toBe('1999-12-31');
   });
 
   test('YY < 50 maps to 2000s', () => {
-    expect(parseDateToISO('25-06-15')).toBe('2025-06-15');
+    expect(parseDateStringToISO('25-06-15')).toBe('2025-06-15');
   });
 
   test('YY=50 boundary maps to 1950', () => {
-    expect(parseDateToISO('50-01-01')).toBe('1950-01-01');
+    expect(parseDateStringToISO('50-01-01')).toBe('1950-01-01');
   });
 
   test('YY=49 boundary maps to 2049', () => {
-    expect(parseDateToISO('49-12-31')).toBe('2049-12-31');
+    expect(parseDateStringToISO('49-12-31')).toBe('2049-12-31');
   });
 });
 
 describe('parseDateToISO — MM/DD format with year inference', () => {
   test('MM/DD with zero-padding', () => {
-    const result = parseDateToISO('01/15');
+    const result = parseDateStringToISO('01/15');
     expect(result).toMatch(/^\d{4}-01-15$/);
   });
 
   test('MM.DD with single digits', () => {
-    const result = parseDateToISO('1.5');
+    const result = parseDateStringToISO('1.5');
     expect(result).toMatch(/^\d{4}-01-05$/);
   });
 });
 
 describe('parseDateToISO — Korean date formats', () => {
   test('2024년 1월 15일', () => {
-    expect(parseDateToISO('2024년 1월 15일')).toBe('2024-01-15');
+    expect(parseDateStringToISO('2024년 1월 15일')).toBe('2024-01-15');
   });
 
   test('2024년 12월 5일', () => {
-    expect(parseDateToISO('2024년 12월 5일')).toBe('2024-12-05');
+    expect(parseDateStringToISO('2024년 12월 5일')).toBe('2024-12-05');
   });
 
   test('1월 15일 — year inferred', () => {
-    const result = parseDateToISO('1월 15일');
+    const result = parseDateStringToISO('1월 15일');
     expect(result).toMatch(/^\d{4}-01-15$/);
   });
 });
@@ -212,122 +124,197 @@ describe('inferYear — look-back heuristic', () => {
 
 describe('parseDateToISO — edge cases', () => {
   test('whitespace is trimmed', () => {
-    expect(parseDateToISO('  2024-01-15  ')).toBe('2024-01-15');
+    expect(parseDateStringToISO('  2024-01-15  ')).toBe('2024-01-15');
   });
 
   test('unrecognized format passes through unchanged', () => {
-    expect(parseDateToISO('not-a-date')).toBe('not-a-date');
+    expect(parseDateStringToISO('not-a-date')).toBe('not-a-date');
   });
 
   test('empty string passes through', () => {
-    expect(parseDateToISO('')).toBe('');
+    expect(parseDateStringToISO('')).toBe('');
   });
 });
 
 describe('parseDateToISO — invalid date range validation', () => {
   test('MM/DD with month > 12 is rejected', () => {
-    expect(parseDateToISO('13/45')).toBe('13/45');
+    expect(parseDateStringToISO('13/45')).toBe('13/45');
   });
 
   test('MM/DD with day > 31 is rejected', () => {
-    expect(parseDateToISO('01/32')).toBe('01/32');
+    expect(parseDateStringToISO('01/32')).toBe('01/32');
   });
 
   test('MM/DD with month 0 is rejected', () => {
-    expect(parseDateToISO('0/15')).toBe('0/15');
+    expect(parseDateStringToISO('0/15')).toBe('0/15');
   });
 
   test('MM/DD with day 0 is rejected', () => {
-    expect(parseDateToISO('1/0')).toBe('1/0');
+    expect(parseDateStringToISO('1/0')).toBe('1/0');
   });
 
   test('koreanFull with month > 12 is rejected', () => {
-    expect(parseDateToISO('2026년 99월 99일')).toBe('2026년 99월 99일');
+    expect(parseDateStringToISO('2026년 99월 99일')).toBe('2026년 99월 99일');
   });
 
   test('koreanFull with month 0 is rejected', () => {
-    expect(parseDateToISO('2026년 0월 15일')).toBe('2026년 0월 15일');
+    expect(parseDateStringToISO('2026년 0월 15일')).toBe('2026년 0월 15일');
   });
 
   test('koreanFull with day 0 is rejected', () => {
-    expect(parseDateToISO('2026년 1월 0일')).toBe('2026년 1월 0일');
+    expect(parseDateStringToISO('2026년 1월 0일')).toBe('2026년 1월 0일');
   });
 
   test('koreanFull with day > 31 is rejected', () => {
-    expect(parseDateToISO('2026년 1월 32일')).toBe('2026년 1월 32일');
+    expect(parseDateStringToISO('2026년 1월 32일')).toBe('2026년 1월 32일');
   });
 
   test('koreanShort with month > 12 is rejected', () => {
-    expect(parseDateToISO('99월 99일')).toBe('99월 99일');
+    expect(parseDateStringToISO('99월 99일')).toBe('99월 99일');
   });
 
   test('koreanShort with month 0 is rejected', () => {
-    expect(parseDateToISO('0월 15일')).toBe('0월 15일');
+    expect(parseDateStringToISO('0월 15일')).toBe('0월 15일');
   });
 
   test('koreanShort with day 0 is rejected', () => {
-    expect(parseDateToISO('1월 0일')).toBe('1월 0일');
+    expect(parseDateStringToISO('1월 0일')).toBe('1월 0일');
   });
 
   test('koreanShort with day > 31 is rejected', () => {
-    expect(parseDateToISO('1월 32일')).toBe('1월 32일');
+    expect(parseDateStringToISO('1월 32일')).toBe('1월 32일');
   });
 
   test('valid boundary: month 12 day 31 passes', () => {
-    const result = parseDateToISO('12/31');
+    const result = parseDateStringToISO('12/31');
     expect(result).toMatch(/^\d{4}-12-31$/);
   });
 
   test('valid boundary: month 1 day 1 passes', () => {
-    const result = parseDateToISO('1/1');
+    const result = parseDateStringToISO('1/1');
     expect(result).toMatch(/^\d{4}-01-01$/);
   });
 
   test('YYYYMMDD with month > 12 is rejected', () => {
-    expect(parseDateToISO('20261399')).toBe('20261399');
+    expect(parseDateStringToISO('20261399')).toBe('20261399');
   });
 
   test('YYYYMMDD with day > 31 is rejected', () => {
-    expect(parseDateToISO('20260132')).toBe('20260132');
+    expect(parseDateStringToISO('20260132')).toBe('20260132');
   });
 
   test('YYYYMMDD with month 0 is rejected', () => {
-    expect(parseDateToISO('20260015')).toBe('20260015');
+    expect(parseDateStringToISO('20260015')).toBe('20260015');
   });
 
   test('YYYYMMDD with day 0 is rejected', () => {
-    expect(parseDateToISO('20260100')).toBe('20260100');
+    expect(parseDateStringToISO('20260100')).toBe('20260100');
   });
 
   test('full-date with month > 12 is rejected', () => {
-    expect(parseDateToISO('2026/13/99')).toBe('2026/13/99');
+    expect(parseDateStringToISO('2026/13/99')).toBe('2026/13/99');
   });
 
   test('full-date with day > 31 is rejected', () => {
-    expect(parseDateToISO('2026/01/32')).toBe('2026/01/32');
+    expect(parseDateStringToISO('2026/01/32')).toBe('2026/01/32');
   });
 
   test('full-date with month 0 is rejected', () => {
-    expect(parseDateToISO('2026/0/15')).toBe('2026/0/15');
+    expect(parseDateStringToISO('2026/0/15')).toBe('2026/0/15');
   });
 
   test('full-date with day 0 is rejected', () => {
-    expect(parseDateToISO('2026/1/0')).toBe('2026/1/0');
+    expect(parseDateStringToISO('2026/1/0')).toBe('2026/1/0');
   });
 
   test('short-year with month > 12 is rejected', () => {
-    expect(parseDateToISO('99/13/99')).toBe('99/13/99');
+    expect(parseDateStringToISO('99/13/99')).toBe('99/13/99');
   });
 
   test('short-year with day > 31 is rejected', () => {
-    expect(parseDateToISO('99/01/32')).toBe('99/01/32');
+    expect(parseDateStringToISO('99/01/32')).toBe('99/01/32');
   });
 
   test('short-year with month 0 is rejected', () => {
-    expect(parseDateToISO('99/00/15')).toBe('99/00/15');
+    expect(parseDateStringToISO('99/00/15')).toBe('99/00/15');
   });
 
   test('short-year with day 0 is rejected', () => {
-    expect(parseDateToISO('99/01/00')).toBe('99/01/00');
+    expect(parseDateStringToISO('99/01/00')).toBe('99/01/00');
+  });
+});
+
+describe('parseDateToISO — month-aware day validation (C63-04)', () => {
+  test('Feb 29 in leap year 2024 passes', () => {
+    expect(parseDateStringToISO('2024-02-29')).toBe('2024-02-29');
+  });
+
+  test('Feb 29 in non-leap year 2025 is rejected', () => {
+    expect(parseDateStringToISO('2025-02-29')).toBe('2025-02-29');
+  });
+
+  test('Feb 28 always passes', () => {
+    expect(parseDateStringToISO('2025-02-28')).toBe('2025-02-28');
+  });
+
+  test('Feb 31 is always rejected', () => {
+    expect(parseDateStringToISO('2024-02-31')).toBe('2024-02-31');
+    expect(parseDateStringToISO('2025-02-31')).toBe('2025-02-31');
+  });
+
+  test('Apr 31 is rejected (April has 30 days)', () => {
+    expect(parseDateStringToISO('2024-04-31')).toBe('2024-04-31');
+  });
+
+  test('Apr 30 passes', () => {
+    expect(parseDateStringToISO('2024-04-30')).toBe('2024-04-30');
+  });
+
+  test('Jan 31 passes (January has 31 days)', () => {
+    expect(parseDateStringToISO('2024-01-31')).toBe('2024-01-31');
+  });
+
+  test('Jun 31 is rejected (June has 30 days)', () => {
+    expect(parseDateStringToISO('2024-06-31')).toBe('2024-06-31');
+  });
+
+  test('YYYYMMDD Feb 29 leap year passes', () => {
+    expect(parseDateStringToISO('20240229')).toBe('2024-02-29');
+  });
+
+  test('YYYYMMDD Feb 29 non-leap year is rejected', () => {
+    expect(parseDateStringToISO('20250229')).toBe('20250229');
+  });
+
+  test('YYYYMMDD Feb 31 is rejected', () => {
+    expect(parseDateStringToISO('20240231')).toBe('20240231');
+  });
+
+  test('Korean full date Feb 29 leap year passes', () => {
+    expect(parseDateStringToISO('2024년 2월 29일')).toBe('2024-02-29');
+  });
+
+  test('Korean full date Feb 29 non-leap year is rejected', () => {
+    expect(parseDateStringToISO('2025년 2월 29일')).toBe('2025년 2월 29일');
+  });
+
+  test('Korean full date Apr 31 is rejected', () => {
+    expect(parseDateStringToISO('2024년 4월 31일')).toBe('2024년 4월 31일');
+  });
+
+  test('Short-year Feb 29 leap year passes (24 is 2024, a leap year)', () => {
+    expect(parseDateStringToISO('24-02-29')).toBe('2024-02-29');
+  });
+
+  test('Short-year Feb 29 non-leap year is rejected (25 is 2025)', () => {
+    expect(parseDateStringToISO('25-02-29')).toBe('25-02-29');
+  });
+
+  test('Century boundary: 2000 is a leap year', () => {
+    expect(parseDateStringToISO('2000-02-29')).toBe('2000-02-29');
+  });
+
+  test('Century boundary: 1900 is NOT a leap year', () => {
+    expect(parseDateStringToISO('1900-02-29')).toBe('1900-02-29');
   });
 });
