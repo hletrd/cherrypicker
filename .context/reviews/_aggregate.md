@@ -1,53 +1,33 @@
-# Review Aggregate -- 2026-04-20 (Cycle 7)
+# Review Aggregate -- 2026-04-20 (Cycle 8)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle7-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle8-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
-- Cycle 6 aggregate (2026-04-20-cycle6-comprehensive.md)
+- Cycle 7 aggregate (2026-04-20-cycle7-comprehensive.md)
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-53 findings are confirmed fixed except as noted below:
+All prior cycle 1-7 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C7-01 | **FIXED** | `SavingsComparison.svelte:262` uses `formatRate(card.rate)` |
+| C7-01 | **FIXED** | `SavingsComparison.svelte:263` uses `formatRate(card.rate)` |
 | C7-02 | **FIXED** | `SpendingSummary.svelte:111` uses `formatRatePrecise()` |
-| C7-03 | **FIXED** | `SavingsComparison.svelte:179` uses `formatRatePrecise()` |
+| C7-03 | **FIXED** | `SavingsComparison.svelte:180` uses `formatRatePrecise()` |
 | C7-08 | **FIXED** | `pdf.ts` now has `inferYear()` and handles short Korean dates + MM/DD |
-| C9-01 | **FIXED** | `analyzer.ts:47` -- `cachedCoreRulesRef` removed, cache uses null check |
-| C9-05 | **FIXED** | `store.svelte.ts:419` -- error set when result is null |
-| C9-11 | **FIXED** | `store.svelte.ts:143-149` -- non-empty checks for id, date, category |
-| C9-13 | **FIXED** | `analyzer.ts:381` -- monthlyBreakdown explicitly sorted by month |
-| C10-03 | **FIXED** | `xlsx.ts:195` -- `Number.isFinite(raw)` check added |
-| C10-06 | **FIXED** | `FileDropzone.svelte:211` -- checks `analysisStore.error` after analyze |
-| C10-09 | **FIXED** | `store.svelte.ts:363-366` -- reoptimize filters to latest month |
-| C10-13 | **FIXED** | `matcher.ts:40` -- guards empty/single-char merchant names |
-| C47-L01 | **STILL FIXED** | Terminal `formatWon` has `Number.isFinite` guard + negative-zero normalization |
-| C47-L02 | **STILL FIXED** | Terminal `formatRate` has `Number.isFinite` guard |
-| C52-01/D-107 | **FIXED** | `csv.ts:966-974` now collects adapter failures into `fallbackResult.errors` |
-| C52-02 | **FIXED** | `TransactionReview.svelte:108-130` now uses `updatedTxs.map()` for AI categorization |
-| C52-06/C4-07 | **FIXED** | `SpendingSummary.svelte:10,128` now uses `sessionStorage` (not `localStorage`) |
-| C53-01 | **FIXED** | `TransactionReview.svelte:187-205` `changeCategory` now uses replacement pattern |
-| C53-02 | **FIXED** | Duplicated card stats reading logic extracted to `apps/web/src/lib/build-stats.ts` |
-| C53-03 | **FIXED** | `CardDetail.svelte:222` now has `dark:text-blue-300` for dark mode |
-| C4-01 | **FIXED** | `build-stats.ts:25-30` catch block now differentiates ENOENT, EACCES, and other errors |
-| C5-01 | **FIXED** | `SpendingSummary.svelte:119-121` now has `Number.isFinite` guard on `parseInt` results |
-| C6-03 | **FIXED** | `analyzer.ts:300-302` has length guard `if (!tx.date || tx.date.length < 7) continue;` |
-
----
-
-## Re-analyzed Prior Findings (downgraded this cycle)
-
-| Finding | Prior Status | New Assessment |
-|---|---|---|
-| C3-02 | LOW/LOW | NOT A REAL ISSUE -- The "duplicate guard" in SavingsComparison count-up is a correct early-return pattern |
-| C3-03 | MEDIUM/MEDIUM | NOT A REAL ISSUE -- Keyboard accessibility works correctly via onfocusin/onfocusout combination |
-| C3-05 | LOW/HIGH | NOT A REAL ISSUE -- Reoptimize catch correctly preserves old result; clearing sessionStorage would destroy valid data |
+| C7-09 | **FIXED** | `formatDateKo`/`formatDateShort` now have `Number.isNaN` guards |
+| C7-04 | **OPEN (LOW)** | TransactionReview $effect re-sync fragile -- no change since cycle 7 |
+| C7-05 | **OPEN (LOW)** | `_persistWarningKind` module-level mutable variable -- see C8-12 |
+| C7-06 | **OPEN (LOW)** | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
+| C7-07 | **OPEN (LOW)** | BANK_SIGNATURES duplicated between packages/parser and apps/web |
+| C7-10 | **OPEN (LOW)** | CategoryBreakdown percentage rounding can cause total > 100% |
+| C7-11 | **OPEN (LOW)** | persistWarning message misleading for data corruption vs size truncation |
+| C7-12 | **OPEN (LOW)** | CardDetail uses full page reload -- see C8-06 |
+| C7-13 | **OPEN (LOW)** | toCoreCardRuleSets cache never hits due to reference equality -- now uses null check |
 
 ---
 
@@ -55,7 +35,17 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C7-01 | LOW | MEDIUM | `apps/web/__tests__/analyzer-adapter.test.ts:236,271` | Test `slice(0, 7)` without length guard, inconsistent with production code |
+| C8-01 | MEDIUM | High | `apps/web/src/components/dashboard/TransactionReview.svelte:49,77-143,262` | AI categorizer disabled but 65+ lines of unreachable dead code |
+| C8-02 | MEDIUM | High | `apps/web/src/components/cards/CardDetail.svelte:77-92` | $effect fetch not abortable on unmount -- no AbortController, no cleanup return |
+| C8-03 | LOW | High | `apps/web/src/components/dashboard/SpendingSummary.svelte:119-121` | Month diff breaks on year boundaries (Dec 2025 -> Jan 2026 shows wrong label) |
+| C8-05 | LOW | High | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:6-49` | CATEGORY_COLORS poor dark mode contrast for gray-toned categories (extends C4-09) |
+| C8-06 | LOW | High | `FileDropzone.svelte:217` + `CardDetail.svelte:272` | Full page reload navigation instead of Astro navigate() (extends C7-12) |
+| C8-07 | LOW | High | `apps/web/src/lib/build-stats.ts:16-18` | Stale fallback values will drift from actual data (extends C4-14) |
+| C8-08 | LOW | Medium | `pdf.ts:137-144` + `xlsx.ts:183-190` | inferYear() timezone-dependent near midnight Dec 31 |
+| C8-09 | LOW | High | `apps/web/__tests__/analyzer-adapter.test.ts:22-72` | Test duplicates production code instead of testing it directly |
+| C8-10 | LOW | High | `apps/web/src/lib/parser/csv.ts:257,334,etc` | Installment NaN implicitly filtered by `> 1` comparison -- fragile |
+| C8-11 | LOW | Medium | `apps/web/src/lib/parser/pdf.ts:342` | Fallback date regex could match decimal numbers like "3.5" |
+| C8-12 | LOW | High | `apps/web/src/lib/store.svelte.ts:106,157` | _persistWarningKind module-level mutable variable (extends C7-05) |
 
 ---
 
@@ -64,17 +54,23 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 | Finding | Severity | Note |
 |---|---|---|
 | C4-06/C52-03/C9-02/D-40/D-82 | LOW | Annual savings projection label unchanged |
-| C4-09/C52-05/D-42/D-46/D-64/D-78/D-96 | LOW | Hardcoded `CATEGORY_COLORS` in CategoryBreakdown (dark mode contrast) |
+| C4-09/C52-05/D-42/D-46/D-64/D-78/D-96/C8-05 | LOW | Hardcoded CATEGORY_COLORS in CategoryBreakdown (dark mode contrast) |
 | C4-10 | MEDIUM | E2E test stale dist/ dependency |
 | C4-11 | MEDIUM | No regression test for findCategory fuzzy match |
 | C4-13/C9-08/D-43/D-74 | LOW | Small-percentage bars nearly invisible |
-| C4-14/D-44 | LOW | Stale fallback values in Layout footer |
-| C9-04/D-71 | LOW | Complex fallback date regex in PDF parser |
-| C9-06/D-59/D-72 | LOW | Percentage rounding can shift "other" threshold |
-| C9-07/D-73/D-89 | LOW | Math.max spread stack overflow risk (theoretical) |
-| C9-09/D-07/D-54 | LOW | Categories cache never invalidated |
-| C9-10/D-52/D-75 | LOW | HTML-as-XLS double-decode and unnecessary re-encode |
-| C9-12/D-76 | LOW | Module-level cache persists across store resets |
+| C4-14/D-44/C8-07 | LOW | Stale fallback values in Layout footer / build-stats |
+| C7-04 | LOW | TransactionReview $effect re-sync fragile |
+| C7-06 | LOW | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
+| C7-07 | LOW | BANK_SIGNATURES duplicated between packages/parser and apps/web |
+| C7-10 | LOW | CategoryBreakdown percentage rounding can cause total > 100% |
+| C7-11 | LOW | persistWarning message misleading for data corruption vs size truncation |
+| C7-12/C8-06 | LOW | CardDetail + FileDropzone use full page reload |
+| C7-13 | LOW | toCoreCardRuleSets cache keyed by reference equality (now uses null check, improved) |
+| C8-08 | LOW | inferYear() timezone edge case near midnight Dec 31 |
+| C8-09 | LOW | Test duplicates production code |
+| C8-10 | LOW | csv.ts installment NaN fragile implicit filter |
+| C8-11 | LOW | pdf.ts fallback date regex could match decimals |
+| C8-12/C7-05 | LOW | _persistWarningKind module-level mutable variable |
 | D-106 | LOW | `apps/web/src/lib/parser/pdf.ts:284` bare `catch {}` |
 | D-110 | LOW | Non-latest month edits have no visible optimization effect |
 | D-66 | LOW | CardGrid issuer filter shows issuers with 0 cards after type filter |
