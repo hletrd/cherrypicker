@@ -9,10 +9,6 @@
 
   let { dataContentId, emptyStateId }: Props = $props();
 
-  function formatWonStat(amount: number): string {
-    return Number.isFinite(amount) ? amount.toLocaleString('ko-KR') + '원' : '0원';
-  }
-
   // Cached element references — queried once on first effect run, then reused
   // to avoid repeated getElementById calls on every store change. Stale refs
   // (elements removed from DOM during Astro client-side navigation) are
@@ -90,10 +86,10 @@
     }
 
     if (hasData && cachedStatTotalSpending) {
-      cachedStatTotalSpending.textContent = formatWonStat(opt.totalSpending);
+      cachedStatTotalSpending.textContent = formatWon(opt.totalSpending);
 
       if (cachedStatTotalSavings) {
-        cachedStatTotalSavings.textContent = (opt.savingsVsSingleCard >= 0 ? '+' : '') + formatWonStat(opt.savingsVsSingleCard);
+        cachedStatTotalSavings.textContent = (opt.savingsVsSingleCard >= 0 ? '+' : '') + formatWon(opt.savingsVsSingleCard);
       }
 
       if (cachedStatCardsNeeded) {
