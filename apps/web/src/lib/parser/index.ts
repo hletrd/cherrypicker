@@ -17,7 +17,10 @@ export async function parseFile(file: File, bank?: BankId): Promise<ParseResult>
     case 'csv': {
       let content: string;
       const buffer = await file.arrayBuffer();
-      const ENCODINGS = ['utf-8', 'euc-kr', 'cp949'] as const;
+      // CP949 is a strict superset of EUC-KR, so EUC-KR is omitted — it can
+      // never produce fewer replacement characters than CP949, making it
+      // redundant in the "fewest replacement chars" heuristic (C64-02).
+      const ENCODINGS = ['utf-8', 'cp949'] as const;
       let bestContent = '';
       let bestReplacements = Infinity;
 
