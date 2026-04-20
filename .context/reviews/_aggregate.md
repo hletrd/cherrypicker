@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-21 (Cycle 53)
+# Review Aggregate -- 2026-04-21 (Cycle 54)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle53-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle54-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-52 per-agent and aggregate files
+- All cycle 1-53 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-52 findings are confirmed fixed except as noted below:
+All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -21,8 +21,9 @@ All prior cycle 1-52 findings are confirmed fixed except as noted below:
 | C53-01 | **FIXED** | `TransactionReview.svelte:112-135` `changeCategory` uses spread-copy + index assignment |
 | C53-02 | **FIXED** | Both `index.astro` and `Layout.astro` use shared `readCardStats()` from `build-stats.ts` |
 | C53-03 | **FIXED** | `CardDetail.svelte:217` has `dark:text-blue-300` on performance tier header |
+| C54-03 | **FIXED** | `OptimalCardMap.svelte:37-44` uses immutable Set pattern for `toggleRow` |
 | C51-01 | **FIXED** | `report.astro` uses `ReportContent.svelte` + `VisibilityToggle.svelte` |
-| C51-04 | **FIXED** | `OptimalCardMap.svelte:37-43` toggleRow uses `.add()`/`.delete()` on `$state` Set |
+| C51-04 | **FIXED** | `OptimalCardMap.svelte:37-43` toggleRow uses immutable Set pattern |
 | C50-01 | **FIXED** | `CategoryBreakdown.svelte:133` uses `0` as reduce initial value with `|| 1` fallback |
 | C50-02 | **FIXED** | `SavingsComparison.svelte:93-96` documents `Infinity` as intentional sentinel |
 | C50-05 | **FIXED** | `SavingsComparison.svelte:18-28` derives `cardBreakdown` from `analysisStore.cardResults` |
@@ -67,9 +68,10 @@ All prior cycle 1-52 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C54-01 | LOW | HIGH | `apps/web/public/scripts/results.js:1-38` | `results.js` duplicates stat population logic that `VisibilityToggle.svelte` already handles from the reactive store. Split-brain between sessionStorage read (inline script) and store read (Svelte island). After reoptimize + page reload, inline script briefly shows stale pre-edit values. |
-| C54-02 | LOW | MEDIUM | `apps/web/public/scripts/dashboard.js:1-16` | `dashboard.js` visibility toggle races with `VisibilityToggle.svelte`. Both toggle `hidden` class on the same elements. Inline script reads from `sessionStorage`, Svelte island reads from the store. After a store reset + browser back navigation, inline script may briefly show data content before VisibilityToggle hydrates. |
-| C54-03 | MEDIUM | MEDIUM | `apps/web/src/components/dashboard/OptimalCardMap.svelte:37-43` | `expandedRows` Set directly mutated via `.add()`/`.delete()`. While Svelte 5's proxy can track some Set mutations, this is fragile and may not reliably trigger re-renders in all code paths. Immutable Set pattern (`expandedRows = new Set(...)`) is more robust. |
+| C54-01 | LOW | HIGH | `apps/web/public/scripts/results.js:1-22` | `results.js` visibility toggle is redundant with `VisibilityToggle.svelte`. The stat population code was removed (per comment), but the visibility toggle still reads from `sessionStorage` independently of the Svelte store. After a store reset + browser back navigation, the inline script may briefly show data content while the store has no data. Fix: Remove the visibility toggle from `results.js` entirely and let `VisibilityToggle.svelte` be the sole controller. |
+| C54-02 | CLOSED | -- | `apps/web/public/scripts/dashboard.js` | **False positive.** No `dashboard.js` exists in `public/scripts/`. The dashboard page uses `VisibilityToggle.svelte` directly without an inline script. This finding is reclassified as non-existent. |
+
+Note: C54-03 (OptimalCardMap Set mutation) was confirmed FIXED in the current codebase (lines 37-44 use immutable Set pattern).
 
 ---
 
@@ -87,8 +89,8 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | CategoryBreakdown maxPercentage=1 | C41, C42, C43, C49, C50 | **FIXED** |
 | SpendingSummary sessionStorage dismiss | C4, C51 | **FIXED** |
 | CSV BOM handling gap | C52 | **FIXED** |
-| Inline script / VisibilityToggle split-brain | C54, C51, C52 | NEW (LOW) -- 2 cycles agree (C54-01 + C54-02) |
-| OptimalCardMap Set mutation | C51, C54 | OPEN (MEDIUM) -- 2 cycles agree (C51 noted it worked, C54 flags fragility) |
+| Inline script / VisibilityToggle split-brain | C54, C51, C52 | OPEN (LOW) -- 2 cycles agree (C54-01) |
+| OptimalCardMap Set mutation | C51, C54 | **FIXED** |
 
 ---
 
