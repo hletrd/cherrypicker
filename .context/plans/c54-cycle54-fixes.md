@@ -13,10 +13,12 @@
 **Problem:** The `results.js` inline script reads from `sessionStorage` and toggles visibility of `results-data-content` and `results-empty-state`. This is redundant with `VisibilityToggle.svelte` which reads from the reactive store. After a store reset + browser back navigation, the inline script may briefly show data content while the store has no data.
 **Fix:** Remove the entire visibility toggle logic from `results.js`. The `VisibilityToggle.svelte` component already handles both visibility and stat population from the reactive store. After removing the inline script's visibility code, `results.js` becomes empty and should be deleted entirely (since it no longer serves any purpose).
 **Steps:**
-1. Delete `apps/web/public/scripts/results.js` entirely
-2. Verify `results.astro` does not reference `results.js` (it should not -- the page uses VisibilityToggle.svelte)
-3. Run all gates to confirm no regressions
-4. Commit with message: `fix(web): 🐛 remove split-brain visibility toggle from results.js`
+1. ~~Delete `apps/web/public/scripts/results.js` entirely~~ DONE
+2. ~~Verify `results.astro` does not reference `results.js`~~ DONE -- no references found via grep
+3. ~~Run all gates to confirm no regressions~~ DONE -- eslint: 0 errors, tsc: 0 errors, vitest: 189 pass, bun test: 266 pass
+4. ~~Commit with message: `fix(web): 🐛 remove split-brain visibility toggle from results.js`~~ DONE -- commit 0000000e4d76d77cd7a428e2ef118684718ea6bb
+
+**Status:** COMPLETED
 
 ### C54-02: CLOSED (False Positive)
 
