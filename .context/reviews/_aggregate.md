@@ -1,7 +1,7 @@
-# Review Aggregate -- 2026-04-20 (Cycle 3 Re-verification)
+# Review Aggregate -- 2026-04-20 (Cycle 4)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle3-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle4-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
@@ -23,10 +23,11 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 | C6R-M02 | **FIXED** | Web-side CSV/XLSX use `Number.isNaN()` |
 | C47-L01 | **STILL FIXED** | Terminal `formatWon` has `Number.isFinite` guard + negative-zero normalization |
 | C47-L02 | **STILL FIXED** | Terminal `formatRate` has `Number.isFinite` guard |
-| C9-01 | **FIXED** | `analyzer.ts:47,167-168` -- `cachedRulesRef` removed, cache uses null check |
+| C9-01 | **FIXED** | `analyzer.ts:47` -- `cachedCoreRulesRef` removed, cache uses null check |
 | C9-05 | **FIXED** | `store.svelte.ts:419` -- error set when result is null |
 | C9-11 | **FIXED** | `store.svelte.ts:143-149` -- non-empty checks for id, date, category |
 | C9-13 | **FIXED** | `analyzer.ts:381` -- monthlyBreakdown explicitly sorted by month |
+| C10-03 | **FIXED** | `xlsx.ts:195` -- `Number.isFinite(raw)` check added |
 | C10-06 | **FIXED** | `FileDropzone.svelte:211` -- checks `analysisStore.error` after analyze |
 | C10-09 | **FIXED** | `store.svelte.ts:363-366` -- reoptimize filters to latest month |
 | C10-13 | **FIXED** | `matcher.ts:40` -- guards empty/single-char merchant names |
@@ -39,13 +40,13 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 ---
 
-## Prior Findings Now Resolved (This Cycle)
+## Re-analyzed Prior Findings (downgraded this cycle)
 
-| Finding | Resolution |
-|---|---|
-| C53-01 | `changeCategory` in TransactionReview now uses array replacement pattern instead of in-place mutation |
-| C53-02 | Card stats reading logic extracted to shared `build-stats.ts` module |
-| C53-03 | CardDetail performance tier header now has dark mode contrast variant |
+| Finding | Prior Status | New Assessment |
+|---|---|---|
+| C3-02 | LOW/LOW | NOT A REAL ISSUE -- The "duplicate guard" in SavingsComparison count-up is a correct early-return pattern, not a bug |
+| C3-03 | MEDIUM/MEDIUM | NOT A REAL ISSUE -- On careful re-analysis, keyboard accessibility works correctly via onfocusin/onfocusout combination |
+| C3-05 | LOW/HIGH | NOT A REAL ISSUE -- Reoptimize catch correctly preserves old result; clearing sessionStorage would destroy valid data |
 
 ---
 
@@ -53,21 +54,7 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C3-01 | LOW | LOW | `apps/web/src/lib/build-stats.ts:25` | `catch (err)` block logs misleading "not found" message when JSON.parse fails with SyntaxError |
-| C3-02 | LOW | LOW | `apps/web/src/components/dashboard/SavingsComparison.svelte:53-70` | Count-up animation $effect creates unnecessary RAF loop when target === displayedSavings |
-| C3-03 | MEDIUM | MEDIUM | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:153-161` | Keyboard accessibility issue: hoveredIndex set by mouse events doesn't collapse on keyboard focus loss |
-| C3-04 | LOW | MEDIUM | `apps/web/src/components/dashboard/OptimalCardMap.svelte:17-24` | Rate bar visual distortion when all rates are near-zero (epsilon too small) |
-| C3-05 | LOW | HIGH | `apps/web/src/lib/store.svelte.ts:405-420` | Missing sessionStorage cleanup when reoptimize fails with null result |
-
----
-
-## Re-articulated Deferred Findings (additional context this cycle)
-
-These are existing deferred items with new failure scenarios or more precise analysis:
-
-| ID | Prior ID | New Context |
-|---|---|---|
-| C3-05 | C9-05 | C9-05 fixed the "error set when result is null" issue, but C3-05 identifies a related gap: the stale sessionStorage data is NOT cleared when reoptimize fails, which can confuse users on page refresh |
+| C4-01 | LOW | HIGH | `apps/web/src/lib/build-stats.ts:25-30` | `catch (err)` block logs misleading "not found" message when JSON.parse fails with SyntaxError vs when file is actually not found |
 
 ---
 
@@ -79,17 +66,18 @@ These are existing deferred items with new failure scenarios or more precise ana
 | C4-09/C52-05 | LOW | Hardcoded `CATEGORY_COLORS` in CategoryBreakdown (dark mode contrast) |
 | C4-10 | MEDIUM | E2E test stale dist/ dependency |
 | C4-11 | MEDIUM | No regression test for findCategory fuzzy match |
-| C4-13 | LOW | Small-percentage bars nearly invisible |
+| C4-13/C9-08 | LOW | Small-percentage bars nearly invisible |
 | C4-14/C52-04 | LOW | Stale fallback values in Layout footer (partially addressed by shared module) |
 | C9-04 | LOW | Complex fallback date regex in PDF parser |
 | C9-06 | LOW | Percentage rounding can shift "other" threshold |
 | C9-07 | LOW | Math.max spread stack overflow risk (theoretical) |
-| C9-08 | LOW | Comparison bars misleading when both rewards are 0 |
 | C9-09 | LOW | Categories cache never invalidated (same as D-07/D-54) |
 | C9-10 | LOW | HTML-as-XLS double-decode and unnecessary re-encode |
 | C9-12 | LOW | Module-level cache persists across store resets |
 | D-106 | LOW | `apps/web/src/lib/parser/pdf.ts:284` bare `catch {}` |
 | D-110 | LOW | Non-latest month edits have no visible optimization effect |
+| C3-01 | LOW | `build-stats.ts:25` catch block misleading message (superseded by C4-01 which is the same finding re-verified) |
+| C3-04 | LOW | OptimalCardMap rate bar epsilon distortion (same as C4-13/C9-08) |
 
 ---
 
