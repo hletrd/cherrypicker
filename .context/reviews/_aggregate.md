@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-20 (Cycle 32)
+# Review Aggregate -- 2026-04-20 (Cycle 33)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle32-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle33-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-31 per-agent and aggregate files
+- All cycle 1-32 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-31 findings are confirmed fixed except as noted below:
+All prior cycle 1-32 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -33,13 +33,10 @@ All prior cycle 1-31 findings are confirmed fixed except as noted below:
 | C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks (deferred) |
 | C22-05 | OPEN (LOW) | TransactionReview changeCategory O(n) array copy (deferred) |
 | C24-06 | OPEN (LOW) | buildCardResults totalSpending no negative amount guard (safe in practice) |
-| C25-01/C29-01 | FIXED | CATEGORY_COLORS utility subcategories now high-contrast in dark mode |
-| C25-09/C53-03/C29-02 | FIXED | CardDetail performance tier header now uses bg-blue-50 dark:bg-blue-900/50 |
-| C27-01/C30-03 | FIXED | loadFromStorage inner catch now logs console.warn |
-| C30-02 | FIXED | parseCSV generic fallback path now wrapped in try/catch for defensive consistency |
 | C27-02 | OPEN (LOW) | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
-| C31-01 | FIXED | SpendingSummary dismiss catch now logs console.warn matching C27-01/C30-03 pattern |
-| C31-02 | FIXED | Redundant Map.set() in greedyOptimize replaced with explicit first-insertion check |
+| C32-01 | FIXED | Server-side parseGenericCSV now uses Math.round(parseFloat(...)) |
+| C32-02 | FIXED | Server-side parseGenericCSV now filters zero-amount transactions |
+| C32-03 | FIXED | Server-side parseCSV generic fallback now wrapped in try/catch |
 
 ---
 
@@ -47,9 +44,12 @@ All prior cycle 1-31 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C32-01 | MEDIUM | High | `packages/parser/src/csv/generic.ts:124` | Server-side `parseGenericCSV` uses `parseInt` for amount parsing while web-side uses `Math.round(parseFloat(...))` -- produces different amounts for decimal inputs (e.g., "1234.56" → 1234 vs 1235) |
-| C32-02 | LOW | High | `packages/parser/src/csv/generic.ts:231-236` | Server-side `parseGenericCSV` does not filter zero-amount transactions, while web-side does (C26-02) -- zero-amount rows inflate transaction counts in CLI output |
-| C32-03 | LOW | Medium | `packages/parser/src/csv/index.ts:71-77` | Server-side `parseCSV` generic fallback has no try/catch wrapper, while web-side does (C30-02) -- unexpected throws from parseGenericCSV propagate uncaught |
+| C33-01 | MEDIUM | High | `packages/core/src/categorizer/matcher.ts:55-71` | MerchantMatcher substring scan is O(n) over ALL_KEYWORDS on every call — performance concern for large statement files |
+| C33-02 | MEDIUM | Medium | `apps/web/src/lib/store.svelte.ts:309,491-502` | cachedCategoryLabels never invalidated when categories.json changes on the server (e.g., redeployment); stale across long-lived tabs (extends C21-04) |
+| C33-03 | LOW | High | `apps/web/src/lib/parser/pdf.ts:166-177` | parseAmount returns 0 for unparseable amounts instead of null — fallback PDF scanner silently drops unparseable amounts without error reporting |
+| C33-04 | LOW | Medium | `packages/parser/src/csv/generic.ts:133-153` | SplitCSVLine does not handle doubled-quote escape (""), while web-side splitLine at csv.ts:14 does — parity bug |
+| C33-05 | LOW | Low | `apps/web/src/lib/analyzer.ts:63-67` | toCoreCardRuleSets does not validate tiers[].unit narrowing, unlike source and type which have explicit allowlists |
+| C33-06 | LOW | Medium | `packages/core/src/optimizer/greedy.ts:224` | buildCardResults totalSpending uses Math.abs(tx.amount) but assignedTransactions are always positive — misleading implication |
 
 ---
 
