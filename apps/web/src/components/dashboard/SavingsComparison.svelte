@@ -51,6 +51,13 @@
   // Respects prefers-reduced-motion: skips animation and sets value
   // immediately for users who have enabled reduced motion (C22-02).
   let displayedSavings = $state(0);
+  // Parallel animated state for the annual projection — keeps monthly and
+  // annual values in sync during the count-up animation (C41-01). Without
+  // this, the monthly display animates from 0 to target over 600ms while
+  // the annual projection shows the final value immediately, creating a
+  // visual inconsistency where the two numbers are mathematically out of
+  // sync during the animation.
+  let displayedAnnualSavings = $state(0);
 
   $effect(() => {
     const target = opt?.savingsVsSingleCard ?? 0;
@@ -62,10 +69,13 @@
       && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
       displayedSavings = target;
+      displayedAnnualSavings = (target >= 0 ? target : Math.abs(target)) * 12;
       return;
     }
 
     const startVal = displayedSavings;
+    const annualTarget = (target >= 0 ? target : Math.abs(target)) * 12;
+    const startAnnual = displayedAnnualSavings;
     let cancelled = false;
     let rafId: number;
     const start = performance.now();
@@ -75,6 +85,7 @@
       const progress = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
       displayedSavings = Math.round(startVal + (target - startVal) * eased);
+      displayedAnnualSavings = Math.round(startAnnual + (annualTarget - startAnnual) * eased);
       if (progress < 1) rafId = requestAnimationFrame(tick);
     }
     rafId = requestAnimationFrame(tick);
@@ -215,7 +226,7 @@
            correctly determines the sign prefix without Object.is(-0) guard (C12-04) -->
       <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 0 ? '+' : ''}{formatWon(displayedSavings)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
-        연간 약 {formatWon((opt.savingsVsSingleCard >= 0 ? opt.savingsVsSingleCard : Math.abs(opt.savingsVsSingleCard)) * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
+        연간 약 {formatWon(displayedAnnualSavings)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
       </div>
       {#if savingsPct === Infinity}
         <!-- Defensive badge (C28-04): currently unreachable — see savingsPct comment -->
