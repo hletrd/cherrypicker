@@ -43,7 +43,7 @@ function isActive(href: string) {
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <title>{title} | CherryPicker</title>
-    <script is:inline src="/cherrypicker/scripts/layout.js"></script>
+    <script is:inline src={`${base}scripts/layout.js`}></script>
   </head>
   <body class="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] transition-colors duration-200">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-[var(--color-primary)] focus:px-4 focus:py-2 focus:text-sm focus:text-white focus:shadow-lg">
