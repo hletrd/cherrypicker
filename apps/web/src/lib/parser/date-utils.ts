@@ -131,5 +131,13 @@ export function parseDateStringToISO(raw: string): string {
     }
   }
 
+  // No known date format matched the input (C70-03/C56-04). Return the raw
+  // string as-is for backward compatibility, but warn so developers and users
+  // can see that a date was not parsed correctly. Downstream code that uses
+  // date-based filtering (e.g., tx.date.startsWith(latestMonth)) will skip
+  // this transaction automatically because the raw string won't match the
+  // "YYYY-MM" prefix. 10 cycles have flagged this as an issue.
+  console.warn(`[cherrypicker] Unparseable date string returned as-is: "${cleaned}"`);
+
   return cleaned;
 }
