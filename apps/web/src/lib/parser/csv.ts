@@ -22,19 +22,9 @@ function splitLine(line: string, delimiter: string): string[] {
   return result;
 }
 
-/** Infer the year for a short-date (month/day only) using a look-back
- *  heuristic: if the date would be more than 3 months in the future,
- *  assume it belongs to the previous year. This handles the common case
- *  of uploading a December statement in January. */
-function inferYear(month: number, day: number): number {
-  const now = new Date();
-  const candidate = new Date(now.getFullYear(), month - 1, day);
-  // If the candidate is more than ~3 months in the future, use previous year
-  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
-    return now.getFullYear() - 1;
-  }
-  return now.getFullYear();
-}
+/** Shared inferYear — delegates to the canonical implementation in date-utils.ts
+ *  to avoid triplicating the heuristic across parsers (C18-05). */
+import { inferYear } from './date-utils.js';
 
 function parseDateToISO(raw: string): string {
   const cleaned = raw.trim();
