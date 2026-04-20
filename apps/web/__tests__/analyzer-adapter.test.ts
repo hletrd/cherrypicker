@@ -233,6 +233,9 @@ describe('multi-month transaction handling', () => {
     const monthlySpending = new Map<string, number>();
     const monthlyTxCount = new Map<string, number>();
     for (const tx of txs) {
+      // Guard against malformed dates shorter than 7 chars (YYYY-MM) —
+      // matches the guard in analyzer.ts analyzeMultipleFiles().
+      if (!tx.date || tx.date.length < 7) continue;
       const month = tx.date.slice(0, 7);
       monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
       monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
@@ -268,7 +271,9 @@ describe('multi-month transaction handling', () => {
     ];
 
     // Previous month = 2026-01, spending = 80000
-    const months = new Set(txs.map(tx => tx.date.slice(0, 7)));
+    // Guard against malformed dates shorter than 7 chars (YYYY-MM) —
+    // matches the guard in analyzer.ts analyzeMultipleFiles().
+    const months = new Set(txs.filter(tx => tx.date && tx.date.length >= 7).map(tx => tx.date.slice(0, 7)));
     const sorted = [...months].sort();
     const latestMonth = sorted[sorted.length - 1]!;
     const previousMonth = sorted.length >= 2 ? sorted[sorted.length - 2]! : null;

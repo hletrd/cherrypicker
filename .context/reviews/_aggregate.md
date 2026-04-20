@@ -1,11 +1,11 @@
-# Review Aggregate -- 2026-04-20 (Cycle 6)
+# Review Aggregate -- 2026-04-20 (Cycle 7)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle6-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle7-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
-- Cycle 5 aggregate (2026-04-20-cycle5-comprehensive.md)
+- Cycle 6 aggregate (2026-04-20-cycle6-comprehensive.md)
 
 ---
 
@@ -37,6 +37,7 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 | C53-03 | **FIXED** | `CardDetail.svelte:222` now has `dark:text-blue-300` for dark mode |
 | C4-01 | **FIXED** | `build-stats.ts:25-30` catch block now differentiates ENOENT, EACCES, and other errors |
 | C5-01 | **FIXED** | `SpendingSummary.svelte:119-121` now has `Number.isFinite` guard on `parseInt` results |
+| C6-03 | **FIXED** | `analyzer.ts:300-302` has length guard `if (!tx.date || tx.date.length < 7) continue;` |
 
 ---
 
@@ -54,7 +55,7 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C6-03 | LOW | MEDIUM | `apps/web/src/lib/analyzer.ts:300` | `tx.date.slice(0, 7)` without length guard in monthly spending calculation |
+| C7-01 | LOW | MEDIUM | `apps/web/__tests__/analyzer-adapter.test.ts:236,271` | Test `slice(0, 7)` without length guard, inconsistent with production code |
 
 ---
 
