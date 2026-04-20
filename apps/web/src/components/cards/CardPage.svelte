@@ -37,7 +37,10 @@
 
   function goBack() {
     selectedCardId = null;
-    history.replaceState(null, '', window.location.pathname + window.location.search);
+    // Clear the hash to return to the card list view. Using hash assignment
+    // instead of replaceState so the navigation is added to browser history,
+    // enabling the back button to return to previously viewed cards (C19-03).
+    window.location.hash = '';
   }
 
   onMount(() => {
