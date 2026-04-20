@@ -260,7 +260,14 @@ function clearStorage(): void {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(STORAGE_KEY);
     }
-  } catch { /* SSR */ }
+  } catch (err) {
+    // SSR environments don't have sessionStorage — that's expected.
+    // Non-SSR failures (e.g., SecurityError in sandboxed iframes) are
+    // worth logging for diagnostics (C24-02).
+    if (typeof sessionStorage !== 'undefined') {
+      console.warn('[cherrypicker] Failed to clear sessionStorage:', err);
+    }
+  }
 }
 
 // --- Store ---
