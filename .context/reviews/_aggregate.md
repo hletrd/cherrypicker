@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-22 (Cycle 49)
+# Review Aggregate -- 2026-04-21 (Cycle 50)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle49-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle50-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-48 per-agent and aggregate files
+- All cycle 1-49 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-48 findings are confirmed fixed except as noted below:
+All prior cycle 1-49 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -34,7 +34,7 @@ All prior cycle 1-48 findings are confirmed fixed except as noted below:
 | C8-07/C4-14 | OPEN (LOW) | build-stats.ts fallback values will drift |
 | C8-08 | OPEN (LOW) | inferYear() timezone-dependent near midnight Dec 31 |
 | C8-09 | OPEN (LOW) | Test duplicates production code instead of testing it directly |
-| C18-01 | OPEN (LOW) | VisibilityToggle $effect directly mutates DOM |
+| C18-01/C50-08 | OPEN (LOW) | VisibilityToggle $effect directly mutates DOM |
 | C18-02 | OPEN (LOW) | Results page stat elements queried every effect run even on dashboard page |
 | C18-03 | OPEN (LOW) | Annual savings projection simply multiplies monthly by 12 without seasonal adjustment |
 | C18-04 | OPEN (LOW) | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
@@ -46,8 +46,10 @@ All prior cycle 1-48 findings are confirmed fixed except as noted below:
 | C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed |
 | C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
 | C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner |
-| C41-04/C42-03/C43-03/C49-03 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 |
+| C41-04/C42-03/C43-03/C49-03/C50-01 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 |
 | C41-05/C42-04 | OPEN (LOW) | cards.ts loadCategories returns empty array on AbortError |
+| C49-01 | OPEN (LOW) | `isSubstringSafeKeyword` is dead code superseded by SUBSTRING_SAFE_ENTRIES |
+| C49-02 | OPEN (LOW) | `buildCategoryLabelMap` bare subcategory ID shadowing risk (no current collision) |
 
 ---
 
@@ -55,8 +57,29 @@ All prior cycle 1-48 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C49-01 | LOW | HIGH | `packages/core/src/categorizer/matcher.ts:21-23` | `isSubstringSafeKeyword` is dead code -- superseded by `SUBSTRING_SAFE_ENTRIES` pre-computation (C33-01) |
-| C49-02 | LOW | MEDIUM | `apps/web/src/lib/category-labels.ts:11` | `buildCategoryLabelMap` sets bare subcategory ID key that could shadow a top-level category with the same ID. Currently no collision exists in the taxonomy. |
+| C50-01 | LOW | HIGH | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129` | `maxPercentage` initial value 1 distorts small-dataset bars (same as C41-04/C42-03/C43-03/C49-03) |
+| C50-02 | LOW | MEDIUM | `apps/web/src/components/dashboard/SavingsComparison.svelte:108` | `savingsPct` returns numeric `Infinity` instead of string sentinel -- could confuse screen readers |
+| C50-03 | LOW | HIGH | `apps/web/src/lib/cards.ts:280-307` | `getCardById` O(n) linear scan (same as D-111) |
+| C50-04 | LOW | MEDIUM | `apps/web/src/lib/parser/csv.ts:38-74` | `parseAmount`/`isValidAmount` split is conceptually confusing but well-documented -- no code change needed |
+| C50-05 | LOW | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:24-45` | `cardBreakdown` re-derives from assignments instead of using `cardResults` -- redundant computation |
+| C50-06 | LOW | HIGH | `apps/web/src/lib/formatters.ts:5-10` | `formatWon` uses minus sign for negatives instead of Korean banking convention (parentheses) |
+| C50-07 | LOW | MEDIUM | `apps/web/src/lib/parser/xlsx.ts:282-293` | XLSX parser returns first sheet with transactions, not the one with the most |
+| C50-08 | LOW | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte` | $effect directly mutates DOM (same as C18-01, still open) |
+
+---
+
+## Cross-Agent Agreement (Multi-Cycle Convergence)
+
+The following findings have been flagged by multiple cycles, indicating high signal:
+
+| Finding | Flagged by Cycles | Current Status |
+|---|---|---|
+| CategoryBreakdown maxPercentage=1 | C41, C42, C43, C49, C50 | OPEN (LOW) -- 5 cycles agree |
+| VisibilityToggle DOM mutation | C18, C50 | OPEN (LOW) -- 2 cycles agree |
+| getCardById O(n) | C3 (D-111), C50 | OPEN (LOW) -- 2 cycles agree |
+| cardBreakdown redundant derivation | C6 (D-53), C50 | OPEN (LOW) -- 2 cycles agree |
+| MerchantMatcher O(n) scan | C16 (D-100), C33, C50 | OPEN (MEDIUM) -- 3 cycles agree |
+| cachedCategoryLabels staleness | C21, C23, C25, C26, C33 | OPEN (MEDIUM) -- 5 cycles agree |
 
 ---
 
