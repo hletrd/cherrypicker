@@ -166,6 +166,13 @@ function chainAbortSignal(controller: AbortController, signal?: AbortSignal): vo
   signal.addEventListener('abort', () => controller.abort(), { once: true });
 }
 
+/** Check if an error is an AbortError (expected cancellation from component
+ *  unmount or explicit signal abort). Used to distinguish intentional
+ *  cancellations from real network failures in fetch catch blocks. */
+function isAbortError(err: unknown): boolean {
+  return err instanceof DOMException && err.name === 'AbortError';
+}
+
 export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson> {
   // If an in-flight fetch was aborted, reset the cache so a retry can succeed
   if (cardsPromise && cardsAbortController?.signal.aborted) {
@@ -186,6 +193,12 @@ export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson> {
       .catch(err => {
         cardsPromise = null;
         cardsAbortController = null;
+        // AbortError is expected (component unmount, signal cancellation).
+        // Don't propagate it — callers who passed a signal already know
+        // about the abort. Callers without signals should not receive an
+        // unexpected AbortError rejection. The cache reset above ensures
+        // the next call re-fetches successfully.
+        if (isAbortError(err)) return undefined as unknown as CardsJson;
         throw err;
       });
   } else if (signal) {
@@ -216,22 +229,30 @@ export async function loadCategories(signal?: AbortSignal): Promise<CategoryNode
       .catch(err => {
         categoriesPromise = null;
         categoriesAbortController = null;
+        // AbortError is expected (component unmount, signal cancellation).
+        // Don't propagate it — same rationale as loadCardsData above.
+        if (isAbortError(err)) return undefined as unknown as { categories: CategoryNode[] };
         throw err;
       });
   } else if (signal) {
     chainAbortSignal(categoriesAbortController!, signal);
   }
   const data = await categoriesPromise;
+  // data may be undefined after an AbortError — return empty array so callers
+  // that don't pass a signal never crash on an unexpected abort.
+  if (!data) return [];
   return data.categories;
 }
 
 export async function getAllCardRules(): Promise<CardRuleSet[]> {
   const data = await loadCardsData();
+  if (!data) return [];
   return data.issuers.flatMap(issuer => issuer.cards);
 }
 
 export async function getCardList(filters?: { issuer?: string; type?: string }): Promise<CardSummary[]> {
   const data = await loadCardsData();
+  if (!data) return [];
   let cards: CardSummary[] = data.issuers.flatMap(issuer =>
     issuer.cards.map(c => ({
       id: c.card.id,
@@ -255,6 +276,7 @@ export async function getCardList(filters?: { issuer?: string; type?: string }):
 
 export async function getCardById(cardId: string, options?: { signal?: AbortSignal }): Promise<CardDetail | null> {
   const data = await loadCardsData(options?.signal);
+  if (!data) return null;
   for (const issuer of data.issuers) {
     const card = issuer.cards.find(c => c.card.id === cardId);
     if (card) {
