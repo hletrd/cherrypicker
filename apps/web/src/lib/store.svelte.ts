@@ -250,7 +250,15 @@ function loadFromStorage(): AnalysisResult | null {
       sessionStorage.removeItem(STORAGE_KEY);
     }
   } catch {
-    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch { /* best-effort cleanup: corrupted data removal, SecurityError in sandboxed iframes is expected */ }
+    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch (err) {
+      // Best-effort cleanup: corrupted data removal.
+      // SecurityError in sandboxed iframes is expected and safe to ignore.
+      // Log when sessionStorage is available but the remove failed for another
+      // reason, matching the pattern in clearStorage() (C24-02/C27-01/C30-03).
+      if (typeof sessionStorage !== 'undefined') {
+        console.warn('[cherrypicker] Failed to remove corrupted data from sessionStorage:', err);
+      }
+    }
   }
   return null;
 }
