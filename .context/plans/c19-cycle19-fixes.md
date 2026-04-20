@@ -42,15 +42,16 @@
 - **Problem:** `isValidTx` filters out zero-amount transactions (they're not valid for optimization), but the name `isValidTx` implies a general validity check. A developer might assume zero-amount entries like balance inquiries would pass.
 - **Fix:** Rename to `isOptimizableTx` and add a JSDoc comment explaining that zero-amount transactions are excluded because they don't contribute to spending optimization. Update all call sites (currently only used in `loadFromStorage`).
 
-## Implementation Order
+## Implementation Order & Status
 
-1. **C19-01** -- Extract `parseDateStringToISO` to `date-utils.ts` (foundational -- reduces triplication, makes future date fixes easier)
-2. **C19-02** -- Fix VisibilityToggle cleanup race (medium severity, same file as existing C18-01 fix)
-3. **C19-06** -- Tighten AMOUNT_PATTERNS regex (small targeted fix, reduces false positives)
-4. **C19-03** -- Fix CardPage browser history (small UX fix)
-5. **C19-04 + C19-05** -- Replace window.location.href with Astro navigate (combined, same pattern in two files)
-6. **C19-07** -- Rename isValidTx to isOptimizableTx (small clarity improvement)
+1. **C19-01** -- Extract `parseDateStringToISO` to `date-utils.ts` -- **DONE** (commit `0000000b99`)
+2. **C19-02** -- Fix VisibilityToggle cleanup race -- **DONE** (commit `0000000a23`)
+3. **C19-06** -- Tighten AMOUNT_PATTERNS regex -- **DONE** (commit `00000008c`)
+4. **C19-03** -- Fix CardPage browser history -- **DONE** (commit `000000059f5`)
+5. **C19-04 + C19-05** -- Replace window.location.href with Astro navigate -- **DEFERRED** (requires Astro ClientRouter / `<ClientRouter />` component in layout; project does not currently use View Transitions. Adding it is an architectural change beyond cycle scope.)
+6. **C19-07** -- Rename isValidTx to isOptimizableTx -- **DONE** (commit `000000093de`)
 
 ## Deferred Items
 
-All prior deferred items from `00-deferred-items.md` remain unchanged. No new deferrals this cycle.
+- **C19-04 + C19-05**: `navigate()` from `astro:transitions/client` requires `<ClientRouter />` in the Astro layout. The project currently uses static output mode without View Transitions. Enabling ClientRouter is an architectural change that requires testing all pages for compatibility. Deferred until a dedicated cycle for View Transitions adoption.
+- All prior deferred items from `00-deferred-items.md` remain unchanged.
