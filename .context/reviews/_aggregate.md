@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-21 (Cycle 41)
+# Review Aggregate -- 2026-04-21 (Cycle 42)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle41-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle42-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-40 per-agent and aggregate files
+- All cycle 1-41 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-40 findings are confirmed fixed except as noted below:
+All prior cycle 1-41 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -39,10 +39,15 @@ All prior cycle 1-40 findings are confirmed fixed except as noted below:
 | C39-03 | FIXED | Web-side parseFile now adds encoding quality warning when bestReplacements > 50 |
 | C39-05 | FIXED | FileDropzone addFiles now adds valid files first, then checks total size |
 | C39-04 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 -- theoretical edge case |
-| C39-06/C40-01 | SUPERSEDED by C41-01 | SavingsComparison annual projection issue evolved — see C41-01 |
+| C39-06/C40-01 | SUPERSEDED by C41-01 | SavingsComparison annual projection issue evolved -- see C41-01 |
 | C40-02 | FIXED | TransactionReview changeCategory index mutation now has explanatory comment |
-| C40-03 | NO FIX NEEDED | formatDateKo/formatDateShort redundant parseInt validation — appropriate defensive coding |
+| C40-03 | NO FIX NEEDED | formatDateKo/formatDateShort redundant parseInt validation -- appropriate defensive coding |
 | C40-04 | FIXED | buildCardResults has explicit comment documenting pre-filtered positive-amount requirement |
+| C41-01 | FIXED | SavingsComparison monthly/annual animation now synced via displayedAnnualSavings |
+| C41-02 | FIXED | SpendingSummary formatPeriod uses formatYearMonthKo from formatters.ts |
+| C41-03 | FIXED | FileDropzone parsePreviousSpending extracted to named function |
+| C41-04 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 -- see C42-03 |
+| C41-05 | OPEN (LOW) | cards.ts loadCategories returns empty array on AbortError -- see C42-04 |
 
 ---
 
@@ -50,11 +55,10 @@ All prior cycle 1-40 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | Description | File+line |
 |---|---|---|---|---|
-| C41-01 | MEDIUM | High | SavingsComparison monthly/annual animation inconsistency — monthly animates but annual shows final value immediately, making values mathematically out of sync during 600ms animation | `apps/web/src/components/dashboard/SavingsComparison.svelte:216-218` |
-| C41-02 | LOW | High | SpendingSummary formatPeriod duplicates date parsing logic from formatters.ts | `apps/web/src/components/dashboard/SpendingSummary.svelte:30-43` |
-| C41-03 | LOW | High | FileDropzone handleUpload uses inline IIFE for previousMonthSpending parsing | `apps/web/src/components/upload/FileDropzone.svelte:217` |
-| C41-04 | LOW | Low | CategoryBreakdown maxPercentage initial value 1 causes misleading bar widths for sub-1% categories | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129` |
-| C41-05 | LOW | Medium | cards.ts loadCategories returns empty array on AbortError — silent category dropdown fallback | `apps/web/src/lib/cards.ts:246` |
+| C42-01 | MEDIUM | High | All parsers except server-side PDF allow negative-amount (refund) transactions to pass through, inflating transaction counts and monthly spending totals | `apps/web/src/lib/parser/pdf.ts:246`, `csv.ts:72`, `xlsx.ts:400`, all server CSV adapters |
+| C42-02 | MEDIUM | High | `Math.abs(tx.amount)` in monthlyBreakdown computation double-counts refunds as positive spending | `apps/web/src/lib/analyzer.ts:290`, `store.svelte.ts:425` |
+| C42-03 | LOW | Medium | maxPercentage initial value 1 -- theoretical edge case, not a real bug | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129` |
+| C42-04 | LOW | High | loadCategories returns empty array on AbortError -- reasonable fallback, minimal impact | `apps/web/src/lib/cards.ts:246` |
 
 ---
 
