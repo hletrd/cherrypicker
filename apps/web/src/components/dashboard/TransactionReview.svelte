@@ -3,6 +3,10 @@
   import { formatWon } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
   import type { CategorizedTx } from '../../lib/analyzer.js';
+  // NOTE: AI categorization is disabled until a self-hosted runtime is ready.
+  // See categorizer-ai.ts for details. The import and related code below
+  // (isAvailable, runAICategorization, AI button) are kept for when the
+  // feature is re-enabled — they are currently unreachable dead code.
   import * as aiCategorizer from '../../lib/categorizer-ai.js';
   import { onMount } from 'svelte';
   import { loadCategories } from '../../lib/cards.js';
@@ -74,6 +78,9 @@
     }
   });
 
+  // DISABLED: AI categorization is not available until a self-hosted runtime
+  // is ready. This function is unreachable because aiAvailable is always false.
+  // Re-enable by updating categorizer-ai.ts isAvailable() to return true.
   async function runAICategorization() {
     aiRunning = true;
     aiStatus = '모델 불러오는 중';
