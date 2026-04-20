@@ -89,7 +89,7 @@
       cachedStatTotalSpending.textContent = formatWon(opt.totalSpending);
 
       if (cachedStatTotalSavings) {
-        cachedStatTotalSavings.textContent = (opt.savingsVsSingleCard >= 0 ? '+' : '') + formatWon(opt.savingsVsSingleCard);
+        cachedStatTotalSavings.textContent = (opt.savingsVsSingleCard > 0 ? '+' : '') + formatWon(opt.savingsVsSingleCard);
       }
 
       if (cachedStatCardsNeeded) {
