@@ -1,5 +1,6 @@
 import type { BankId, ParseError, ParseResult, RawTransaction } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
+import { inferYear } from '../date-utils.js';
 
 // Korean date patterns
 const DATE_PATTERNS = [
@@ -25,18 +26,6 @@ function isAmountLike(value: string): boolean {
 function isMerchantLike(header: string): boolean {
   const merchantKeywords = ['가맹점', '이용처', '상호', '업체', '가게', '상점', 'merchant', '이용가맹점'];
   return merchantKeywords.some((k) => header.includes(k));
-}
-
-/** Infer the year for a short-date (month/day only) using a look-back
- *  heuristic: if the date would be more than 3 months in the future,
- *  assume it belongs to the previous year. */
-function inferYear(month: number, day: number): number {
-  const now = new Date();
-  const candidate = new Date(now.getFullYear(), month - 1, day);
-  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
-    return now.getFullYear() - 1;
-  }
-  return now.getFullYear();
 }
 
 function parseDateToISO(raw: string): string {
