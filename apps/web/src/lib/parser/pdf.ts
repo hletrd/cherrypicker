@@ -370,7 +370,8 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
       if (amountStart > dateEnd) {
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
-          const amount = parseAmount(amountMatch[1]!);
+          const amountRaw = amountMatch[1]!;
+          const amount = parseAmount(amountRaw);
           // Allow non-zero amounts including negative (refund/cancellation entries)
           if (amount !== 0) {
             fallbackTransactions.push({
@@ -378,6 +379,13 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
               merchant: between.replace(/\s+/g, ' ').trim(),
               amount,
             });
+          } else {
+            // If the raw value was non-empty and not just zeroes, report an
+            // error — matching the structured path's behavior (C10-03/C11-03).
+            const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
+            if (cleaned && !/^0+$/.test(cleaned)) {
+              errors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
+            }
           }
         }
       }
