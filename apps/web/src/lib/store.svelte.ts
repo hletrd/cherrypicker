@@ -415,7 +415,9 @@ function createAnalysisStore() {
           persistToStorage(result);
           persistWarningKind = _persistWarningKind;
         } else {
-          // Store was reset while reoptimizing — cannot apply edits
+          // Store was reset while reoptimizing — cannot apply edits.
+          // Clear stale sessionStorage data to prevent confusion on refresh.
+          clearStorage();
           error = '분석 결과가 없어요. 다시 분석해 보세요.';
         }
       } catch (e) {
