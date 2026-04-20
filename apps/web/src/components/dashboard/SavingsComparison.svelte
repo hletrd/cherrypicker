@@ -212,7 +212,7 @@
       <div class="mb-3 text-xs font-medium text-green-700 dark:text-green-400">{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}</div>
       <!-- formatWon normalizes -0 to +0 internally, so displayedSavings >= 0
            correctly determines the sign prefix without Object.is(-0) guard (C12-04) -->
-      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 0 ? '+' : ''}{formatWon(displayedSavings)}</div>
+      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings > 0 ? '+' : ''}{formatWon(displayedSavings)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
         연간 약 {formatWon(displayedAnnualSavings)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
       </div>
