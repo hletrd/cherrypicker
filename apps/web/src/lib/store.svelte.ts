@@ -244,9 +244,12 @@ function createAnalysisStore() {
   let generation = $state(0);
   // Set when sessionStorage persistence was partial (transactions truncated)
   // or failed entirely (quota exceeded). Reset on successful full save.
+  // Only set the warning when we have evidence the data came from storage
+  // (i.e. _loadPersistWarningKind was set by loadFromStorage). If the data
+  // was just computed (not loaded), there's no persistence warning to show.
   let persistWarningKind = $state<PersistWarningKind>(
-    result !== null && result.transactions === undefined
-      ? (_loadPersistWarningKind ?? 'truncated')
+    result !== null && result.transactions === undefined && _loadPersistWarningKind !== null
+      ? _loadPersistWarningKind
       : null
   );
   // Consume and reset the load-time warning kind so it doesn't leak
