@@ -215,7 +215,7 @@
            correctly determines the sign prefix without Object.is(-0) guard (C12-04) -->
       <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 0 ? '+' : ''}{formatWon(displayedSavings)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
-        연간 약 {formatWon((opt.savingsVsSingleCard >= 0 ? opt.savingsVsSingleCard : Math.abs(opt.savingsVsSingleCard)) * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
+        연간 약 {formatWon((displayedSavings >= 0 ? displayedSavings : Math.abs(displayedSavings)) * 12)} {displayedSavings >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
       </div>
       {#if savingsPct === Infinity}
         <!-- Defensive badge (C28-04): currently unreachable — see savingsPct comment -->
