@@ -1,19 +1,21 @@
-# Review Aggregate -- 2026-04-21 (Cycle 55)
+# Review Aggregate -- 2026-04-21 (Cycle 56)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle55-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle56-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-54 per-agent and aggregate files
+- All cycle 1-55 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-54 findings are confirmed fixed except as noted below:
+All prior cycle 1-55 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C55-02 | **FIXED** | `CardDetail.svelte:32-33` already has `dark:text-green-400` and `dark:text-blue-400` in `rateColorClass` |
+| C55-05 | **DUPLICATED** | Same as C56-01 below -- count-up animation zero-crossing flicker |
 | C54-01 | **FIXED** | `results.js` no longer exists in `public/scripts/` -- only `layout.js` remains |
 | C52-01 | **FIXED** | `parseCSV()` at line 915 and `parseGenericCSV()` at line 121 both strip UTF-8 BOM |
 | C52-02 | **FIXED** | `report.js` deleted from `public/scripts/`; no references found |
@@ -69,8 +71,9 @@ All prior cycle 1-54 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C55-02 | LOW | MEDIUM | `apps/web/src/components/cards/CardDetail.svelte:30-35` | `rateColorClass` returns `text-green-600` and `text-blue-600` without dark mode overrides, causing poor contrast on dark backgrounds. Other parts of the same component (e.g., card type badges at lines 125-128, tier header at line 217) have `dark:` variants. Fix: Add `dark:text-green-400` and `dark:text-blue-400`. |
-| C55-05 | MEDIUM | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:45-76,215` | Count-up animation from positive to negative target (or vice versa) briefly passes through zero, showing "+0원" due to the `displayedSavings >= 0 ? '+' : ''` sign prefix. During the 600ms animation, this creates a visual flicker. Fix: Snap through zero or suppress the '+' prefix when the value rounds to zero during sign transitions. |
+| C56-01 | MEDIUM | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:70,215` | Count-up animation from positive to negative target (or vice versa) briefly passes through zero, showing "+0원" due to the `displayedSavings > 0 ? '+' : ''` sign prefix. During the 600ms animation, this creates a visual flicker. Fix: Snap through zero or suppress the '+' prefix when the value rounds to zero during sign transitions. |
+| C56-04 | LOW | MEDIUM | `apps/web/src/lib/parser/date-utils.ts:112` + all parsers | `parseDateStringToISO` returns the raw input string when no format matches, without reporting an error. Corrupted or unexpected date strings (e.g., "N/A") become the `date` field silently. Downstream code handles these (filtered by `tx.date.length < 7`), but the user gets no error message explaining skipped rows. |
+| C56-05 | LOW | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:215` | Zero savings shows "0원" without plus sign, but the label above says "추가 절약". Minor visual inconsistency -- very rare case (exact zero savings). |
 
 ---
 
@@ -81,7 +84,7 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
 | VisibilityToggle DOM mutation | C18, C50 | OPEN (LOW) -- 2 cycles agree |
-| getCardById O(n) | C3 (D-111), C50 | OPEN (LOW) -- 2 cycles agree |
+| getCardById O(n) | C3 (D-111), C50, C56 | OPEN (LOW) -- 3 cycles agree |
 | cardBreakdown redundant derivation | C6 (D-53), C50 | **FIXED** |
 | MerchantMatcher O(n) scan | C16 (D-100), C33, C50 | OPEN (MEDIUM) -- 3 cycles agree |
 | cachedCategoryLabels staleness | C21, C23, C25, C26, C33 | OPEN (MEDIUM) -- 5 cycles agree |
@@ -90,7 +93,8 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | CSV BOM handling gap | C52 | **FIXED** |
 | Inline script / VisibilityToggle split-brain | C54, C51, C52 | **FIXED** (results.js deleted) |
 | OptimalCardMap Set mutation | C51, C54 | **FIXED** |
-| CardDetail dark mode contrast | C55, C53 (partial) | OPEN (LOW) -- C53 fixed tier header, C55 finds rate class gap |
+| CardDetail dark mode contrast | C55, C53 (partial), C56 | **FIXED** (rateColorClass now has dark: variants) |
+| SavingsComparison zero-crossing flicker | C55, C56 | OPEN (MEDIUM) -- 2 cycles agree |
 
 ---
 
