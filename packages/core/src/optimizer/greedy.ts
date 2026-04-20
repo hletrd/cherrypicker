@@ -4,6 +4,10 @@ import type { OptimizationResult, CardAssignment, CardRewardResult, CategoryRewa
 import type { OptimizationConstraints } from './constraints.js';
 import { calculateRewards, buildCategoryKey } from '../calculator/reward.js';
 
+// TODO(C64-03): CATEGORY_NAMES_KO can silently drift from the YAML taxonomy in
+// packages/rules/data/categories.yaml. When the taxonomy is updated, this map
+// must be updated in lockstep. The correct long-term fix is to import labels
+// from the rules package at CLI startup instead of maintaining a duplicate here.
 export const CATEGORY_NAMES_KO: Record<string, string> = {
   // Parent categories
   dining: '외식',
