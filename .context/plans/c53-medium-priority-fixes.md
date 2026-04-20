@@ -32,7 +32,7 @@ function changeCategory(txId: string, newCategory: string) {
   }
 }
 ```
-**Status:** PENDING
+**Status:** DONE
 
 ### 2. [LOW] Fix CardDetail performance tier header dark mode contrast (C53-03)
 
@@ -42,7 +42,7 @@ function changeCategory(txId: string, newCategory: string) {
 ```html
 <td colspan="4" class="px-4 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300">
 ```
-**Status:** PENDING
+**Status:** DONE
 
 ### 3. [LOW] Extract duplicated card stats reading logic (C53-02)
 
@@ -74,7 +74,7 @@ export async function readCardStats(): Promise<CardStats> {
 }
 ```
 Then import in both `index.astro` and `Layout.astro`.
-**Status:** PENDING
+**Status:** DONE
 
 ---
 
@@ -82,7 +82,6 @@ Then import in both `index.astro` and `Layout.astro`.
 
 | Finding | Reason for deferral | Exit criterion |
 |---|---|---|
-| C53-02 | LOW severity; duplication is a maintainability concern, not a bug; both files currently produce the same values | Stats reading logic needs to change |
 | C52-03/C4-06/C9-02 | LOW severity; annual projection label partially addressed with "최근 월 기준" caveat; UX team input needed | UX review recommends different label |
 | C52-04/C4-14 | LOW severity; fallback values are correct at time of writing; only affects build-time failures | cards.json becomes unavailable at build time |
 | C52-05/C4-09 | LOW severity; dark mode contrast is acceptable for most colors; only 2-3 very dark entries affected; design token migration is a larger effort | Design system integration planned |

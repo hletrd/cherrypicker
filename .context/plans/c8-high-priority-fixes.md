@@ -1,10 +1,10 @@
 # Cycle 8 — High Priority Fixes
 
-## Status: IN PROGRESS
+## Status: COMPLETED
 
 ---
 
-### Plan 1: Make CardDetail $effect fetch abortable on unmount (C8-02)
+### Plan 1: Make CardDetail $effect fetch abortable on unmount (C8-02) -- DONE
 
 **Finding:** C8-02 — MEDIUM/High
 **File:** `apps/web/src/components/cards/CardDetail.svelte:77-92`
@@ -21,7 +21,7 @@ The `$effect` at line 77 calls `getCardDetail(cardId)` via `.then()/.catch()/.fi
 
 ---
 
-### Plan 2: Remove or gate dead AI categorization code in TransactionReview (C8-01)
+### Plan 2: Remove or gate dead AI categorization code in TransactionReview (C8-01) -- DONE
 
 **Finding:** C8-01 — MEDIUM/High
 **File:** `apps/web/src/components/dashboard/TransactionReview.svelte:6,49,77-143,262`
@@ -38,7 +38,7 @@ The `categorizer-ai.ts` module is entirely disabled (`isAvailable()` returns `fa
 
 ---
 
-### Plan 3: Refactor persistToStorage to return warning kind (C8-12 / C7-05)
+### Plan 3: Refactor persistToStorage to return warning kind (C8-12 / C7-05) -- DONE
 
 **Finding:** C8-12 / C7-05 — LOW/High
 **File:** `apps/web/src/lib/store.svelte.ts:106,157`
@@ -56,7 +56,7 @@ The `categorizer-ai.ts` module is entirely disabled (`isAvailable()` returns `fa
 
 ---
 
-### Plan 4: Fix SpendingSummary month diff for year boundaries (C8-03)
+### Plan 4: Fix SpendingSummary month diff for year boundaries (C8-03) -- DONE
 
 **Finding:** C8-03 — LOW/High
 **File:** `apps/web/src/components/dashboard/SpendingSummary.svelte:119-121`
