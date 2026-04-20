@@ -13,8 +13,8 @@ const ALL_KEYWORDS: Record<string, string> = {
 };
 
 // Pre-compute keyword entries once at module level instead of on every
-// match() call — avoids repeated Object.entries() allocation and the
-// isSubstringSafeKeyword filter for the O(n) substring scan (C33-01).
+// match() call — avoids repeated Object.entries() allocation for the
+// O(n) substring scan (C33-01).
 const SUBSTRING_SAFE_ENTRIES: Array<[keyword: string, categoryStr: string]> = Object.entries(ALL_KEYWORDS)
   .filter(([kw]) => kw.trim().length >= 2);
 
