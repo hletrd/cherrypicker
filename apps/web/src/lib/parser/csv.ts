@@ -964,7 +964,13 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
       try {
         return adapter.parseCSV(content);
       } catch (err) {
-        console.warn(`[cherrypicker] Bank adapter ${adapter.bankId} failed, falling through:`, err);
+        // Fall through to generic parser, but record the failure in the result
+        // (matching the server-side pattern in packages/parser/src/csv/index.ts)
+        const fallbackResult = parseGenericCSV(content, resolvedBank);
+        fallbackResult.errors.unshift({
+          message: `${adapter.bankId} 어댑터 파싱 실패: ${err instanceof Error ? err.message : String(err)}`,
+        });
+        return fallbackResult;
       }
     }
   }
