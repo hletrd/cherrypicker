@@ -104,6 +104,12 @@ export async function parseAndCategorize(
   }
 
   const categoryNodes = await loadCategories();
+  // Guard against empty categories — loadCategories() returns [] on AbortError
+  // (component unmount during fetch). Proceeding would produce silently wrong
+  // results with all transactions as "uncategorized" (C71-02).
+  if (categoryNodes.length === 0) {
+    throw new Error('카테고리 데이터를 불러올 수 없어요. 다시 시도해 보세요.');
+  }
   // Reuse the provided matcher (from analyzeMultipleFiles) or construct a new
   // one for backward compatibility (e.g., analyzeFile single-call path).
   // MerchantMatcher expects CategoryNode[] from @cherrypicker/rules which has
@@ -246,6 +252,13 @@ export async function analyzeMultipleFiles(
   // 1. Construct MerchantMatcher once (shared across all files) to avoid
   // redundant loadCategories() fetches and matcher construction per file.
   const categoryNodes = await loadCategories();
+  // Guard against empty categories — loadCategories() returns [] on AbortError
+  // (component unmount during fetch). Proceeding with empty categories would
+  // create a MerchantMatcher that categorizes everything as "uncategorized"
+  // with 0 confidence, producing silently wrong results (C71-02).
+  if (categoryNodes.length === 0) {
+    throw new Error('카테고리 데이터를 불러올 수 없어요. 다시 시도해 보세요.');
+  }
   const sharedMatcher = new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
 
   // 2. Parse and categorize ALL files using the shared matcher
