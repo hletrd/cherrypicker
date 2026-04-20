@@ -179,10 +179,22 @@ export async function optimizeFromTransactions(
   // The cardIds filter is applied after cache retrieval so filtered calls
   // don't get stale unfiltered data from the cache.
   const allCardRules = await getAllCardRules();
+  let transformed: CoreCardRuleSet[] | null = null;
   if (!cachedCoreRules) {
-    cachedCoreRules = toCoreCardRuleSets(allCardRules);
+    transformed = toCoreCardRuleSets(allCardRules);
+    // Don't cache an empty array — it may result from an AbortError in
+    // loadCardsData() (which returns [] on abort). Caching [] would poison
+    // all subsequent optimizations to produce 0 rewards until manual reset
+    // (C72-02). Leaving cachedCoreRules as null forces a retry on next call.
+    if (transformed.length > 0) {
+      cachedCoreRules = transformed;
+    }
   }
-  let coreRules = cachedCoreRules;
+  // cachedCoreRules may still be null when loadCardsData() returned [] due to
+  // AbortError and we chose not to cache the empty array (C72-02). In that
+  // case, fall back to the empty transformation result so the optimizer gets
+  // an empty array instead of null. The next call will retry the fetch.
+  let coreRules: CoreCardRuleSet[] = cachedCoreRules ?? transformed ?? [];
 
   // Apply cardIds filter AFTER cache retrieval to avoid returning stale
   // unfiltered rules when a filtered set is requested.
