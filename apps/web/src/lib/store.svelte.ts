@@ -413,6 +413,16 @@ function createAnalysisStore() {
       loading = true;
       error = null;
       try {
+        // Early null guard — if the store was reset before reoptimize is called,
+        // we cannot apply edits. This also fixes the TypeScript compilation error
+        // where result.previousMonthSpendingOption was accessed before the null
+        // check at the bottom of this method (C45-01).
+        if (!result) {
+          clearStorage();
+          error = '분석 결과가 없어요. 다시 분석해 보세요.';
+          return;
+        }
+
         const categoryLabels = await getCategoryLabels();
         // Filter to the latest month to match the initial optimization behavior.
         // analyzeMultipleFiles only optimizes the latest month; reoptimize must
@@ -473,25 +483,19 @@ function createAnalysisStore() {
           ...options,
           previousMonthSpending,
         }, categoryLabels);
-        if (result) {
-          // Keep all months in the transactions field for display/editing,
-          // but the optimization only covers the latest month.
-          result = {
-            ...result,
-            transactions: editedTransactions,
-            optimization,
-            monthlyBreakdown: updatedMonthlyBreakdown,
-          };
-          generation++;
-          const persistResult = persistToStorage(result);
-          persistWarningKind = persistResult.kind;
-          truncatedTxCount = persistResult.truncatedTxCount;
-        } else {
-          // Store was reset while reoptimizing — cannot apply edits.
-          // Clear stale sessionStorage data to prevent confusion on refresh.
-          clearStorage();
-          error = '분석 결과가 없어요. 다시 분석해 보세요.';
-        }
+        // result is guaranteed non-null here (early null guard at top of try block).
+        // Keep all months in the transactions field for display/editing,
+        // but the optimization only covers the latest month.
+        result = {
+          ...result!,
+          transactions: editedTransactions,
+          optimization,
+          monthlyBreakdown: updatedMonthlyBreakdown,
+        };
+        generation++;
+        const persistResult = persistToStorage(result);
+        persistWarningKind = persistResult.kind;
+        truncatedTxCount = persistResult.truncatedTxCount;
       } catch (e) {
         error = e instanceof Error ? e.message : '재계산 중 문제가 생겼어요';
       } finally {
