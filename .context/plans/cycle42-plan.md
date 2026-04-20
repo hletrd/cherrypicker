@@ -31,7 +31,7 @@
   17. `packages/parser/src/csv/bc.ts:60` -- same
   18. `packages/parser/src/csv/generic.ts:121` -- same
 - **Verification:** Run `bun test` and `vitest` to ensure no regressions. The existing tests should still pass because no test cases rely on negative-amount transactions being included in results.
-- **Status:** PENDING
+- **Status:** DONE
 
 ---
 
@@ -46,7 +46,7 @@
   2. `apps/web/src/lib/store.svelte.ts:425` -- same
 - **Note:** After C42-01 is implemented, `Math.abs()` is no longer needed since all amounts reaching the analyzer will be positive. Using `tx.amount` directly is more correct and matches the intent.
 - **Verification:** Run `bun test` and `vitest`. Also verify that the monthly spending total in the UI matches the sum of displayed transaction amounts.
-- **Status:** PENDING
+- **Status:** DONE
 
 ---
 
