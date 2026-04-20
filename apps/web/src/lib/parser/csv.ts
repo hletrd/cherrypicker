@@ -30,7 +30,12 @@ function parseDateToISO(raw: string): string {
   return parseDateStringToISO(raw);
 }
 
-function parseAmount(raw: string): number {
+/** Parse an amount string from CSV data. Returns null for unparseable inputs
+ *  (NaN), matching the null-return pattern used by all other parsers (web PDF,
+ *  web XLSX, server CSV, server XLSX, server PDF). The previous NaN return
+ *  (C37-01) hid the risk of NaN propagation — the `number` return type could
+ *  not enforce null checks at the call site. */
+function parseAmount(raw: string): number | null {
   let cleaned = raw.trim();
   // Handle (1,234) format for negative amounts
   const isNegative = cleaned.startsWith('(') && cleaned.endsWith(')');
@@ -40,14 +45,22 @@ function parseAmount(raw: string): number {
   // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
   // cells may contain decimal remainders; rounding is more correct than truncation.
   const parsed = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(parsed)) return NaN;
+  if (Number.isNaN(parsed)) return null;
   return isNegative ? -parsed : parsed;
 }
 
-/** Check if a parsed amount is valid (not NaN). Pushes an error and returns
- *  false if the amount is NaN, so the caller can skip the transaction. */
-function isValidAmount(amount: number, amountRaw: string, lineIdx: number, errors: ParseError[]): boolean {
-  if (Number.isNaN(amount)) {
+/** Check if a parsed amount is valid (not null, not zero). Pushes an error
+ *  and returns false if the amount is null (unparseable), so the caller can
+ *  skip the transaction. Zero-amount rows are also skipped (balance inquiries,
+ *  declined transactions) which don't contribute to optimization — matching
+ *  the separated null-check + zero-skip pattern used by all other parsers
+ *  (web PDF, web XLSX, server CSV) instead of combining NaN and zero checks
+ *  in one function (C37-02).
+ *
+ *  Acts as a TypeScript type guard: when it returns true, the amount is
+ *  narrowed from `number | null` to `number`. */
+function isValidAmount(amount: number | null, amountRaw: string, lineIdx: number, errors: ParseError[]): amount is number {
+  if (amount === null) {
     if (amountRaw.trim()) {
       errors.push({ line: lineIdx + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}` });
     }
