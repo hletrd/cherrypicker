@@ -373,6 +373,9 @@ function createAnalysisStore() {
         const monthlySpending = new Map<string, number>();
         const monthlyTxCount = new Map<string, number>();
         for (const tx of editedTransactions) {
+          // Guard against malformed dates shorter than 7 chars (YYYY-MM) —
+          // matches the guard in analyzer.ts getLatestMonth().
+          if (!tx.date || tx.date.length < 7) continue;
           const month = tx.date.slice(0, 7);
           monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
           monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
