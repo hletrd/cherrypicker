@@ -20,8 +20,8 @@ export interface UploadResult {
 export async function getCards(filters?: {
   issuer?: string;
   type?: string;
-}) {
-  return getCardList(filters);
+}, options?: { signal?: AbortSignal }) {
+  return getCardList(filters, options);
 }
 
 export async function getCardDetail(cardId: string, options?: { signal?: AbortSignal }) {

@@ -71,10 +71,12 @@
   });
 
   onMount(() => {
-    getCards()
-      .then((result) => { cards = result; })
-      .catch((e) => { error = e instanceof Error ? e.message : '카드를 불러오지 못했어요'; })
-      .finally(() => { loading = false; });
+    const controller = new AbortController();
+    getCards({ signal: controller.signal })
+      .then((result) => { if (!controller.signal.aborted) cards = result; })
+      .catch((e) => { if (!controller.signal.aborted) error = e instanceof Error && e.name !== 'AbortError' ? e.message : '카드를 불러오지 못했어요'; })
+      .finally(() => { if (!controller.signal.aborted) loading = false; });
+    return () => { controller.abort(); };
   });
 </script>
 

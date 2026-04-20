@@ -253,8 +253,8 @@ export async function getAllCardRules(): Promise<CardRuleSet[]> {
   return data.issuers.flatMap(issuer => issuer.cards);
 }
 
-export async function getCardList(filters?: { issuer?: string; type?: string }): Promise<CardSummary[]> {
-  const data = await loadCardsData();
+export async function getCardList(filters?: { issuer?: string; type?: string }, options?: { signal?: AbortSignal }): Promise<CardSummary[]> {
+  const data = await loadCardsData(options?.signal);
   if (!data) return [];
   let cards: CardSummary[] = data.issuers.flatMap(issuer =>
     issuer.cards.map(c => ({
