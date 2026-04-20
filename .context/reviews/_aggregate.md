@@ -1,17 +1,17 @@
-# Review Aggregate -- 2026-04-20 (Cycle 12)
+# Review Aggregate -- 2026-04-20 (Cycle 13)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle12-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle13-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
-- Cycle 11 aggregate (previously `_aggregate.md`)
+- Cycle 12 aggregate (previously `_aggregate.md`)
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-11 findings are confirmed fixed except as noted below:
+All prior cycle 1-12 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -30,24 +30,26 @@ All prior cycle 1-11 findings are confirmed fixed except as noted below:
 | C10-01 | **FIXED** | `SpendingSummary.svelte:10-18` has try/catch around sessionStorage reads in onMount; `SpendingSummary.svelte:139` has try/catch around sessionStorage writes in dismiss handler |
 | C11-01 | **FIXED** | `analyzer.ts:304` now uses `Math.abs(tx.amount)` matching `store.svelte.ts:378` |
 | C11-03 | **FIXED** | `pdf.ts:382-389` now reports errors for unparseable amounts in fallback path |
+| C12-01 | **IMPROVED** | `OptimalCardMap.svelte:19-25` maxRate floor lowered from 0.5% to 0.1% -- better proportional accuracy |
+| C12-04 | **FIXED** | `SavingsComparison.svelte:205` removed redundant `Object.is(-0)` guard; `formatWon` handles normalization |
 | C52-02 | **FIXED** | `TransactionReview.svelte:108-130` uses `updatedTxs.map()` to replace entries instead of mutating in-place |
 | C53-01 | **FIXED** | `TransactionReview.svelte:120-139` `changeCategory` now uses replacement pattern (`editedTxs.map(...)`) |
 | C8-02/C9R-02 | **FIXED** | `CardDetail.svelte:82-95` now has AbortController cleanup on unmount via `$effect` return cleanup |
 | C10-03 | **FIXED** | PDF parseAmount now reports errors in both structured and fallback paths (C11-03 completed the fallback fix) |
-| C7-04 | **OPEN (LOW)** | TransactionReview $effect re-sync fragile -- no change since cycle 7 |
-| C7-06 | **OPEN (LOW)** | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
-| C7-07 | **OPEN (LOW)** | BANK_SIGNATURES duplicated between packages/parser and apps/web |
-| C7-10 | **OPEN (LOW)** | CategoryBreakdown percentage rounding can cause total > 100% |
-| C7-11 | **OPEN (LOW)** | persistWarning message misleading for data corruption vs size truncation |
-| C8-01 | **OPEN (MEDIUM)** | AI categorizer disabled but 65+ lines of unreachable dead code |
-| C8-05 | **OPEN (LOW)** | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast (extends C4-09) |
-| C8-06 | **OPEN (LOW)** | FileDropzone + CardDetail use full page reload navigation (extends C7-12) |
-| C8-07 | **OPEN (LOW)** | build-stats.ts fallback values will drift (extends C4-14) |
-| C8-08 | **OPEN (LOW)** | inferYear() timezone-dependent near midnight Dec 31 |
-| C8-09 | **OPEN (LOW)** | Test duplicates production code instead of testing it directly |
-| C8-10 | **OPEN (LOW)** | csv.ts installment NaN implicitly filtered by `> 1` comparison |
-| C8-11 | **OPEN (LOW)** | pdf.ts fallback date regex could match decimal numbers like "3.5" |
-| C9R-03 | **OPEN (LOW)** | pdf.ts negative amounts (refunds) silently dropped |
+| C7-04 | OPEN (LOW) | TransactionReview $effect re-sync fragile -- no change since cycle 7 |
+| C7-06 | OPEN (LOW) | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
+| C7-07 | OPEN (LOW) | BANK_SIGNATURES duplicated between packages/parser and apps/web |
+| C7-10 | OPEN (LOW) | CategoryBreakdown percentage rounding can cause total > 100% |
+| C7-11 | OPEN (LOW) | persistWarning message misleading for data corruption vs size truncation |
+| C8-01 | OPEN (MEDIUM) | AI categorizer disabled but 65+ lines of unreachable dead code |
+| C8-05 | OPEN (LOW) | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast (extends C4-09) |
+| C8-06 | OPEN (LOW) | FileDropzone + CardDetail use full page reload navigation (extends C7-12) |
+| C8-07 | OPEN (LOW) | build-stats.ts fallback values will drift (extends C4-14) |
+| C8-08 | OPEN (LOW) | inferYear() timezone-dependent near midnight Dec 31 |
+| C8-09 | OPEN (LOW) | Test duplicates production code instead of testing it directly |
+| C8-10 | OPEN (LOW) | csv.ts installment NaN implicitly filtered by `> 1` comparison |
+| C8-11 | OPEN (LOW) | pdf.ts fallback date regex could match decimal numbers like "3.5" |
+| C9R-03 | OPEN (LOW) | pdf.ts negative amounts (refunds) silently dropped |
 
 ---
 
@@ -55,8 +57,10 @@ All prior cycle 1-11 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C12-01 | LOW | Low | `apps/web/src/components/dashboard/OptimalCardMap.svelte:17-25` | `maxRate` floor of 0.5% causes bars to appear wider than proportional when all rates are very low (e.g., 0.3% rate fills 60% of bar). This is by design to prevent invisible bars, but the threshold may be too high. |
-| C12-04 | LOW | Low | `apps/web/src/components/dashboard/SavingsComparison.svelte:203` | Redundant `Object.is(displayedSavings, -0)` negative-zero guard -- `formatWon` already normalizes negative-zero at line 8. The guard is harmless but confusing for maintainers. |
+| C13-01 | MEDIUM | Medium | `apps/web/src/lib/cards.ts:155-168` | `loadCardsData` accepts AbortSignal but ignores it on cached promise -- second caller's signal is silently discarded. CardDetail's AbortController cleanup has no effect if cards data is already being fetched. |
+| C13-02 | LOW | Medium | `apps/web/src/lib/cards.ts:170-184` | `loadCategories` has no AbortSignal support -- unlike `loadCardsData`, there is no way to cancel the fetch on component unmount. |
+| C13-03 | LOW | Low | `apps/web/src/components/dashboard/SpendingSummary.svelte:67` | Inline `reduce` in template recalculates on every render instead of using `$derived`. Minor perf concern + inconsistent with other components. |
+| C13-04 | LOW | Medium | `apps/web/src/components/cards/CardPage.svelte:13-19` | `$effect` calls async `getCardById` without AbortController or cleanup -- rapid card clicks can cause visual flicker from racing responses. CardDetail.svelte correctly handles this but CardPage does not. |
 
 ---
 
