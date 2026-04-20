@@ -103,9 +103,8 @@ const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
  *  - 'corrupted': save failed entirely (quota exceeded) or loaded data failed validation
  *  Read by the store to inform the user that their data may not survive a tab close. */
 type PersistWarningKind = 'truncated' | 'corrupted' | null;
-let _persistWarningKind: PersistWarningKind = null;
 
-function persistToStorage(data: AnalysisResult): void {
+function persistToStorage(data: AnalysisResult): PersistWarningKind {
   try {
     if (typeof sessionStorage !== 'undefined') {
       const persisted: PersistedAnalysisResult = {
@@ -125,15 +124,16 @@ function persistToStorage(data: AnalysisResult): void {
         // Transactions are the largest field — omit them if over budget
         const withoutTxs: PersistedAnalysisResult = { ...persisted, transactions: undefined };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(withoutTxs));
-        _persistWarningKind = 'truncated'; // Data was truncated — transactions not saved
+        return 'truncated'; // Data was truncated — transactions not saved
       } else {
         sessionStorage.setItem(STORAGE_KEY, serialized);
-        _persistWarningKind = null; // Full save succeeded
+        return null; // Full save succeeded
       }
     }
   } catch {
-    _persistWarningKind = 'corrupted'; // quota exceeded or SSR — save failed entirely
+    return 'corrupted'; // quota exceeded or SSR — save failed entirely
   }
+  return null;
 }
 
 function isValidTx(tx: any): tx is CategorizedTx {
@@ -329,8 +329,7 @@ function createAnalysisStore() {
       result = r;
       generation++;
       error = null;
-      persistToStorage(r);
-      persistWarningKind = _persistWarningKind;
+      persistWarningKind = persistToStorage(r);
     },
 
     async analyze(files: File | File[], options?: AnalyzeOptions): Promise<void> {
@@ -342,8 +341,7 @@ function createAnalysisStore() {
         const analysisResult = await analyzeMultipleFiles(fileArray, options);
         result = analysisResult;
         generation++;
-        persistToStorage(analysisResult);
-        persistWarningKind = _persistWarningKind;
+        persistWarningKind = persistToStorage(analysisResult);
       } catch (e) {
         error = e instanceof Error ? e.message : '분석 중 문제가 생겼어요';
         result = null;
@@ -415,8 +413,7 @@ function createAnalysisStore() {
             monthlyBreakdown: updatedMonthlyBreakdown,
           };
           generation++;
-          persistToStorage(result);
-          persistWarningKind = _persistWarningKind;
+          persistWarningKind = persistToStorage(result);
         } else {
           // Store was reset while reoptimizing — cannot apply edits.
           // Clear stale sessionStorage data to prevent confusion on refresh.
@@ -435,7 +432,6 @@ function createAnalysisStore() {
       error = null;
       loading = false;
       persistWarningKind = null;
-      _persistWarningKind = null;
       _loadPersistWarningKind = null;
       cachedCategoryLabels = undefined;
       clearStorage();
