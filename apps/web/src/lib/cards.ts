@@ -229,7 +229,15 @@ export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson | u
     // can still abort the active request if needed.
     chainAbortSignal(cardsAbortController!, signal);
   }
-  return cardsPromise;
+  const result = await cardsPromise;
+  // If the awaited promise resolved to undefined (AbortError), another caller
+  // may have already started a new fetch (the catch handler resets
+  // cardsPromise to null, and a concurrent call would set a new one).
+  // Retry with the new promise instead of returning undefined (C72-05).
+  if (result === undefined && cardsPromise) {
+    return cardsPromise;
+  }
+  return result;
 }
 
 export async function loadCategories(signal?: AbortSignal): Promise<CategoryNode[]> {
@@ -260,7 +268,14 @@ export async function loadCategories(signal?: AbortSignal): Promise<CategoryNode
   } else if (signal) {
     chainAbortSignal(categoriesAbortController!, signal);
   }
-  const data = await categoriesPromise;
+  let data = await categoriesPromise;
+  // If the awaited promise resolved to undefined (AbortError), another caller
+  // may have already started a new fetch (the catch handler resets
+  // categoriesPromise to null, and a concurrent call would set a new one).
+  // Retry with the new promise instead of returning [] (C72-05).
+  if (!data && categoriesPromise) {
+    data = await categoriesPromise;
+  }
   // data may be undefined after an AbortError — return empty array so callers
   // that don't pass a signal never crash on an unexpected abort.
   if (!data) return [];
