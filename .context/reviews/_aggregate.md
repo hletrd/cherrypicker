@@ -1,31 +1,30 @@
-# Review Aggregate -- 2026-04-21 (Cycle 66)
+# Review Aggregate -- 2026-04-21 (Cycle 67)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle66-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle67-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-65 per-agent and aggregate files
+- All cycle 1-66 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-65 findings are confirmed fixed except as noted below.
-New in cycle 66: C65-01 confirmed **FIXED** (isValidShortDate now uses MAX_DAYS_PER_MONTH table).
+All prior cycle 1-66 findings are confirmed fixed except as noted below.
+New in cycle 67: C66-01, C66-06, C66-09/C65-02 all confirmed **FIXED**.
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C65-01 | **FIXED** | `pdf.ts:32-50` uses `MAX_DAYS_PER_MONTH` table for month-aware day validation in `isValidShortDate()`. |
-| C65-02 | OPEN (LOW) | `date-utils.ts:100,124` still has redundant `day >= 1` pre-check before `isValidDayForMonth`. |
-| C64-01 | **FIXED** | `parser-date.test.ts:9-10` imports from production `date-utils.ts`. |
-| C64-02 | **FIXED** | `parser/index.ts:20-23` encoding list is `['utf-8', 'cp949']`. |
-| C64-03 | OPEN (LOW) | `CATEGORY_NAMES_KO` hardcoded map still present with TODO comment. |
-| C63-04 | **FIXED** | `date-utils.ts:12-20` adds `daysInMonth()` and `isValidDayForMonth()`. |
-| C63-07 | **FIXED** | `parser/index.ts:29-38` iterates ALL encodings and picks fewest replacement chars. |
-| C62-09 | **FIXED** | `cards.ts:158-168` builds `cardIndex` Map; `getCardById` uses O(1) lookup. |
-| C62-11 | OPEN (LOW) | `store.svelte.ts:154-165` logs non-quota errors but returns 'corrupted' for ALL non-quota errors. |
-| C56-04 | OPEN (LOW) | `date-utils.ts:132` still returns raw input for unparseable dates. |
-| C56-05 | OPEN (LOW) | Zero savings shows "0원" without plus sign. |
+| C66-01 | **FIXED** | Server-side `date-utils.ts` uses `isValidDayForMonth()` in all branches. |
+| C66-06 | **FIXED** | Server-side parser uses `cp949` instead of `euc-kr`. |
+| C66-09/C65-02 | **FIXED** | Web-side `date-utils.ts` redundant `day >= 1` pre-checks removed. |
+| C66-07 | NO-OP | build-stats.ts fallback values (683/24/45) match current cards.json. |
+| C66-02 | OPEN (MEDIUM) | `cachedCategoryLabels` stale across redeployments (carry-forward from C33-02). 11 cycles agree. |
+| C66-03 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction (carry-forward from C33-01). 9 cycles agree. |
+| C66-04 | OPEN (LOW) | `persistToStorage` returns 'corrupted' for non-quota errors (carry-forward from C62-11). 6 cycles agree. |
+| C66-05 | OPEN (LOW) | `FALLBACK_CATEGORIES` hardcoded 13 categories vs 40+ in taxonomy (carry-forward from C64-03). 4 cycles agree. |
+| C66-08 | OPEN (LOW) | `formatIssuerNameKo` and `CATEGORY_COLORS` hardcoded maps will drift. 4 cycles agree. |
+| C66-10 | OPEN (LOW) | `BANK_SIGNATURES` duplicated between server and web (carry-forward from C7-07). 3 cycles agree. |
 
 ---
 
@@ -33,16 +32,11 @@ New in cycle 66: C65-01 confirmed **FIXED** (isValidShortDate now uses MAX_DAYS_
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C66-01 | MEDIUM | HIGH | `packages/parser/src/date-utils.ts:43,52,64,74,85,95` | Server-side `parseDateStringToISO` uses `day <= 31` validation while web-side uses `isValidDayForMonth(year, month, day)`. Server-side parser (CLI) will accept impossible dates like "2024-02-31" that the web parser correctly rejects. |
-| C66-02 | MEDIUM | HIGH | `apps/web/src/lib/store.svelte.ts:327-334` | `cachedCategoryLabels` stale across redeployments (carry-forward from C33-02). 9 cycles agree. |
-| C66-03 | MEDIUM | HIGH | `packages/core/src/categorizer/taxonomy.ts:71-76` | MerchantMatcher substring scan O(n) per transaction (carry-forward from C33-01). 7 cycles agree. |
-| C66-04 | LOW | HIGH | `apps/web/src/lib/store.svelte.ts:154-166` | `persistToStorage` returns 'corrupted' for non-quota errors like circular references, giving misleading user message (carry-forward from C62-11). 4 cycles agree. |
-| C66-05 | LOW | HIGH | `apps/web/src/components/dashboard/TransactionReview.svelte:13-27` | `FALLBACK_CATEGORIES` hardcoded 13 categories vs 40+ in taxonomy. Carry-forward from C64-03. |
-| C66-06 | LOW | HIGH | `packages/parser/src/index.ts:43` | Server-side parser uses `euc-kr` while web-side uses `cp949`. CP949 is a strict superset; EUC-KR may produce more replacement characters for certain Korean text. |
-| C66-07 | LOW | HIGH | `apps/web/src/lib/build-stats.ts:16-18` | Hardcoded fallback stats (`totalCards: 683`) will drift from actual card count. Carry-forward from C8-07. |
-| C66-08 | LOW | MEDIUM | `apps/web/src/lib/formatters.ts:52-79` | `formatIssuerNameKo()` and `CATEGORY_COLORS` are hardcoded maps that must be manually updated when issuers/categories are added. |
-| C66-09 | LOW | HIGH | `apps/web/src/lib/parser/date-utils.ts:100,124` | Redundant `day >= 1` pre-check before `isValidDayForMonth`. Carry-forward from C65-02. |
-| C66-10 | LOW | HIGH | `packages/parser/src/detect.ts` vs `apps/web/src/lib/parser/detect.ts` | `BANK_SIGNATURES` duplicated between server and web. Carry-forward from C7-07. |
+| C67-01 | MEDIUM | HIGH | `packages/core/src/optimizer/greedy.ts:120-146` | `scoreCardsForTransaction` recalculates ALL card rewards for every transaction — O(m*n*k) quadratic behavior in the greedy optimizer. For 500 transactions x 600 cards, produces ~300,000 full `calculateRewards()` calls. Could be optimized with incremental reward tracking. |
+| C67-02 | LOW | HIGH | `packages/parser/src/date-utils.ts:22-29`, `apps/web/src/lib/parser/date-utils.ts:33-41` | `inferYear()` uses `new Date()` timezone-dependent — narrow edge case near midnight Dec 31. Carry-forward from C8-08 (59 cycles, consistently deferred). |
+| C67-03 | LOW | HIGH | `packages/core/src/optimizer/greedy.ts:11-86` | `CATEGORY_NAMES_KO` hardcoded map can drift from YAML taxonomy. Carry-forward from C64-03. TODO comment acknowledges. CLI path has no fallback. |
+| C67-04 | MEDIUM | HIGH | `apps/web/src/lib/parser/xlsx.ts:187-204` | XLSX parser `parseDateToISO` returns Excel serial date WITHOUT month-aware day validation. String path uses `isValidDayForMonth()` but serial-date path bypasses it. Inconsistency with the validation-consistent string path. |
+| C67-05 | LOW | HIGH | `packages/parser/src/xlsx/adapters/index.ts` | Server-side XLSX parser also lacks month-aware day validation for serial dates. Same class as C67-04. |
 
 ---
 
@@ -52,17 +46,18 @@ The following findings have been flagged by multiple cycles, indicating high sig
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| MerchantMatcher/taxonomy O(n) scan | C16, C33, C50, C62, C63, C64, C65, C66 | OPEN (MEDIUM) -- 8 cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21, C23, C25, C26, C33, C62, C63, C64, C65, C66 | OPEN (MEDIUM) -- 10 cycles agree |
-| persistToStorage bare catch / 'corrupted' for all non-quota | C62, C63, C64, C65, C66 | OPEN (LOW) -- 5 cycles agree |
+| MerchantMatcher/taxonomy O(n) scan | C16, C33, C50, C62, C63, C64, C65, C66, C67 | OPEN (MEDIUM) -- 9 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21, C23, C25, C26, C33, C62, C63, C64, C65, C66, C67 | OPEN (MEDIUM) -- 11 cycles agree |
+| persistToStorage bare catch / 'corrupted' for all non-quota | C62, C63, C64, C65, C66, C67 | OPEN (LOW) -- 6 cycles agree |
 | CategoryBreakdown dark mode contrast | C4, C8, C59, C62 | OPEN (LOW) -- 4 cycles agree |
-| Annual savings simple *12 projection | C7, C18, C62, C63, C64, C65, C66 | OPEN (LOW) -- 7 cycles agree |
-| date-utils unparseable passthrough | C56, C62, C63, C64, C65, C66 | OPEN (LOW) -- 6 cycles agree |
-| CSV DATE_PATTERNS divergence risk | C20, C25, C62, C64, C65, C66 | OPEN (LOW) -- 6 cycles agree |
-| Hardcoded fallback drift (CATEGORY_NAMES_KO / build-stats) | C8, C64, C65, C66 | OPEN (LOW) -- 4 cycles agree |
-| BANK_SIGNATURES duplication | C7, C66 | OPEN (LOW) -- 2 cycles agree |
-| Server vs web date-utils validation gap | C66 | NEW (MEDIUM) |
-| Server EUC-KR vs web CP949 | C66 | NEW (LOW) |
+| Annual savings simple *12 projection | C7, C18, C62, C63, C64, C65, C66, C67 | OPEN (LOW) -- 8 cycles agree |
+| date-utils unparseable passthrough | C56, C62, C63, C64, C65, C66, C67 | OPEN (LOW) -- 7 cycles agree |
+| CSV DATE_PATTERNS divergence risk | C20, C25, C62, C64, C65, C66, C67 | OPEN (LOW) -- 7 cycles agree |
+| Hardcoded fallback drift (CATEGORY_NAMES_KO / build-stats) | C8, C64, C65, C66, C67 | OPEN (LOW) -- 5 cycles agree |
+| BANK_SIGNATURES duplication | C7, C66, C67 | OPEN (LOW) -- 3 cycles agree |
+| inferYear() timezone dependence | C8, C67 | OPEN (LOW) -- 2 cycles agree (59 cycles deferred) |
+| XLSX serial date validation gap | C67 | NEW (MEDIUM) |
+| Greedy optimizer O(m*n*k) quadratic | C67 | NEW (MEDIUM) |
 
 ---
 
@@ -80,7 +75,7 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | C7-11 | LOW | persistWarning message misleading for data corruption vs size truncation |
 | C8-05/C4-09 | LOW | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast |
 | C8-07/C4-14/C66-07 | LOW | build-stats.ts fallback values will drift |
-| C8-08 | LOW | inferYear() timezone-dependent near midnight Dec 31 |
+| C8-08/C67-02 | LOW | inferYear() timezone-dependent near midnight Dec 31 |
 | C8-09 | LOW | Test duplicates production code instead of testing it directly |
 | C18-01/C50-08 | LOW | VisibilityToggle $effect directly mutates DOM |
 | C18-02 | LOW | Results page stat elements queried every effect run even on dashboard page |
@@ -96,11 +91,14 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | C56-04 | LOW | date-utils.ts returns raw input for unparseable dates without error reporting |
 | C56-05 | LOW | Zero savings shows "0원" without plus sign |
 | C62-11/C66-04 | LOW | persistToStorage returns 'corrupted' for non-quota errors |
-| C64-03/C66-05 | LOW | CATEGORY_NAMES_KO hardcoded map can drift from YAML taxonomy |
-| C65-02/C66-09 | LOW | date-utils.ts redundant day<=31 pre-check before isValidDayForMonth |
-| C66-01 | MEDIUM | Server-side date-utils.ts lacks month-aware day validation |
-| C66-06 | LOW | Server-side parser uses EUC-KR while web-side uses CP949 |
+| C64-03/C66-05/C67-03 | LOW | CATEGORY_NAMES_KO hardcoded map can drift from YAML taxonomy |
+| C65-02/C66-09 | **FIXED** | Redundant day pre-checks removed |
+| C66-01 | **FIXED** | Server-side date-utils.ts now uses month-aware day validation |
+| C66-06 | **FIXED** | Server-side parser now uses CP949 |
 | C66-08 | LOW | formatIssuerNameKo and CATEGORY_COLORS hardcoded maps will drift |
+| C67-01 | MEDIUM | Greedy optimizer O(m*n*k) quadratic behavior |
+| C67-04 | MEDIUM | XLSX serial-date path lacks month-aware day validation |
+| C67-05 | LOW | Server-side XLSX parser also lacks serial-date validation |
 
 ---
 
