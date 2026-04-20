@@ -22,7 +22,7 @@ import VisibilityToggle from '../components/ui/VisibilityToggle.svelte';
       </div>
       <div class="flex gap-3">
         <button
-          onclick="window.print()"
+          onclick="cherrypickerPrint()"
           class="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--color-primary-dark)]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16" aria-hidden="true">
@@ -59,6 +59,23 @@ import VisibilityToggle from '../components/ui/VisibilityToggle.svelte';
 
     <VisibilityToggle client:load dataContentId="report-data-content" emptyStateId="report-empty-state" />
   </div>
+
+  <script is:inline>
+    function cherrypickerPrint() {
+      // Temporarily remove the `dark` class from <html> so Tailwind dark-mode
+      // variants don't apply during printing. The class is restored after the
+      // print dialog closes (afterprint event). This ensures consistent
+      // light-mode output regardless of the user's active theme (C61-05).
+      var html = document.documentElement;
+      var wasDark = html.classList.contains('dark');
+      if (wasDark) html.classList.remove('dark');
+      window.addEventListener('afterprint', function restore() {
+        if (wasDark) html.classList.add('dark');
+        window.removeEventListener('afterprint', restore);
+      });
+      window.print();
+    }
+  </script>
 
   <style>
     @media print {
