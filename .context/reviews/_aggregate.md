@@ -1,19 +1,20 @@
-# Review Aggregate -- 2026-04-21 (Cycle 54)
+# Review Aggregate -- 2026-04-21 (Cycle 55)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle54-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle55-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-53 per-agent and aggregate files
+- All cycle 1-54 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-53 findings are confirmed fixed except as noted below:
+All prior cycle 1-54 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C54-01 | **FIXED** | `results.js` no longer exists in `public/scripts/` -- only `layout.js` remains |
 | C52-01 | **FIXED** | `parseCSV()` at line 915 and `parseGenericCSV()` at line 121 both strip UTF-8 BOM |
 | C52-02 | **FIXED** | `report.js` deleted from `public/scripts/`; no references found |
 | C52-03 | **FIXED** | `Layout.astro:46` uses `${base}scripts/layout.js` with template literal |
@@ -68,10 +69,8 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C54-01 | LOW | HIGH | `apps/web/public/scripts/results.js:1-22` | `results.js` visibility toggle is redundant with `VisibilityToggle.svelte`. The stat population code was removed (per comment), but the visibility toggle still reads from `sessionStorage` independently of the Svelte store. After a store reset + browser back navigation, the inline script may briefly show data content while the store has no data. Fix: Remove the visibility toggle from `results.js` entirely and let `VisibilityToggle.svelte` be the sole controller. |
-| C54-02 | CLOSED | -- | `apps/web/public/scripts/dashboard.js` | **False positive.** No `dashboard.js` exists in `public/scripts/`. The dashboard page uses `VisibilityToggle.svelte` directly without an inline script. This finding is reclassified as non-existent. |
-
-Note: C54-03 (OptimalCardMap Set mutation) was confirmed FIXED in the current codebase (lines 37-44 use immutable Set pattern).
+| C55-02 | LOW | MEDIUM | `apps/web/src/components/cards/CardDetail.svelte:30-35` | `rateColorClass` returns `text-green-600` and `text-blue-600` without dark mode overrides, causing poor contrast on dark backgrounds. Other parts of the same component (e.g., card type badges at lines 125-128, tier header at line 217) have `dark:` variants. Fix: Add `dark:text-green-400` and `dark:text-blue-400`. |
+| C55-05 | MEDIUM | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:45-76,215` | Count-up animation from positive to negative target (or vice versa) briefly passes through zero, showing "+0원" due to the `displayedSavings >= 0 ? '+' : ''` sign prefix. During the 600ms animation, this creates a visual flicker. Fix: Snap through zero or suppress the '+' prefix when the value rounds to zero during sign transitions. |
 
 ---
 
@@ -89,8 +88,9 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | CategoryBreakdown maxPercentage=1 | C41, C42, C43, C49, C50 | **FIXED** |
 | SpendingSummary sessionStorage dismiss | C4, C51 | **FIXED** |
 | CSV BOM handling gap | C52 | **FIXED** |
-| Inline script / VisibilityToggle split-brain | C54, C51, C52 | OPEN (LOW) -- 2 cycles agree (C54-01) |
+| Inline script / VisibilityToggle split-brain | C54, C51, C52 | **FIXED** (results.js deleted) |
 | OptimalCardMap Set mutation | C51, C54 | **FIXED** |
+| CardDetail dark mode contrast | C55, C53 (partial) | OPEN (LOW) -- C53 fixed tier header, C55 finds rate class gap |
 
 ---
 
