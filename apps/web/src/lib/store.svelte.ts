@@ -332,8 +332,16 @@ function createAnalysisStore() {
   async function getCategoryLabels(): Promise<Map<string, string>> {
     if (cachedCategoryLabels) return cachedCategoryLabels;
     const nodes = await loadCategories();
-    cachedCategoryLabels = buildCategoryLabelMap(nodes);
-    return cachedCategoryLabels;
+    // Don't cache an empty Map — loadCategories() returns [] on AbortError,
+    // and caching the empty result would poison all subsequent reoptimize()
+    // calls to show raw English keys instead of Korean labels (C72-03).
+    // Returning the empty Map for this call is acceptable because the caller
+    // (reoptimize) will still function — labels are cosmetic, not structural.
+    const labels = buildCategoryLabelMap(nodes);
+    if (nodes.length > 0) {
+      cachedCategoryLabels = labels;
+    }
+    return labels;
   }
 
   return {
