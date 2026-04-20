@@ -2,7 +2,7 @@ import { readFile } from 'fs/promises';
 import type { BankId, ParseResult } from '../types.js';
 import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
-import { parseDateStringToISO } from '../date-utils.js';
+import { parseDateStringToISO, isValidDayForMonth } from '../date-utils.js';
 
 // SheetJS is imported as a CommonJS module
 import xlsx from 'xlsx';
@@ -32,10 +32,18 @@ function parseDateToISO(raw: unknown): string {
     // Excel serial date number
     const date = xlsx.SSF.parse_date_code(raw);
     if (date) {
-      const y = date.y.toString().padStart(4, '0');
-      const m = date.m.toString().padStart(2, '0');
-      const d = date.d.toString().padStart(2, '0');
-      return `${y}-${m}-${d}`;
+      // Validate month/day ranges using month-aware day validation (C67-04).
+      // This ensures serial dates like "Feb 31" are rejected, matching the
+      // string-parsing path which uses isValidDayForMonth() in date-utils.ts.
+      if (date.m >= 1 && date.m <= 12 && isValidDayForMonth(date.y, date.m, date.d)) {
+        const y = date.y.toString().padStart(4, '0');
+        const m = date.m.toString().padStart(2, '0');
+        const d = date.d.toString().padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      // Invalid date from serial number — return as-is so the caller can detect
+      // the malformed value, matching the string-path fallback behavior.
+      return String(raw);
     }
   }
   if (typeof raw === 'string') {
