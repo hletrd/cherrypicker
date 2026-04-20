@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-22 (Cycle 31)
+# Review Aggregate -- 2026-04-20 (Cycle 32)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle31-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle32-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-30 per-agent and aggregate files
+- All cycle 1-31 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-30 findings are confirmed fixed except as noted below:
+All prior cycle 1-31 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -33,11 +33,13 @@ All prior cycle 1-30 findings are confirmed fixed except as noted below:
 | C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks (deferred) |
 | C22-05 | OPEN (LOW) | TransactionReview changeCategory O(n) array copy (deferred) |
 | C24-06 | OPEN (LOW) | buildCardResults totalSpending no negative amount guard (safe in practice) |
-| C25-01/C29-01 | FIXED | CATEGORY_COLORS utility subcategories now high-contrast in dark mode (#facc15, #fb923c, #38bdf8) |
-| C25-09/C53-03/C29-02 | FIXED | CardDetail performance tier header now uses bg-blue-50 dark:bg-blue-900/50 with text-blue-700 dark:text-blue-300 |
-| C27-01/C30-03 | FIXED | loadFromStorage inner catch now logs console.warn when sessionStorage is available but removeItem fails |
+| C25-01/C29-01 | FIXED | CATEGORY_COLORS utility subcategories now high-contrast in dark mode |
+| C25-09/C53-03/C29-02 | FIXED | CardDetail performance tier header now uses bg-blue-50 dark:bg-blue-900/50 |
+| C27-01/C30-03 | FIXED | loadFromStorage inner catch now logs console.warn |
 | C30-02 | FIXED | parseCSV generic fallback path now wrapped in try/catch for defensive consistency |
 | C27-02 | OPEN (LOW) | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
+| C31-01 | FIXED | SpendingSummary dismiss catch now logs console.warn matching C27-01/C30-03 pattern |
+| C31-02 | FIXED | Redundant Map.set() in greedyOptimize replaced with explicit first-insertion check |
 
 ---
 
@@ -45,8 +47,9 @@ All prior cycle 1-30 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C31-01 | LOW | High | `SpendingSummary.svelte:147` | Dismiss button `catch {}` silently swallows sessionStorage errors without console.warn -- inconsistent with C27-01/C30-03 fix pattern in loadFromStorage/clearStorage |
-| C31-02 | LOW | Medium | `greedy.ts:289-290` | Redundant `Map.set()` call after in-place `push()` on same array reference -- no-op on cache hit, adds cognitive overhead |
+| C32-01 | MEDIUM | High | `packages/parser/src/csv/generic.ts:124` | Server-side `parseGenericCSV` uses `parseInt` for amount parsing while web-side uses `Math.round(parseFloat(...))` -- produces different amounts for decimal inputs (e.g., "1234.56" → 1234 vs 1235) |
+| C32-02 | LOW | High | `packages/parser/src/csv/generic.ts:231-236` | Server-side `parseGenericCSV` does not filter zero-amount transactions, while web-side does (C26-02) -- zero-amount rows inflate transaction counts in CLI output |
+| C32-03 | LOW | Medium | `packages/parser/src/csv/index.ts:71-77` | Server-side `parseCSV` generic fallback has no try/catch wrapper, while web-side does (C30-02) -- unexpected throws from parseGenericCSV propagate uncaught |
 
 ---
 
