@@ -1,6 +1,6 @@
 # Plan: Cycle 34 Fixes — Server-side PDF/XLSX Parity Bugs + DRY Cleanup
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Source findings:** C34-01 (MEDIUM, High), C34-02 (LOW, High), C34-03 (LOW, High), C34-05 (LOW, High)
 
 ---
@@ -202,7 +202,7 @@ Remove the local `inferYear` function.
 
 | Task | Status |
 |---|---|
-| 1 | PENDING |
-| 2 | PENDING |
-| 3 | PENDING |
-| 4 | PENDING |
+| 1 | DONE |
+| 2 | DONE |
+| 3 | DONE |
+| 4 | DONE |
