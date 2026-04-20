@@ -110,9 +110,11 @@ const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
 
 /** Set when sessionStorage persistence partially or fully failed.
  *  - 'truncated': transactions omitted due to size limit
- *  - 'corrupted': save failed entirely (quota exceeded) or loaded data failed validation
- *  Read by the store to inform the user that their data may not survive a tab close. */
-type PersistWarningKind = 'truncated' | 'corrupted' | null;
+ *  - 'corrupted': save failed due to quota exceeded, or loaded data failed validation
+ *  - 'error': unexpected non-quota persistence failure (e.g., circular reference)
+ *  Read by the store to inform the user that their data may not survive a tab close.
+ *  Distinguishes quota errors from unexpected failures for better diagnostics (C66-04/C69). */
+type PersistWarningKind = 'truncated' | 'corrupted' | 'error' | null;
 
 /** Result of persisting analysis data to sessionStorage.
  *  - kind: 'truncated' (transactions omitted), 'corrupted' (save failed), or null (success)
@@ -158,11 +160,12 @@ function persistToStorage(data: AnalysisResult): PersistResult {
       return { kind: 'corrupted', truncatedTxCount: null };
     }
     // Non-quota errors (e.g., circular reference in JSON.stringify) are unexpected
-    // and should be logged for diagnostics while still treating the save as failed
+    // and should be logged for diagnostics. Return 'error' instead of 'corrupted'
+    // to distinguish code bugs from quota failures (C66-04/C69).
     if (typeof console !== 'undefined') {
       console.warn('[cherrypicker] Unexpected error persisting analysis data:', err);
     }
-    return { kind: 'corrupted', truncatedTxCount: null };
+    return { kind: 'error', truncatedTxCount: null };
   }
   return { kind: null, truncatedTxCount: null };
 }
