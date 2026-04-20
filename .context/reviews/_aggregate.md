@@ -1,17 +1,17 @@
-# Review Aggregate -- 2026-04-20 (Cycle 15)
+# Review Aggregate -- 2026-04-20 (Cycle 16)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle15-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle16-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
-- Cycle 14 aggregate (previously `_aggregate.md`)
+- Cycle 15 aggregate (previously `_aggregate.md`)
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-14 findings are confirmed fixed except as noted below:
+All prior cycle 1-15 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -55,6 +55,7 @@ All prior cycle 1-14 findings are confirmed fixed except as noted below:
 | C8-10 | OPEN (LOW) | csv.ts installment NaN implicitly filtered by `> 1` comparison |
 | C8-11 | OPEN (LOW) | pdf.ts fallback date regex could match decimal numbers like "3.5" |
 | C9R-03 | OPEN (LOW) | pdf.ts negative amounts (refunds) silently dropped |
+| C15-01 | OPEN (LOW) | `undefined as unknown as` type escape in cards.ts AbortError path |
 
 ---
 
@@ -62,7 +63,10 @@ All prior cycle 1-14 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C15-01 | LOW | Medium | `cards.ts:201,234` | `undefined as unknown as CardsJson` type escape after AbortError is a code smell; downstream null guards protect against it, but the cast is unsafe if new callers are added without null checks |
+| C16-01 | MEDIUM | High | `store.svelte.ts:148` | `isValidTx` requires `tx.amount > 0`, dropping negative-amount (refund) transactions on sessionStorage restore. Extends C9R-03 — even if the parser passes refunds through, they are lost on page reload. |
+| C16-02 | LOW | High | `csv.ts:246` | Generic CSV parser uses English error messages (`Cannot parse amount`) while all bank-specific adapters use Korean (`금액을 해석할 수 없습니다`). Inconsistent UX for a Korean-language app. |
+| C16-03 | LOW | Medium | `SpendingSummary.svelte:138` | "이전 달 실적" label misleading for multi-month gaps (e.g., 3-month gap shows "previous month" when it's actually 3 months prior). |
+| C16-04 | LOW | High | `CardGrid.svelte:73-78` | CardGrid fetches cards in onMount without AbortController cleanup, inconsistent with CardDetail/CardPage patterns. Minor — cached data prevents duplicate requests, but state is set on detached components. |
 
 ---
 
@@ -88,7 +92,7 @@ All prior cycle 1-14 findings are confirmed fixed except as noted below:
 | C8-09 | LOW | Test duplicates production code |
 | C8-10 | LOW | csv.ts installment NaN fragile implicit filter |
 | C8-11 | LOW | pdf.ts fallback date regex could match decimals |
-| C9R-03 | LOW | pdf.ts negative amounts (refunds) silently dropped |
+| C9R-03/C16-01 | LOW/MEDIUM | pdf.ts negative amounts dropped at parse AND on sessionStorage restore (C16-01 extends C9R-03) |
 | D-106 | LOW | `apps/web/src/lib/parser/pdf.ts:296` bare `catch {}` |
 | D-110 | LOW | Non-latest month edits have no visible optimization effect |
 | D-66 | LOW | CardGrid issuer filter shows issuers with 0 cards after type filter |
