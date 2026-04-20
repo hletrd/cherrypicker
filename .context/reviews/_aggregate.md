@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-22 (Cycle 34)
+# Review Aggregate -- 2026-04-20 (Cycle 35)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle34-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle35-comprehensive.md` (full re-read of all source files, re-verified all prior findings, cross-verified parseAmount consistency across ALL parsers including bank adapters)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-33 per-agent and aggregate files
+- All cycle 1-34 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-33 findings are confirmed fixed except as noted below:
+All prior cycle 1-34 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -30,16 +30,17 @@ All prior cycle 1-33 findings are confirmed fixed except as noted below:
 | C19-05 | OPEN (LOW) | CardDetail navigation uses full page reload (deferred: requires ClientRouter) |
 | C21-02 | OPEN (LOW) | cards.ts shared fetch AbortSignal race (deferred) |
 | C21-04/C23-02/C25-02/C26-03 | OPEN (LOW->MEDIUM) | cachedCategoryLabels/cachedCoreRules invalidated on explicit reset but stale across long-lived tabs |
-| C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks (deferred) |
+| C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks |
 | C22-05 | OPEN (LOW) | TransactionReview changeCategory O(n) array copy (deferred) |
 | C24-06 | OPEN (LOW) | buildCardResults totalSpending no negative amount guard (safe in practice) |
 | C27-02 | OPEN (LOW) | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
-| C31-01 | FIXED | SpendingSummary dismiss catch now logs console.warn matching C27-01/C30-03 pattern |
-| C31-02 | FIXED | greedyOptimize Map.set() replaced with if/else -- only .set() on first insertion |
-| C33-01 | PARTIALLY FIXED | SUBSTRING_SAFE_ENTRIES pre-computed at module level; still O(n) substring scan per transaction but avoids per-call allocation |
-| C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
-| C33-04 | FIXED | Server-side splitCSVLine now handles RFC 4180 doubled quotes |
-| C33-06 | FIXED | buildCardResults uses tx.amount directly instead of Math.abs(tx.amount) |
+| C33-01 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
+| C33-02 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction |
+| C34-01 | FIXED | Server-side PDF parseAmount now returns null for NaN, uses Math.round(parseFloat(...)), handles parenthesized negatives |
+| C34-02 | FIXED | Server-side XLSX parseAmount string path now uses Math.round(parseFloat(...)) |
+| C34-03 | FIXED | Server-side PDF findDateCell now has isValidShortDate() |
+| C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner -- architectural gap |
+| C34-05 | FIXED | inferYear centralized into date-utils.ts, shared across CSV/XLSX/PDF |
 
 ---
 
@@ -47,11 +48,9 @@ All prior cycle 1-33 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C34-01 | MEDIUM | High | `packages/parser/src/pdf/index.ts:102-108` | Server-side PDF parseAmount returns 0 for NaN (not null), uses parseInt (truncation) instead of Math.round(parseFloat(...)), and lacks parenthesized negative handling -- parity bug with fixed web-side |
-| C34-02 | LOW | High | `packages/parser/src/xlsx/index.ts:136` | Server-side XLSX parseAmount string path uses parseInt (truncation) instead of Math.round(parseFloat(...)) -- inconsistent with numeric path |
-| C34-03 | LOW | High | `packages/parser/src/pdf/index.ts:110-122` | Server-side PDF findDateCell does not validate month/day ranges for SHORT_MD_DATE_PATTERN (no isValidShortDate) -- parity bug with web-side |
-| C34-04 | LOW | High | `packages/parser/src/pdf/index.ts:131-187, 189-258` | Server-side PDF has no fallback line scanner -- missing entire parsing tier present on web-side |
-| C34-05 | LOW | High | `packages/parser/src/csv/generic.ts:33-40`, `xlsx/index.ts:31-38`, `pdf/index.ts:23-30` | inferYear duplicated 3 times across server-side parsers -- not centralized like web-side date-utils.ts |
+| C35-01 | MEDIUM | High | `packages/parser/src/csv/{hyundai,kb,shinhan,woori,samsung,hana,nh,lotte,ibk,bc}.ts:28` | All 10 bank-specific CSV adapters use `parseInt(cleaned, 10)` instead of `Math.round(parseFloat(...))` for amount parsing and return `NaN` instead of `null` -- parity bug with all fixed parsers (same class as C34-01/C34-02) |
+| C35-02 | LOW | High | All 10 bank-specific CSV adapters | Bank adapters don't filter zero-amount rows -- generic CSV does `if (amount === 0) continue;` but bank adapters pass zero amounts through |
+| C35-03 | LOW | High | All 10 bank-specific CSV adapters | Bank adapters have duplicated `parseDateToISO` without `inferYear` support -- missing Korean dates, short dates, and short-year dates that the generic CSV handles |
 
 ---
 
@@ -65,6 +64,7 @@ All prior cycle 1-33 findings are confirmed fixed except as noted below:
 | C4-13/C9-08/D-43/D-74 | LOW | Small-percentage bars nearly invisible |
 | C20-02/C25-03 | LOW | csv.ts DATE_PATTERNS/AMOUNT_PATTERNS divergence risk with date-utils.ts |
 | C20-04/C25-10 | LOW | pdf.ts module-level regex constants divergence risk with date-utils.ts |
+| C34-04 | LOW | Server-side PDF has no fallback line scanner |
 | C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro |
 | D-01 through D-111 | Various | See deferred items file for full list |
 
