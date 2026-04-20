@@ -1,19 +1,23 @@
-# Review Aggregate -- 2026-04-21 (Cycle 42)
+# Review Aggregate -- 2026-04-21 (Cycle 43)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle42-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle43-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-41 per-agent and aggregate files
+- All cycle 1-42 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-41 findings are confirmed fixed except as noted below:
+All prior cycle 1-42 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C42-01 | FIXED | All parsers now use `amount <= 0`: web-side PDF, CSV, XLSX, all 10 server-side CSV adapters, server-side generic |
+| C42-02 | FIXED | `analyzer.ts:290` and `store.svelte.ts:425` now use `tx.amount` instead of `Math.abs(tx.amount)` |
+| C53-01 | FIXED | `TransactionReview.svelte:131` now uses `editedTxs[idx] = updated` (spread-copy + index assignment) |
+| C53-03 | FIXED | `CardDetail.svelte:217` now has `dark:text-blue-300` on performance tier header row |
 | C7-04 | OPEN (LOW) | TransactionReview $effect re-sync fragile -- no change since cycle 7 |
 | C7-06 | OPEN (LOW) | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
 | C7-07 | OPEN (LOW) | BANK_SIGNATURES duplicated between packages/parser and apps/web |
@@ -22,7 +26,7 @@ All prior cycle 1-41 findings are confirmed fixed except as noted below:
 | C8-07/C4-14 | OPEN (LOW) | build-stats.ts fallback values will drift |
 | C8-08 | OPEN (LOW) | inferYear() timezone-dependent near midnight Dec 31 |
 | C8-09 | OPEN (LOW) | Test duplicates production code instead of testing it directly |
-| C18-01 | OPEN (MEDIUM) | VisibilityToggle $effect directly mutates DOM; now uses cached refs with isConnected check (C21-01 fix) but pattern remains fragile |
+| C18-01 | OPEN (LOW) | VisibilityToggle $effect directly mutates DOM; now uses cached refs with isConnected check (C21-01 fix) but pattern remains fragile |
 | C18-02 | OPEN (LOW) | Results page stat elements queried every effect run even on dashboard page |
 | C18-03 | OPEN (LOW) | Annual savings projection simply multiplies monthly by 12 without seasonal adjustment |
 | C18-04 | OPEN (LOW) | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
@@ -31,23 +35,11 @@ All prior cycle 1-41 findings are confirmed fixed except as noted below:
 | C21-02 | OPEN (LOW) | cards.ts shared fetch AbortSignal race (deferred) |
 | C21-04/C23-02/C25-02/C26-03 | OPEN (LOW->MEDIUM) | cachedCategoryLabels/cachedCoreRules invalidated on explicit reset but stale across long-lived tabs |
 | C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks |
-| C22-05/C39-02 | FIXED | TransactionReview changeCategory now uses O(1) index mutation instead of O(n) array copy |
 | C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed with SUBSTRING_SAFE_ENTRIES |
 | C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
 | C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner -- architectural gap |
-| C39-01 | FIXED | vitest gate now passes: 8 test files, 189 tests |
-| C39-03 | FIXED | Web-side parseFile now adds encoding quality warning when bestReplacements > 50 |
-| C39-05 | FIXED | FileDropzone addFiles now adds valid files first, then checks total size |
-| C39-04 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 -- theoretical edge case |
-| C39-06/C40-01 | SUPERSEDED by C41-01 | SavingsComparison annual projection issue evolved -- see C41-01 |
-| C40-02 | FIXED | TransactionReview changeCategory index mutation now has explanatory comment |
-| C40-03 | NO FIX NEEDED | formatDateKo/formatDateShort redundant parseInt validation -- appropriate defensive coding |
-| C40-04 | FIXED | buildCardResults has explicit comment documenting pre-filtered positive-amount requirement |
-| C41-01 | FIXED | SavingsComparison monthly/annual animation now synced via displayedAnnualSavings |
-| C41-02 | FIXED | SpendingSummary formatPeriod uses formatYearMonthKo from formatters.ts |
-| C41-03 | FIXED | FileDropzone parsePreviousSpending extracted to named function |
-| C41-04 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 -- see C42-03 |
-| C41-05 | OPEN (LOW) | cards.ts loadCategories returns empty array on AbortError -- see C42-04 |
+| C41-04/C42-03/C43-03 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 -- theoretical edge case |
+| C41-05/C42-04 | OPEN (LOW) | cards.ts loadCategories returns empty array on AbortError -- reasonable fallback |
 
 ---
 
@@ -55,10 +47,9 @@ All prior cycle 1-41 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | Description | File+line |
 |---|---|---|---|---|
-| C42-01 | MEDIUM | High | All parsers except server-side PDF allow negative-amount (refund) transactions to pass through, inflating transaction counts and monthly spending totals | `apps/web/src/lib/parser/pdf.ts:246`, `csv.ts:72`, `xlsx.ts:400`, all server CSV adapters |
-| C42-02 | MEDIUM | High | `Math.abs(tx.amount)` in monthlyBreakdown computation double-counts refunds as positive spending | `apps/web/src/lib/analyzer.ts:290`, `store.svelte.ts:425` |
-| C42-03 | LOW | Medium | maxPercentage initial value 1 -- theoretical edge case, not a real bug | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129` |
-| C42-04 | LOW | High | loadCategories returns empty array on AbortError -- reasonable fallback, minimal impact | `apps/web/src/lib/cards.ts:246` |
+| C43-01 | MEDIUM | High | `isOptimizableTx` allows negative amounts through sessionStorage restoration -- inconsistent with parser-level `amount <= 0` filter | `apps/web/src/lib/store.svelte.ts:168` |
+| C43-02 | LOW | High | `Math.abs(tx.amount)` in performanceExclusions is redundant after C42-01 fix | `apps/web/src/lib/analyzer.ts:210` |
+| C43-03 | LOW | Medium | maxPercentage initial value 1 -- theoretical edge case (same as C41-04/C42-03, carried forward) | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129` |
 
 ---
 
