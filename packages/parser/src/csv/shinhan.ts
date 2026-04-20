@@ -1,32 +1,14 @@
 import type { BankAdapter, ParseResult, RawTransaction, ParseError } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
+import { parseDateStringToISO } from '../date-utils.js';
 
-function parseDateToISO(raw: string): string {
-  const cleaned = raw.trim();
-  const fullMatch = cleaned.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
-  if (fullMatch) {
-    const month = parseInt(fullMatch[2]!, 10);
-    const day = parseInt(fullMatch[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
-    }
-  }
-  if (/^\d{8}$/.test(cleaned)) {
-    const month = parseInt(cleaned.slice(4, 6), 10);
-    const day = parseInt(cleaned.slice(6, 8), 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
-    }
-  }
-  return cleaned;
-}
-
-function parseAmount(raw: string): number {
+function parseAmount(raw: string): number | null {
   let cleaned = raw.trim().replace(/원$/, '').replace(/,/g, '');
   const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNeg) cleaned = cleaned.slice(1, -1);
-  const n = parseInt(cleaned, 10);
-  if (Number.isNaN(n)) return NaN;
+  if (!cleaned) return null;
+  const n = Math.round(parseFloat(cleaned));
+  if (Number.isNaN(n)) return null;
   return isNeg ? -n : n;
 }
 
@@ -95,15 +77,16 @@ export const shinhanAdapter: BankAdapter = {
       if (!dateRaw && !merchantRaw) continue;
 
       const amount = parseAmount(amountRaw);
-      if (Number.isNaN(amount)) {
+      if (amount === null) {
         if (amountRaw.trim()) {
           errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}`, raw: line });
         }
         continue;
       }
+      if (amount === 0) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw),
+        date: parseDateStringToISO(dateRaw),
         merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
         amount,
       };
