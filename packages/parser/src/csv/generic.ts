@@ -1,6 +1,7 @@
 import type { BankId, ParseError, ParseResult, RawTransaction } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
 import { parseDateStringToISO } from '../date-utils.js';
+import { splitCSVLine, parseCSVAmount, parseCSVInstallments } from './shared.js';
 
 // Korean date patterns
 const DATE_PATTERNS = [
@@ -23,52 +24,9 @@ function isAmountLike(value: string): boolean {
   return AMOUNT_PATTERNS.some((p) => p.test(value.trim()));
 }
 
-function isMerchantLike(header: string): boolean {
-  const merchantKeywords = ['가맹점', '이용처', '상호', '업체', '가게', '상점', 'merchant', '이용가맹점'];
-  return merchantKeywords.some((k) => header.includes(k));
-}
-
 // Use shared parseDateStringToISO from date-utils.ts for date parsing.
 // The local parseDateToISO was removed in favor of the centralized
 // implementation to avoid divergence (C35-03).
-
-function parseAmount(raw: string): number | null {
-  let cleaned = raw.trim().replace(/원$/, '').replace(/,/g, '');
-  const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
-  if (isNeg) cleaned = cleaned.slice(1, -1);
-  if (!cleaned) return null;
-  // Use Math.round(parseFloat(...)) to match the web-side parser's rounding
-  // behavior (C21-03/C32-01). Korean Won amounts are always integers, but
-  // formula-rendered CSV cells may contain decimal remainders; rounding is
-  // more correct than truncation.
-  const n = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(n)) return null;
-  return isNeg ? -n : n;
-}
-
-function splitCSVLine(line: string, delimiter: string): string[] {
-  if (delimiter === ',') {
-    // Handle quoted fields for comma-separated
-    const result: string[] = [];
-    let inQuotes = false;
-    let current = '';
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i]!;
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; } // RFC 4180 escaped quote
-        else { inQuotes = !inQuotes; }
-      } else if (char === delimiter && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current.trim());
-    return result;
-  }
-  return line.split(delimiter).map((v) => v.trim());
-}
 
 export function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   const delimiter = detectCSVDelimiter(content);
@@ -150,7 +108,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
 
     if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
-    const amount = parseAmount(amountRaw);
+    const amount = parseCSVAmount(amountRaw);
     if (amount === null) {
       if (amountRaw.trim()) {
         errors.push({ line: i + 1, message: `Cannot parse amount: ${amountRaw}`, raw: line });
@@ -169,8 +127,8 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     };
 
     if (installmentsCol !== -1 && cells[installmentsCol]) {
-      const inst = parseInt(cells[installmentsCol] ?? '', 10);
-      if (!Number.isNaN(inst) && inst > 1) tx.installments = inst;
+      const inst = parseCSVInstallments(cells[installmentsCol]);
+      if (inst !== undefined) tx.installments = inst;
     }
 
     if (categoryCol !== -1 && cells[categoryCol]) {
