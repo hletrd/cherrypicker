@@ -151,8 +151,18 @@ function persistToStorage(data: AnalysisResult): PersistResult {
         return { kind: null, truncatedTxCount: null }; // Full save succeeded
       }
     }
-  } catch {
-    return { kind: 'corrupted', truncatedTxCount: null }; // quota exceeded or SSR — save failed entirely
+  } catch (err) {
+    // QuotaExceededError is expected in private browsing or with very large data
+    if (typeof DOMException !== 'undefined' && err instanceof DOMException &&
+        (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+      return { kind: 'corrupted', truncatedTxCount: null };
+    }
+    // Non-quota errors (e.g., circular reference in JSON.stringify) are unexpected
+    // and should be logged for diagnostics while still treating the save as failed
+    if (typeof console !== 'undefined') {
+      console.warn('[cherrypicker] Unexpected error persisting analysis data:', err);
+    }
+    return { kind: 'corrupted', truncatedTxCount: null };
   }
   return { kind: null, truncatedTxCount: null };
 }
