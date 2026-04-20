@@ -22,49 +22,40 @@
 
 ## Implementation Steps
 
-### Step 1: Fix CATEGORY_COLORS dark mode contrast (C25-01)
+### Step 1: Fix CATEGORY_COLORS dark mode contrast (C25-01) -- DONE
 
-File: `apps/web/src/components/dashboard/CategoryBreakdown.svelte`
+Commit: `000000026e` fix(web): improve CATEGORY_COLORS dark mode contrast
 
-Replace near-invisible dark-mode colors with lighter alternatives that maintain the same hue family:
 - `water: '#1f2937'` → `water: '#64748b'` (slate-500, visible on dark bg)
 - `gas: '#374151'` → `gas: '#94a3b8'` (slate-400, visible on dark bg)
 - `electricity: '#4b5563'` → `electricity: '#9ca3af'` (gray-400, visible on dark bg)
 
-### Step 2: Add console.warn to pdf.ts tryStructuredParse catch (C25-06/D-106)
+### Step 2: Add console.warn to pdf.ts tryStructuredParse catch (C25-06/D-106) -- DONE
 
-File: `apps/web/src/lib/parser/pdf.ts`
+Commit: `00000003d6` fix(web): add diagnostic logging to pdf.ts tryStructuredParse catch
 
-Change `catch { return null; }` to:
-```typescript
-catch (err) {
-  console.warn('[cherrypicker] Structured PDF table parse failed, falling back to line scan:', err instanceof Error ? err.message : String(err));
-  return null;
-}
-```
+- Bare `catch {}` replaced with `catch (err)` that logs a warning before returning null
+- Fallback line-scanner behavior preserved
 
-### Step 3: Fix CardDetail performance tier header dark mode contrast (C25-09/C53-03)
+### Step 3: Fix CardDetail performance tier header dark mode contrast (C25-09/C53-03) -- DONE
 
-File: `apps/web/src/components/cards/CardDetail.svelte`
+Commit: `00000004d4` fix(web): improve performance tier header dark mode contrast in CardDetail
 
-Change `dark:text-blue-300` to `dark:text-blue-200` on the performance tier group header row.
+- `dark:text-blue-300` changed to `dark:text-blue-200` on performance tier group header row
 
-### Step 4: Add negative amount guard in buildCardResults (C25-04/C24-06)
+### Step 4: Add negative amount guard in buildCardResults (C25-04/C24-06) -- DONE
 
-File: `packages/core/src/optimizer/greedy.ts`
+Commit: `00000005ff` fix(core): add Math.abs guard in buildCardResults totalSpending
 
-Change:
-```typescript
-const totalSpending = assignedTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-```
-To:
-```typescript
-const totalSpending = assignedTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-```
+- `sum + tx.amount` changed to `sum + Math.abs(tx.amount)` in totalSpending reduce
 
-### Step 5: Run quality gates
+### Step 5: Run quality gates -- DONE
 
-Run all gates: lint, typecheck, test (bun test), build
+All gates pass:
+- Lint: 0 errors, 0 warnings across all workspaces
+- Typecheck: 0 errors, 0 warnings across all workspaces
+- Tests: 266 pass, 0 fail
+- Build: 5 pages built successfully
 
 ## Deferred Items
 
