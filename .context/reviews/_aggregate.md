@@ -1,21 +1,24 @@
-# Review Aggregate -- 2026-04-21 (Cycle 72)
+# Review Aggregate -- 2026-04-22 (Cycle 73)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle72-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle73-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-71 per-agent and aggregate files
+- All cycle 1-72 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-71 findings are confirmed fixed except as noted below.
+All prior cycle 1-72 findings are confirmed fixed except as noted below.
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C71-01 | **FIXED** | `clearAllFiles()` and `removeFile()` (when last file) now reset `bank` and `previousSpending`. |
-| C71-02 | **FIXED** | `analyzeMultipleFiles` and `parseAndCategorize` guard `categoryNodes.length === 0` and throw. |
+| C72-01 | **FIXED** | `handleRetry()` now clears `navigateTimeout` at line 266. |
+| C72-02 | **FIXED** | `optimizeFromTransactions()` guards `transformed.length > 0` before caching (lines 189-191). |
+| C72-03 | **FIXED** | `getCategoryLabels()` guards `nodes.length > 0` before caching (lines 341-343). |
+| C72-04 | **FIXED** | `addFiles()` now accumulates all error types into `errorParts[]` (lines 162-175). |
+| C72-05 | **FIXED** | `loadCardsData()` and `loadCategories()` both retry on undefined/aborted promise (lines 237-240, 276-278). |
 | C70-01 | **FIXED** | `detectBank` caps confidence at 0.5 for single-pattern banks. |
 | C69-02 | **FIXED** | `parseCSVAmount`/`parseAmount` handle parenthesized negatives. |
 | C68-01 | **FIXED** | Server-side PDF `isValidShortDate` uses `MAX_DAYS_PER_MONTH` table. |
@@ -26,8 +29,8 @@ All prior cycle 1-71 findings are confirmed fixed except as noted below.
 | C70-05 | OPEN (LOW) | BANK_SIGNATURES duplicated between web and server. |
 | C69-01 | OPEN (LOW) | Tiny savings animation flicker. |
 | C67-01 | OPEN (MEDIUM) | Greedy optimizer O(m*n*k) quadratic behavior unchanged. |
-| C66-02 | OPEN (MEDIUM) | `cachedCategoryLabels` stale across redeployments. 14+ cycles agree. |
-| C66-03 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction. 11+ cycles agree. |
+| C66-02 | OPEN (MEDIUM) | `cachedCategoryLabels` stale across redeployments. 15+ cycles agree. |
+| C66-03 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction. 12+ cycles agree. |
 
 ---
 
@@ -35,11 +38,13 @@ All prior cycle 1-71 findings are confirmed fixed except as noted below.
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C72-01 | MEDIUM | HIGH | `apps/web/src/components/upload/FileDropzone.svelte:259-262` | `handleRetry()` doesn't clear `navigateTimeout`, causing unexpected dashboard navigation if retry is clicked within 1200ms of success. |
-| C72-02 | MEDIUM | HIGH | `apps/web/src/lib/analyzer.ts:181-184` | `cachedCoreRules` is permanently set to `[]` when `getAllCardRules()` returns empty on AbortError. All subsequent optimizations produce 0 rewards until manual reset. |
-| C72-03 | LOW | MEDIUM | `apps/web/src/lib/store.svelte.ts:332-337` | `getCategoryLabels()` caches empty Map on AbortError, causing all subsequent reoptimizations to show raw English keys instead of Korean labels. |
-| C72-04 | LOW | HIGH | `apps/web/src/components/upload/FileDropzone.svelte:160-169` | `addFiles()` shows only the first error category when multiple error types occur (oversized, invalid format, duplicate). User must retry multiple times to discover all issues. |
-| C72-05 | LOW | MEDIUM | `apps/web/src/lib/cards.ts:193-233` | `loadCategories()`/`loadCardsData()` have an AbortController race: when an in-flight fetch is aborted and a new one starts, the second caller awaiting the old promise receives `[]` instead of the new fetch result. |
+| C73-01 | LOW | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:46-76` | Annual projection animation state (`displayedAnnualSavings`) may be stale briefly after store reset, but hidden by conditional rendering. Cosmetic only. |
+| C73-02 | LOW | MEDIUM | `apps/web/src/components/dashboard/TransactionReview.svelte:43-69` | `onMount` calls `loadCategories()` without AbortSignal, allowing orphaned fetch on unmount. No cache-poisoning risk (no signal = no AbortError return), but wastes network resources. |
+| C73-03 | LOW | HIGH | `apps/web/src/components/report/ReportContent.svelte:48` | Sign-prefix pattern inconsistency with SavingsComparison.svelte -- no `Math.abs(...) >= 1` guard, but unnecessary since ReportContent shows final (not animated) values. |
+| C73-04 | LOW | MEDIUM | `apps/web/src/lib/parser/index.ts:17-47` + `csv.ts:928,134` | BOM stripping happens redundantly up to 3 times (TextDecoder, parseCSV, parseGenericCSV). Harmless but unclear responsibility. |
+| C73-05 | N/A | N/A | `apps/web/src/components/upload/FileDropzone.svelte:229-263` | NOT A BUG -- verified handleUpload/uploadStatus state machine correctly prevents stale navigateTimeout. |
+| C73-06 | LOW | MEDIUM | `apps/web/src/lib/parser/xlsx.ts:283-287` | HTML-as-XLS files decoded then re-encoded, doubling memory for large files. Bounded by 10MB file limit (~20MB total). |
+| C73-07 | LOW | HIGH | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:6-49` | CATEGORY_COLORS dark mode contrast issue persists (re-confirmation of C8-05/C4-09). |
 
 ---
 
@@ -47,17 +52,19 @@ All prior cycle 1-71 findings are confirmed fixed except as noted below.
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| MerchantMatcher/taxonomy O(n) scan | C16-C72 | OPEN (MEDIUM) -- 12 cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21-C72 | OPEN (MEDIUM) -- 15 cycles agree |
-| persistToStorage bare catch / error handling | C62-C72 | PARTIALLY FIXED (C69 added 'error' kind) |
-| Annual savings simple *12 projection | C7-C72 | OPEN (LOW) -- 11 cycles agree |
-| date-utils unparseable passthrough | C56-C72 | PARTIALLY FIXED (C70 added warn) |
-| CSV DATE_PATTERNS divergence risk | C20-C72 | OPEN (LOW) -- 10 cycles agree |
-| Hardcoded fallback drift | C8-C72 | OPEN (LOW) -- 8 cycles agree |
-| BANK_SIGNATURES duplication | C7-C72 | OPEN (LOW) -- 7 cycles agree |
-| inferYear() timezone dependence | C8-C72 | OPEN (LOW) -- 5 cycles agree (60+ cycles deferred) |
-| Greedy optimizer O(m*n*k) quadratic | C67-C72 | OPEN (MEDIUM) -- 5 cycles agree |
-| AbortError cache poisoning | C72 | NEW (MEDIUM) -- first cycle, cross-file pattern |
+| MerchantMatcher/taxonomy O(n) scan | C16-C73 | OPEN (MEDIUM) -- 13 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21-C73 | OPEN (MEDIUM) -- 16 cycles agree |
+| persistToStorage bare catch / error handling | C62-C73 | PARTIALLY FIXED (C69 added 'error' kind) |
+| Annual savings simple *12 projection | C7-C73 | OPEN (LOW) -- 12 cycles agree |
+| date-utils unparseable passthrough | C56-C73 | PARTIALLY FIXED (C70 added warn) |
+| CSV DATE_PATTERNS divergence risk | C20-C73 | OPEN (LOW) -- 11 cycles agree |
+| Hardcoded fallback drift | C8-C73 | OPEN (LOW) -- 9 cycles agree |
+| BANK_SIGNATURES duplication | C7-C73 | OPEN (LOW) -- 8 cycles agree |
+| inferYear() timezone dependence | C8-C73 | OPEN (LOW) -- 6 cycles agree (60+ cycles deferred) |
+| Greedy optimizer O(m*n*k) quadratic | C67-C73 | OPEN (MEDIUM) -- 6 cycles agree |
+| CATEGORY_COLORS dark mode contrast | C4-C73 | OPEN (LOW) -- many cycles agree |
+| BOM handling redundancy | C73 | NEW (LOW) -- first cycle |
+| TransactionReview orphaned fetch | C73 | NEW (LOW) -- first cycle |
 
 ---
 
@@ -73,7 +80,7 @@ All prior cycle 1-71 findings are confirmed fixed except as noted below.
 | C7-06 | LOW | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
 | C7-07/C66-10/C70-05 | LOW | BANK_SIGNATURES duplicated between packages/parser and apps/web |
 | C7-11 | LOW | persistWarning message misleading for data corruption vs size truncation |
-| C8-05/C4-09 | LOW | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast |
+| C8-05/C4-09/C73-07 | LOW | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast |
 | C8-07/C4-14/C66-07 | LOW | build-stats.ts fallback values will drift |
 | C8-08/C67-02 | LOW | inferYear() timezone-dependent near midnight Dec 31 |
 | C8-09 | LOW | Test duplicates production code instead of testing it directly |
@@ -97,6 +104,10 @@ All prior cycle 1-71 findings are confirmed fixed except as noted below.
 | C70-02 | LOW | cachedCategoryLabels not invalidated on Astro View Transitions |
 | C70-04 | LOW | csv.ts reimplements shared.ts instead of importing from it |
 | C71-05 | LOW | BANK_SIGNATURES array order affects detection accuracy for overlapping patterns |
+| C73-01 | LOW | SavingsComparison annual projection stale briefly after reset (cosmetic) |
+| C73-02 | LOW | TransactionReview loadCategories() without AbortSignal |
+| C73-04 | LOW | BOM stripping redundancy across parser chain |
+| C73-06 | LOW | XLSX HTML-as-XLS double memory for re-encoded buffer |
 
 ---
 
