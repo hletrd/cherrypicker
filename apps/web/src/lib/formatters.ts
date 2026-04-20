@@ -143,6 +143,21 @@ export function getIssuerColor(issuer: string): string {
 }
 
 /**
+ * Format a date string to Korean year-month format.
+ * Example: "2026-03-15" → "2026년 3월"
+ * Used by SpendingSummary formatPeriod to avoid duplicating the
+ * split/parseInt/NaN guard logic (C41-02).
+ */
+export function formatYearMonthKo(dateStr: string): string {
+  const parts = dateStr.split('-');
+  if (parts.length < 2) return '-';
+  const [y, m] = parts;
+  const mNum = parseInt(m!, 10);
+  if (Number.isNaN(mNum)) return '-';
+  return `${y}년 ${mNum}월`;
+}
+
+/**
  * Format a date string to Korean format.
  * Example: "2026-03-15" → "2026년 3월 15일"
  */

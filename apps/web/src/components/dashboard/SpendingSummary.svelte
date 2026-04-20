@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRatePrecise } from '../../lib/formatters.js';
+  import { formatWon, formatRatePrecise, formatYearMonthKo } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let dismissed = $state(false);
@@ -28,18 +28,9 @@
 
   function formatPeriod(period: { start: string; end: string } | undefined): string {
     if (!period) return '-';
-    // ISO 8601 dates: extract YYYY-MM via slice(0,7) for robustness
-    const startYM = period.start.slice(0, 7);
-    const endYM = period.end.slice(0, 7);
-    if (startYM.length < 7 || endYM.length < 7) return '-';
-    const [sy, sm] = startYM.split('-');
-    const [ey, em] = endYM.split('-');
-    if (!sy || !sm || !ey || !em) return '-';
-    const smNum = parseInt(sm, 10);
-    const emNum = parseInt(em, 10);
-    if (Number.isNaN(smNum) || Number.isNaN(emNum)) return '-';
-    const startStr = `${sy}년 ${smNum}월`;
-    const endStr = `${ey}년 ${emNum}월`;
+    const startStr = formatYearMonthKo(period.start);
+    const endStr = formatYearMonthKo(period.end);
+    if (startStr === '-' || endStr === '-') return '-';
     return startStr === endStr ? startStr : `${startStr} ~ ${endStr}`;
   }
 
