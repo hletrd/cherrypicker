@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-20 (Cycle 23)
+# Review Aggregate -- 2026-04-20 (Cycle 24)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle23-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle24-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-22 per-agent and aggregate files
+- All cycle 1-23 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-22 findings are confirmed fixed except as noted below:
+All prior cycle 1-23 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -43,6 +43,11 @@ All prior cycle 1-22 findings are confirmed fixed except as noted below:
 | C22-03 | **FIXED** | persistToStorage now tracks truncatedTxCount in PersistResult |
 | C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks (deferred) |
 | C22-05 | OPEN (LOW) | TransactionReview changeCategory O(n) array copy (deferred) |
+| C23-01 | **FIXED** | greedy.ts now uses `Number.isFinite(tx.amount)` guard alongside `tx.amount > 0` |
+| C23-02 | OPEN (LOW) | `analyzer.ts:47` cachedCoreRules never invalidated -- same class as C21-04 |
+| C23-03 | **FIXED** | SpendingSummary monthDiff NaN now guarded by `Number.isFinite()` check |
+| C23-04 | OPEN (LOW) | csv.ts generic header detection heuristic (low risk) |
+| C23-05 | OPEN (LOW) | csv.ts fallthrough to generic parser when no bank detected (expected) |
 | D-106 | OPEN (LOW) | `apps/web/src/lib/parser/pdf.ts:260` bare `catch {}` |
 
 ---
@@ -51,11 +56,12 @@ All prior cycle 1-22 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C23-01 | MEDIUM | High | `packages/core/src/optimizer/greedy.ts:265-267` | Greedy optimizer filters `tx.amount > 0` but does not guard against `NaN` amounts. If a NaN amount somehow passes upstream validation, `NaN > 0` is `false` (filtered out), but the sort `b.amount - a.amount` produces `NaN` comparisons which sort inconsistently across JS engines. Adding `Number.isFinite(tx.amount)` makes the optimizer defensive against upstream parser bugs. |
-| C23-02 | LOW | High | `apps/web/src/lib/analyzer.ts:46-70` | `toCoreCardRuleSets()` caches the full unfiltered list (`cachedCoreRules`) with no invalidation mechanism. Currently safe because `cards.json` is static, but the assumption "rules from static JSON don't change per session" would break if the data source becomes dynamic. Same class of issue as C21-04 (cachedCategoryLabels). |
-| C23-03 | LOW | Medium | `apps/web/src/components/dashboard/SpendingSummary.svelte:131-138` | Monthly difference calculation can produce "NaN개월 전 실적" in the UI if `monthDiff` is `NaN` (e.g. from corrupted month strings). The `monthDiff === 1` check fails correctly, but the else-branch template interpolates `NaN` directly. A `!Number.isFinite(monthDiff)` guard would prevent the display artifact. |
-| C23-04 | LOW | Medium | `apps/web/src/lib/parser/csv.ts:100-108` | Generic CSV header detection uses `hasNonNumeric` (any Korean/Latin text) to identify the header row. If a CSV has Korean title text before the actual header, the title row would be incorrectly selected as the header, causing bad column mapping. Bank-specific adapters avoid this by checking for specific header keywords. |
-| C23-05 | LOW | High | `apps/web/src/lib/parser/csv.ts:922-969` | When `parseCSV` is called without a bank hint and no adapter's `detect()` matches, the function falls through to `parseGenericCSV(content, null)` with no bank knowledge. This is expected behavior but means files from unrecognized banks have reduced parsing reliability. |
+| C24-01 | MEDIUM | High | `apps/web/src/lib/parser/csv.ts` (all adapters) | Installment NaN guard logic duplicated across 10 bank adapters. Each adapter (samsung, shinhan, kb, hyundai, lotte, hana, woori, nh, ibk, bc) has an identical `if (Number.isNaN(inst)) { /* comment */ } else if (inst > 1)` block with the same C8-10 comment. If the installment parsing logic changes, all 10 copies must be updated. A shared `parseInstallments()` helper (similar to xlsx.ts's `parseInstallments()`) would eliminate the duplication. |
+| C24-02 | MEDIUM | High | `apps/web/src/lib/store.svelte.ts:264` | `clearStorage()` has a bare `catch { /* SSR */ }` with no error logging. If sessionStorage removal fails for a non-SSR reason (e.g., SecurityError in a sandboxed iframe), the failure is silently swallowed with no diagnostic trail. Adding a `console.warn` for non-SSR failures would aid debugging. |
+| C24-03 | LOW | High | `apps/web/src/components/dashboard/SpendingSummary.svelte:138` | When `monthDiff === 0` (e.g., two monthlyBreakdown entries for the same month), the template shows "0개월 전 실적" which is confusing. A `monthDiff === 0` guard showing "같은 달 실적" would be clearer. |
+| C24-04 | LOW | Medium | `apps/web/src/lib/cards.ts:207-211` | When `loadCardsData()` chains a new caller's AbortSignal to an already-aborting shared controller, the `{ once: true }` listener on the dead controller is technically harmless but conceptually untidy. No functional bug. |
+| C24-05 | LOW | Medium | `apps/web/src/lib/formatters.ts:190-194` | `buildPageUrl()` does not strip trailing slashes from the path. If called with `'dashboard/'`, the result would have a double-slash-like segment. All current call sites pass bare names, so this is an edge case. |
+| C24-06 | LOW | High | `packages/core/src/optimizer/greedy.ts:224` | `buildCardResults` computes `totalSpending` as `reduce((sum, tx) => sum + tx.amount, 0)` without guarding against negative amounts internally. Safe in practice since the only caller passes pre-filtered transactions, but the function lacks its own invariant. |
 
 ---
 
@@ -88,6 +94,9 @@ All prior cycle 1-22 findings are confirmed fixed except as noted below:
 | C21-04 | LOW | cachedCategoryLabels never invalidated (deferred) |
 | C22-04 | LOW | CSV adapter gap for 14 banks (deferred) |
 | C22-05 | LOW | TransactionReview O(n) changeCategory (deferred) |
+| C23-02 | LOW | cachedCoreRules never invalidated (deferred, same class as C21-04) |
+| C23-04 | LOW | csv.ts generic header detection heuristic (low risk) |
+| C23-05 | LOW | csv.ts fallthrough to generic parser (expected behavior) |
 | C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro |
 | C53-03 | LOW | CardDetail performance tier header dark mode contrast |
 | C14-03 | LOW | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
