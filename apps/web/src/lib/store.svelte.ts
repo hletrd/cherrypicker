@@ -145,7 +145,7 @@ function isValidTx(tx: any): tx is CategorizedTx {
     typeof tx.merchant === 'string' &&
     typeof tx.amount === 'number' &&
     Number.isFinite(tx.amount) &&
-    tx.amount > 0 &&
+    tx.amount !== 0 &&
     typeof tx.category === 'string' && tx.category.length > 0
   );
 }
