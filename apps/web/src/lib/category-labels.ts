@@ -10,10 +10,14 @@ export function buildCategoryLabelMap(nodes: CategoryNode[]): Map<string, string
     labels.set(node.id, node.labelKo);
     if (node.subcategories) {
       for (const sub of node.subcategories) {
-        labels.set(sub.id, sub.labelKo);
-        // Dot-notation key for optimizer lookups — buildCategoryKey
-        // produces "dining.cafe" but the taxonomy only has "cafe" as
-        // the sub ID; without this entry, categoryLabels.get() misses.
+        // Only set the dot-notation key for subcategories — the optimizer
+        // uses buildCategoryKey() which produces "dining.cafe", and
+        // categoryLabels.get() must find these entries. The bare sub ID
+        // (e.g. "cafe") is NOT set here because it could shadow a
+        // top-level category with the same ID if the taxonomy ever
+        // introduces a collision (C49-02). Components that need bare
+        // subcategory labels (e.g. TransactionReview's categoryMap)
+        // build their own maps directly from the category nodes.
         labels.set(`${node.id}.${sub.id}`, sub.labelKo);
       }
     }
