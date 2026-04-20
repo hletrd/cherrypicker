@@ -74,8 +74,15 @@
   $effect(() => {
     const gen = analysisStore.generation;
     const txs = analysisStore.transactions;
-    if (txs.length > 0 && gen !== lastSyncedGeneration) {
-      editedTxs = txs.map(tx => ({ ...tx }));
+    if (gen !== lastSyncedGeneration) {
+      if (txs.length > 0) {
+        editedTxs = txs.map(tx => ({ ...tx }));
+      } else {
+        // Clear stale transactions when the store is reset (C61-01).
+        // Without this, editedTxs retains data from the previous analysis
+        // after analysisStore.reset() sets transactions to [].
+        editedTxs = [];
+      }
       hasEdits = false;
       lastSyncedGeneration = gen;
     }
