@@ -19,7 +19,20 @@
   let sortOrder = $state<'name' | 'fee-asc' | 'fee-desc' | 'rewards'>('name');
   let issuerFilter = $state('');
 
-  let availableIssuers = $derived([...new Set(filteredCards.map(c => c.issuer))].sort());
+  // Derive available issuers from type-filtered cards only (not from
+  // filteredCards which also depends on issuerFilter). This breaks the
+  // reactive dependency cycle: typeFilter change -> filteredCards recompute
+  // -> availableIssuers recompute -> $effect resets issuerFilter ->
+  // filteredCards recompute again. By basing availableIssuers on the type
+  // filter alone, the $effect that resets issuerFilter no longer causes
+  // a second filteredCards recomputation (C60-01).
+  let availableIssuers = $derived.by(() => {
+    let filtered = cards.slice();
+    if (typeFilter === 'credit') filtered = filtered.filter(c => c.type === 'credit');
+    else if (typeFilter === 'check') filtered = filtered.filter(c => c.type === 'check');
+    else if (typeFilter === 'prepaid') filtered = filtered.filter(c => c.type === 'prepaid');
+    return [...new Set(filtered.map(c => c.issuer))].sort();
+  });
 
   // Reset issuer filter if the selected issuer is no longer available
   // after type filter change (e.g., issuer only has credit cards but
