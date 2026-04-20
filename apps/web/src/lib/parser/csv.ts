@@ -53,6 +53,10 @@ function isValidAmount(amount: number, amountRaw: string, lineIdx: number, error
     }
     return false;
   }
+  // Skip zero-amount rows (e.g., balance inquiries, declined transactions)
+  // which don't contribute to spending optimization — matching the PDF
+  // parser's behavior (pdf.ts:231-237). C26-02.
+  if (amount === 0) return false;
   return true;
 }
 
@@ -184,6 +188,9 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
       if (amountRaw) errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}`, raw: line });
       continue;
     }
+    // Skip zero-amount rows (balance inquiries, declined transactions) —
+    // matching the PDF parser and bank-specific adapter behavior (C26-02).
+    if (amount === 0) continue;
 
     const tx: RawTransaction = {
       date: parseDateToISO(dateRaw),
