@@ -1,17 +1,17 @@
-# Review Aggregate -- 2026-04-20 (Cycle 13)
+# Review Aggregate -- 2026-04-20 (Cycle 14)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle13-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle14-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
-- Cycle 12 aggregate (previously `_aggregate.md`)
+- Cycle 13 aggregate (previously `_aggregate.md`)
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-12 findings are confirmed fixed except as noted below:
+All prior cycle 1-13 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -32,6 +32,10 @@ All prior cycle 1-12 findings are confirmed fixed except as noted below:
 | C11-03 | **FIXED** | `pdf.ts:382-389` now reports errors for unparseable amounts in fallback path |
 | C12-01 | **IMPROVED** | `OptimalCardMap.svelte:19-25` maxRate floor lowered from 0.5% to 0.1% -- better proportional accuracy |
 | C12-04 | **FIXED** | `SavingsComparison.svelte:205` removed redundant `Object.is(-0)` guard; `formatWon` handles normalization |
+| C13-01 | **FIXED** | `cards.ts:160-167` now has `chainAbortSignal` -- second caller's signal is chained to active AbortController |
+| C13-02 | **FIXED** | `cards.ts:199-226` `loadCategories` now accepts optional `signal` parameter with same chain pattern |
+| C13-03 | **FIXED** | `SpendingSummary.svelte:12-15` now uses `$derived` for `totalAllSpending` instead of inline reduce |
+| C13-04 | **FIXED** | `CardPage.svelte:14-30` now uses AbortController + generation counter pattern matching CardDetail |
 | C52-02 | **FIXED** | `TransactionReview.svelte:108-130` uses `updatedTxs.map()` to replace entries instead of mutating in-place |
 | C53-01 | **FIXED** | `TransactionReview.svelte:120-139` `changeCategory` now uses replacement pattern (`editedTxs.map(...)`) |
 | C8-02/C9R-02 | **FIXED** | `CardDetail.svelte:82-95` now has AbortController cleanup on unmount via `$effect` return cleanup |
@@ -57,10 +61,7 @@ All prior cycle 1-12 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C13-01 | MEDIUM | Medium | `apps/web/src/lib/cards.ts:155-168` | `loadCardsData` accepts AbortSignal but ignores it on cached promise -- second caller's signal is silently discarded. CardDetail's AbortController cleanup has no effect if cards data is already being fetched. |
-| C13-02 | LOW | Medium | `apps/web/src/lib/cards.ts:170-184` | `loadCategories` has no AbortSignal support -- unlike `loadCardsData`, there is no way to cancel the fetch on component unmount. |
-| C13-03 | LOW | Low | `apps/web/src/components/dashboard/SpendingSummary.svelte:67` | Inline `reduce` in template recalculates on every render instead of using `$derived`. Minor perf concern + inconsistent with other components. |
-| C13-04 | LOW | Medium | `apps/web/src/components/cards/CardPage.svelte:13-19` | `$effect` calls async `getCardById` without AbortController or cleanup -- rapid card clicks can cause visual flicker from racing responses. CardDetail.svelte correctly handles this but CardPage does not. |
+| C14-01 | MEDIUM | Medium | `apps/web/src/lib/cards.ts:186-190` and `:217-220` | `loadCardsData` and `loadCategories` catch blocks reset cache on AbortError -- a deliberate abort by one component clears the cache for all future callers, forcing a re-fetch. Should distinguish AbortError from real network errors. |
 
 ---
 
