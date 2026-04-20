@@ -105,5 +105,5 @@ When `get()` returns an existing array, `push()` mutates it in-place (same refer
 
 | Task | Status |
 |---|---|
-| 1 | TODO |
-| 2 | TODO |
+| 1 | DONE -- commit 000000098f |
+| 2 | DONE -- commit 0000000388 |
