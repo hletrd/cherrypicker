@@ -1,21 +1,23 @@
-# Review Aggregate -- 2026-04-21 (Cycle 56)
+# Review Aggregate -- 2026-04-21 (Cycle 57)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle56-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle57-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-55 per-agent and aggregate files
+- All cycle 1-56 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-55 findings are confirmed fixed except as noted below:
+All prior cycle 1-56 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C56-01 | **FIXED** | `SavingsComparison.svelte:217` now uses `displayedSavings > 0 && Math.abs(displayedSavings) >= 1 ? '+' : ''` -- zero-crossing flicker suppressed |
+| C56-04 | OPEN (LOW) | `date-utils.ts:112` still returns raw input for unparseable dates without error reporting |
+| C56-05 | OPEN (LOW) | Zero savings shows "0원" without plus sign -- minor visual inconsistency |
 | C55-02 | **FIXED** | `CardDetail.svelte:32-33` already has `dark:text-green-400` and `dark:text-blue-400` in `rateColorClass` |
-| C55-05 | **DUPLICATED** | Same as C56-01 below -- count-up animation zero-crossing flicker |
 | C54-01 | **FIXED** | `results.js` no longer exists in `public/scripts/` -- only `layout.js` remains |
 | C52-01 | **FIXED** | `parseCSV()` at line 915 and `parseGenericCSV()` at line 121 both strip UTF-8 BOM |
 | C52-02 | **FIXED** | `report.js` deleted from `public/scripts/`; no references found |
@@ -71,9 +73,8 @@ All prior cycle 1-55 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C56-01 | MEDIUM | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:70,215` | Count-up animation from positive to negative target (or vice versa) briefly passes through zero, showing "+0원" due to the `displayedSavings > 0 ? '+' : ''` sign prefix. During the 600ms animation, this creates a visual flicker. Fix: Snap through zero or suppress the '+' prefix when the value rounds to zero during sign transitions. |
-| C56-04 | LOW | MEDIUM | `apps/web/src/lib/parser/date-utils.ts:112` + all parsers | `parseDateStringToISO` returns the raw input string when no format matches, without reporting an error. Corrupted or unexpected date strings (e.g., "N/A") become the `date` field silently. Downstream code handles these (filtered by `tx.date.length < 7`), but the user gets no error message explaining skipped rows. |
-| C56-05 | LOW | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:215` | Zero savings shows "0원" without plus sign, but the label above says "추가 절약". Minor visual inconsistency -- very rare case (exact zero savings). |
+| C57-01 | MEDIUM | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:55,60` | `displayedAnnualSavings` uses `Math.abs(target)` for negative savings, making the annual projection always positive while the label says "추가 비용". The monthly `displayedSavings` correctly preserves the sign (negative values render with minus via `formatWon`), but the annual value is always non-negative, creating an inconsistency in sign semantics between monthly and annual displays. |
+| C57-02 | LOW | MEDIUM | `apps/web/src/components/report/ReportContent.svelte:48` | Report shows "+0원" for zero savings due to `>= 0` ternary check instead of `> 0`, inconsistent with the dashboard which was fixed in C56-01 to suppress the plus sign at zero. |
 
 ---
 
@@ -94,7 +95,8 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | Inline script / VisibilityToggle split-brain | C54, C51, C52 | **FIXED** (results.js deleted) |
 | OptimalCardMap Set mutation | C51, C54 | **FIXED** |
 | CardDetail dark mode contrast | C55, C53 (partial), C56 | **FIXED** (rateColorClass now has dark: variants) |
-| SavingsComparison zero-crossing flicker | C55, C56 | OPEN (MEDIUM) -- 2 cycles agree |
+| SavingsComparison zero-crossing flicker | C55, C56 | **FIXED** (Math.abs guard added) |
+| Annual savings Math.abs sign inconsistency | C57 | NEW (MEDIUM) -- 1 cycle |
 
 ---
 
