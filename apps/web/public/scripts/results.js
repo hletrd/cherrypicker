@@ -1,29 +1,15 @@
+// Progressive enhancement: show data content from sessionStorage before
+// Svelte island hydrates. The VisibilityToggle Svelte component is the
+// authoritative source for both visibility and stat population — this
+// inline script only provides a faster initial render from sessionStorage.
+// Stat population was removed to eliminate split-brain with the Svelte
+// store (C54-01).
 document.addEventListener('DOMContentLoaded', () => {
   try {
     const raw = sessionStorage.getItem('cherrypicker:analysis');
     if (raw) {
       const data = JSON.parse(raw);
-      const opt = data.optimization;
-      if (opt) {
-        const formatWon = (amount) => Number.isFinite(amount) ? amount.toLocaleString('ko-KR') + '원' : '0원';
-        const totalSpending = document.getElementById('stat-total-spending');
-        const totalSavings = document.getElementById('stat-total-savings');
-        const cardsNeeded = document.getElementById('stat-cards-needed');
-
-        if (totalSpending) totalSpending.textContent = formatWon(opt.totalSpending);
-        if (totalSavings) totalSavings.textContent = (opt.savingsVsSingleCard >= 0 ? '+' : '') + formatWon(opt.savingsVsSingleCard);
-        if (cardsNeeded) {
-          const uniqueCards = new Set(opt.assignments.map((assignment) => assignment.assignedCardId)).size;
-          cardsNeeded.textContent = uniqueCards + '장';
-        }
-
-        // Update savings label to "추가 비용" when cherry-picking is worse
-        const savingsLabel = document.getElementById('stat-savings-label');
-        if (savingsLabel && opt.savingsVsSingleCard < 0) {
-          savingsLabel.textContent = '추가 비용';
-        }
-
-        // Show data content, hide empty state
+      if (data.optimization) {
         const emptyState = document.getElementById('results-empty-state');
         const dataContent = document.getElementById('results-data-content');
         if (emptyState) emptyState.classList.add('hidden');
@@ -33,6 +19,4 @@ document.addEventListener('DOMContentLoaded', () => {
   } catch {
     // Ignore malformed persisted state.
   }
-
-  document.getElementById('download-report')?.addEventListener('click', () => window.print());
 });
