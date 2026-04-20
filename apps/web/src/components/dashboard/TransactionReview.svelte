@@ -125,7 +125,7 @@
           // User selected a top-level category
           updated = { ...tx, category: newCategory, subcategory: undefined, confidence: 1.0 };
         }
-        editedTxs = editedTxs.map((t, i) => i === idx ? updated : t);
+        editedTxs[idx] = updated;
         hasEdits = true;
       }
     }
