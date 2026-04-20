@@ -1,18 +1,17 @@
-# Review Aggregate -- 2026-04-20 (Cycle 11)
+# Review Aggregate -- 2026-04-20 (Cycle 12)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle11-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle12-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
-- Cycle 10 aggregate (previously `_aggregate.md`)
-- Cycle 53 comprehensive (2026-04-20-cycle53-comprehensive.md)
+- Cycle 11 aggregate (previously `_aggregate.md`)
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-10 findings are confirmed fixed except as noted below:
+All prior cycle 1-11 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -29,10 +28,12 @@ All prior cycle 1-10 findings are confirmed fixed except as noted below:
 | C9-11 | **FIXED** | `store.svelte.ts` `isValidTx` has non-empty checks for id, date, category |
 | C9-13 | **FIXED** | `analyzer.ts` monthlyBreakdown explicitly sorted by month |
 | C10-01 | **FIXED** | `SpendingSummary.svelte:10-18` has try/catch around sessionStorage reads in onMount; `SpendingSummary.svelte:139` has try/catch around sessionStorage writes in dismiss handler |
-| C10-03 | **PARTIALLY FIXED** | `pdf.ts:264-273` now reports errors for unparseable amounts in structured parse, but fallback path (lines 352-394) still silently skips unparseable amounts without error reporting (see C11-03) |
+| C11-01 | **FIXED** | `analyzer.ts:304` now uses `Math.abs(tx.amount)` matching `store.svelte.ts:378` |
+| C11-03 | **FIXED** | `pdf.ts:382-389` now reports errors for unparseable amounts in fallback path |
 | C52-02 | **FIXED** | `TransactionReview.svelte:108-130` uses `updatedTxs.map()` to replace entries instead of mutating in-place |
-| C53-01 | **FIXED** | `TransactionReview.svelte:120-139` `changeCategory` now uses replacement pattern (`editedTxs = editedTxs.map(...)`) |
+| C53-01 | **FIXED** | `TransactionReview.svelte:120-139` `changeCategory` now uses replacement pattern (`editedTxs.map(...)`) |
 | C8-02/C9R-02 | **FIXED** | `CardDetail.svelte:82-95` now has AbortController cleanup on unmount via `$effect` return cleanup |
+| C10-03 | **FIXED** | PDF parseAmount now reports errors in both structured and fallback paths (C11-03 completed the fallback fix) |
 | C7-04 | **OPEN (LOW)** | TransactionReview $effect re-sync fragile -- no change since cycle 7 |
 | C7-06 | **OPEN (LOW)** | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
 | C7-07 | **OPEN (LOW)** | BANK_SIGNATURES duplicated between packages/parser and apps/web |
@@ -54,9 +55,8 @@ All prior cycle 1-10 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C11-01 | LOW | Medium | `apps/web/src/lib/store.svelte.ts:378` vs `apps/web/src/lib/analyzer.ts:304` | `Math.abs(tx.amount)` used in `reoptimize` monthly spending calculation but NOT in `analyzeMultipleFiles` monthly spending calculation. Inconsistency could cause monthly breakdown numbers to diverge after editing if negative-amount transactions are present. |
-| C11-02 | LOW | Low | `apps/web/src/components/cards/CardDetail.svelte:276`, `apps/web/src/components/upload/FileDropzone.svelte:217` | `window.location.href = import.meta.env.BASE_URL + 'cards'` relies on BASE_URL having trailing slash. Astro guarantees this, but the pattern is fragile if config changes. Other locations use `${base}cards` template literal with base having trailing slash. |
-| C11-03 | LOW | Medium | `apps/web/src/lib/parser/pdf.ts:352-394` | PDF fallback parsing path does not report errors for unparseable amounts. When `parseAmount` returns 0 from a non-zero input, the transaction is silently skipped with no error reported. This is a remaining gap from C10-03 which was partially fixed for the structured path only. |
+| C12-01 | LOW | Low | `apps/web/src/components/dashboard/OptimalCardMap.svelte:17-25` | `maxRate` floor of 0.5% causes bars to appear wider than proportional when all rates are very low (e.g., 0.3% rate fills 60% of bar). This is by design to prevent invisible bars, but the threshold may be too high. |
+| C12-04 | LOW | Low | `apps/web/src/components/dashboard/SavingsComparison.svelte:203` | Redundant `Object.is(displayedSavings, -0)` negative-zero guard -- `formatWon` already normalizes negative-zero at line 8. The guard is harmless but confusing for maintainers. |
 
 ---
 
@@ -86,10 +86,10 @@ All prior cycle 1-10 findings are confirmed fixed except as noted below:
 | D-106 | LOW | `apps/web/src/lib/parser/pdf.ts:296` bare `catch {}` |
 | D-110 | LOW | Non-latest month edits have no visible optimization effect |
 | D-66 | LOW | CardGrid issuer filter shows issuers with 0 cards after type filter |
-| D-01 through D-111 | Various | See deferred items file for full list |
+| C11-02 | LOW | BASE_URL trailing slash assumption in CardDetail and FileDropzone |
 | C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro |
 | C53-03 | LOW | CardDetail performance tier header dark mode contrast |
-| C10-03 | LOW | PDF parseAmount: structured path now reports errors, fallback path still silent (superseded by C11-03) |
+| D-01 through D-111 | Various | See deferred items file for full list |
 
 ---
 
