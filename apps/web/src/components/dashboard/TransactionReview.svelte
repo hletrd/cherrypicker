@@ -3,14 +3,7 @@
   import { formatWon } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
   import type { CategorizedTx } from '../../lib/analyzer.js';
-  // NOTE: AI categorization is disabled until a self-hosted runtime is ready.
-  // See categorizer-ai.ts for details. To re-enable:
-  // 1. Update categorizer-ai.ts isAvailable() to return true
-  // 2. Re-add: import * as aiCategorizer from '../../lib/categorizer-ai.js'
-  // 3. Re-add state: aiAvailable, aiStatus, aiProgress, aiRunning
-  // 4. Re-add: aiAvailable = aiCategorizer.isAvailable() in onMount
-  // 5. Re-add: runAICategorization() function
-  // 6. Re-add AI button block in the template (search for "AI 분류")
+  // AI categorization is disabled — see ../../lib/categorizer-ai.ts for re-enable instructions.
   import { onMount } from 'svelte';
   import { loadCategories } from '../../lib/cards.js';
 
