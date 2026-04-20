@@ -57,6 +57,10 @@ function isValidAmount(amount: number, amountRaw: string, lineIdx: number, error
 // Generic CSV parser
 // ---------------------------------------------------------------------------
 
+// NOTE: These patterns are used only for the isDateLike() column-detection
+// heuristic in the generic CSV parser. They must be kept in sync with the
+// date formats handled by parseDateStringToISO() in date-utils.ts. If a new
+// date format is added there, add a corresponding pattern here.
 const DATE_PATTERNS = [
   /^\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/,      // 2024-01-15
   /^\d{2}[.\-\/]\d{2}[.\-\/]\d{2}$/,           // 24-01-15 (YY-MM-DD)

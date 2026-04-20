@@ -13,6 +13,11 @@ type PdfTextMarkedContent = { type: string; id: string };
 // Table parser (ported from packages/parser/src/pdf/table-parser.ts)
 // ---------------------------------------------------------------------------
 
+// NOTE: The date/amount patterns below are used for PDF table row detection
+// and fallback line scanning. They must be kept in sync with the date formats
+// handled by parseDateStringToISO() in date-utils.ts. If a new date format is
+// added there, update the DATE_PATTERN, STRICT_DATE_PATTERN, and related
+// constants accordingly.
 const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일)/;
 const AMOUNT_PATTERN = /[\d,]+원?/;
 const STRICT_DATE_PATTERN = /(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/;
