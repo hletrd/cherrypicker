@@ -22,6 +22,12 @@ export async function readCardStats(): Promise<CardStats> {
     totalCards = data.meta?.totalCards ?? totalCards;
     totalIssuers = data.meta?.totalIssuers ?? totalIssuers;
     totalCategories = data.meta?.categories?.length ?? totalCategories;
-  } catch (err) { console.warn('[cherrypicker] cards.json not found at build time, using fallback stats:', err); }
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      console.warn('[cherrypicker] cards.json is malformed at build time, using fallback stats:', err.message);
+    } else {
+      console.warn('[cherrypicker] cards.json not found at build time, using fallback stats:', err);
+    }
+  }
   return { totalCards, totalIssuers, totalCategories };
 }
