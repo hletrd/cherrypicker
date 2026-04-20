@@ -9,13 +9,24 @@
 
   let selectedCardId = $state<string | null>(null);
   let cardName = $state<string>('');
+  let fetchGeneration = 0;
 
   $effect(() => {
-    if (selectedCardId) {
-      getCardById(selectedCardId).then(c => { cardName = c?.nameKo ?? selectedCardId ?? ''; });
-    } else {
-      cardName = '';
-    }
+    if (!selectedCardId) { cardName = ''; return; }
+    const gen = ++fetchGeneration;
+    const controller = new AbortController();
+    getCardById(selectedCardId, { signal: controller.signal })
+      .then(c => {
+        if (!controller.signal.aborted && gen === fetchGeneration) {
+          cardName = c?.nameKo ?? selectedCardId ?? '';
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted && gen === fetchGeneration) {
+          cardName = selectedCardId ?? '';
+        }
+      });
+    return () => { controller.abort(); };
   });
 
   function selectCard(id: string) {
