@@ -234,8 +234,16 @@
         uploadStatus = 'error';
       } else {
         uploadStatus = 'success';
-        navigateTimeout = setTimeout(() => {
-          window.location.href = buildPageUrl('dashboard');
+        navigateTimeout = setTimeout(async () => {
+          // Use Astro client-side navigation to preserve in-memory store
+          // state instead of a full page reload (C62-15). Fall back to
+          // full reload if View Transitions are not enabled.
+          try {
+            const { navigate } = await import('astro:transitions/client');
+            navigate(buildPageUrl('dashboard'));
+          } catch {
+            window.location.href = buildPageUrl('dashboard');
+          }
         }, 1200);
       }
     } catch (e) {

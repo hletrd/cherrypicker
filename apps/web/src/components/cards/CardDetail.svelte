@@ -268,7 +268,17 @@
       <button
         class="mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline cursor-pointer"
         style="color: {issuerColor};"
-        onclick={() => { window.location.href = buildPageUrl('cards'); }}
+        onclick={async () => {
+          // Use Astro client-side navigation to preserve in-memory store
+          // state instead of a full page reload (C62-15). Fall back to
+          // full reload if View Transitions are not enabled.
+          try {
+            const { navigate } = await import('astro:transitions/client');
+            navigate(buildPageUrl('cards'));
+          } catch {
+            window.location.href = buildPageUrl('cards');
+          }
+        }}
       >
         카드 목록으로 돌아가기
       </button>
