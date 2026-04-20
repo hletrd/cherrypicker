@@ -250,7 +250,7 @@ function loadFromStorage(): AnalysisResult | null {
       sessionStorage.removeItem(STORAGE_KEY);
     }
   } catch {
-    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch {}
+    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch { /* best-effort cleanup: corrupted data removal, SecurityError in sandboxed iframes is expected */ }
   }
   return null;
 }
