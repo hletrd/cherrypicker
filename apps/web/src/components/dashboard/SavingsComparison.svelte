@@ -52,12 +52,12 @@
       && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
       displayedSavings = target;
-      displayedAnnualSavings = (target >= 0 ? target : Math.abs(target)) * 12;
+      displayedAnnualSavings = target * 12;
       return;
     }
 
     const startVal = displayedSavings;
-    const annualTarget = (target >= 0 ? target : Math.abs(target)) * 12;
+    const annualTarget = target * 12;
     const startAnnual = displayedAnnualSavings;
     let cancelled = false;
     let rafId: number;
