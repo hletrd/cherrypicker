@@ -9,8 +9,12 @@
   // Category options loaded dynamically from categories.yaml taxonomy
   let categoryOptions = $state<{ id: string; label: string }[]>([]);
 
-  // Fallback used if categories fail to load
+  // Fallback used if categories fail to load. Includes both top-level
+  // categories and dot-notation subcategory keys so that the categoryMap
+  // search (line ~120) can match subcategory labels even in fallback mode
+  // (C74-01).
   const FALLBACK_CATEGORIES = [
+    // Top-level categories
     { id: 'dining', label: '외식' },
     { id: 'grocery', label: '식료품' },
     { id: 'convenience_store', label: '편의점' },
@@ -24,6 +28,32 @@
     { id: 'travel', label: '여행' },
     { id: 'utilities', label: '공과금' },
     { id: 'uncategorized', label: '미분류' },
+    // Common subcategories (dot-notation keys) for fallback search coverage
+    { id: 'dining.cafe', label: '  카페' },
+    { id: 'dining.restaurant', label: '  음식점' },
+    { id: 'dining.fast_food', label: '  패스트푸드' },
+    { id: 'dining.delivery', label: '  배달' },
+    { id: 'grocery.supermarket', label: '  대형마트' },
+    { id: 'grocery.convenience_store', label: '  편의점' },
+    { id: 'transportation.fuel', label: '  주유' },
+    { id: 'transportation.parking', label: '  주차' },
+    { id: 'transportation.toll', label: '  통행료' },
+    { id: 'public_transit.subway', label: '  지하철' },
+    { id: 'public_transit.bus', label: '  버스' },
+    { id: 'public_transit.taxi', label: '  택시' },
+    { id: 'online_shopping.fashion', label: '  패션' },
+    { id: 'medical.hospital', label: '  병원' },
+    { id: 'medical.pharmacy', label: '  약국' },
+    { id: 'education.academy', label: '  학원' },
+    { id: 'education.books', label: '  도서' },
+    { id: 'entertainment.streaming', label: '  스트리밍' },
+    { id: 'entertainment.movie', label: '  영화' },
+    { id: 'entertainment.subscription', label: '  구독' },
+    { id: 'travel.hotel', label: '  숙박' },
+    { id: 'travel.airline', label: '  항공' },
+    { id: 'utilities.electricity', label: '  전기' },
+    { id: 'utilities.gas', label: '  가스' },
+    { id: 'utilities.water', label: '  수도' },
   ];
 
   let categoryMap = $state<Map<string, string>>(new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label])));
