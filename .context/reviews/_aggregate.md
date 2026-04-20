@@ -1,79 +1,35 @@
-# Review Aggregate -- 2026-04-21 (Cycle 61)
+# Review Aggregate -- 2026-04-21 (Cycle 62)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle61-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle62-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-60 per-agent and aggregate files
+- All cycle 1-61 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-59 findings are confirmed fixed except as noted below.
-New in cycle 61: C60-01 confirmed **FIXED**.
+All prior cycle 1-60 findings are confirmed fixed except as noted below.
+New in cycle 62: C61-01, C61-04, C61-05 confirmed **FIXED**.
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C60-01 | **FIXED** | `CardGrid.svelte:29-35` now derives `availableIssuers` from type-filtered cards only, breaking the reactive cycle with `filteredCards` |
-| C59-02 | **FIXED** | `SpendingSummary.svelte:124-130` now validates `month` against `/^\d{4}-\d{2}$/` regex before parseInt |
-| C59-03 | **FIXED** | `VisibilityToggle.svelte:22,102-104,125` now captures `originalSavingsLabelText` on first access and restores it during cleanup instead of hardcoding Korean text |
-| C58-01 | **FIXED** | `VisibilityToggle.svelte:92` now uses `> 0` instead of `>= 0` -- "+0원" no longer shown for zero savings |
-| C58-07 | **FIXED** | `apps/web/__tests__/parser-encoding.test.ts` added -- encoding detection fallback path now covered by tests |
-| C57-01 | **FIXED** | `SavingsComparison.svelte:55,60` now uses `target * 12` (not `Math.abs(target) * 12`) for annual projection |
-| C57-02 | **FIXED** | `ReportContent.svelte:48` uses `> 0` and `VisibilityToggle.svelte:92` now also uses `> 0` |
-| C56-01 | **FIXED** | `SavingsComparison.svelte:217` now uses `displayedSavings > 0 && Math.abs(displayedSavings) >= 1 ? '+' : ''` |
-| C56-04 | OPEN (LOW) | `date-utils.ts:112` still returns raw input for unparseable dates without error reporting |
-| C56-05 | OPEN (LOW) | Zero savings shows "0원" without plus sign -- minor visual inconsistency |
-| C55-02 | **FIXED** | `CardDetail.svelte:32-33` already has `dark:text-green-400` and `dark:text-blue-400` in `rateColorClass` |
-| C54-01 | **FIXED** | `results.js` no longer exists in `public/scripts/` |
-| C52-01 | **FIXED** | `parseCSV()` at line 915 and `parseGenericCSV()` at line 121 both strip UTF-8 BOM |
-| C52-02 | **FIXED** | `report.js` deleted from `public/scripts/` |
-| C52-03 | **FIXED** | `Layout.astro:46` uses `${base}scripts/layout.js` with template literal |
-| C52-06/C4-07 | **FIXED** | `SpendingSummary.svelte` uses `sessionStorage` for dismissal flag |
-| C53-01 | **FIXED** | `TransactionReview.svelte:112-135` `changeCategory` uses spread-copy + index assignment |
-| C53-02 | **FIXED** | Both `index.astro` and `Layout.astro` use shared `readCardStats()` from `build-stats.ts` |
-| C53-03 | **FIXED** | `CardDetail.svelte:217` has `dark:text-blue-300` on performance tier header |
-| C54-03 | **FIXED** | `OptimalCardMap.svelte:37-44` uses immutable Set pattern for `toggleRow` |
-| C51-01 | **FIXED** | `report.astro` uses `ReportContent.svelte` + `VisibilityToggle.svelte` |
-| C51-04 | **FIXED** | `OptimalCardMap.svelte:37-43` toggleRow uses immutable Set pattern |
-| C50-01 | **FIXED** | `CategoryBreakdown.svelte:133` uses `0` as reduce initial value with `|| 1` fallback |
-| C50-02 | **FIXED** | `SavingsComparison.svelte:93-96` documents `Infinity` as intentional sentinel |
-| C50-05 | **FIXED** | `SavingsComparison.svelte:18-28` derives `cardBreakdown` from `analysisStore.cardResults` |
-| C50-07 | **FIXED** | `xlsx.ts:283-298` tracks bestResult across all sheets |
-| C49-02 | **FIXED** | `category-labels.ts` no longer sets bare `sub.id` key |
-| D-106 | **FIXED** | `pdf.ts:270-276` no longer uses bare `catch {}` -- now logs diagnostic `console.warn` |
-| C45-01 | **FIXED** | `store.svelte.ts:420-424` early null guard before `result.previousMonthSpendingOption` access |
-| C45-02 | **FIXED** | Same early null guard eliminates wasted computation |
-| C44-03 | **FIXED** | `CardGrid.svelte:125` has `aria-live="polite"` on filter result count |
-| C44-01 | **FIXED** | `previousMonthSpendingOption` now stored in `AnalysisResult` and forwarded during `reoptimize()` |
-| C43-01 | FIXED | `isOptimizableTx` at `store.svelte.ts:168` uses `obj.amount > 0` |
-| C43-02 | FIXED | `analyzer.ts:210` uses `tx.amount` directly |
-| C42-01 | FIXED | All parsers now use `amount <= 0` |
-| C42-02 | FIXED | `analyzer.ts:290` and `store.svelte.ts:425` use `tx.amount` |
-| D-107 | FIXED | Web-side CSV adapter error collection now collects errors |
-| C7-04 | OPEN (LOW) | TransactionReview $effect re-sync fragile |
-| C7-06 | OPEN (LOW) | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
-| C7-07 | OPEN (LOW) | BANK_SIGNATURES duplicated between packages/parser and apps/web |
-| C7-11 | OPEN (LOW) | persistWarning message misleading for data corruption vs size truncation |
-| C8-05/C4-09 | OPEN (LOW) | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast -- non-utility entries |
-| C8-07/C4-14 | OPEN (LOW) | build-stats.ts fallback values will drift |
-| C8-08 | OPEN (LOW) | inferYear() timezone-dependent near midnight Dec 31 |
-| C8-09 | OPEN (LOW) | Test duplicates production code instead of testing it directly |
-| C18-01/C50-08 | OPEN (LOW) | VisibilityToggle $effect directly mutates DOM |
-| C18-02 | OPEN (LOW) | Results page stat elements queried every effect run even on dashboard page |
-| C18-03 | OPEN (LOW) | Annual savings projection simply multiplies monthly by 12 without seasonal adjustment |
-| C18-04 | OPEN (LOW) | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
-| C19-04 | OPEN (LOW) | FileDropzone navigation uses full page reload |
-| C19-05 | OPEN (LOW) | CardDetail navigation uses full page reload |
-| C21-02 | OPEN (LOW) | cards.ts shared fetch AbortSignal race |
-| C21-04/C23-02/C25-02/C26-03 | OPEN (LOW->MEDIUM) | cachedCategoryLabels/cachedCoreRules invalidated on explicit reset but stale across long-lived tabs |
-| C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks |
-| C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed |
-| C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
-| C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner |
-| C41-05/C42-04 | OPEN (LOW) | cards.ts loadCategories returns empty array on AbortError |
-| C49-01 | OPEN (LOW) | `isSubstringSafeKeyword` is dead code superseded by SUBSTRING_SAFE_ENTRIES |
+| C61-01 | **FIXED** | `TransactionReview.svelte:81-84` clears `editedTxs = []` when `txs.length === 0` |
+| C61-04 | **FIXED** | `CardDetail.svelte:22,31,204` uses `categoryLabelsReady` flag |
+| C61-05 | **FIXED** | `report.astro:64-77` `cherrypickerPrint()` removes `dark` class before print |
+| C60-01 | **FIXED** | `CardGrid.svelte:29-35` derives `availableIssuers` from type-filtered cards only |
+| C59-02 | **FIXED** | `SpendingSummary.svelte:124-130` validates `month` against regex |
+| C59-03 | **FIXED** | `VisibilityToggle.svelte:22,102-104,125` captures original label text |
+| C58-01 | **FIXED** | `VisibilityToggle.svelte:92` uses `> 0` instead of `>= 0` |
+| C56-04 | OPEN (LOW) | `date-utils.ts:112` still returns raw input for unparseable dates |
+| C56-05 | OPEN (LOW) | Zero savings shows "0원" without plus sign |
+| C33-01/C62-01 | OPEN (MEDIUM) | MerchantMatcher/taxonomy substring scan O(n) per transaction |
+| C33-02/C62-04 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
+| C21-04/C62-04 | OPEN (MEDIUM) | cachedCategoryLabels invalidated only on explicit reset |
+| C62-09 | OPEN (MEDIUM) | `getCardById` O(n) linear scan through all issuers |
+| C62-15 | OPEN (MEDIUM) | FileDropzone full-page reload after upload loses truncated session data |
+| C62-11 | OPEN (LOW) | `persistToStorage` bare catch returns 'corrupted' for non-quota errors |
 
 ---
 
@@ -81,11 +37,21 @@ New in cycle 61: C60-01 confirmed **FIXED**.
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C61-01 | LOW | MEDIUM | `apps/web/src/components/dashboard/TransactionReview.svelte:74-82` | `$effect` sync skips clearing `editedTxs` when `analysisStore.transactions` is empty after store reset |
-| C61-02 | LOW | HIGH | `apps/web/src/components/cards/CardPage.svelte:70-73` | Breadcrumb uses inconsistent interactive elements (`<a>` vs `<button>`) within the same `<ol>` |
-| C61-03 | LOW | LOW | `SpendingSummary.svelte:141` | `console.warn` fires for expected QuotaExceededError in private browsing -- minor logging noise |
-| C61-04 | LOW | LOW | `CardDetail.svelte:21-28,68-87` | Category labels fetch races with card data fetch, causing brief flash of raw category IDs on slow connections |
-| C61-05 | LOW | LOW | `report.astro:64-81` | Extension of C60-02: print stylesheet doesn't remove `dark` class from `<html>`, causing dark-mode Tailwind variants to render in print |
+| C62-01 | MEDIUM | HIGH | `packages/core/src/categorizer/taxonomy.ts:71-78` | `findCategory` substring scan iterates ALL keywordMap entries per call -- converges with C33-01 |
+| C62-02 | LOW | HIGH | `apps/web/src/lib/parser/date-utils.ts:112` | `parseDateStringToISO` returns raw input for unparseable dates -- converges with C56-04 |
+| C62-03 | LOW | MEDIUM | `apps/web/src/components/dashboard/SavingsComparison.svelte:60` | Annual projection `target * 12` -- converges with C18-03 |
+| C62-04 | LOW | MEDIUM | `apps/web/src/lib/store.svelte.ts:317-323` | `cachedCategoryLabels` stale across redeployments -- converges with C21-04/C33-02 |
+| C62-05 | LOW | MEDIUM | `apps/web/src/components/cards/CardPage.svelte:70-74` | Breadcrumb `<a href="#">` should be `<button>` -- converges with C61-02 |
+| C62-06 | LOW | LOW | `apps/web/src/lib/parser/csv.ts:96-103` | `DATE_PATTERNS` divergence risk with date-utils.ts -- converges with C20-02/C25-03 |
+| C62-07 | -- | -- | ~~withdrawn~~ | Initially flagged QuotaExceededError logging, but re-examination found the filter is correct. Not an issue. |
+| C62-08 | LOW | MEDIUM | `apps/web/src/lib/parser/xlsx.ts:241-249` | `isHTMLContent` only checks first 512 bytes -- converges with C18-04 |
+| C62-09 | MEDIUM | HIGH | `apps/web/src/lib/cards.ts:280-307` | `getCardById` O(n) linear scan -- converges with C3-D111/C50/C56 |
+| C62-10 | LOW | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte:62-127` | `$effect` directly mutates DOM -- converges with C18-01/C50 |
+| C62-11 | LOW | MEDIUM | `apps/web/src/lib/store.svelte.ts:155` | `persistToStorage` bare catch returns 'corrupted' for non-quota errors |
+| C62-12 | LOW | LOW | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:6-49` | `CATEGORY_COLORS` incomplete coverage + dark mode contrast -- converges with C8-05/C4-09 |
+| C62-13 | LOW | MEDIUM | `apps/web/src/lib/analyzer.ts:48-79` | `cachedCoreRules` stale across redeployments -- converges with C62-04 |
+| C62-14 | LOW | LOW | `apps/web/__tests__/parser-date.test.ts` | Tests duplicate production code -- converges with C8-09 |
+| C62-15 | MEDIUM | HIGH | `apps/web/src/components/upload/FileDropzone.svelte:237-239` | Full-page reload after upload loses truncated session data -- converges with C19-04 |
 
 ---
 
@@ -96,24 +62,19 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
 | VisibilityToggle DOM mutation | C18, C50 | OPEN (LOW) -- 2 cycles agree |
-| getCardById O(n) | C3 (D-111), C50, C56 | OPEN (LOW) -- 3 cycles agree |
-| cardBreakdown redundant derivation | C6 (D-53), C50 | **FIXED** |
-| MerchantMatcher O(n) scan | C16 (D-100), C33, C50 | OPEN (MEDIUM) -- 3 cycles agree |
-| cachedCategoryLabels staleness | C21, C23, C25, C26, C33 | OPEN (MEDIUM) -- 5 cycles agree |
-| CategoryBreakdown maxPercentage=1 | C41, C42, C43, C49, C50 | **FIXED** |
-| SpendingSummary sessionStorage dismiss | C4, C51 | **FIXED** |
-| CSV BOM handling gap | C52 | **FIXED** |
-| Inline script / VisibilityToggle split-brain | C54, C51, C52 | **FIXED** (results.js deleted) |
-| OptimalCardMap Set mutation | C51, C54 | **FIXED** |
-| CardDetail dark mode contrast | C55, C53 (partial), C56 | **FIXED** |
-| SavingsComparison zero-crossing flicker | C55, C56 | **FIXED** |
-| Annual savings Math.abs sign inconsistency | C57 | **FIXED** |
-| Savings zero-prefix inconsistency | C57, C58 | **FIXED** |
-| CategoryBreakdown dark mode contrast | C4, C8, C59 | OPEN (LOW) -- 3 cycles agree |
-| Taxonomy.findCategory O(n) scan | C33, C59 | OPEN (MEDIUM) -- 2 cycles agree |
-| Full-page reload navigation | C19, C60 | OPEN (LOW) -- 2 cycles agree |
+| getCardById O(n) | C3, C50, C56, C62 | OPEN (MEDIUM) -- 4 cycles agree |
+| MerchantMatcher/taxonomy O(n) scan | C16, C33, C50, C62 | OPEN (MEDIUM) -- 4 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21, C23, C25, C26, C33, C62 | OPEN (MEDIUM) -- 6 cycles agree |
+| CategoryBreakdown dark mode contrast | C4, C8, C59, C62 | OPEN (LOW) -- 4 cycles agree |
+| Annual savings simple *12 projection | C7, C18, C62 | OPEN (LOW) -- 3 cycles agree |
+| Full-page reload navigation | C19, C60, C62 | OPEN (LOW) -- 3 cycles agree |
+| date-utils unparseable passthrough | C56, C62 | OPEN (LOW) -- 2 cycles agree |
+| CSV DATE_PATTERNS divergence risk | C20, C25, C62 | OPEN (LOW) -- 3 cycles agree |
+| Print stylesheet dark-mode fix | C60, C61 | **FIXED** |
 | CardGrid reactive dependency cycle | C60 | **FIXED** (C61 confirmed) |
-| Print stylesheet dark-mode inconsistency | C60, C61 | OPEN (LOW) -- 2 cycles agree |
+| CardDetail category labels flash | C61 | **FIXED** (C62 confirmed) |
+| TransactionReview stale editedTxs on reset | C61 | **FIXED** (C62 confirmed) |
+| SavingsComparison zero-prefix inconsistency | C57, C58 | **FIXED** |
 
 ---
 
@@ -125,10 +86,32 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | C4-10 | MEDIUM | E2E test stale dist/ dependency |
 | C4-11 | MEDIUM | No regression test for findCategory fuzzy match |
 | C4-13/C9-08/D-43/D-74 | LOW | Small-percentage bars nearly invisible |
+| C7-04 | LOW | TransactionReview $effect re-sync fragile |
+| C7-06 | LOW | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
+| C7-07 | LOW | BANK_SIGNATURES duplicated between packages/parser and apps/web |
+| C7-11 | LOW | persistWarning message misleading for data corruption vs size truncation |
+| C8-05/C4-09 | LOW | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast |
+| C8-07/C4-14 | LOW | build-stats.ts fallback values will drift |
+| C8-08 | LOW | inferYear() timezone-dependent near midnight Dec 31 |
+| C8-09 | LOW | Test duplicates production code instead of testing it directly |
+| C18-01/C50-08 | LOW | VisibilityToggle $effect directly mutates DOM |
+| C18-02 | LOW | Results page stat elements queried every effect run even on dashboard page |
+| C18-04 | LOW | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
+| C19-04 | LOW | FileDropzone navigation uses full page reload |
+| C19-05 | LOW | CardDetail navigation uses full page reload |
 | C20-02/C25-03 | LOW | csv.ts DATE_PATTERNS/AMOUNT_PATTERNS divergence risk with date-utils.ts |
 | C20-04/C25-10 | LOW | pdf.ts module-level regex constants divergence risk with date-utils.ts |
+| C21-02 | LOW | cards.ts shared fetch AbortSignal race |
+| C22-04 | LOW | CSV adapter registry only covers 10 of 24 detected banks |
+| C33-01 | MEDIUM | MerchantMatcher substring scan O(n) per transaction -- partially fixed |
+| C33-02 | MEDIUM | cachedCategoryLabels stale across redeployments |
 | C34-04 | LOW | Server-side PDF has no fallback line scanner |
-| D-01 through D-111 | Various | See deferred items file for full list |
+| C41-05/C42-04 | LOW | cards.ts loadCategories returns empty array on AbortError |
+| C49-01 | LOW | `isSubstringSafeKeyword` is dead code superseded by SUBSTRING_SAFE_ENTRIES |
+| C56-04 | LOW | date-utils.ts returns raw input for unparseable dates without error reporting |
+| C56-05 | LOW | Zero savings shows "0원" without plus sign |
+| C61-02 | LOW | Breadcrumb uses `<a>` instead of `<button>` for action |
+| C62-11 | LOW | persistToStorage bare catch returns 'corrupted' for non-quota errors |
 
 ---
 
