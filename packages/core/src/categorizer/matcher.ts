@@ -12,6 +12,12 @@ const ALL_KEYWORDS: Record<string, string> = {
   ...NICHE_KEYWORDS,
 };
 
+// Pre-compute keyword entries once at module level instead of on every
+// match() call — avoids repeated Object.entries() allocation and the
+// isSubstringSafeKeyword filter for the O(n) substring scan (C33-01).
+const SUBSTRING_SAFE_ENTRIES: Array<[keyword: string, categoryStr: string]> = Object.entries(ALL_KEYWORDS)
+  .filter(([kw]) => kw.trim().length >= 2);
+
 function isSubstringSafeKeyword(keyword: string): boolean {
   return keyword.trim().length >= 2;
 }
@@ -51,9 +57,10 @@ export class MerchantMatcher {
     }
 
     // 2. Substring match against MERCHANT_KEYWORDS keys (confidence 0.8)
+    //    Uses precomputed SUBSTRING_SAFE_ENTRIES to avoid per-call
+    //    Object.entries() allocation and filtering (C33-01).
     let bestStaticKw: { category: string; subcategory?: string; kwLen: number } | undefined;
-    for (const [kw, categoryStr] of Object.entries(ALL_KEYWORDS)) {
-      if (!isSubstringSafeKeyword(kw)) continue;
+    for (const [kw, categoryStr] of SUBSTRING_SAFE_ENTRIES) {
       // lower.includes(kw): merchant name contains keyword — always meaningful
       // kw.includes(lower): keyword contains merchant name — only meaningful when
       // the merchant name is >= 3 chars to avoid false positives (e.g., "스타"
