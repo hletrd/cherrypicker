@@ -153,6 +153,20 @@ let cardsAbortController: AbortController | null = null;
 let categoriesPromise: Promise<{ categories: CategoryNode[] } | undefined> | null = null;
 let categoriesAbortController: AbortController | null = null;
 
+// Card-by-ID index for O(1) lookups instead of O(n) linear scan (C62-09).
+// Built once when loadCardsData() first resolves, cleared on error/reset.
+let cardIndex: Map<string, { issuer: IssuerData; card: CardRuleSet }> | null = null;
+
+function buildCardIndex(data: CardsJson): Map<string, { issuer: IssuerData; card: CardRuleSet }> {
+  const index = new Map<string, { issuer: IssuerData; card: CardRuleSet }>();
+  for (const issuer of data.issuers) {
+    for (const card of issuer.cards) {
+      index.set(card.card.id, { issuer, card });
+    }
+  }
+  return index;
+}
+
 function getBaseUrl(): string {
   return import.meta.env.BASE_URL ?? '/';
 }
@@ -193,9 +207,15 @@ export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson | u
         if (!res.ok) throw new Error('카드 데이터를 불러올 수 없습니다');
         return res.json() as Promise<CardsJson>;
       })
+      .then(data => {
+        // Build card-by-ID index for O(1) lookups (C62-09)
+        cardIndex = buildCardIndex(data);
+        return data;
+      })
       .catch(err => {
         cardsPromise = null;
         cardsAbortController = null;
+        cardIndex = null; // Clear stale index on error
         // AbortError is expected (component unmount, signal cancellation).
         // Don't propagate it — callers who passed a signal already know
         // about the abort. Callers without signals should not receive an
@@ -280,6 +300,31 @@ export async function getCardList(filters?: { issuer?: string; type?: string }, 
 export async function getCardById(cardId: string, options?: { signal?: AbortSignal }): Promise<CardDetail | null> {
   const data = await loadCardsData(options?.signal);
   if (!data) return null;
+  // Use the O(1) index when available, fall back to linear scan (C62-09)
+  if (cardIndex) {
+    const entry = cardIndex.get(cardId);
+    if (!entry) return null;
+    const { issuer, card } = entry;
+    return {
+      id: card.card.id,
+      issuer: card.card.issuer,
+      issuerNameKo: issuer.nameKo,
+      issuerNameEn: issuer.nameEn,
+      name: card.card.name,
+      nameKo: card.card.nameKo,
+      type: card.card.type,
+      annualFee: card.card.annualFee,
+      url: card.card.url,
+      lastUpdated: card.card.lastUpdated,
+      source: card.card.source,
+      rewardCategories: card.rewards.map(r => r.category),
+      performanceTiers: card.performanceTiers,
+      performanceExclusions: card.performanceExclusions,
+      rewards: card.rewards,
+      globalConstraints: card.globalConstraints,
+    };
+  }
+  // Fallback: linear scan (should not normally be reached)
   for (const issuer of data.issuers) {
     const card = issuer.cards.find(c => c.card.id === cardId);
     if (card) {
