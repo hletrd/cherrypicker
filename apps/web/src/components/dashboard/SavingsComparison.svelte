@@ -53,6 +53,7 @@
   $effect(() => {
     const target = opt?.savingsVsSingleCard ?? 0;
     if (target === 0 && displayedSavings === 0) return;
+    if (target === displayedSavings) return;
     const startVal = displayedSavings;
     let cancelled = false;
     let rafId: number;
