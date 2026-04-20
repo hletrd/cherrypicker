@@ -57,7 +57,7 @@ export const ibkAdapter: BankAdapter = {
         }
         continue;
       }
-      if (amount === 0) continue;
+      if (amount <= 0) continue;
 
       const tx: RawTransaction = {
         date: parseDateStringToISO(dateRaw),

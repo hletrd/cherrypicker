@@ -66,10 +66,10 @@ function isValidAmount(amount: number | null, amountRaw: string, lineIdx: number
     }
     return false;
   }
-  // Skip zero-amount rows (e.g., balance inquiries, declined transactions)
-  // which don't contribute to spending optimization — matching the PDF
-  // parser's behavior (pdf.ts:231-237). C26-02.
-  if (amount === 0) return false;
+  // Skip zero- and negative-amount rows (e.g., balance inquiries, declined
+  // transactions, refunds). These don't contribute to spending optimization
+  // and would inflate monthly spending totals (C42-01/C42-02).
+  if (amount <= 0) return false;
   return true;
 }
 

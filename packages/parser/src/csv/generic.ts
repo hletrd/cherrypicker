@@ -116,9 +116,10 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
       continue;
     }
     // Skip zero-amount rows (e.g., balance inquiries, declined transactions)
-    // which don't contribute to spending optimization — matching the web-side
-    // parser's isValidAmount() behavior (C26-02/C32-02).
-    if (amount === 0) continue;
+    // Skip zero- and negative-amount rows (e.g., balance inquiries, declined
+    // transactions, refunds). These don't contribute to spending optimization
+    // and would inflate monthly spending totals (C42-01/C42-02).
+    if (amount <= 0) continue;
 
     const tx: RawTransaction = {
       date: parseDateStringToISO(dateRaw),

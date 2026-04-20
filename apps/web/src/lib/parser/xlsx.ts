@@ -393,11 +393,10 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       }
       continue;
     }
-    // Skip zero-amount rows (e.g., balance inquiries, declined transactions)
-    // which don't contribute to spending optimization — matching the CSV
-    // parser's isValidAmount() behavior (C26-02) and the PDF parser's
-    // zero-amount filter (pdf.ts:231-237). C28-02.
-    if (amount === 0) continue;
+    // Skip zero- and negative-amount rows (e.g., balance inquiries, declined
+    // transactions, refunds). These don't contribute to spending optimization
+    // and would inflate monthly spending totals (C42-01/C42-02).
+    if (amount <= 0) continue;
 
     const tx: RawTransaction = {
       date: parseDateToISO(dateRaw),
