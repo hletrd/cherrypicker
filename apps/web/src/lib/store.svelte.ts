@@ -141,17 +141,17 @@ function persistToStorage(data: AnalysisResult): PersistWarningKind {
  *  are excluded because they don't contribute to optimization — they are
  *  not "invalid" per se, just not optimizable. Renamed from isOptimizableTx
  *  to clarify the filtering intent (C19-07). */
-function isOptimizableTx(tx: any): tx is CategorizedTx {
+function isOptimizableTx(tx: unknown): tx is CategorizedTx {
+  if (!tx || typeof tx !== 'object') return false;
+  const obj = tx as Record<string, unknown>;
   return (
-    tx &&
-    typeof tx === 'object' &&
-    typeof tx.id === 'string' && tx.id.length > 0 &&
-    typeof tx.date === 'string' && tx.date.length > 0 &&
-    typeof tx.merchant === 'string' &&
-    typeof tx.amount === 'number' &&
-    Number.isFinite(tx.amount) &&
-    tx.amount !== 0 &&
-    typeof tx.category === 'string' && tx.category.length > 0
+    typeof obj.id === 'string' && obj.id.length > 0 &&
+    typeof obj.date === 'string' && obj.date.length > 0 &&
+    typeof obj.merchant === 'string' &&
+    typeof obj.amount === 'number' &&
+    Number.isFinite(obj.amount) &&
+    obj.amount !== 0 &&
+    typeof obj.category === 'string' && obj.category.length > 0
   );
 }
 
