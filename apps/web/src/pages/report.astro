@@ -1,5 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import ReportContent from '../components/report/ReportContent.svelte';
+import VisibilityToggle from '../components/ui/VisibilityToggle.svelte';
 ---
 
 <Layout title="리포트">
@@ -20,7 +22,7 @@ import Layout from '../layouts/Layout.astro';
       </div>
       <div class="flex gap-3">
         <button
-          id="print-report"
+          onclick="window.print()"
           class="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--color-primary-dark)]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16" aria-hidden="true">
@@ -31,40 +33,51 @@ import Layout from '../layouts/Layout.astro';
       </div>
     </div>
 
-    <!-- Report content -->
-    <div
-      id="report-content"
-      class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-[var(--shadow-card)] print:rounded-none print:border-0 print:p-0 print:shadow-none"
-    >
-      <div class="flex flex-col items-center gap-4 py-8">
-        <p class="text-[var(--color-text-muted)]">아직 분석 결과가 없어요</p>
-        <a href={import.meta.env.BASE_URL}
-          class="inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
-        >명세서 올리러 가기</a>
+    <!-- Empty state when no data -->
+    <div id="report-empty-state" class="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="48" height="48" class="text-[var(--color-text-muted)] opacity-40" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+      </svg>
+      <p class="text-base font-medium text-[var(--color-text-muted)]">아직 분석 결과가 없어요</p>
+      <p class="text-sm text-[var(--color-text-muted)]">명세서를 올리면 분석 리포트를 보여줘요</p>
+      <a
+        href={`${import.meta.env.BASE_URL}`}
+        class="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
+      >
+        명세서 올리러 가기
+      </a>
+    </div>
+
+    <!-- Data-driven content (hidden until store has data) -->
+    <div id="report-data-content" class="hidden">
+      <div
+        class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 shadow-[var(--shadow-card)] print:rounded-none print:border-0 print:p-0 print:shadow-none"
+      >
+        <ReportContent client:load />
       </div>
     </div>
+
+    <VisibilityToggle client:load dataContentId="report-data-content" emptyStateId="report-empty-state" />
   </div>
+
+  <style>
+    @media print {
+      :global(nav),
+      :global(footer) {
+        display: none !important;
+      }
+      :global(main) {
+        padding: 0 !important;
+      }
+      :global(body) {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      #report-content {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+    }
+  </style>
 </Layout>
-
-<script is:inline src="/cherrypicker/scripts/report.js"></script>
-
-<style>
-  @media print {
-    :global(nav),
-    :global(footer) {
-      display: none !important;
-    }
-    :global(main) {
-      padding: 0 !important;
-    }
-    :global(body) {
-      background: #fff !important;
-      color: #000 !important;
-    }
-    #report-content {
-      border: none !important;
-      box-shadow: none !important;
-      padding: 0 !important;
-    }
-  }
-</style>
