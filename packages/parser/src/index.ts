@@ -32,19 +32,19 @@ export async function parseStatement(filePath: string, options?: ParseOptions): 
   switch (detection.format) {
     case 'csv': {
       const buffer = await readFile(filePath);
-      // Try UTF-8 first, then EUC-KR fallback via TextDecoder
+      // Try UTF-8 first, then CP949 fallback via TextDecoder
       let content: string;
       try {
         content = buffer.toString('utf-8');
-        // Sanity check: if too many replacement chars per KB, try EUC-KR
+        // Sanity check: if too many replacement chars per KB, try CP949
         const replacementCount = (content.match(/\uFFFD/g) ?? []).length;
         const ratio = replacementCount / (content.length / 1024);
         if (ratio > 1) {
-          const decoder = new TextDecoder('euc-kr');
+          const decoder = new TextDecoder('cp949');
           content = decoder.decode(buffer);
         }
       } catch {
-        const decoder = new TextDecoder('euc-kr');
+        const decoder = new TextDecoder('cp949');
         content = decoder.decode(buffer);
       }
       return parseCSV(content, bank);
