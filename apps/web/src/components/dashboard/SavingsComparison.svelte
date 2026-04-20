@@ -12,35 +12,18 @@
     return ids.size;
   });
 
-  // Per-card spending/reward breakdown
-  interface CardBreakdown {
-    cardId: string;
-    cardName: string;
-    spending: number;
-    reward: number;
-    rate: number;
-  }
-
-  let cardBreakdown = $derived.by((): CardBreakdown[] => {
-    if (!assignments.length) return [];
-    const map = new Map<string, CardBreakdown>();
-    for (const a of assignments) {
-      const existing = map.get(a.assignedCardId);
-      if (existing) {
-        existing.spending += a.spending;
-        existing.reward += a.reward;
-      } else {
-        map.set(a.assignedCardId, {
-          cardId: a.assignedCardId,
-          cardName: a.assignedCardName,
-          spending: a.spending,
-          reward: a.reward,
-        });
-      }
-    }
-    return [...map.values()].map(entry => ({
-      ...entry,
-      rate: entry.spending > 0 ? entry.reward / entry.spending : 0,
+  // Per-card spending/reward breakdown — derived from the optimizer's
+  // cardResults instead of re-aggregating assignments, ensuring consistency
+  // with the optimizer's computation and eliminating redundant work (C50-05).
+  let cardBreakdown = $derived.by(() => {
+    const results = analysisStore.cardResults;
+    if (!results.length) return [];
+    return results.map(cr => ({
+      cardId: cr.cardId,
+      cardName: cr.cardName,
+      spending: cr.totalSpending,
+      reward: cr.totalReward,
+      rate: cr.effectiveRate,
     })).sort((a, b) => b.reward - a.reward);
   });
 
@@ -106,6 +89,11 @@
     // but used by cherry-pick), this guard would become reachable. Kept as a
     // defensive measure.
     if (opt.bestSingleCard.totalReward === 0 && opt.savingsVsSingleCard > 0) {
+      // IMPORTANT: `Infinity` is used as a discriminating sentinel value,
+      // not a numeric percentage. The template checks `savingsPct === Infinity`
+      // to render the "최적 조합만 혜택" badge. Do NOT consume `savingsPct`
+      // as a numeric value in ARIA live regions or screen reader announcements
+      // without first checking for `Infinity` (C50-02).
       return Infinity;
     }
     if (opt.bestSingleCard.totalReward === 0) return 0;
