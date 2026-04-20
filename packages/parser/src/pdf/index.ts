@@ -179,6 +179,64 @@ export async function parsePDF(
     };
   }
 
+  // Tier 2.5: Fallback line scanner — scan every line for date + amount
+  // patterns when structured table parsing fails (C34-04/C69). Ported from
+  // the web-side parser (apps/web/src/lib/parser/pdf.ts) which has had this
+  // fallback since initial implementation.
+  const fallbackTransactions: RawTransaction[] = [];
+  const lines = text.split('\n');
+  const fallbackDatePattern = /(\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/]\d{1,2}(?![.\-\/\d]))/;
+  // The 'g' flag is required for matchAll() below. Do NOT hoist this regex
+  // to module scope — the global flag's lastIndex mutation would break
+  // .test()/.exec() calls if the regex were shared across invocations.
+  const fallbackAmountPattern = /([\d,]+)원?/g;
+
+  for (const line of lines) {
+    const dateMatch = line.match(fallbackDatePattern);
+    // Use the last amount match — Korean statements typically list the
+    // transaction amount as the last numeric value on the line
+    const amountMatches = [...line.matchAll(fallbackAmountPattern)];
+    const amountMatch = amountMatches.length > 0 ? amountMatches[amountMatches.length - 1] : null;
+    if (dateMatch && amountMatch) {
+      // Extract merchant: everything between date and amount
+      const dateEnd = line.indexOf(dateMatch[0]) + dateMatch[0].length;
+      const amountStart = line.lastIndexOf(amountMatch[0]);
+      if (amountStart > dateEnd) {
+        const between = line.slice(dateEnd, amountStart).trim();
+        if (between) {
+          const amountRaw = amountMatch[1]!;
+          const amount = parseAmount(amountRaw);
+          // parseAmount returns null for unparseable inputs — skip the row
+          // rather than silently treating it as 0 (C34-01).
+          if (amount === null) {
+            const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
+            if (cleaned && !/^0+$/.test(cleaned)) {
+              errors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
+            }
+          } else if (amount > 0) {
+            // Only include positive-amount transactions (C42-01).
+            // Negative amounts (refunds) and zero amounts (balance inquiries)
+            // don't contribute to spending optimization.
+            fallbackTransactions.push({
+              date: parseDateStringToISO(dateMatch[1]!),
+              merchant: between.replace(/\s+/g, ' ').trim(),
+              amount,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  if (fallbackTransactions.length > 0) {
+    return {
+      bank: resolvedBank,
+      format: 'pdf',
+      transactions: fallbackTransactions,
+      errors,
+    };
+  }
+
   if (!options.allowRemoteLLM) {
     errors.push({
       message:
