@@ -165,7 +165,7 @@ function isOptimizableTx(tx: unknown): tx is CategorizedTx {
     typeof obj.merchant === 'string' &&
     typeof obj.amount === 'number' &&
     Number.isFinite(obj.amount) &&
-    obj.amount !== 0 &&
+    obj.amount > 0 &&
     typeof obj.category === 'string' && obj.category.length > 0
   );
 }

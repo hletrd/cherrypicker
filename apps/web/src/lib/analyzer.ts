@@ -207,7 +207,7 @@ export async function optimizeFromTransactions(
           !(tx.subcategory && exclusions.has(tx.subcategory)) &&
           !(tx.subcategory && exclusions.has(`${tx.category}.${tx.subcategory}`))
         )
-        .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+        .reduce((sum, tx) => sum + tx.amount, 0);
       cardPreviousSpending.set(rule.card.id, qualifying);
     }
   }
