@@ -259,7 +259,10 @@ function tryStructuredParse(text: string, _bank: BankId | null): RawTransaction[
       const merchant = merchantIdx !== -1 ? (row[merchantIdx] ?? '').trim() : '';
       const amount = parseAmount(amountCell.value);
 
-      if (amount <= 0 || (!merchant && amount === 0)) continue;
+      // Skip zero-amount rows and rows with no merchant AND zero amount.
+      // Allow negative amounts (refund/cancellation entries).
+      if (amount === 0) continue;
+      if (!merchant && amount === 0) continue;
 
       const tx: RawTransaction = {
         date: parseDateToISO(dateCell.value),
@@ -359,7 +362,8 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
           const amount = parseAmount(amountMatch[1]!);
-          if (amount > 0) {
+          // Allow non-zero amounts including negative (refund/cancellation entries)
+          if (amount !== 0) {
             fallbackTransactions.push({
               date: parseDateToISO(dateMatch[1]!),
               merchant: between.replace(/\s+/g, ' ').trim(),
