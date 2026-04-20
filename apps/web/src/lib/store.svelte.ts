@@ -78,6 +78,11 @@ export interface AnalysisResult {
   transactions?: CategorizedTx[];
   optimization: OptimizationResult;
   monthlyBreakdown?: { month: string; spending: number; transactionCount: number }[];
+  /** The user's explicit previousMonthSpending input (if provided during
+   *  analysis). Forwarded to reoptimize() so that category edits preserve
+   *  the user's original performance tier baseline instead of silently
+   *  recomputing it from exclusion-filtered spending (C44-01). */
+  previousMonthSpendingOption?: number;
 }
 
 export interface AnalyzeOptions {
@@ -92,7 +97,7 @@ const STORAGE_KEY = 'cherrypicker:analysis';
 
 type PersistedAnalysisResult = Pick<
   AnalysisResult,
-  'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown' | 'transactions'
+  'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown' | 'transactions' | 'previousMonthSpendingOption'
 > & {
   /** When transactions are omitted due to size limits, records how many
    *  were lost so the warning can inform the user (C22-03). */
@@ -131,6 +136,7 @@ function persistToStorage(data: AnalysisResult): PersistResult {
         optimization: data.optimization,
         monthlyBreakdown: data.monthlyBreakdown,
         transactions: data.transactions,
+        previousMonthSpendingOption: data.previousMonthSpendingOption,
       };
       const serialized = JSON.stringify(persisted);
       if (serialized.length > MAX_PERSIST_SIZE) {
@@ -246,6 +252,7 @@ function loadFromStorage(): AnalysisResult | null {
                 transactionCount: typeof item?.transactionCount === 'number' ? item.transactionCount : 0,
               }))
             : undefined,
+          previousMonthSpendingOption: typeof parsed.previousMonthSpendingOption === 'number' ? parsed.previousMonthSpendingOption : undefined,
         } as AnalysisResult;
       }
       sessionStorage.removeItem(STORAGE_KEY);
@@ -384,6 +391,11 @@ function createAnalysisStore() {
       try {
         const fileArray = Array.isArray(files) ? files : [files];
         const analysisResult = await analyzeMultipleFiles(fileArray, options);
+        // Preserve the user's explicit previousMonthSpending input so
+        // reoptimize() can forward it instead of silently dropping it (C44-01).
+        if (options?.previousMonthSpending !== undefined) {
+          analysisResult.previousMonthSpendingOption = options.previousMonthSpending;
+        }
         result = analysisResult;
         generation++;
         const persistResult = persistToStorage(analysisResult);
@@ -433,10 +445,21 @@ function createAnalysisStore() {
             transactionCount: monthlyTxCount.get(month) ?? 0,
           }));
 
-        // Compute previousMonthSpending from the FRESH monthly breakdown
-        // (derived from editedTransactions), not from the stale result.monthlyBreakdown.
+        // Compute previousMonthSpending: prefer the user's explicit input from
+        // the initial analysis (stored in result.previousMonthSpendingOption) so
+        // that category edits preserve the user's original performance tier
+        // baseline instead of silently recomputing it (C44-01). Fall back to
+        // the FRESH monthly breakdown (derived from editedTransactions) when
+        // the user did not provide an explicit value.
         let previousMonthSpending: number | undefined;
-        if (latestMonth) {
+        if (options?.previousMonthSpending !== undefined) {
+          // Caller explicitly provided a value — use it
+          previousMonthSpending = options.previousMonthSpending;
+        } else if (result.previousMonthSpendingOption !== undefined) {
+          // User provided a value during the initial analysis — preserve it
+          previousMonthSpending = result.previousMonthSpendingOption;
+        } else if (latestMonth) {
+          // No explicit value — compute from the fresh monthly breakdown
           const months = updatedMonthlyBreakdown.map(m => m.month).sort();
           const latestIdx = months.indexOf(latestMonth);
           if (latestIdx > 0) {
