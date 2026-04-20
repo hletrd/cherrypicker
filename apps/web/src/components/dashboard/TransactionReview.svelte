@@ -3,7 +3,6 @@
   import { formatWon } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
   import type { CategorizedTx } from '../../lib/analyzer.js';
-  // AI categorization is disabled — see ../../lib/categorizer-ai.ts for re-enable instructions.
   import { onMount } from 'svelte';
   import { loadCategories } from '../../lib/cards.js';
 
