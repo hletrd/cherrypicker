@@ -43,7 +43,7 @@ This suppresses the '+' prefix when the animated value rounds to 0, which is exa
 2. Run all gates to confirm no regressions
 3. Commit with message: `fix(web): 🐛 suppress +0원 flicker during SavingsComparison sign transitions`
 
-**Status:** PENDING
+**Status:** COMPLETED -- commit 00000005030faeb0d82756b92b33772aa5cb6532
 
 ---
 
