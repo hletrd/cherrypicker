@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-20 (Cycle 33)
+# Review Aggregate -- 2026-04-22 (Cycle 34)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle33-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-22-cycle34-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-32 per-agent and aggregate files
+- All cycle 1-33 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-32 findings are confirmed fixed except as noted below:
+All prior cycle 1-33 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -34,9 +34,12 @@ All prior cycle 1-32 findings are confirmed fixed except as noted below:
 | C22-05 | OPEN (LOW) | TransactionReview changeCategory O(n) array copy (deferred) |
 | C24-06 | OPEN (LOW) | buildCardResults totalSpending no negative amount guard (safe in practice) |
 | C27-02 | OPEN (LOW) | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
-| C32-01 | FIXED | Server-side parseGenericCSV now uses Math.round(parseFloat(...)) |
-| C32-02 | FIXED | Server-side parseGenericCSV now filters zero-amount transactions |
-| C32-03 | FIXED | Server-side parseCSV generic fallback now wrapped in try/catch |
+| C31-01 | FIXED | SpendingSummary dismiss catch now logs console.warn matching C27-01/C30-03 pattern |
+| C31-02 | FIXED | greedyOptimize Map.set() replaced with if/else -- only .set() on first insertion |
+| C33-01 | PARTIALLY FIXED | SUBSTRING_SAFE_ENTRIES pre-computed at module level; still O(n) substring scan per transaction but avoids per-call allocation |
+| C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
+| C33-04 | FIXED | Server-side splitCSVLine now handles RFC 4180 doubled quotes |
+| C33-06 | FIXED | buildCardResults uses tx.amount directly instead of Math.abs(tx.amount) |
 
 ---
 
@@ -44,12 +47,11 @@ All prior cycle 1-32 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C33-01 | MEDIUM | High | `packages/core/src/categorizer/matcher.ts:55-71` | MerchantMatcher substring scan is O(n) over ALL_KEYWORDS on every call — performance concern for large statement files |
-| C33-02 | MEDIUM | Medium | `apps/web/src/lib/store.svelte.ts:309,491-502` | cachedCategoryLabels never invalidated when categories.json changes on the server (e.g., redeployment); stale across long-lived tabs (extends C21-04) |
-| C33-03 | LOW | High | `apps/web/src/lib/parser/pdf.ts:166-177` | parseAmount returns 0 for unparseable amounts instead of null — fallback PDF scanner silently drops unparseable amounts without error reporting |
-| C33-04 | LOW | Medium | `packages/parser/src/csv/generic.ts:133-153` | SplitCSVLine does not handle doubled-quote escape (""), while web-side splitLine at csv.ts:14 does — parity bug |
-| C33-05 | LOW | Low | `apps/web/src/lib/analyzer.ts:63-67` | toCoreCardRuleSets does not validate tiers[].unit narrowing, unlike source and type which have explicit allowlists |
-| C33-06 | LOW | Medium | `packages/core/src/optimizer/greedy.ts:224` | buildCardResults totalSpending uses Math.abs(tx.amount) but assignedTransactions are always positive — misleading implication |
+| C34-01 | MEDIUM | High | `packages/parser/src/pdf/index.ts:102-108` | Server-side PDF parseAmount returns 0 for NaN (not null), uses parseInt (truncation) instead of Math.round(parseFloat(...)), and lacks parenthesized negative handling -- parity bug with fixed web-side |
+| C34-02 | LOW | High | `packages/parser/src/xlsx/index.ts:136` | Server-side XLSX parseAmount string path uses parseInt (truncation) instead of Math.round(parseFloat(...)) -- inconsistent with numeric path |
+| C34-03 | LOW | High | `packages/parser/src/pdf/index.ts:110-122` | Server-side PDF findDateCell does not validate month/day ranges for SHORT_MD_DATE_PATTERN (no isValidShortDate) -- parity bug with web-side |
+| C34-04 | LOW | High | `packages/parser/src/pdf/index.ts:131-187, 189-258` | Server-side PDF has no fallback line scanner -- missing entire parsing tier present on web-side |
+| C34-05 | LOW | High | `packages/parser/src/csv/generic.ts:33-40`, `xlsx/index.ts:31-38`, `pdf/index.ts:23-30` | inferYear duplicated 3 times across server-side parsers -- not centralized like web-side date-utils.ts |
 
 ---
 
