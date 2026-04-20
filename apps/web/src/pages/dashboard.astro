@@ -5,6 +5,7 @@ import CategoryBreakdown from '../components/dashboard/CategoryBreakdown.svelte'
 import OptimalCardMap from '../components/dashboard/OptimalCardMap.svelte';
 import SavingsComparison from '../components/dashboard/SavingsComparison.svelte';
 import TransactionReview from '../components/dashboard/TransactionReview.svelte';
+import VisibilityToggle from '../components/ui/VisibilityToggle.svelte';
 ---
 
 <Layout title="대시보드">
@@ -118,5 +119,5 @@ import TransactionReview from '../components/dashboard/TransactionReview.svelte'
     </div>
   </div>
 
-  <script is:inline src="/cherrypicker/scripts/dashboard.js"></script>
+  <VisibilityToggle client:load dataContentId="dashboard-data-content" emptyStateId="dashboard-empty-state" />
 </Layout>
