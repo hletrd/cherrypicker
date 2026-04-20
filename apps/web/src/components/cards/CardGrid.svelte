@@ -122,7 +122,7 @@
       </button>
     {/each}
     {#if !loading}
-      <span class="ml-auto rounded-full bg-[var(--color-bg)] px-3 py-1 text-xs font-medium text-[var(--color-text-muted)]">
+      <span class="ml-auto rounded-full bg-[var(--color-bg)] px-3 py-1 text-xs font-medium text-[var(--color-text-muted)]" aria-live="polite">
         {filteredCards.length}개 카드
       </span>
     {/if}
