@@ -32,7 +32,7 @@ No new fix verifications this cycle.
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
 | C69-01 | LOW | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:217` | During count-up animation, tiny savings (1-2 won) could show brief "+1원" flicker before stabilizing. The `Math.abs(displayedSavings) >= 1` guard mostly prevents this. Sub-second visual artifact only. |
-| C69-02 | LOW | MEDIUM | `packages/parser/src/csv/shared.ts` | Web-side CSV `parseAmount` handles parenthesized negatives `(1,234)` but server-side shared CSV parser may not, creating parse-result parity gap for negative-amount rows. Needs verification. |
+| C69-02 | LOW | MEDIUM→HIGH | `packages/parser/src/csv/shared.ts` | **Already fixed** -- `parseCSVAmount` line 36-37 already handles parenthesized negatives. Verified this cycle. No action needed. |
 
 ---
 
@@ -91,7 +91,6 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | C66-08 | LOW | formatIssuerNameKo and CATEGORY_COLORS hardcoded maps will drift |
 | C67-01 | MEDIUM | Greedy optimizer O(m*n*k) quadratic behavior |
 | C69-01 | LOW | SavingsComparison tiny savings animation flicker (informational) |
-| C69-02 | LOW | Server-side CSV shared.ts may lack parenthesized-negative handling |
 
 ---
 

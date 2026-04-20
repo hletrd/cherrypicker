@@ -11,7 +11,7 @@ All prior findings are carried forward. This cycle focuses on addressing the mos
 ### Task 1: Improve `persistToStorage` error discrimination (C66-04/C62-11)
 **Priority:** HIGH (8 cycles agree; low severity but easy fix that improves diagnostics)
 **Files:** `apps/web/src/lib/store.svelte.ts:125-168`
-**Status:** PENDING
+**Status:** COMMITTED (`0000000cc6ff`) -- Added 'error' PersistWarningKind, updated persistToStorage catch block, added red-themed user message.
 
 **Problem:** `persistToStorage()` returns `{ kind: 'corrupted' }` for ALL non-quota errors, including `TypeError` (circular references), `SyntaxError` (unlikely from stringify), and other unexpected errors. This lumps data corruption together with code bugs, making it harder to diagnose persistence failures. The user sees "거래 내역을 불러오지 못했어요" for all failure types.
 
@@ -22,11 +22,11 @@ All prior findings are carried forward. This cycle focuses on addressing the mos
 - Add a new user-facing message for `'error'` vs `'corrupted'`
 
 **Steps:**
-1. [ ] Update `PersistWarningKind` type to include `'error'`
-2. [ ] In `persistToStorage`, return `{ kind: 'error' }` for non-quota catch path
-3. [ ] Add user-facing message for `'error'` kind in the template section
-4. [ ] Run `vitest` and `bun test` to verify no regressions
-5. [ ] Commit: `fix(web): 🐛 distinguish persistence error types in store`
+1. [x] Update `PersistWarningKind` type to include `'error'`
+2. [x] In `persistToStorage`, return `{ kind: 'error' }` for non-quota catch path
+3. [x] Add user-facing message for `'error'` kind in the template section
+4. [x] Run `vitest` and `bun test` to verify no regressions
+5. [x] Commit: `fix(web): 🐛 distinguish persistence error types in store`
 
 ### Task 2: Add zero-savings plus-sign display fix (C56-05)
 **Priority:** MEDIUM (9 cycles have flagged annual savings projection; this is the simplest sub-fix)
@@ -42,7 +42,7 @@ For this cycle, focus on the narrower fix: when savings is exactly 0, show "0원
 ### Task 3: Add fallback line scanner to server-side PDF parser (C34-04)
 **Priority:** MEDIUM (server-side PDF has no fallback when structured parse fails, unlike web-side)
 **Files:** `packages/parser/src/pdf/index.ts`
-**Status:** PENDING
+**Status:** COMMITTED (`000000024238`) -- Added fallback line scanner between Tier 2 and LLM fallback, ported from web-side parser.
 
 **Problem:** The server-side PDF parser (`packages/parser/src/pdf/index.ts`) has only two tiers: structured parse and LLM fallback. The web-side parser has three tiers: structured parse, fallback line scanner, and "no transactions found" error. When structured parse fails on the server and LLM is disabled (the default), the user gets an error message but no transactions. The web-side parser has a better chance of extracting transactions via its fallback line scanner.
 
@@ -52,10 +52,10 @@ For this cycle, focus on the narrower fix: when savings is exactly 0, show "0원
 - Use the same `DATE_PATTERN`, `AMOUNT_PATTERN`, and `parseDateStringToISO()` / `parseAmount()` helpers already available
 
 **Steps:**
-1. [ ] Add fallback line scanner after structured parse failure in `packages/parser/src/pdf/index.ts`
-2. [ ] Reuse existing `parseDateStringToISO()` and `parseAmount()` helpers
-3. [ ] Run `bun test` to verify no regressions
-4. [ ] Commit: `feat(parser): ✨ add fallback line scanner to server-side PDF parser`
+1. [x] Add fallback line scanner after structured parse failure in `packages/parser/src/pdf/index.ts`
+2. [x] Reuse existing `parseDateStringToISO()` and `parseAmount()` helpers
+3. [x] Run `bun test` to verify no regressions
+4. [x] Commit: `feat(parser): ✨ add fallback line scanner to server-side PDF parser`
 
 ---
 
@@ -72,5 +72,5 @@ For this cycle, focus on the narrower fix: when savings is exactly 0, show "0원
 | C66-08 (formatIssuerNameKo / CATEGORY_COLORS drift) | 6 cycles agree. Both maps are derived from YAML data at build time. Exit criterion: when new issuers are added without updating the maps. |
 | C66-10 (BANK_SIGNATURES duplication) | 5 cycles agree. Both copies are currently identical. Fix would require shared module between Bun and browser environments. Exit criterion: when the two copies drift out of sync. |
 | C69-01 (animation flicker for tiny savings) | Informational only. The existing `Math.abs(displayedSavings) >= 1` guard already mitigates. Sub-second visual artifact with no user impact. |
-| C69-02 (server-side CSV negative amounts) | **Already fixed** -- `packages/parser/src/csv/shared.ts:parseCSVAmount` line 36-37 handles parenthesized negatives. |
+| C69-02 (server-side CSV negative amounts) | **Already fixed** -- `packages/parser/src/csv/shared.ts:parseCSVAmount` line 36-37 handles parenthesized negatives. Verified this cycle. |
 | C56-05 (zero savings sign display) | Current "0원" display is correct for zero savings. No code change needed. |
