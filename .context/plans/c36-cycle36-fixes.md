@@ -1,6 +1,6 @@
 # Plan: Cycle 36 Fixes -- Web PDF parseAmount Parity + DRY Consolidation
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Source findings:** C36-01 (MEDIUM, High), C36-02 (LOW, High), C36-03 (LOW, High)
 
 ---
@@ -203,6 +203,6 @@ export function buildCategoryLabelMap(nodes: CategoryNode[]): Map<string, string
 
 | Task | Status |
 |---|---|
-| 1 | PENDING |
-| 2 | PENDING |
-| 3 | PENDING |
+| 1 | DONE — commit 00000006d7 |
+| 2 | DONE — commit 0000000c11 |
+| 3 | DONE — commit 000000010c |
