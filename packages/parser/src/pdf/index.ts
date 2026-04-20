@@ -1,6 +1,6 @@
 import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
-import { inferYear } from '../date-utils.js';
+import { parseDateStringToISO } from '../date-utils.js';
 import { extractText } from './extractor.js';
 import { parseTable, filterTransactionRows } from './table-parser.js';
 import { parsePDFWithLLM } from './llm-fallback.js';
@@ -9,7 +9,7 @@ export interface PDFParseOptions {
   allowRemoteLLM?: boolean;
 }
 
-// Date patterns for findDateCell — must cover all formats that parseDateToISO
+// Date patterns for findDateCell — must cover all formats that parseDateStringToISO
 // handles, matching the web-side implementation in apps/web/src/lib/parser/pdf.ts.
 const STRICT_DATE_PATTERN = /(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/;
 const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})/;
@@ -30,75 +30,8 @@ function isValidShortDate(cell: string): boolean {
   return month >= 1 && month <= 12 && day >= 1 && day <= 31;
 }
 
-function parseDateToISO(raw: string): string {
-  const cleaned = raw.trim();
-
-  // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD — validate month/day ranges to
-  // avoid producing invalid date strings from corrupted data.
-  const fullMatch = cleaned.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
-  if (fullMatch) {
-    const month = parseInt(fullMatch[2]!, 10);
-    const day = parseInt(fullMatch[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${fullMatch[1]}-${fullMatch[2]!.padStart(2, '0')}-${fullMatch[3]!.padStart(2, '0')}`;
-    }
-  }
-
-  // YYYYMMDD — validate month/day ranges
-  if (/^\d{8}$/.test(cleaned)) {
-    const month = parseInt(cleaned.slice(4, 6), 10);
-    const day = parseInt(cleaned.slice(6, 8), 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`;
-    }
-  }
-
-  // YY-MM-DD or YY.MM.DD — validate month/day ranges
-  const shortYearMatch = cleaned.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})$/);
-  if (shortYearMatch) {
-    const year = parseInt(shortYearMatch[1]!, 10);
-    const fullYear = year >= 50 ? 1900 + year : 2000 + year;
-    const month = parseInt(shortYearMatch[2]!, 10);
-    const day = parseInt(shortYearMatch[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${fullYear}-${shortYearMatch[2]!.padStart(2, '0')}-${shortYearMatch[3]!.padStart(2, '0')}`;
-    }
-  }
-
-  // Korean: 2025년 11월 30일 — validate month/day ranges
-  const koreanFull = cleaned.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-  if (koreanFull) {
-    const month = parseInt(koreanFull[2]!, 10);
-    const day = parseInt(koreanFull[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
-    }
-  }
-
-  // Korean short: 1월 15일 — infer year with look-back heuristic
-  const koreanShort = cleaned.match(/(\d{1,2})월\s*(\d{1,2})일/);
-  if (koreanShort) {
-    const month = parseInt(koreanShort[1]!, 10);
-    const day = parseInt(koreanShort[2]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const year = inferYear(month, day);
-      return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
-    }
-  }
-
-  // MM/DD or MM.DD — infer year with look-back heuristic
-  const mdMatch = cleaned.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
-  if (mdMatch) {
-    const month = parseInt(mdMatch[1]!, 10);
-    const day = parseInt(mdMatch[2]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const year = inferYear(month, day);
-      return `${year}-${mdMatch[1]!.padStart(2, '0')}-${mdMatch[2]!.padStart(2, '0')}`;
-    }
-  }
-
-  return cleaned;
-}
+// Date string parsing delegated to shared parseDateStringToISO from
+// date-utils.ts to avoid divergence (C35-03).
 
 /** Parse an amount string from PDF text. Returns null for unparseable inputs
  *  so callers can distinguish between genuinely zero amounts and parse failures,
@@ -171,7 +104,7 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
       if (amount <= 0) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateCell.value),
+        date: parseDateStringToISO(dateCell.value),
         merchant,
         amount,
       };
