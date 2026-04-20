@@ -2,13 +2,13 @@
 
 **Date:** 2026-04-21
 **Source review:** `.context/reviews/2026-04-21-cycle52-comprehensive.md`
-**Status:** IN PROGRESS
+**Status:** COMPLETED
 
 ---
 
 ## Actionable Findings
 
-### C52-01: CSV parser doesn't strip UTF-8 BOM (MEDIUM/HIGH confidence)
+### C52-01: CSV parser doesn't strip UTF-8 BOM (MEDIUM/HIGH confidence) -- FIXED
 
 **File:** `apps/web/src/lib/parser/csv.ts:120,139,148-161`
 **Problem:** The CSV parser doesn't strip UTF-8 BOM (`\uFEFF`) before processing. The XLSX parser already handles this (line 248 of `xlsx.ts`). BOM-prefixed header cells fail `indexOf` matches in all 10 bank adapters and the generic parser's regex checks, causing complete parse failure for Windows-generated CSV exports.
@@ -25,7 +25,7 @@
 
 ---
 
-### C52-02: Delete dead code `report.js` (LOW/HIGH confidence)
+### C52-02: Delete dead code `report.js` (LOW/HIGH confidence) -- FIXED
 
 **File:** `apps/web/public/scripts/report.js`
 **Problem:** The report page was refactored to use `ReportContent.svelte` + `VisibilityToggle.svelte`, but the old plain JS file was never deleted. It references a non-existent `#report-content` element.
@@ -37,7 +37,7 @@
 
 ---
 
-### C52-03: Layout.astro hardcoded script path (LOW/HIGH confidence)
+### C52-03: Layout.astro hardcoded script path (LOW/HIGH confidence) -- FIXED
 
 **File:** `apps/web/src/layouts/Layout.astro:46`
 **Problem:** The layout template hardcodes `/cherrypicker/scripts/layout.js` instead of using `${base}` variable like all other resource references in the same file. Breaks if deployed under a different base path.
