@@ -193,14 +193,17 @@ describe('parseCSV - edge cases', () => {
     expect(result.transactions[0]?.date).toBe('2026-02-01');
   });
 
-  test('generic parser preserves legitimate zero-amount rows instead of dropping them silently', () => {
+  test('generic parser skips zero-amount rows (balance inquiries, declined transactions)', () => {
     const content = [
       '거래일시,가맹점명,이용금액',
       '2026-02-01,테스트 승인,0',
     ].join('\n');
     const result = parseCSV(content);
-    expect(result.transactions).toHaveLength(1);
-    expect(result.transactions[0]?.amount).toBe(0);
+    // Zero-amount rows are filtered out — matching the web-side parser's
+    // isValidAmount() behavior (C26-02/C32-02). These rows (balance
+    // inquiries, declined transactions) don't contribute to spending
+    // optimization.
+    expect(result.transactions).toHaveLength(0);
   });
 
   test('generic parser surfaces malformed amounts as errors', () => {
