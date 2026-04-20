@@ -1,21 +1,23 @@
-# Review Aggregate -- 2026-04-21 (Cycle 58)
+# Review Aggregate -- 2026-04-21 (Cycle 59)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle58-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle59-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-57 per-agent and aggregate files
+- All cycle 1-58 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-57 findings are confirmed fixed except as noted below:
+All prior cycle 1-58 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C58-01 | **FIXED** | `VisibilityToggle.svelte:92` now uses `> 0` instead of `>= 0` -- "+0원" no longer shown for zero savings |
+| C58-07 | **FIXED** | `apps/web/__tests__/parser-encoding.test.ts` added -- encoding detection fallback path now covered by tests |
 | C57-01 | **FIXED** | `SavingsComparison.svelte:55,60` now uses `target * 12` (not `Math.abs(target) * 12`) for annual projection. Sign semantics are now consistent between monthly and annual displays. |
-| C57-02 | OPEN (LOW) | `ReportContent.svelte:48` uses `> 0` which is correct, but `VisibilityToggle.svelte:92` uses `>= 0` -- see C58-01 below |
+| C57-02 | **FIXED** | `ReportContent.svelte:48` uses `> 0` and `VisibilityToggle.svelte:92` now also uses `> 0` (C58-01 fix) -- all three components now consistent |
 | C56-01 | **FIXED** | `SavingsComparison.svelte:217` now uses `displayedSavings > 0 && Math.abs(displayedSavings) >= 1 ? '+' : ''` -- zero-crossing flicker suppressed |
 | C56-04 | OPEN (LOW) | `date-utils.ts:112` still returns raw input for unparseable dates without error reporting |
 | C56-05 | OPEN (LOW) | Zero savings shows "0원" without plus sign -- minor visual inconsistency |
@@ -75,8 +77,12 @@ All prior cycle 1-57 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C58-01 | MEDIUM | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte:92` | VisibilityToggle uses `>= 0` for savings sign prefix, producing "+0원" on the results page for zero savings. Inconsistent with ReportContent.svelte:48 (uses `> 0`) and SavingsComparison.svelte:217 (uses `> 0`). All three should use `> 0` to suppress the plus sign at zero. |
-| C58-07 | LOW | MEDIUM | `apps/web/src/lib/parser/index.ts:17-47` | No test coverage for the web-side parser encoding detection fallback path (EUC-KR/CP949). The threshold logic (lines 33, 42) could break silently without tests. |
+| C59-01 | LOW | HIGH | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:6-49` | CATEGORY_COLORS gray-toned entries (utilities `#6b7280`, parking `#78716c`, toll `#a8a29e`, general `#94a3b8`) have poor dark mode contrast -- extension of C8-05/C4-09 which noted non-utility entries. These specific low-contrast entries not previously enumerated. |
+| C59-02 | LOW | MEDIUM | `apps/web/src/components/dashboard/SpendingSummary.svelte:124-128` | monthDiff `parseInt` on `month.slice()` without format validation; guarded by `Number.isFinite` so no crash, but corrupted month field could produce incorrect label. |
+| C59-03 | LOW | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte:119` | Cleanup function hardcodes Korean text `'예상 절약액'` for savings label reset; latent i18n/page-transition consistency risk. If Astro replaces the element, cleanup could overwrite new element's text. |
+| C59-04 | LOW | HIGH | `packages/core/src/categorizer/taxonomy.ts:70-78` | `findCategory` substring scan is O(n) per merchant name, same pattern as C33-01 (MEDIUM) but in the taxonomy layer. The MerchantMatcher optimization did not address the taxonomy's own scan performance. |
+| C59-05 | LOW | MEDIUM | `apps/web/src/lib/formatters.ts:9` | `toLocaleString('ko-KR')` may produce inconsistent grouping separators across JS engines; latent SSR hydration mismatch risk. |
+| C59-06 | LOW | MEDIUM | `apps/web/src/lib/category-labels.ts:21` / `TransactionReview.svelte:63` | Bare subcategory IDs missing from categoryMap; intentional per C49-02 but causes search gaps for edge-case manual edits. |
 
 ---
 
@@ -99,7 +105,9 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | CardDetail dark mode contrast | C55, C53 (partial), C56 | **FIXED** (rateColorClass now has dark: variants) |
 | SavingsComparison zero-crossing flicker | C55, C56 | **FIXED** (Math.abs guard added) |
 | Annual savings Math.abs sign inconsistency | C57 | **FIXED** (C57-01 fixed: removed Math.abs, now uses target * 12) |
-| Savings zero-prefix inconsistency | C57, C58 | OPEN (MEDIUM) -- 2 cycles agree (C57-02 and C58-01 flag the same root cause from different components) |
+| Savings zero-prefix inconsistency | C57, C58 | **FIXED** (C58-01 fixed: VisibilityToggle now uses `> 0`) |
+| CategoryBreakdown dark mode contrast | C4, C8, C59 | OPEN (LOW) -- 3 cycles agree (C8-05/C4-09 for non-utility, C59-01 for utility/transport entries) |
+| Taxonomy.findCategory O(n) scan | C33, C59 | OPEN (MEDIUM) -- 2 cycles agree (C33-01 flagged MerchantMatcher, C59-04 extends to taxonomy layer) |
 
 ---
 
