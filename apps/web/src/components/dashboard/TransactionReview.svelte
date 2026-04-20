@@ -104,25 +104,30 @@
         },
       );
 
-      // Apply results
+      // Apply results — replace array entries instead of mutating in-place
+      // to ensure Svelte 5 reactivity correctly detects the changes.
       let changed = 0;
+      let updatedTxs = editedTxs;
       for (const [txId, result] of results) {
         if (result.category !== 'uncategorized') {
-          const tx = editedTxs.find(t => t.id === txId);
-          if (tx) {
-            // Only clear subcategory when the AI changes the category to a
-            // different one — if the category is unchanged, the existing
-            // subcategory (from keyword matching) is still valid and more
-            // specific than the AI's category-only result.
-            if (tx.category !== result.category) {
-              tx.subcategory = undefined;
+          const idx = editedTxs.findIndex(t => t.id === txId);
+          if (idx !== -1) {
+            const tx = editedTxs[idx];
+            if (tx) {
+              // Only clear subcategory when the AI changes the category to a
+              // different one — if the category is unchanged, the existing
+              // subcategory (from keyword matching) is still valid and more
+              // specific than the AI's category-only result.
+              const updated = tx.category !== result.category
+                ? { ...tx, category: result.category, subcategory: undefined, confidence: result.confidence }
+                : { ...tx, category: result.category, confidence: result.confidence };
+              updatedTxs = updatedTxs.map((t, i) => i === idx ? updated : t);
+              changed++;
             }
-            tx.category = result.category;
-            tx.confidence = result.confidence;
-            changed++;
           }
         }
       }
+      editedTxs = updatedTxs;
 
       if (changed > 0) {
         hasEdits = true;
