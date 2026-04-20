@@ -1,17 +1,17 @@
-# Review Aggregate -- 2026-04-20 (Cycle 14)
+# Review Aggregate -- 2026-04-20 (Cycle 15)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle14-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle15-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
-- Cycle 13 aggregate (previously `_aggregate.md`)
+- Cycle 14 aggregate (previously `_aggregate.md`)
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-13 findings are confirmed fixed except as noted below:
+All prior cycle 1-14 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -30,12 +30,13 @@ All prior cycle 1-13 findings are confirmed fixed except as noted below:
 | C10-01 | **FIXED** | `SpendingSummary.svelte:10-18` has try/catch around sessionStorage reads in onMount; `SpendingSummary.svelte:139` has try/catch around sessionStorage writes in dismiss handler |
 | C11-01 | **FIXED** | `analyzer.ts:304` now uses `Math.abs(tx.amount)` matching `store.svelte.ts:378` |
 | C11-03 | **FIXED** | `pdf.ts:382-389` now reports errors for unparseable amounts in fallback path |
-| C12-01 | **IMPROVED** | `OptimalCardMap.svelte:19-25` maxRate floor lowered from 0.5% to 0.1% -- better proportional accuracy |
+| C12-01 | **FIXED** | `OptimalCardMap.svelte:19-25` maxRate floor lowered from 0.5% to 0.1% -- better proportional accuracy |
 | C12-04 | **FIXED** | `SavingsComparison.svelte:205` removed redundant `Object.is(-0)` guard; `formatWon` handles normalization |
 | C13-01 | **FIXED** | `cards.ts:160-167` now has `chainAbortSignal` -- second caller's signal is chained to active AbortController |
 | C13-02 | **FIXED** | `cards.ts:199-226` `loadCategories` now accepts optional `signal` parameter with same chain pattern |
 | C13-03 | **FIXED** | `SpendingSummary.svelte:12-15` now uses `$derived` for `totalAllSpending` instead of inline reduce |
 | C13-04 | **FIXED** | `CardPage.svelte:14-30` now uses AbortController + generation counter pattern matching CardDetail |
+| C14-01 | **FIXED** | `cards.ts:193-203,229-236` catch blocks now use `isAbortError` to distinguish AbortError from real errors; AbortError resets cache but does not propagate. Downstream callers have null guards. |
 | C52-02 | **FIXED** | `TransactionReview.svelte:108-130` uses `updatedTxs.map()` to replace entries instead of mutating in-place |
 | C53-01 | **FIXED** | `TransactionReview.svelte:120-139` `changeCategory` now uses replacement pattern (`editedTxs.map(...)`) |
 | C8-02/C9R-02 | **FIXED** | `CardDetail.svelte:82-95` now has AbortController cleanup on unmount via `$effect` return cleanup |
@@ -46,9 +47,9 @@ All prior cycle 1-13 findings are confirmed fixed except as noted below:
 | C7-10 | OPEN (LOW) | CategoryBreakdown percentage rounding can cause total > 100% |
 | C7-11 | OPEN (LOW) | persistWarning message misleading for data corruption vs size truncation |
 | C8-01 | OPEN (MEDIUM) | AI categorizer disabled but 65+ lines of unreachable dead code |
-| C8-05 | OPEN (LOW) | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast (extends C4-09) |
-| C8-06 | OPEN (LOW) | FileDropzone + CardDetail use full page reload navigation (extends C7-12) |
-| C8-07 | OPEN (LOW) | build-stats.ts fallback values will drift (extends C4-14) |
+| C8-05/C4-09 | OPEN (LOW) | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast (extends C4-09) |
+| C8-06/C7-12 | OPEN (LOW) | FileDropzone + CardDetail use full page reload navigation (extends C7-12) |
+| C8-07/C4-14 | OPEN (LOW) | build-stats.ts fallback values will drift (extends C4-14) |
 | C8-08 | OPEN (LOW) | inferYear() timezone-dependent near midnight Dec 31 |
 | C8-09 | OPEN (LOW) | Test duplicates production code instead of testing it directly |
 | C8-10 | OPEN (LOW) | csv.ts installment NaN implicitly filtered by `> 1` comparison |
@@ -61,7 +62,7 @@ All prior cycle 1-13 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C14-01 | **FIXED** | `cards.ts:193-203,229-236` catch blocks now use `isAbortError` to distinguish AbortError from real errors; AbortError resets cache but does not propagate. Downstream callers (`loadCategories`, `getAllCardRules`, `getCardList`, `getCardById`) have null guards for undefined-after-abort. |
+| C15-01 | LOW | Medium | `cards.ts:201,234` | `undefined as unknown as CardsJson` type escape after AbortError is a code smell; downstream null guards protect against it, but the cast is unsafe if new callers are added without null checks |
 
 ---
 
@@ -94,6 +95,8 @@ All prior cycle 1-13 findings are confirmed fixed except as noted below:
 | C11-02 | LOW | BASE_URL trailing slash assumption in CardDetail and FileDropzone |
 | C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro |
 | C53-03 | LOW | CardDetail performance tier header dark mode contrast |
+| C14-03 | LOW | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
+| C15-01 | LOW | `undefined as unknown as` type escape in cards.ts AbortError path |
 | D-01 through D-111 | Various | See deferred items file for full list |
 
 ---

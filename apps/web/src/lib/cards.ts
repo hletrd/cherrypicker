@@ -144,10 +144,13 @@ export interface CategoryNode {
   subcategories?: CategoryNode[];
 }
 
-// Cached data
-let cardsPromise: Promise<CardsJson> | null = null;
+// Cached data — the promise resolves to undefined when an AbortError occurs
+// (component unmount or signal cancellation), so callers must guard with
+// `if (!data)`. Downstream functions (getAllCardRules, getCardList, getCardById)
+// already handle this case.
+let cardsPromise: Promise<CardsJson | undefined> | null = null;
 let cardsAbortController: AbortController | null = null;
-let categoriesPromise: Promise<{ categories: CategoryNode[] }> | null = null;
+let categoriesPromise: Promise<{ categories: CategoryNode[] } | undefined> | null = null;
 let categoriesAbortController: AbortController | null = null;
 
 function getBaseUrl(): string {
@@ -173,7 +176,7 @@ function isAbortError(err: unknown): boolean {
   return err instanceof DOMException && err.name === 'AbortError';
 }
 
-export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson> {
+export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson | undefined> {
   // If an in-flight fetch was aborted, reset the cache so a retry can succeed
   if (cardsPromise && cardsAbortController?.signal.aborted) {
     cardsPromise = null;
@@ -198,7 +201,7 @@ export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson> {
         // about the abort. Callers without signals should not receive an
         // unexpected AbortError rejection. The cache reset above ensures
         // the next call re-fetches successfully.
-        if (isAbortError(err)) return undefined as unknown as CardsJson;
+        if (isAbortError(err)) return undefined;
         throw err;
       });
   } else if (signal) {
@@ -231,7 +234,7 @@ export async function loadCategories(signal?: AbortSignal): Promise<CategoryNode
         categoriesAbortController = null;
         // AbortError is expected (component unmount, signal cancellation).
         // Don't propagate it — same rationale as loadCardsData above.
-        if (isAbortError(err)) return undefined as unknown as { categories: CategoryNode[] };
+        if (isAbortError(err)) return undefined;
         throw err;
       });
   } else if (signal) {
