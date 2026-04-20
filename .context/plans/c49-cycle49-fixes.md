@@ -13,7 +13,7 @@
 
 ## Implementation Tasks
 
-### Task 1: Remove dead `isSubstringSafeKeyword` function (C49-01)
+### Task 1: Remove dead `isSubstringSafeKeyword` function (C49-01) -- DONE
 
 **File:** `packages/core/src/categorizer/matcher.ts:21-23`
 **Severity:** LOW
@@ -25,11 +25,11 @@
 
 **Fix:** Remove lines 21-23 (the `isSubstringSafeKeyword` function).
 
-**Verification:** `npm run typecheck` and `npx vitest run` must pass.
+**Verification:** `npm run typecheck` PASS, `npx vitest run` 189/189 PASS. Commit: `0000000d`
 
 ---
 
-### Task 2: Remove bare subcategory ID key from `buildCategoryLabelMap` (C49-02)
+### Task 2: Remove bare subcategory ID key from `buildCategoryLabelMap` (C49-02) -- DONE
 
 **File:** `apps/web/src/lib/category-labels.ts:11`
 **Severity:** LOW
@@ -41,7 +41,7 @@
 
 **Fix:** Remove line 11 (`labels.set(sub.id, sub.labelKo)`). Add a comment above line 17 explaining why only the dot-notation key is set for subcategories.
 
-**Verification:** `npm run typecheck`, `npx vitest run`, and `bun test packages/parser tools/scraper` must pass. Verify no regressions by checking that the analyzer and CardDetail components still display correct Korean labels.
+**Verification:** `npm run typecheck` PASS, `npx vitest run` 189/189 PASS, `bun test` 58/58 PASS. Commit: `0000000e`
 
 ---
 
