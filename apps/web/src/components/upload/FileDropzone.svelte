@@ -144,18 +144,19 @@
         invalid.push(f.name);
       }
     }
-    // Check total size after adding valid files
-    const totalSize = [...uploadedFiles, ...valid].reduce((sum, f) => sum + f.size, 0);
-    if (totalSize > MAX_TOTAL_SIZE) {
-      errorMessage = `전체 파일 크기가 50MB를 초과합니다`;
-      uploadStatus = 'error';
-      return;
-    }
+    // Add valid files first
     if (valid.length > 0) {
       uploadedFiles = [...uploadedFiles, ...valid];
       uploadStatus = 'idle';
       errorMessage = '';
     }
+    // Then check total size and show warning (but keep files)
+    const totalSize = uploadedFiles.reduce((sum, f) => sum + f.size, 0);
+    if (totalSize > MAX_TOTAL_SIZE) {
+      errorMessage = `전체 파일 크기가 50MB를 초과합니다. 일부 파일이 느리게 처리될 수 있어요.`;
+      // Don't set uploadStatus to 'error' — let user proceed
+    }
+    // Show individual file errors (these are hard blocks)
     if (oversized.length > 0) {
       errorMessage = `파일 크기는 10MB 이하여야 합니다 (초과: ${oversized.join(', ')})`;
       uploadStatus = 'error';
