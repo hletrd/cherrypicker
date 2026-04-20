@@ -99,5 +99,5 @@ The inner `catch` in `loadFromStorage` (line 253) silently swallows errors from 
 
 | Task | Status |
 |---|---|
-| 1 | pending |
-| 2 | pending |
+| 1 | DONE -- commit 0000000118d |
+| 2 | DONE -- commit 00000000e0e |
