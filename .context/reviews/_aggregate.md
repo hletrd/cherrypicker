@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-21 (Cycle 48)
+# Review Aggregate -- 2026-04-22 (Cycle 49)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle48-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle49-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-47 per-agent and aggregate files
+- All cycle 1-48 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-46 findings are confirmed fixed except as noted below:
+All prior cycle 1-48 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -26,8 +26,6 @@ All prior cycle 1-46 findings are confirmed fixed except as noted below:
 | C43-02 | FIXED | `analyzer.ts:210` uses `tx.amount` directly |
 | C42-01 | FIXED | All parsers now use `amount <= 0` |
 | C42-02 | FIXED | `analyzer.ts:290` and `store.svelte.ts:425` use `tx.amount` |
-| C53-01 (prev) | FIXED | `TransactionReview.svelte:131` now uses spread-copy + index assignment |
-| C53-03 (prev) | FIXED | `CardDetail.svelte:217` now has `dark:text-blue-300` on performance tier header |
 | C7-04 | OPEN (LOW) | TransactionReview $effect re-sync fragile |
 | C7-06 | OPEN (LOW) | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
 | C7-07 | OPEN (LOW) | BANK_SIGNATURES duplicated between packages/parser and apps/web |
@@ -48,14 +46,17 @@ All prior cycle 1-46 findings are confirmed fixed except as noted below:
 | C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed |
 | C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
 | C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner |
-| C41-04/C42-03/C43-03 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 |
+| C41-04/C42-03/C43-03/C49-03 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 |
 | C41-05/C42-04 | OPEN (LOW) | cards.ts loadCategories returns empty array on AbortError |
 
 ---
 
 ## New Findings (This Cycle)
 
-No new findings identified in cycle 48. The codebase is in a stable state with all HIGH and MEDIUM severity issues resolved.
+| ID | Severity | Confidence | File | Description |
+|---|---|---|---|---|
+| C49-01 | LOW | HIGH | `packages/core/src/categorizer/matcher.ts:21-23` | `isSubstringSafeKeyword` is dead code -- superseded by `SUBSTRING_SAFE_ENTRIES` pre-computation (C33-01) |
+| C49-02 | LOW | MEDIUM | `apps/web/src/lib/category-labels.ts:11` | `buildCategoryLabelMap` sets bare subcategory ID key that could shadow a top-level category with the same ID. Currently no collision exists in the taxonomy. |
 
 ---
 
