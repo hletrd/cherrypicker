@@ -1,10 +1,11 @@
-# Review Aggregate -- 2026-04-20 (Cycle 5)
+# Review Aggregate -- 2026-04-20 (Cycle 6)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle5-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle6-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
+- Cycle 5 aggregate (2026-04-20-cycle5-comprehensive.md)
 
 ---
 
@@ -35,6 +36,7 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 | C53-02 | **FIXED** | Duplicated card stats reading logic extracted to `apps/web/src/lib/build-stats.ts` |
 | C53-03 | **FIXED** | `CardDetail.svelte:222` now has `dark:text-blue-300` for dark mode |
 | C4-01 | **FIXED** | `build-stats.ts:25-30` catch block now differentiates ENOENT, EACCES, and other errors |
+| C5-01 | **FIXED** | `SpendingSummary.svelte:119-121` now has `Number.isFinite` guard on `parseInt` results |
 
 ---
 
@@ -52,7 +54,7 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C5-01 | LOW | MEDIUM | `apps/web/src/components/dashboard/SpendingSummary.svelte:119` | `parseInt` on month slice without NaN guard in prevLabel computation |
+| C6-03 | LOW | MEDIUM | `apps/web/src/lib/analyzer.ts:300` | `tx.date.slice(0, 7)` without length guard in monthly spending calculation |
 
 ---
 
@@ -60,18 +62,18 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | Finding | Severity | Note |
 |---|---|---|
-| C4-06/C52-03/C9-02 | LOW | Annual savings projection label unchanged |
-| C4-09/C52-05 | LOW | Hardcoded `CATEGORY_COLORS` in CategoryBreakdown (dark mode contrast) |
+| C4-06/C52-03/C9-02/D-40/D-82 | LOW | Annual savings projection label unchanged |
+| C4-09/C52-05/D-42/D-46/D-64/D-78/D-96 | LOW | Hardcoded `CATEGORY_COLORS` in CategoryBreakdown (dark mode contrast) |
 | C4-10 | MEDIUM | E2E test stale dist/ dependency |
 | C4-11 | MEDIUM | No regression test for findCategory fuzzy match |
-| C4-13/C9-08 | LOW | Small-percentage bars nearly invisible |
-| C4-14/C52-04 | LOW | Stale fallback values in Layout footer (partially addressed by shared module) |
-| C9-04 | LOW | Complex fallback date regex in PDF parser |
-| C9-06 | LOW | Percentage rounding can shift "other" threshold |
-| C9-07 | LOW | Math.max spread stack overflow risk (theoretical) |
-| C9-09 | LOW | Categories cache never invalidated (same as D-07/D-54) |
-| C9-10 | LOW | HTML-as-XLS double-decode and unnecessary re-encode |
-| C9-12 | LOW | Module-level cache persists across store resets |
+| C4-13/C9-08/D-43/D-74 | LOW | Small-percentage bars nearly invisible |
+| C4-14/D-44 | LOW | Stale fallback values in Layout footer |
+| C9-04/D-71 | LOW | Complex fallback date regex in PDF parser |
+| C9-06/D-59/D-72 | LOW | Percentage rounding can shift "other" threshold |
+| C9-07/D-73/D-89 | LOW | Math.max spread stack overflow risk (theoretical) |
+| C9-09/D-07/D-54 | LOW | Categories cache never invalidated |
+| C9-10/D-52/D-75 | LOW | HTML-as-XLS double-decode and unnecessary re-encode |
+| C9-12/D-76 | LOW | Module-level cache persists across store resets |
 | D-106 | LOW | `apps/web/src/lib/parser/pdf.ts:284` bare `catch {}` |
 | D-110 | LOW | Non-latest month edits have no visible optimization effect |
 | D-66 | LOW | CardGrid issuer filter shows issuers with 0 cards after type filter |
