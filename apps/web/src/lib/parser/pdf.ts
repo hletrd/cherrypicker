@@ -138,69 +138,12 @@ function filterTransactionRows(rows: string[][]): string[][] {
 // Structured parser (ported from packages/parser/src/pdf/index.ts)
 // ---------------------------------------------------------------------------
 
-/** Shared inferYear — delegates to the canonical implementation in date-utils.ts
- *  to avoid triplicating the heuristic across parsers (C18-05). */
-import { inferYear } from './date-utils.js';
+/** Shared date-parsing — delegates to the canonical implementation in
+ *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
+import { parseDateStringToISO } from './date-utils.js';
 
 function parseDateToISO(raw: string): string {
-  // YYYY-MM-DD etc. — validate month/day ranges to avoid producing invalid
-  // date strings from corrupted data (e.g., "2026/13/99").
-  const match = raw.match(STRICT_DATE_PATTERN);
-  if (match) {
-    const month = parseInt(match[2]!, 10);
-    const day = parseInt(match[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${match[1]}-${match[2]!.padStart(2, '0')}-${match[3]!.padStart(2, '0')}`;
-    }
-  }
-
-  // YY.MM.DD or YY-MM-DD — validate month/day ranges to avoid producing
-  // invalid date strings from corrupted data (e.g., "99/13/99").
-  const shortMatch = raw.match(SHORT_YEAR_DATE_PATTERN);
-  if (shortMatch) {
-    const year = parseInt(shortMatch[1]!, 10);
-    const fullYear = year >= 50 ? 1900 + year : 2000 + year;
-    const month = parseInt(shortMatch[2]!, 10);
-    const day = parseInt(shortMatch[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${fullYear}-${shortMatch[2]!.padStart(2, '0')}-${shortMatch[3]!.padStart(2, '0')}`;
-    }
-  }
-
-  // Korean date formats — validate month/day ranges to avoid producing
-  // invalid date strings from corrupted text (e.g., "2026년 99월 99일").
-  const koreanFull = raw.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
-  if (koreanFull) {
-    const month = parseInt(koreanFull[2]!, 10);
-    const day = parseInt(koreanFull[3]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
-    }
-  }
-
-  // 1월 15일 — Korean short date without year
-  const koreanShort = raw.match(/(\d{1,2})월\s*(\d{1,2})일/);
-  if (koreanShort) {
-    const month = parseInt(koreanShort[1]!, 10);
-    const day = parseInt(koreanShort[2]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const year = inferYear(month, day);
-      return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
-    }
-  }
-
-  // MM/DD or MM.DD — infer year with look-back heuristic
-  const mdMatch = raw.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
-  if (mdMatch) {
-    const month = parseInt(mdMatch[1]!, 10);
-    const day = parseInt(mdMatch[2]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const year = inferYear(month, day);
-      return `${year}-${mdMatch[1]!.padStart(2, '0')}-${mdMatch[2]!.padStart(2, '0')}`;
-    }
-  }
-
-  return raw;
+  return parseDateStringToISO(raw);
 }
 
 function parseAmount(raw: string): number {
