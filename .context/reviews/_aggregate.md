@@ -1,20 +1,21 @@
-# Review Aggregate -- 2026-04-21 (Cycle 60)
+# Review Aggregate -- 2026-04-21 (Cycle 61)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle60-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle61-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-59 per-agent and aggregate files
+- All cycle 1-60 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-58 findings are confirmed fixed except as noted below.
-New in cycle 60: C59-02 and C59-03 confirmed **FIXED**.
+All prior cycle 1-59 findings are confirmed fixed except as noted below.
+New in cycle 61: C60-01 confirmed **FIXED**.
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C60-01 | **FIXED** | `CardGrid.svelte:29-35` now derives `availableIssuers` from type-filtered cards only, breaking the reactive cycle with `filteredCards` |
 | C59-02 | **FIXED** | `SpendingSummary.svelte:124-130` now validates `month` against `/^\d{4}-\d{2}$/` regex before parseInt |
 | C59-03 | **FIXED** | `VisibilityToggle.svelte:22,102-104,125` now captures `originalSavingsLabelText` on first access and restores it during cleanup instead of hardcoding Korean text |
 | C58-01 | **FIXED** | `VisibilityToggle.svelte:92` now uses `> 0` instead of `>= 0` -- "+0원" no longer shown for zero savings |
@@ -80,9 +81,11 @@ New in cycle 60: C59-02 and C59-03 confirmed **FIXED**.
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C60-01 | LOW | MEDIUM | `apps/web/src/components/cards/CardGrid.svelte:22,27-31` | `availableIssuers` derived from `filteredCards` creates reactive dependency cycle with `$effect` that resets `issuerFilter`. Double-computation on type filter change. |
-| C60-02 | LOW | LOW | `apps/web/src/pages/report.astro:65-81` | Print stylesheet forces light-mode colors but doesn't reset dark-mode-specific inline styles (issuer badges, etc.) for consistent print output. |
-| C60-03 | LOW | HIGH | `apps/web/src/components/upload/FileDropzone.svelte:238` | Already deferred as C19-04 -- `window.location.href` causes full reload instead of Astro View Transition. Still open. |
+| C61-01 | LOW | MEDIUM | `apps/web/src/components/dashboard/TransactionReview.svelte:74-82` | `$effect` sync skips clearing `editedTxs` when `analysisStore.transactions` is empty after store reset |
+| C61-02 | LOW | HIGH | `apps/web/src/components/cards/CardPage.svelte:70-73` | Breadcrumb uses inconsistent interactive elements (`<a>` vs `<button>`) within the same `<ol>` |
+| C61-03 | LOW | LOW | `SpendingSummary.svelte:141` | `console.warn` fires for expected QuotaExceededError in private browsing -- minor logging noise |
+| C61-04 | LOW | LOW | `CardDetail.svelte:21-28,68-87` | Category labels fetch races with card data fetch, causing brief flash of raw category IDs on slow connections |
+| C61-05 | LOW | LOW | `report.astro:64-81` | Extension of C60-02: print stylesheet doesn't remove `dark` class from `<html>`, causing dark-mode Tailwind variants to render in print |
 
 ---
 
@@ -109,6 +112,8 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | CategoryBreakdown dark mode contrast | C4, C8, C59 | OPEN (LOW) -- 3 cycles agree |
 | Taxonomy.findCategory O(n) scan | C33, C59 | OPEN (MEDIUM) -- 2 cycles agree |
 | Full-page reload navigation | C19, C60 | OPEN (LOW) -- 2 cycles agree |
+| CardGrid reactive dependency cycle | C60 | **FIXED** (C61 confirmed) |
+| Print stylesheet dark-mode inconsistency | C60, C61 | OPEN (LOW) -- 2 cycles agree |
 
 ---
 
