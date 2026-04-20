@@ -52,8 +52,8 @@ All previously deferred findings (D-01 through D-111) remain unchanged from prio
 
 | Task | Status | Commit |
 |---|---|---|
-| 1: handleRetry clearTimeout | PENDING | |
-| 2: cachedCoreRules empty guard | PENDING | |
-| 3: getCategoryLabels empty guard | PENDING | |
-| 4: addFiles combined errors | PENDING | |
-| 5: AbortController race fix | PENDING | |
+| 1: handleRetry clearTimeout | DONE | 000000052195b7e143641c7bfa3e6e66ddd8fbc9 |
+| 2: cachedCoreRules empty guard | DONE | 0000000cff1f72036577d9e0e32fbb2407bbc839 |
+| 3: getCategoryLabels empty guard | DONE | 0000000d502892db3d8b38d85790d604dee3aad0 |
+| 4: addFiles combined errors | DONE | 000000052195b7e143641c7bfa3e6e66ddd8fbc9 (same commit as Task 1) |
+| 5: AbortController race fix | DONE | 00000008631d1a545828364d8067939db0488f65 |
