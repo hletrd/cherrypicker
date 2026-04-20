@@ -2,16 +2,10 @@
 
 ## Actionable Fixes (scheduled for implementation this cycle)
 
-### Task 1: Add month-aware day validation to XLSX serial-date path (C67-04)
+### Task 1: Add month-aware day validation to XLSX serial-date path (C67-04) -- DONE
 **Priority:** HIGH (MEDIUM severity, validation consistency gap)
-**Files:** `apps/web/src/lib/parser/xlsx.ts:187-204`, `packages/parser/src/xlsx/adapters/index.ts`
-
-The XLSX parser's `parseDateToISO()` returns Excel serial date strings (from `XLSX.SSF.parse_date_code()`) without validating month/day ranges using `isValidDayForMonth()`. All other date parsing paths (CSV, PDF, string-based XLSX) now use `isValidDayForMonth()`. This is the same class of issue as C66-01 (server-side date-utils lacking month-aware validation), which was fixed last cycle.
-
-**Implementation:**
-1. In `apps/web/src/lib/parser/xlsx.ts`, import `daysInMonth` and `isValidDayForMonth` from `./date-utils.js` (or define locally if they're not exported).
-2. After `XLSX.SSF.parse_date_code(raw)` produces `{y, m, d}`, add a validation check: `if (!isValidDayForMonth(y, m, d)) return String(raw);`
-3. Repeat for `packages/parser/src/xlsx/adapters/index.ts` using the server-side `date-utils.ts` helpers.
+**Files:** `apps/web/src/lib/parser/xlsx.ts`, `packages/parser/src/xlsx/index.ts`, `apps/web/src/lib/parser/date-utils.ts`, `packages/parser/src/date-utils.ts`
+**Status:** COMMITTED (`0000000441ce`, `00000002c67e`) -- Exported `daysInMonth`/`isValidDayForMonth` from both date-utils.ts files. Added `isValidDayForMonth()` validation to both web-side and server-side XLSX `parseDateToISO()` serial-date paths. Invalid serial dates now return the raw number as a string instead of producing impossible date strings like "2024-02-31".
 
 ### Task 2: Greedy optimizer `scoreCardsForTransaction` incremental result caching (C67-01)
 **Priority:** LOW-MEDIUM (MEDIUM severity but large code change; deferred by 12+ cycles as D-09/D-51/D-86)
