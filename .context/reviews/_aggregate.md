@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-22 (Cycle 30)
+# Review Aggregate -- 2026-04-22 (Cycle 31)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle30-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-22-cycle31-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-29 per-agent and aggregate files
+- All cycle 1-30 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-29 findings are confirmed fixed except as noted below:
+All prior cycle 1-30 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -35,7 +35,8 @@ All prior cycle 1-29 findings are confirmed fixed except as noted below:
 | C24-06 | OPEN (LOW) | buildCardResults totalSpending no negative amount guard (safe in practice) |
 | C25-01/C29-01 | FIXED | CATEGORY_COLORS utility subcategories now high-contrast in dark mode (#facc15, #fb923c, #38bdf8) |
 | C25-09/C53-03/C29-02 | FIXED | CardDetail performance tier header now uses bg-blue-50 dark:bg-blue-900/50 with text-blue-700 dark:text-blue-300 |
-| C27-01 | OPEN (MEDIUM) | Bare `catch {}` in loadFromStorage inner cleanup inconsistent with C24-02 and C26-01 fix patterns |
+| C27-01/C30-03 | FIXED | loadFromStorage inner catch now logs console.warn when sessionStorage is available but removeItem fails |
+| C30-02 | FIXED | parseCSV generic fallback path now wrapped in try/catch for defensive consistency |
 | C27-02 | OPEN (LOW) | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
 
 ---
@@ -44,9 +45,8 @@ All prior cycle 1-29 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C30-01 | MEDIUM | High | `OptimalCardMap.svelte:18-19` | maxRate derived value re-computes on every store change even when assignments haven't changed -- not actionable at current scale |
-| C30-02 | LOW | High | `csv.ts:934` | parseCSV generic fallback path (parseGenericCSV) has no try/catch unlike the bank-specific adapter path -- defensive consistency gap |
-| C30-03 | LOW | Medium | `store.svelte.ts:252-253` | loadFromStorage inner catch silently swallows errors; inconsistent with clearStorage which logs console.warn -- same as C27-01 re-articulated |
+| C31-01 | LOW | High | `SpendingSummary.svelte:147` | Dismiss button `catch {}` silently swallows sessionStorage errors without console.warn -- inconsistent with C27-01/C30-03 fix pattern in loadFromStorage/clearStorage |
+| C31-02 | LOW | Medium | `greedy.ts:289-290` | Redundant `Map.set()` call after in-place `push()` on same array reference -- no-op on cache hit, adds cognitive overhead |
 
 ---
 
