@@ -1,30 +1,33 @@
-# Review Aggregate -- 2026-04-21 (Cycle 59)
+# Review Aggregate -- 2026-04-21 (Cycle 60)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle59-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle60-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-58 per-agent and aggregate files
+- All cycle 1-59 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-58 findings are confirmed fixed except as noted below:
+All prior cycle 1-58 findings are confirmed fixed except as noted below.
+New in cycle 60: C59-02 and C59-03 confirmed **FIXED**.
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C59-02 | **FIXED** | `SpendingSummary.svelte:124-130` now validates `month` against `/^\d{4}-\d{2}$/` regex before parseInt |
+| C59-03 | **FIXED** | `VisibilityToggle.svelte:22,102-104,125` now captures `originalSavingsLabelText` on first access and restores it during cleanup instead of hardcoding Korean text |
 | C58-01 | **FIXED** | `VisibilityToggle.svelte:92` now uses `> 0` instead of `>= 0` -- "+0원" no longer shown for zero savings |
 | C58-07 | **FIXED** | `apps/web/__tests__/parser-encoding.test.ts` added -- encoding detection fallback path now covered by tests |
-| C57-01 | **FIXED** | `SavingsComparison.svelte:55,60` now uses `target * 12` (not `Math.abs(target) * 12`) for annual projection. Sign semantics are now consistent between monthly and annual displays. |
-| C57-02 | **FIXED** | `ReportContent.svelte:48` uses `> 0` and `VisibilityToggle.svelte:92` now also uses `> 0` (C58-01 fix) -- all three components now consistent |
-| C56-01 | **FIXED** | `SavingsComparison.svelte:217` now uses `displayedSavings > 0 && Math.abs(displayedSavings) >= 1 ? '+' : ''` -- zero-crossing flicker suppressed |
+| C57-01 | **FIXED** | `SavingsComparison.svelte:55,60` now uses `target * 12` (not `Math.abs(target) * 12`) for annual projection |
+| C57-02 | **FIXED** | `ReportContent.svelte:48` uses `> 0` and `VisibilityToggle.svelte:92` now also uses `> 0` |
+| C56-01 | **FIXED** | `SavingsComparison.svelte:217` now uses `displayedSavings > 0 && Math.abs(displayedSavings) >= 1 ? '+' : ''` |
 | C56-04 | OPEN (LOW) | `date-utils.ts:112` still returns raw input for unparseable dates without error reporting |
 | C56-05 | OPEN (LOW) | Zero savings shows "0원" without plus sign -- minor visual inconsistency |
 | C55-02 | **FIXED** | `CardDetail.svelte:32-33` already has `dark:text-green-400` and `dark:text-blue-400` in `rateColorClass` |
-| C54-01 | **FIXED** | `results.js` no longer exists in `public/scripts/` -- only `layout.js` remains |
+| C54-01 | **FIXED** | `results.js` no longer exists in `public/scripts/` |
 | C52-01 | **FIXED** | `parseCSV()` at line 915 and `parseGenericCSV()` at line 121 both strip UTF-8 BOM |
-| C52-02 | **FIXED** | `report.js` deleted from `public/scripts/`; no references found |
+| C52-02 | **FIXED** | `report.js` deleted from `public/scripts/` |
 | C52-03 | **FIXED** | `Layout.astro:46` uses `${base}scripts/layout.js` with template literal |
 | C52-06/C4-07 | **FIXED** | `SpendingSummary.svelte` uses `sessionStorage` for dismissal flag |
 | C53-01 | **FIXED** | `TransactionReview.svelte:112-135` `changeCategory` uses spread-copy + index assignment |
@@ -77,12 +80,9 @@ All prior cycle 1-58 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C59-01 | LOW | HIGH | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:6-49` | CATEGORY_COLORS gray-toned entries (utilities `#6b7280`, parking `#78716c`, toll `#a8a29e`, general `#94a3b8`) have poor dark mode contrast -- extension of C8-05/C4-09 which noted non-utility entries. These specific low-contrast entries not previously enumerated. |
-| C59-02 | LOW | MEDIUM | `apps/web/src/components/dashboard/SpendingSummary.svelte:124-128` | monthDiff `parseInt` on `month.slice()` without format validation; guarded by `Number.isFinite` so no crash, but corrupted month field could produce incorrect label. |
-| C59-03 | LOW | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte:119` | Cleanup function hardcodes Korean text `'예상 절약액'` for savings label reset; latent i18n/page-transition consistency risk. If Astro replaces the element, cleanup could overwrite new element's text. |
-| C59-04 | LOW | HIGH | `packages/core/src/categorizer/taxonomy.ts:70-78` | `findCategory` substring scan is O(n) per merchant name, same pattern as C33-01 (MEDIUM) but in the taxonomy layer. The MerchantMatcher optimization did not address the taxonomy's own scan performance. |
-| C59-05 | LOW | MEDIUM | `apps/web/src/lib/formatters.ts:9` | `toLocaleString('ko-KR')` may produce inconsistent grouping separators across JS engines; latent SSR hydration mismatch risk. |
-| C59-06 | LOW | MEDIUM | `apps/web/src/lib/category-labels.ts:21` / `TransactionReview.svelte:63` | Bare subcategory IDs missing from categoryMap; intentional per C49-02 but causes search gaps for edge-case manual edits. |
+| C60-01 | LOW | MEDIUM | `apps/web/src/components/cards/CardGrid.svelte:22,27-31` | `availableIssuers` derived from `filteredCards` creates reactive dependency cycle with `$effect` that resets `issuerFilter`. Double-computation on type filter change. |
+| C60-02 | LOW | LOW | `apps/web/src/pages/report.astro:65-81` | Print stylesheet forces light-mode colors but doesn't reset dark-mode-specific inline styles (issuer badges, etc.) for consistent print output. |
+| C60-03 | LOW | HIGH | `apps/web/src/components/upload/FileDropzone.svelte:238` | Already deferred as C19-04 -- `window.location.href` causes full reload instead of Astro View Transition. Still open. |
 
 ---
 
@@ -102,12 +102,13 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | CSV BOM handling gap | C52 | **FIXED** |
 | Inline script / VisibilityToggle split-brain | C54, C51, C52 | **FIXED** (results.js deleted) |
 | OptimalCardMap Set mutation | C51, C54 | **FIXED** |
-| CardDetail dark mode contrast | C55, C53 (partial), C56 | **FIXED** (rateColorClass now has dark: variants) |
-| SavingsComparison zero-crossing flicker | C55, C56 | **FIXED** (Math.abs guard added) |
-| Annual savings Math.abs sign inconsistency | C57 | **FIXED** (C57-01 fixed: removed Math.abs, now uses target * 12) |
-| Savings zero-prefix inconsistency | C57, C58 | **FIXED** (C58-01 fixed: VisibilityToggle now uses `> 0`) |
-| CategoryBreakdown dark mode contrast | C4, C8, C59 | OPEN (LOW) -- 3 cycles agree (C8-05/C4-09 for non-utility, C59-01 for utility/transport entries) |
-| Taxonomy.findCategory O(n) scan | C33, C59 | OPEN (MEDIUM) -- 2 cycles agree (C33-01 flagged MerchantMatcher, C59-04 extends to taxonomy layer) |
+| CardDetail dark mode contrast | C55, C53 (partial), C56 | **FIXED** |
+| SavingsComparison zero-crossing flicker | C55, C56 | **FIXED** |
+| Annual savings Math.abs sign inconsistency | C57 | **FIXED** |
+| Savings zero-prefix inconsistency | C57, C58 | **FIXED** |
+| CategoryBreakdown dark mode contrast | C4, C8, C59 | OPEN (LOW) -- 3 cycles agree |
+| Taxonomy.findCategory O(n) scan | C33, C59 | OPEN (MEDIUM) -- 2 cycles agree |
+| Full-page reload navigation | C19, C60 | OPEN (LOW) -- 2 cycles agree |
 
 ---
 
