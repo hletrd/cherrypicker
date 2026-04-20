@@ -262,8 +262,12 @@ export function greedyOptimize(
     assignedTransactionsByCard.set(rule.card.id, []);
   }
 
+  // Filter out zero/negative amounts AND NaN/Infinity values (C23-01).
+  // NaN > 0 is false so NaN amounts are already excluded by the > 0 check,
+  // but Number.isFinite also guards the sort comparator against NaN
+  // comparisons which sort inconsistently across JS engines.
   const sortedTransactions = [...constraints.transactions]
-    .filter((tx) => tx.amount > 0)
+    .filter((tx) => tx.amount > 0 && Number.isFinite(tx.amount))
     .sort((a, b) => b.amount - a.amount);
 
   const txAssignments: TxAssignment[] = [];
