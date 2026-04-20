@@ -221,8 +221,11 @@ function buildCardResults(
 
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
     const output = calculateCardOutput(assignedTransactions, previousMonthSpending, rule);
-    // Optimizer only assigns positive-amount transactions (filtered at line 270),
+    // Optimizer only assigns positive-amount transactions (filtered at line 271),
     // so Math.abs() is unnecessary — use tx.amount directly (C33-06).
+    // IMPORTANT: buildCardResults requires pre-filtered positive-amount
+    // transactions as input. If called with unfiltered data (including negative
+    // or zero amounts), totalSpending and effectiveRate would be incorrect (C40-04).
     const totalSpending = assignedTransactions.reduce((sum, tx) => sum + tx.amount, 0);
     // Replace English categoryKey in categoryNameKo with the Korean label
     // from the taxonomy (if available). calculateRewards sets categoryNameKo
