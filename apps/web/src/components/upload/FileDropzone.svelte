@@ -44,7 +44,8 @@
 
   let isDragOver = $state(false);
   let uploadedFiles = $state<File[]>([]);
-  let fileInputEl = $state<HTMLInputElement | null>(null);
+  let primaryFileInputEl = $state<HTMLInputElement | null>(null);
+  let addFileInputEl = $state<HTMLInputElement | null>(null);
   let uploadStatus = $state<'idle' | 'uploading' | 'success' | 'error'>('idle');
   let errorMessage = $state('');
   let bank = $state('');
@@ -165,7 +166,8 @@
     if (uploadedFiles.length === 0) {
       uploadStatus = 'idle';
       errorMessage = '';
-      if (fileInputEl) fileInputEl.value = '';
+      if (primaryFileInputEl) primaryFileInputEl.value = '';
+      if (addFileInputEl) addFileInputEl.value = '';
     }
   }
 
@@ -173,7 +175,8 @@
     uploadedFiles = [];
     uploadStatus = 'idle';
     errorMessage = '';
-    if (fileInputEl) fileInputEl.value = '';
+    if (primaryFileInputEl) primaryFileInputEl.value = '';
+    if (addFileInputEl) addFileInputEl.value = '';
   }
 
   function handleDrop(e: DragEvent) {
@@ -326,7 +329,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             파일 추가
-            <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf" multiple onchange={handleFileInput} bind:this={fileInputEl} />
+            <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf" multiple onchange={handleFileInput} bind:this={addFileInputEl} />
           </label>
           <button
             class="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:border-red-300 hover:text-red-500 transition-colors"
@@ -345,7 +348,7 @@
         <p class="text-sm text-[var(--color-text-muted)]">CSV, Excel, PDF 지원 · 여러 파일 동시 업로드 가능</p>
         <label class="mt-3 inline-block cursor-pointer rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[var(--color-primary-dark)] transition-colors">
           파일 선택
-          <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf" multiple onchange={handleFileInput} bind:this={fileInputEl} />
+          <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf" multiple onchange={handleFileInput} bind:this={primaryFileInputEl} />
         </label>
       </div>
     {/if}
