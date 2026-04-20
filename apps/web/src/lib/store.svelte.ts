@@ -136,7 +136,12 @@ function persistToStorage(data: AnalysisResult): PersistWarningKind {
   return null;
 }
 
-function isValidTx(tx: any): tx is CategorizedTx {
+/** Validate that a transaction is suitable for spending optimization.
+ *  Zero-amount entries (e.g., balance inquiries, declined transactions)
+ *  are excluded because they don't contribute to optimization — they are
+ *  not "invalid" per se, just not optimizable. Renamed from isOptimizableTx
+ *  to clarify the filtering intent (C19-07). */
+function isOptimizableTx(tx: any): tx is CategorizedTx {
   return (
     tx &&
     typeof tx === 'object' &&
@@ -190,7 +195,7 @@ function loadFromStorage(): AnalysisResult | null {
         // the essential fields; invalid entries are silently dropped.
         let transactions: CategorizedTx[] | undefined;
         if (Array.isArray(parsed.transactions)) {
-          const validTxs = parsed.transactions.filter(isValidTx);
+          const validTxs = parsed.transactions.filter(isOptimizableTx);
           transactions = validTxs.length > 0 ? validTxs : undefined;
           // If the transactions array existed but all entries failed validation,
           // that's data corruption rather than truncation
