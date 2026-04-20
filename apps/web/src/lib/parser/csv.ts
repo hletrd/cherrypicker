@@ -56,6 +56,18 @@ function isValidAmount(amount: number, amountRaw: string, lineIdx: number, error
   return true;
 }
 
+/** Parse an installment value from a CSV cell. Returns undefined for
+ *  non-numeric values (e.g., "일시불" for lump-sum) which are common and
+ *  expected — they mean no installment, not a parse error. Returns the
+ *  installment count only when > 1. Extracted from 10 duplicated blocks
+ *  across bank adapters (C24-01). */
+function parseInstallments(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  const inst = parseInt(raw, 10);
+  if (Number.isNaN(inst)) return undefined; // "일시불" etc.
+  return inst > 1 ? inst : undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Generic CSV parser
 // ---------------------------------------------------------------------------
@@ -180,12 +192,8 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     };
 
     if (installmentsCol !== -1 && cells[installmentsCol]) {
-      const inst = parseInt(cells[installmentsCol] ?? '', 10);
-      if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+      const inst = parseInstallments(cells[installmentsCol]);
+      if (inst !== undefined) tx.installments = inst;
     }
 
     if (categoryCol !== -1 && cells[categoryCol]) {
@@ -261,12 +269,8 @@ const samsungAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
 
@@ -330,12 +334,8 @@ const shinhanAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
 
@@ -400,12 +400,8 @@ const kbAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
 
@@ -470,12 +466,8 @@ const hyundaiAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
 
@@ -539,12 +531,8 @@ const lotteAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
 
@@ -608,12 +596,8 @@ const hanaAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
 
@@ -678,12 +662,8 @@ const wooriAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
 
@@ -747,12 +727,8 @@ const nhAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
 
@@ -817,12 +793,8 @@ const ibkAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
 
@@ -886,12 +858,8 @@ const bcAdapter: BankAdapter = {
       };
 
       if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInt(cells[installIdx] ?? '', 10);
-        if (Number.isNaN(inst)) {
-        // Non-numeric installment values (e.g., "일시불" for lump-sum) are
-        // common and expected -- they mean no installment, not a parse error.
-        // Silently skip instead of relying on implicit NaN > 1 === false (C8-10).
-      } else if (inst > 1) tx.installments = inst;
+        const inst = parseInstallments(cells[installIdx]);
+        if (inst !== undefined) tx.installments = inst;
       }
       if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
 
