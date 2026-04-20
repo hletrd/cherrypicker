@@ -125,6 +125,9 @@
           // User selected a top-level category
           updated = { ...tx, category: newCategory, subcategory: undefined, confidence: 1.0 };
         }
+        // Svelte 5 $state tracks array index mutations — editedTxs[idx] = updated
+        // is both correct and more performant than the previous editedTxs.map(...)
+        // pattern which created an O(n) array copy per edit (C22-05/C39-02).
         editedTxs[idx] = updated;
         hasEdits = true;
       }
