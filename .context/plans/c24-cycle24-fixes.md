@@ -6,19 +6,19 @@
 - **File:** `apps/web/src/lib/parser/csv.ts` (lines 263-269, 332-338, 402-408, 472-478, 541-547, 610-616, 680-686, 749-755, 819-825, 889-894)
 - **Problem:** The installment parsing logic (`parseInt(...)`, NaN check, `inst > 1` assignment) is duplicated across all 10 bank adapters. Each copy has the identical C8-10 comment. If the logic ever changes, all 10 copies must be updated. The xlsx parser already has a clean `parseInstallments()` helper (xlsx.ts:227-234) that could be used as a model.
 - **Fix:** Extract a shared `parseInstallments(raw: unknown): number | undefined` helper function in csv.ts (following the same pattern as xlsx.ts:227-234). Replace all 10 duplicated blocks with calls to this helper. The helper handles both string and numeric input, returns `undefined` for NaN/<=1 values, and documents the "일시불" convention in one place.
-- **Status:** TODO
+- **Status:** DONE -- committed as `000000022b3de84caf81d863291903f869fe1e51`
 
 ### C24-02 (MEDIUM): clearStorage() silently swallows non-SSR errors
 - **File:** `apps/web/src/lib/store.svelte.ts:264`
 - **Problem:** `clearStorage()` has a bare `catch { /* SSR */ }` with no error logging. If sessionStorage removal fails for a non-SSR reason (e.g., SecurityError in a sandboxed iframe), the failure is silently swallowed with no diagnostic trail.
 - **Fix:** Add a conditional `console.warn` for non-SSR failures. Check if the error is a SecurityError or other non-expected failure and log it. Keep the silent catch for genuine SSR environments (where `typeof sessionStorage === 'undefined'`).
-- **Status:** TODO
+- **Status:** DONE -- committed as `0000000e5eca49a90c0fba966bf1e8934c3050d4`
 
 ### C24-03 (LOW): SpendingSummary shows "0개월 전 실적" when monthDiff is 0
 - **File:** `apps/web/src/components/dashboard/SpendingSummary.svelte:138`
 - **Problem:** When `monthDiff === 0` (e.g., two monthlyBreakdown entries for the same month due to a data anomaly), the template shows "0개월 전 실적" which is confusing.
 - **Fix:** Add a `monthDiff === 0` guard to the prevLabel derivation. Change the ternary to handle the zero case: `{@const prevLabel = !Number.isFinite(monthDiff) ? '이전 실적' : monthDiff === 0 ? '이전 실적' : monthDiff === 1 ? '전월실적' : `${monthDiff}개월 전 실적`}`.
-- **Status:** TODO
+- **Status:** DONE -- committed as `00000002a787db75df0800a7d10e89abc6282f7e`
 
 ## Previously Open Findings -- Assessment
 
@@ -28,6 +28,7 @@
 
 ### Plan for C8-01 this cycle:
 Remove the `categorizer-ai.ts` file entirely and update TransactionReview.svelte to remove the import comment. The disabled categorizer adds no value as a 40-line stub -- the git history preserves the intent.
+- **Status:** DONE -- committed as `00000000ed9bbf17334ba68508c299ba6293e359`
 
 ## Deferred Items
 
