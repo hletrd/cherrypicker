@@ -1,26 +1,31 @@
-# Review Aggregate -- 2026-04-21 (Cycle 50)
+# Review Aggregate -- 2026-04-21 (Cycle 51)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle50-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle51-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-49 per-agent and aggregate files
+- All cycle 1-50 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-49 findings are confirmed fixed except as noted below:
+All prior cycle 1-50 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C53-01 | **FIXED** | `TransactionReview.svelte:131` uses spread-copy `{ ...tx, ... }` + index assignment instead of in-place mutation |
+| C50-01 | **FIXED** | `CategoryBreakdown.svelte:133` now uses `0` as reduce initial value with `|| 1` fallback |
+| C50-02 | **FIXED** | `SavingsComparison.svelte:93-96` documents `Infinity` as intentional sentinel |
+| C50-05 | **FIXED** | `SavingsComparison.svelte:18-28` derives `cardBreakdown` from `analysisStore.cardResults` |
+| C50-07 | **FIXED** | `xlsx.ts:283-298` tracks bestResult across all sheets |
+| C49-02 | **FIXED** | `category-labels.ts` no longer sets bare `sub.id` key -- only dot-notation key |
+| C53-01 | **FIXED** | `TransactionReview.svelte:131` uses spread-copy `{ ...tx, ... }` + index assignment |
 | C53-02 | **FIXED** | Both `index.astro` and `Layout.astro` now use shared `readCardStats()` from `build-stats.ts` |
 | C53-03 | **FIXED** | `CardDetail.svelte:217` now has `dark:text-blue-300` on performance tier header |
-| D-106 | **FIXED** | `pdf.ts:270-276` no longer uses bare `catch {}` -- now logs diagnostic `console.warn` on structured parse failure |
+| D-106 | **FIXED** | `pdf.ts:270-276` no longer uses bare `catch {}` -- now logs diagnostic `console.warn` |
 | C45-01 | **FIXED** | `store.svelte.ts:420-424` early null guard before `result.previousMonthSpendingOption` access |
 | C45-02 | **FIXED** | Same early null guard eliminates wasted computation |
-| C44-03 | **FIXED** | CardGrid.svelte:125 has `aria-live="polite"` on filter result count |
+| C44-03 | **FIXED** | `CardGrid.svelte:125` has `aria-live="polite"` on filter result count |
 | C44-01 | **FIXED** | `previousMonthSpendingOption` now stored in `AnalysisResult` and forwarded during `reoptimize()` |
 | C43-01 | FIXED | `isOptimizableTx` at `store.svelte.ts:168` uses `obj.amount > 0` |
 | C43-02 | FIXED | `analyzer.ts:210` uses `tx.amount` directly |
@@ -46,10 +51,9 @@ All prior cycle 1-49 findings are confirmed fixed except as noted below:
 | C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed |
 | C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
 | C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner |
-| C41-04/C42-03/C43-03/C49-03/C50-01 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 |
+| C41-04/C42-03/C43-03/C49-03 | **FIXED** (was C50-01) | CategoryBreakdown maxPercentage initial value fixed to 0 with `|| 1` fallback |
 | C41-05/C42-04 | OPEN (LOW) | cards.ts loadCategories returns empty array on AbortError |
 | C49-01 | OPEN (LOW) | `isSubstringSafeKeyword` is dead code superseded by SUBSTRING_SAFE_ENTRIES |
-| C49-02 | OPEN (LOW) | `buildCategoryLabelMap` bare subcategory ID shadowing risk (no current collision) |
 
 ---
 
@@ -57,14 +61,10 @@ All prior cycle 1-49 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C50-01 | LOW | HIGH | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129` | `maxPercentage` initial value 1 distorts small-dataset bars (same as C41-04/C42-03/C43-03/C49-03) |
-| C50-02 | LOW | MEDIUM | `apps/web/src/components/dashboard/SavingsComparison.svelte:108` | `savingsPct` returns numeric `Infinity` instead of string sentinel -- could confuse screen readers |
-| C50-03 | LOW | HIGH | `apps/web/src/lib/cards.ts:280-307` | `getCardById` O(n) linear scan (same as D-111) |
-| C50-04 | LOW | MEDIUM | `apps/web/src/lib/parser/csv.ts:38-74` | `parseAmount`/`isValidAmount` split is conceptually confusing but well-documented -- no code change needed |
-| C50-05 | LOW | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:24-45` | `cardBreakdown` re-derives from assignments instead of using `cardResults` -- redundant computation |
-| C50-06 | LOW | HIGH | `apps/web/src/lib/formatters.ts:5-10` | `formatWon` uses minus sign for negatives instead of Korean banking convention (parentheses) |
-| C50-07 | LOW | MEDIUM | `apps/web/src/lib/parser/xlsx.ts:282-293` | XLSX parser returns first sheet with transactions, not the one with the most |
-| C50-08 | LOW | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte` | $effect directly mutates DOM (same as C18-01, still open) |
+| C51-01 | LOW | HIGH | `apps/web/src/pages/report.astro:49`, `apps/web/public/scripts/report.js` | Report page uses plain JS reading sessionStorage directly (bypassing Svelte store), hardcoded light-mode styles (no dark mode), duplicated formatWon without negative-zero guard |
+| C51-02 | LOW | HIGH | `apps/web/src/components/dashboard/SpendingSummary.svelte:19-26,138` | Uses separate `sessionStorage` key for dismiss state, not cleared by store.reset() (same as C4-07) |
+| C51-03 | LOW | HIGH | `packages/core/src/optimizer/greedy.ts:122-141` | scoreCardsForTransaction calls calculateCardOutput twice per card per transaction (known greedy trade-off) |
+| C51-04 | LOW | HIGH | `apps/web/src/components/dashboard/OptimalCardMap.svelte:37-44` | toggleRow creates new Set on every call instead of mutating $state Set directly |
 
 ---
 
@@ -74,12 +74,13 @@ The following findings have been flagged by multiple cycles, indicating high sig
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| CategoryBreakdown maxPercentage=1 | C41, C42, C43, C49, C50 | OPEN (LOW) -- 5 cycles agree |
 | VisibilityToggle DOM mutation | C18, C50 | OPEN (LOW) -- 2 cycles agree |
 | getCardById O(n) | C3 (D-111), C50 | OPEN (LOW) -- 2 cycles agree |
-| cardBreakdown redundant derivation | C6 (D-53), C50 | OPEN (LOW) -- 2 cycles agree |
+| cardBreakdown redundant derivation | C6 (D-53), C50 | **FIXED** |
 | MerchantMatcher O(n) scan | C16 (D-100), C33, C50 | OPEN (MEDIUM) -- 3 cycles agree |
 | cachedCategoryLabels staleness | C21, C23, C25, C26, C33 | OPEN (MEDIUM) -- 5 cycles agree |
+| CategoryBreakdown maxPercentage=1 | C41, C42, C43, C49, C50 | **FIXED** |
+| SpendingSummary sessionStorage dismiss | C4, C51 | OPEN (LOW) -- 2 cycles agree |
 
 ---
 
