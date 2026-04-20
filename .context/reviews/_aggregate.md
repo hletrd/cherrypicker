@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-21 (Cycle 39)
+# Review Aggregate -- 2026-04-21 (Cycle 40)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle39-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle40-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-38 per-agent and aggregate files
+- All cycle 1-39 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-38 findings are confirmed fixed except as noted below:
+All prior cycle 1-39 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -31,15 +31,15 @@ All prior cycle 1-38 findings are confirmed fixed except as noted below:
 | C21-02 | OPEN (LOW) | cards.ts shared fetch AbortSignal race (deferred) |
 | C21-04/C23-02/C25-02/C26-03 | OPEN (LOW->MEDIUM) | cachedCategoryLabels/cachedCoreRules invalidated on explicit reset but stale across long-lived tabs |
 | C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks |
-| C22-05/C39-02 | OPEN (MEDIUM) | TransactionReview changeCategory O(n) array copy -- PROMOTED from LOW to MEDIUM this cycle due to observed impact with large statements |
-| C24-06 | OPEN (LOW) | buildCardResults totalSpending no negative amount guard (safe in practice) |
-| C27-02 | OPEN (LOW) | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
+| C22-05/C39-02 | FIXED | TransactionReview changeCategory now uses O(1) index mutation instead of O(n) array copy |
 | C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed with SUBSTRING_SAFE_ENTRIES |
 | C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
 | C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner -- architectural gap |
-| C37-01 | FIXED | Web-side CSV parseAmount now returns null instead of NaN |
-| C37-02 | FIXED | isValidAmount now acts as type guard separating null check from zero filter |
-| C37-03 | FIXED | FileDropzone page-level drag handlers now have active guard for unmount race |
+| C39-01 | FIXED | vitest gate now passes: 8 test files, 189 tests |
+| C39-03 | FIXED | Web-side parseFile now adds encoding quality warning when bestReplacements > 50 |
+| C39-05 | FIXED | FileDropzone addFiles now adds valid files first, then checks total size |
+| C39-04 | OPEN (LOW) | CategoryBreakdown maxPercentage initial value 1 -- theoretical edge case |
+| C39-06 | OPEN (LOW) | SavingsComparison annual projection jumps while monthly savings animates -- NOW EXTENDED by C40-01 |
 
 ---
 
@@ -47,12 +47,10 @@ All prior cycle 1-38 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | Description | File+line |
 |---|---|---|---|---|
-| C39-01 | MEDIUM | High | vitest gate cannot run -- all test files use `bun:test` imports | Every `__tests__/*.test.ts` |
-| C39-02 | MEDIUM | High | TransactionReview changeCategory O(n) array copy per edit (promotion of C22-05) | `apps/web/src/components/dashboard/TransactionReview.svelte:128` |
-| C39-03 | LOW | High | Web-side parseFile no encoding quality warning to user | `apps/web/src/lib/parser/index.ts:20-36` |
-| C39-04 | LOW | Medium | CategoryBreakdown maxPercentage initial value 1 -- theoretical edge case | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129,192` |
-| C39-05 | LOW | Medium | FileDropzone total-size error prevents adding individually-valid files | `apps/web/src/components/upload/FileDropzone.svelte:126-153` |
-| C39-06 | LOW | Low | SavingsComparison annual projection jumps while monthly savings animates | `apps/web/src/components/dashboard/SavingsComparison.svelte:218` |
+| C40-01 | MEDIUM | High | SavingsComparison annual projection uses animated `displayedSavings` instead of actual `opt.savingsVsSingleCard` — shows 0원 on mount during animation | `apps/web/src/components/dashboard/SavingsComparison.svelte:218` |
+| C40-02 | LOW | High | TransactionReview changeCategory index mutation lacks explanatory comment for future maintainers | `apps/web/src/components/dashboard/TransactionReview.svelte:128` |
+| C40-03 | LOW | High | formatDateKo/formatDateShort redundant parseInt validation (defensive but unnecessary for validated input) | `apps/web/src/lib/formatters.ts:153,169` |
+| C40-04 | LOW | High | buildCardResults totalSpending uses raw tx.amount without explicit positive-amount documentation | `packages/core/src/optimizer/greedy.ts:226` |
 
 ---
 
