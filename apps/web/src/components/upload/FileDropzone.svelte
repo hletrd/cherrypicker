@@ -206,6 +206,16 @@
     target.value = '';
   }
 
+  /** Parse the previous-month-spending input field into a validated number.
+   *  Returns undefined for empty or invalid inputs, matching the store's
+   *  expected type. Extracted from inline IIFE for readability (C41-03). */
+  function parsePreviousSpending(raw: string): number | undefined {
+    const v = raw.trim();
+    if (v === '') return undefined;
+    const n = Math.round(Number(v));
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
+  }
+
   async function handleUpload() {
     if (uploadedFiles.length === 0) return;
     uploadStatus = 'uploading';
@@ -214,7 +224,7 @@
     try {
       await analysisStore.analyze(uploadedFiles, {
         bank: bank || undefined,
-        previousMonthSpending: (() => { const v = previousSpending.trim(); if (v === '') return undefined; const n = Math.round(Number(v)); return Number.isFinite(n) && n >= 0 ? n : undefined; })(),
+        previousMonthSpending: parsePreviousSpending(previousSpending),
       });
 
       // analysisStore.analyze() catches errors internally (sets error, result=null)
