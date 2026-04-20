@@ -95,6 +95,13 @@ export interface AnalyzeOptions {
 
 const STORAGE_KEY = 'cherrypicker:analysis';
 
+/** Schema version for sessionStorage persistence. Incremented when the
+ *  persisted data shape changes incompatibly. On load, a version mismatch
+ *  logs a warning but still attempts validation — only genuinely corrupted
+ *  data is removed. This prevents silent data loss on app upgrades where
+ *  the old data may still be partially valid (C74-02). */
+const STORAGE_VERSION = 1;
+
 type PersistedAnalysisResult = Pick<
   AnalysisResult,
   'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown' | 'transactions' | 'previousMonthSpendingOption'
@@ -102,6 +109,9 @@ type PersistedAnalysisResult = Pick<
   /** When transactions are omitted due to size limits, records how many
    *  were lost so the warning can inform the user (C22-03). */
   _truncatedTxCount?: number;
+  /** Schema version at time of persist. Used to detect version mismatches
+   *  on load without silently deleting data (C74-02). */
+  _v?: number;
 };
 
 /** Maximum serialized payload size to persist in sessionStorage (4MB, leaving
@@ -139,6 +149,7 @@ function persistToStorage(data: AnalysisResult): PersistResult {
         monthlyBreakdown: data.monthlyBreakdown,
         transactions: data.transactions,
         previousMonthSpendingOption: data.previousMonthSpendingOption,
+        _v: STORAGE_VERSION,
       };
       const serialized = JSON.stringify(persisted);
       if (serialized.length > MAX_PERSIST_SIZE) {
@@ -205,6 +216,14 @@ function loadFromStorage(): AnalysisResult | null {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
+      // Check schema version — log a warning on mismatch but continue
+      // validation so we don't silently delete data that may still be
+      // partially valid after an app upgrade (C74-02).
+      if (parsed._v !== undefined && parsed._v !== STORAGE_VERSION) {
+        if (typeof console !== 'undefined') {
+          console.warn(`[cherrypicker] Session storage schema version mismatch: stored=${parsed._v}, current=${STORAGE_VERSION}. Attempting to load anyway.`);
+        }
+      }
       if (
         parsed &&
         typeof parsed === 'object' &&
