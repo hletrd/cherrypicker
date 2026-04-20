@@ -243,7 +243,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
 
     const amount = parseAmount(amountRaw);
     if (Number.isNaN(amount)) {
-      if (amountRaw) errors.push({ line: i + 1, message: `Cannot parse amount: ${amountRaw}`, raw: line });
+      if (amountRaw) errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}`, raw: line });
       continue;
     }
 
