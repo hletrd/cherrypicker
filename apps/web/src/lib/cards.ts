@@ -146,38 +146,80 @@ export interface CategoryNode {
 
 // Cached data
 let cardsPromise: Promise<CardsJson> | null = null;
+let cardsAbortController: AbortController | null = null;
 let categoriesPromise: Promise<{ categories: CategoryNode[] }> | null = null;
+let categoriesAbortController: AbortController | null = null;
 
 function getBaseUrl(): string {
   return import.meta.env.BASE_URL ?? '/';
 }
 
+/** Chain an external AbortSignal to an internal AbortController so that
+ *  aborting the external signal also aborts the internal controller's fetch.
+ *  Returns early if the external signal is already aborted. */
+function chainAbortSignal(controller: AbortController, signal?: AbortSignal): void {
+  if (!signal) return;
+  if (signal.aborted) {
+    controller.abort();
+    return;
+  }
+  signal.addEventListener('abort', () => controller.abort(), { once: true });
+}
+
 export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson> {
+  // If an in-flight fetch was aborted, reset the cache so a retry can succeed
+  if (cardsPromise && cardsAbortController?.signal.aborted) {
+    cardsPromise = null;
+    cardsAbortController = null;
+  }
+
   if (!cardsPromise) {
-    cardsPromise = fetch(`${getBaseUrl()}data/cards.json`, { signal })
+    const controller = new AbortController();
+    chainAbortSignal(controller, signal);
+    cardsAbortController = controller;
+
+    cardsPromise = fetch(`${getBaseUrl()}data/cards.json`, { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error('카드 데이터를 불러올 수 없습니다');
         return res.json() as Promise<CardsJson>;
       })
       .catch(err => {
         cardsPromise = null;
+        cardsAbortController = null;
         throw err;
       });
+  } else if (signal) {
+    // A fetch is already in-flight — chain the new caller's signal so they
+    // can still abort the active request if needed.
+    chainAbortSignal(cardsAbortController!, signal);
   }
   return cardsPromise;
 }
 
-export async function loadCategories(): Promise<CategoryNode[]> {
+export async function loadCategories(signal?: AbortSignal): Promise<CategoryNode[]> {
+  // If an in-flight fetch was aborted, reset the cache so a retry can succeed
+  if (categoriesPromise && categoriesAbortController?.signal.aborted) {
+    categoriesPromise = null;
+    categoriesAbortController = null;
+  }
+
   if (!categoriesPromise) {
-    categoriesPromise = fetch(`${getBaseUrl()}data/categories.json`)
+    const controller = new AbortController();
+    chainAbortSignal(controller, signal);
+    categoriesAbortController = controller;
+
+    categoriesPromise = fetch(`${getBaseUrl()}data/categories.json`, { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error('카테고리 데이터를 불러올 수 없습니다');
         return res.json() as Promise<{ categories: CategoryNode[] }>;
       })
       .catch(err => {
         categoriesPromise = null;
+        categoriesAbortController = null;
         throw err;
       });
+  } else if (signal) {
+    chainAbortSignal(categoriesAbortController!, signal);
   }
   const data = await categoriesPromise;
   return data.categories;
