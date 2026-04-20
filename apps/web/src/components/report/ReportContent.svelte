@@ -45,7 +45,7 @@
         <tr class="border-b border-[var(--color-border)]">
           <td class="px-4 py-3 font-medium text-[var(--color-text-muted)] bg-[var(--color-bg)]">{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}</td>
           <td class="px-4 py-3 font-mono {opt.savingsVsSingleCard >= 0 ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}">
-            {opt.savingsVsSingleCard >= 0 ? '+' : ''}{formatWon(opt.savingsVsSingleCard)}
+            {opt.savingsVsSingleCard > 0 ? '+' : ''}{formatWon(opt.savingsVsSingleCard)}
           </td>
         </tr>
         <tr class="border-b border-[var(--color-border)]">
