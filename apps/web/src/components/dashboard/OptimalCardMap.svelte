@@ -35,13 +35,11 @@
   });
 
   function toggleRow(category: string) {
-    const next = new Set(expandedRows);
-    if (next.has(category)) {
-      next.delete(category);
+    if (expandedRows.has(category)) {
+      expandedRows.delete(category);
     } else {
-      next.add(category);
+      expandedRows.add(category);
     }
-    expandedRows = next;
   }
 </script>
 
