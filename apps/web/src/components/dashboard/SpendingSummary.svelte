@@ -6,6 +6,14 @@
 
   let dismissed = $state(false);
 
+  // Total spending across all months (computed once via $derived instead of
+  // inline reduce in the template for better change detection and consistency
+  // with other dashboard components).
+  let totalAllSpending = $derived.by(() => {
+    const mb = analysisStore.result?.monthlyBreakdown;
+    return mb ? mb.reduce((sum, m) => sum + m.spending, 0) : 0;
+  });
+
   onMount(() => {
     try {
       if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cherrypicker:dismissed-warning')) {
@@ -64,7 +72,7 @@
       </div>
       {#if analysisStore.result?.monthlyBreakdown && analysisStore.result.monthlyBreakdown.length > 1}
         <div class="mt-0.5 text-xs text-blue-400 dark:text-blue-300">
-          전체 {formatWon(analysisStore.result.monthlyBreakdown.reduce((sum, m) => sum + m.spending, 0))}
+          전체 {formatWon(totalAllSpending)}
         </div>
       {/if}
     </div>
