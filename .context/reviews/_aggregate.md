@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-20 (Cycle 53 Re-verification)
+# Review Aggregate -- 2026-04-20 (Cycle 3 Re-verification)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle53-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle3-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-52 per-agent and aggregate files
+- All cycle 1-53 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-52 findings are confirmed fixed except as noted below:
+All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -33,6 +33,9 @@ All prior cycle 1-52 findings are confirmed fixed except as noted below:
 | C52-01/D-107 | **FIXED** | `csv.ts:966-974` now collects adapter failures into `fallbackResult.errors` |
 | C52-02 | **FIXED** | `TransactionReview.svelte:108-130` now uses `updatedTxs.map()` for AI categorization |
 | C52-06/C4-07 | **FIXED** | `SpendingSummary.svelte:10,128` now uses `sessionStorage` (not `localStorage`) |
+| C53-01 | **FIXED** | `TransactionReview.svelte:187-205` `changeCategory` now uses replacement pattern |
+| C53-02 | **FIXED** | Duplicated card stats reading logic extracted to `apps/web/src/lib/build-stats.ts` |
+| C53-03 | **FIXED** | `CardDetail.svelte:222` now has `dark:text-blue-300` for dark mode |
 
 ---
 
@@ -40,9 +43,9 @@ All prior cycle 1-52 findings are confirmed fixed except as noted below:
 
 | Finding | Resolution |
 |---|---|
-| D-107/C52-01 | Web-side CSV adapter error collection -- now collects errors into result |
-| C52-02 | `TransactionReview.svelte` AI categorization -- now replaces entries instead of mutating in-place |
-| C4-07/C52-06 | `SpendingSummary.svelte` -- now uses `sessionStorage` for dismissal flag |
+| C53-01 | `changeCategory` in TransactionReview now uses array replacement pattern instead of in-place mutation |
+| C53-02 | Card stats reading logic extracted to shared `build-stats.ts` module |
+| C53-03 | CardDetail performance tier header now has dark mode contrast variant |
 
 ---
 
@@ -50,9 +53,11 @@ All prior cycle 1-52 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C53-01 | MEDIUM | HIGH | `apps/web/src/components/dashboard/TransactionReview.svelte:187-205` | `changeCategory` still mutates `editedTxs` entries in-place (same fragile pattern as C52-02, but in a different function); should replace entries like `runAICategorization` does |
-| C53-02 | LOW | MEDIUM | `apps/web/src/pages/index.astro:7-16` + `apps/web/src/layouts/Layout.astro:14-24` | Duplicated card stats reading logic with stale fallback values in two files |
-| C53-03 | LOW | MEDIUM | `apps/web/src/components/cards/CardDetail.svelte:222` | Performance tier header row uses `text-blue-700` without dark mode variant; poor contrast in dark mode |
+| C3-01 | LOW | LOW | `apps/web/src/lib/build-stats.ts:25` | `catch (err)` block logs misleading "not found" message when JSON.parse fails with SyntaxError |
+| C3-02 | LOW | LOW | `apps/web/src/components/dashboard/SavingsComparison.svelte:53-70` | Count-up animation $effect creates unnecessary RAF loop when target === displayedSavings |
+| C3-03 | MEDIUM | MEDIUM | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:153-161` | Keyboard accessibility issue: hoveredIndex set by mouse events doesn't collapse on keyboard focus loss |
+| C3-04 | LOW | MEDIUM | `apps/web/src/components/dashboard/OptimalCardMap.svelte:17-24` | Rate bar visual distortion when all rates are near-zero (epsilon too small) |
+| C3-05 | LOW | HIGH | `apps/web/src/lib/store.svelte.ts:405-420` | Missing sessionStorage cleanup when reoptimize fails with null result |
 
 ---
 
@@ -62,7 +67,7 @@ These are existing deferred items with new failure scenarios or more precise ana
 
 | ID | Prior ID | New Context |
 |---|---|---|
-| C53-01 | C52-02 | The fix for C52-02 only addressed `runAICategorization`; the same in-place mutation pattern persists in `changeCategory` at line 187-205 |
+| C3-05 | C9-05 | C9-05 fixed the "error set when result is null" issue, but C3-05 identifies a related gap: the stale sessionStorage data is NOT cleared when reoptimize fails, which can confuse users on page refresh |
 
 ---
 
@@ -70,13 +75,12 @@ These are existing deferred items with new failure scenarios or more precise ana
 
 | Finding | Severity | Note |
 |---|---|---|
-| C4-06/C52-03 | LOW | Annual savings projection label unchanged |
+| C4-06/C52-03/C9-02 | LOW | Annual savings projection label unchanged |
 | C4-09/C52-05 | LOW | Hardcoded `CATEGORY_COLORS` in CategoryBreakdown (dark mode contrast) |
 | C4-10 | MEDIUM | E2E test stale dist/ dependency |
 | C4-11 | MEDIUM | No regression test for findCategory fuzzy match |
 | C4-13 | LOW | Small-percentage bars nearly invisible |
-| C4-14/C52-04 | LOW | Stale fallback values in Layout footer |
-| C9-02/C52-03 | LOW | Redundant comparison UI when savings=0 |
+| C4-14/C52-04 | LOW | Stale fallback values in Layout footer (partially addressed by shared module) |
 | C9-04 | LOW | Complex fallback date regex in PDF parser |
 | C9-06 | LOW | Percentage rounding can shift "other" threshold |
 | C9-07 | LOW | Math.max spread stack overflow risk (theoretical) |
