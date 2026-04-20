@@ -121,7 +121,11 @@ function parseAmount(raw: string): number | null {
   const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNeg) cleaned = cleaned.slice(1, -1);
   if (!cleaned) return null;
-  const n = parseInt(cleaned, 10);
+  // Use Math.round(parseFloat(...)) to match the web-side parser's rounding
+  // behavior (C21-03/C32-01). Korean Won amounts are always integers, but
+  // formula-rendered CSV cells may contain decimal remainders; rounding is
+  // more correct than truncation.
+  const n = Math.round(parseFloat(cleaned));
   if (Number.isNaN(n)) return null;
   return isNeg ? -n : n;
 }
@@ -235,6 +239,10 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
       }
       continue;
     }
+    // Skip zero-amount rows (e.g., balance inquiries, declined transactions)
+    // which don't contribute to spending optimization — matching the web-side
+    // parser's isValidAmount() behavior (C26-02/C32-02).
+    if (amount === 0) continue;
 
     const tx: RawTransaction = {
       date: parseDateToISO(dateRaw),
