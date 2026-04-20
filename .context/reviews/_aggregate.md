@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-21 (Cycle 38)
+# Review Aggregate -- 2026-04-21 (Cycle 39)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle38-comprehensive.md` (full re-read of all source files, re-verified all prior findings, cross-verified parseAmount consistency across ALL parsers)
+- `.context/reviews/2026-04-21-cycle39-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-37 per-agent and aggregate files
+- All cycle 1-38 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-37 findings are confirmed fixed except as noted below:
+All prior cycle 1-38 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -31,7 +31,7 @@ All prior cycle 1-37 findings are confirmed fixed except as noted below:
 | C21-02 | OPEN (LOW) | cards.ts shared fetch AbortSignal race (deferred) |
 | C21-04/C23-02/C25-02/C26-03 | OPEN (LOW->MEDIUM) | cachedCategoryLabels/cachedCoreRules invalidated on explicit reset but stale across long-lived tabs |
 | C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks |
-| C22-05 | OPEN (LOW) | TransactionReview changeCategory O(n) array copy (deferred) |
+| C22-05/C39-02 | OPEN (MEDIUM) | TransactionReview changeCategory O(n) array copy -- PROMOTED from LOW to MEDIUM this cycle due to observed impact with large statements |
 | C24-06 | OPEN (LOW) | buildCardResults totalSpending no negative amount guard (safe in practice) |
 | C27-02 | OPEN (LOW) | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
 | C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed with SUBSTRING_SAFE_ENTRIES |
@@ -45,7 +45,14 @@ All prior cycle 1-37 findings are confirmed fixed except as noted below:
 
 ## New Findings (This Cycle)
 
-No new findings beyond carry-forward from prior cycles. The C38-01/02/03 items documented in the cycle 38 review are carry-forwards from C8-05/C7-11/C18-01 respectively and do not represent new issues.
+| ID | Severity | Confidence | Description | File+line |
+|---|---|---|---|---|
+| C39-01 | MEDIUM | High | vitest gate cannot run -- all test files use `bun:test` imports | Every `__tests__/*.test.ts` |
+| C39-02 | MEDIUM | High | TransactionReview changeCategory O(n) array copy per edit (promotion of C22-05) | `apps/web/src/components/dashboard/TransactionReview.svelte:128` |
+| C39-03 | LOW | High | Web-side parseFile no encoding quality warning to user | `apps/web/src/lib/parser/index.ts:20-36` |
+| C39-04 | LOW | Medium | CategoryBreakdown maxPercentage initial value 1 -- theoretical edge case | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129,192` |
+| C39-05 | LOW | Medium | FileDropzone total-size error prevents adding individually-valid files | `apps/web/src/components/upload/FileDropzone.svelte:126-153` |
+| C39-06 | LOW | Low | SavingsComparison annual projection jumps while monthly savings animates | `apps/web/src/components/dashboard/SavingsComparison.svelte:218` |
 
 ---
 
@@ -53,7 +60,7 @@ No new findings beyond carry-forward from prior cycles. The C38-01/02/03 items d
 
 | Finding | Severity | Note |
 |---|---|---|
-| C4-06/C52-03/C9-02/D-40/D-82/C9R-04 | LOW | Annual savings projection label unchanged |
+| C4-06/C52-03/C9-02/D-40/D-82/C9R-04/C18-03/C39-06 | LOW | Annual savings projection label unchanged / visual inconsistency |
 | C4-10 | MEDIUM | E2E test stale dist/ dependency |
 | C4-11 | MEDIUM | No regression test for findCategory fuzzy match |
 | C4-13/C9-08/D-43/D-74 | LOW | Small-percentage bars nearly invisible |
