@@ -149,7 +149,7 @@
   {/if}
   {#if analysisStore.persistWarningKind === 'truncated'}
     <div class="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800">
-      <span>데이터가 커서 거래 내역이 저장되지 않았어요. 탭을 닫으면 분석 결과도 사라져요.</span>
+      <span>데이터가 커서 거래 내역{analysisStore.truncatedTxCount ? ` ${analysisStore.truncatedTxCount}건` : ''}이(가) 저장되지 않았어요. 탭을 닫으면 분석 결과도 사라져요.</span>
     </div>
   {:else if analysisStore.persistWarningKind === 'corrupted'}
     <div class="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800">

@@ -92,7 +92,11 @@ const STORAGE_KEY = 'cherrypicker:analysis';
 type PersistedAnalysisResult = Pick<
   AnalysisResult,
   'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown' | 'transactions'
->;
+> & {
+  /** When transactions are omitted due to size limits, records how many
+   *  were lost so the warning can inform the user (C22-03). */
+  _truncatedTxCount?: number;
+};
 
 /** Maximum serialized payload size to persist in sessionStorage (4MB, leaving
  *  1MB headroom for other keys within the typical 5MB per-origin limit). */
@@ -104,7 +108,15 @@ const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
  *  Read by the store to inform the user that their data may not survive a tab close. */
 type PersistWarningKind = 'truncated' | 'corrupted' | null;
 
-function persistToStorage(data: AnalysisResult): PersistWarningKind {
+/** Result of persisting analysis data to sessionStorage.
+ *  - kind: 'truncated' (transactions omitted), 'corrupted' (save failed), or null (success)
+ *  - truncatedTxCount: when kind is 'truncated', how many transactions were lost (C22-03) */
+interface PersistResult {
+  kind: PersistWarningKind;
+  truncatedTxCount: number | null;
+}
+
+function persistToStorage(data: AnalysisResult): PersistResult {
   try {
     if (typeof sessionStorage !== 'undefined') {
       const persisted: PersistedAnalysisResult = {
@@ -121,19 +133,21 @@ function persistToStorage(data: AnalysisResult): PersistWarningKind {
       };
       const serialized = JSON.stringify(persisted);
       if (serialized.length > MAX_PERSIST_SIZE) {
-        // Transactions are the largest field — omit them if over budget
-        const withoutTxs: PersistedAnalysisResult = { ...persisted, transactions: undefined };
+        // Transactions are the largest field — omit them if over budget.
+        // Record how many were lost so the warning can inform the user (C22-03).
+        const txCount = data.transactions?.length ?? 0;
+        const withoutTxs: PersistedAnalysisResult = { ...persisted, transactions: undefined, _truncatedTxCount: txCount };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(withoutTxs));
-        return 'truncated'; // Data was truncated — transactions not saved
+        return { kind: 'truncated', truncatedTxCount: txCount }; // Data was truncated — transactions not saved
       } else {
         sessionStorage.setItem(STORAGE_KEY, serialized);
-        return null; // Full save succeeded
+        return { kind: null, truncatedTxCount: null }; // Full save succeeded
       }
     }
   } catch {
-    return 'corrupted'; // quota exceeded or SSR — save failed entirely
+    return { kind: 'corrupted', truncatedTxCount: null }; // quota exceeded or SSR — save failed entirely
   }
-  return null;
+  return { kind: null, truncatedTxCount: null };
 }
 
 /** Validate that a transaction is suitable for spending optimization.
@@ -160,6 +174,10 @@ function isOptimizableTx(tx: unknown): tx is CategorizedTx {
  *  - 'corrupted': transactions key existed but all entries failed validation
  */
 let _loadPersistWarningKind: PersistWarningKind = null;
+
+/** Track how many transactions were lost during truncation, read from
+ *  the _truncatedTxCount field in the persisted data (C22-03). */
+let _loadTruncatedTxCount: number | null = null;
 
 function loadFromStorage(): AnalysisResult | null {
   try {
@@ -202,6 +220,11 @@ function loadFromStorage(): AnalysisResult | null {
           if (validTxs.length === 0 && parsed.transactions.length > 0) {
             _loadPersistWarningKind = 'corrupted';
           }
+        } else if (!Array.isArray(parsed.transactions) && typeof parsed._truncatedTxCount === 'number') {
+          // Transactions were omitted during save due to size limits.
+          // Record how many were lost so the warning can inform the user (C22-03).
+          _loadPersistWarningKind = 'truncated';
+          _loadTruncatedTxCount = parsed._truncatedTxCount;
         }
 
         return {
@@ -257,9 +280,15 @@ function createAnalysisStore() {
       ? _loadPersistWarningKind
       : null
   );
+  // When transactions are truncated during sessionStorage persistence,
+  // records how many were lost so the warning can inform the user (C22-03).
+  let truncatedTxCount = $state<number | null>(
+    persistWarningKind === 'truncated' ? _loadTruncatedTxCount : null
+  );
   // Consume and reset the load-time warning kind so it doesn't leak
   // across store re-creation (e.g. HMR) or stale after reset.
   _loadPersistWarningKind = null;
+  _loadTruncatedTxCount = null;
 
   // Cache category labels to avoid rebuilding the Map on every reoptimize call.
   let cachedCategoryLabels: Map<string, string> | undefined;
@@ -303,6 +332,9 @@ function createAnalysisStore() {
     get persistWarningKind(): PersistWarningKind {
       return persistWarningKind;
     },
+    get truncatedTxCount(): number | null {
+      return truncatedTxCount;
+    },
 
     // Derived helpers
     get analysisResult(): AnalysisResult | null {
@@ -337,7 +369,9 @@ function createAnalysisStore() {
       result = r;
       generation++;
       error = null;
-      persistWarningKind = persistToStorage(r);
+      const persistResult = persistToStorage(r);
+      persistWarningKind = persistResult.kind;
+      truncatedTxCount = persistResult.truncatedTxCount;
     },
 
     async analyze(files: File | File[], options?: AnalyzeOptions): Promise<void> {
@@ -349,7 +383,9 @@ function createAnalysisStore() {
         const analysisResult = await analyzeMultipleFiles(fileArray, options);
         result = analysisResult;
         generation++;
-        persistWarningKind = persistToStorage(analysisResult);
+        const persistResult = persistToStorage(analysisResult);
+        persistWarningKind = persistResult.kind;
+        truncatedTxCount = persistResult.truncatedTxCount;
       } catch (e) {
         error = e instanceof Error ? e.message : '분석 중 문제가 생겼어요';
         result = null;
@@ -421,7 +457,9 @@ function createAnalysisStore() {
             monthlyBreakdown: updatedMonthlyBreakdown,
           };
           generation++;
-          persistWarningKind = persistToStorage(result);
+          const persistResult = persistToStorage(result);
+          persistWarningKind = persistResult.kind;
+          truncatedTxCount = persistResult.truncatedTxCount;
         } else {
           // Store was reset while reoptimizing — cannot apply edits.
           // Clear stale sessionStorage data to prevent confusion on refresh.
@@ -440,7 +478,9 @@ function createAnalysisStore() {
       error = null;
       loading = false;
       persistWarningKind = null;
+      truncatedTxCount = null;
       _loadPersistWarningKind = null;
+      _loadTruncatedTxCount = null;
       cachedCategoryLabels = undefined;
       clearStorage();
     },
