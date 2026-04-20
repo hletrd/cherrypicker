@@ -1,20 +1,22 @@
-# Review Aggregate -- 2026-04-21 (Cycle 51)
+# Review Aggregate -- 2026-04-21 (Cycle 52)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle51-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle52-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-50 per-agent and aggregate files
+- All cycle 1-51 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-50 findings are confirmed fixed except as noted below:
+All prior cycle 1-51 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C50-01 | **FIXED** | `CategoryBreakdown.svelte:133` now uses `0` as reduce initial value with `|| 1` fallback |
+| C51-01 | **PARTIALLY FIXED** | `report.astro` now uses `ReportContent.svelte` + `VisibilityToggle.svelte`, but `report.js` not deleted (C52-02) |
+| C51-04 | **FIXED** | `OptimalCardMap.svelte:37-43` toggleRow now uses `.add()`/`.delete()` directly on `$state` Set |
+| C50-01 | **FIXED** | `CategoryBreakdown.svelte:133` uses `0` as reduce initial value with `|| 1` fallback |
 | C50-02 | **FIXED** | `SavingsComparison.svelte:93-96` documents `Infinity` as intentional sentinel |
 | C50-05 | **FIXED** | `SavingsComparison.svelte:18-28` derives `cardBreakdown` from `analysisStore.cardResults` |
 | C50-07 | **FIXED** | `xlsx.ts:283-298` tracks bestResult across all sheets |
@@ -51,7 +53,6 @@ All prior cycle 1-50 findings are confirmed fixed except as noted below:
 | C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed |
 | C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
 | C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner |
-| C41-04/C42-03/C43-03/C49-03 | **FIXED** (was C50-01) | CategoryBreakdown maxPercentage initial value fixed to 0 with `|| 1` fallback |
 | C41-05/C42-04 | OPEN (LOW) | cards.ts loadCategories returns empty array on AbortError |
 | C49-01 | OPEN (LOW) | `isSubstringSafeKeyword` is dead code superseded by SUBSTRING_SAFE_ENTRIES |
 
@@ -61,10 +62,9 @@ All prior cycle 1-50 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C51-01 | LOW | HIGH | `apps/web/src/pages/report.astro:49`, `apps/web/public/scripts/report.js` | Report page uses plain JS reading sessionStorage directly (bypassing Svelte store), hardcoded light-mode styles (no dark mode), duplicated formatWon without negative-zero guard |
-| C51-02 | LOW | HIGH | `apps/web/src/components/dashboard/SpendingSummary.svelte:19-26,138` | Uses separate `sessionStorage` key for dismiss state, not cleared by store.reset() (same as C4-07) |
-| C51-03 | LOW | HIGH | `packages/core/src/optimizer/greedy.ts:122-141` | scoreCardsForTransaction calls calculateCardOutput twice per card per transaction (known greedy trade-off) |
-| C51-04 | LOW | HIGH | `apps/web/src/components/dashboard/OptimalCardMap.svelte:37-44` | toggleRow creates new Set on every call instead of mutating $state Set directly |
+| C52-01 | MEDIUM | HIGH | `apps/web/src/lib/parser/csv.ts:120,139,148-161` | CSV parser doesn't strip UTF-8 BOM before header detection. XLSX parser handles BOM correctly but CSV doesn't. BOM-prefixed header cells (e.g., `"\uFEFF이용일"`) fail `indexOf` matches in all 10 bank adapters AND the generic parser's regex checks, causing complete parse failure for Windows-generated CSV exports. |
+| C52-02 | LOW | HIGH | `apps/web/public/scripts/report.js` | Dead code -- report page was refactored to use `ReportContent.svelte` + `VisibilityToggle.svelte`, but the old plain JS file was never deleted. References non-existent `#report-content` element. |
+| C52-03 | LOW | HIGH | `apps/web/src/layouts/Layout.astro:46` | Hardcoded script path `/cherrypicker/scripts/layout.js` instead of using `${base}` variable. Breaks dark mode toggle and mobile menu if deployed under a different base path. All other resource references in the same file correctly use `${base}`. |
 
 ---
 
@@ -81,6 +81,7 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | cachedCategoryLabels staleness | C21, C23, C25, C26, C33 | OPEN (MEDIUM) -- 5 cycles agree |
 | CategoryBreakdown maxPercentage=1 | C41, C42, C43, C49, C50 | **FIXED** |
 | SpendingSummary sessionStorage dismiss | C4, C51 | OPEN (LOW) -- 2 cycles agree |
+| CSV BOM handling gap | C52 | NEW (MEDIUM) -- 1 cycle, high severity |
 
 ---
 
