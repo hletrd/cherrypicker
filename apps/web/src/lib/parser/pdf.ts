@@ -25,6 +25,18 @@ const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})/;
 const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
 const KOREAN_SHORT_DATE_PATTERN = /\d{1,2}월\s*\d{1,2}일/;
 const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/]\d{1,2}$/;
+
+/** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
+ *  values (month 1-12, day 1-31). This prevents decimal amounts like
+ *  "3.5" from being misidentified as MM.DD dates (C8-11). */
+function isValidShortDate(cell: string): boolean {
+  const match = cell.match(SHORT_MD_DATE_PATTERN);
+  if (!match) return false;
+  const parts = cell.split(/[.\-\/]/);
+  const month = parseInt(parts[0] ?? '', 10);
+  const day = parseInt(parts[1] ?? '', 10);
+  return month >= 1 && month <= 12 && day >= 1 && day <= 31;
+}
 const STRICT_AMOUNT_PATTERN = /^-?[\d,]+원?$/;
 
 interface Column {
@@ -167,7 +179,7 @@ function findDateCell(row: string[]): { idx: number; value: string } | null {
       SHORT_YEAR_DATE_PATTERN.test(cell) ||
       KOREAN_FULL_DATE_PATTERN.test(cell) ||
       KOREAN_SHORT_DATE_PATTERN.test(cell) ||
-      SHORT_MD_DATE_PATTERN.test(cell)
+      isValidShortDate(cell)
     ) return { idx: i, value: cell };
   }
   return null;
