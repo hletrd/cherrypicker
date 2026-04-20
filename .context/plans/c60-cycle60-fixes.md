@@ -25,9 +25,9 @@ let availableIssuers = $derived.by(() => {
 ```
 
 **Steps:**
-1. Update `CardGrid.svelte` to derive `availableIssuers` from type-filtered cards only
-2. Run all gates to confirm no regressions
-3. Commit with message: `fix(cards): 🐛 break reactive cycle between availableIssuers and filteredCards`
+1. ~~Update `CardGrid.svelte` to derive `availableIssuers` from type-filtered cards only~~ DONE
+2. ~~Run all gates to confirm no regressions~~ DONE (tsc PASS, vitest 189 pass, bun test 57 pass)
+3. ~~Commit with message: `fix(cards): 🐛 break reactive cycle between availableIssuers and filteredCards`~~ DONE (commit 0000000f)
 
 ---
 
