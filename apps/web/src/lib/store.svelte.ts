@@ -422,7 +422,7 @@ function createAnalysisStore() {
           // matches the guard in analyzer.ts getLatestMonth().
           if (!tx.date || tx.date.length < 7) continue;
           const month = tx.date.slice(0, 7);
-          monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
+          monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
           monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
         }
         const updatedMonthlyBreakdown = [...monthlySpending.entries()]

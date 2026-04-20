@@ -287,7 +287,7 @@ export async function analyzeMultipleFiles(
     // matches the guard in getLatestMonth() above.
     if (!tx.date || tx.date.length < 7) continue;
     const month = tx.date.slice(0, 7); // "2026-01"
-    monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
+    monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
     monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
   }
 
