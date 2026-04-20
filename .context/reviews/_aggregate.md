@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-20 (Cycle 18)
+# Review Aggregate -- 2026-04-20 (Cycle 19)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle18-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle19-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-17 per-agent and aggregate files
+- All cycle 1-18 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-17 findings are confirmed fixed except as noted below:
+All prior cycle 1-18 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -30,7 +30,7 @@ All prior cycle 1-17 findings are confirmed fixed except as noted below:
 | C8-05/C4-09 | OPEN (LOW) | CategoryBreakdown CATEGORY_COLORS poor dark mode contrast (extends C4-09) |
 | C8-06/C7-12 | **FIXED** | `FileDropzone.svelte:217` and `CardDetail.svelte:276` now use `buildPageUrl()` |
 | C8-07/C4-14 | OPEN (LOW) | build-stats.ts fallback values will drift (extends C4-14) |
-| C8-08 | OPEN (LOW) | inferYear() timezone-dependent near midnight Dec 31 |
+| C8-08 | OPEN (LOW) | inferYear() timezone-dependent near midnight Dec 31 (now centralized in date-utils.ts, C18-05 fixed, but timezone issue remains) |
 | C8-09 | OPEN (LOW) | Test duplicates production code instead of testing it directly |
 | C8-10 | OPEN (LOW) | csv.ts installment NaN implicitly filtered by `> 1` comparison |
 | C8-11 | OPEN (LOW) | pdf.ts fallback date regex could match decimal numbers like "3.5" |
@@ -61,10 +61,15 @@ All prior cycle 1-17 findings are confirmed fixed except as noted below:
 | C17-03 | **FIXED** | `FileDropzone.svelte:217` and `CardDetail.svelte:276` now use `buildPageUrl()` |
 | C17-04 | **FIXED** | `dashboard.astro:122` and `results.astro:81` use VisibilityToggle Svelte component |
 | C17-05 | **FIXED** | `CategoryBreakdown.svelte:88-89` uses `rawPct < 2` for threshold |
+| C18-01 | OPEN (MEDIUM) | VisibilityToggle $effect directly mutates DOM; cleanup added but pattern remains fragile |
+| C18-02 | OPEN (LOW) | Results page stat elements queried every effect run even on dashboard page |
+| C18-03 | OPEN (LOW) | Annual savings projection simply multiplies monthly by 12 without seasonal adjustment |
+| C18-04 | OPEN (LOW) | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
+| C18-05 | **FIXED** | `inferYear()` now centralized in `date-utils.ts`; all three parsers import from it |
 | C52-02 | **FIXED** | `TransactionReview.svelte:108-130` uses `updatedTxs.map()` replacement pattern |
 | C53-01 | **FIXED** | `TransactionReview.svelte:120-139` `changeCategory` uses replacement pattern |
-| C9R-03/C16-01 | OPEN (LOW→MEDIUM, now FIXED path works) | pdf.ts negative amounts now pass through; store allows !== 0. Both ends fixed. |
-| D-106 | OPEN (LOW) | `apps/web/src/lib/parser/pdf.ts:303` bare `catch {}` |
+| C9R-03/C16-01 | OPEN (LOW, path works) | pdf.ts negative amounts now pass through; store allows !== 0. Both ends fixed. |
+| D-106 | OPEN (LOW) | `apps/web/src/lib/parser/pdf.ts:295` bare `catch {}` |
 
 ---
 
@@ -72,11 +77,13 @@ All prior cycle 1-17 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C18-01 | MEDIUM | High | `VisibilityToggle.svelte:22-51` | `$effect` directly mutates DOM elements via `document.getElementById` + `classList.toggle` + `textContent = ...`. Anti-pattern in Svelte 5: no cleanup on store reset (elements stay visible), no compile-time check on element IDs, and runs on every store change regardless of which page is mounted. |
-| C18-02 | LOW | High | `VisibilityToggle.svelte:36-49` | Results page stat elements (`stat-total-spending` etc.) queried every effect run even on dashboard page where they don't exist — wasted DOM queries. |
-| C18-03 | LOW | Medium | `SavingsComparison.svelte:207` | Annual savings projection simply multiplies monthly by 12 without seasonal adjustment. Qualifier text is present but projection could mislead. |
-| C18-04 | LOW | High | `xlsx.ts:314-317` | `isHTMLContent()` only decodes first 512 bytes as UTF-8. UTF-8 BOM consumes 3 bytes; EUC-KR encoded files would not be detected as HTML. |
-| C18-05 | LOW | High | `inferYear()` triplicated | Identical `inferYear()` in csv.ts, xlsx.ts, pdf.ts — any fix must be applied three times. |
+| C19-01 | MEDIUM | High | `csv.ts:29-101`, `xlsx.ts:184-272`, `pdf.ts:145-203` | `parseDateToISO` is triplicated with near-identical logic across all three parsers. Unlike `inferYear` which was consolidated into `date-utils.ts` (C18-05 fix), `parseDateToISO` still has three copies. The xlsx version accepts `unknown` (handles Excel serial dates), while csv/pdf versions accept `string`, but the string-parsing branches are identical. Any date-parsing fix must be applied three times. |
+| C19-02 | MEDIUM | Medium | `VisibilityToggle.svelte:26-78` | The `$effect` cleanup function queries DOM elements by ID on cleanup. With Astro client-side navigation, the old VisibilityToggle's cleanup runs after the new page's elements are mounted. If the new page has elements with the same IDs (dashboard vs results), the cleanup could reset elements belonging to the new page instance. |
+| C19-03 | LOW | High | `CardPage.svelte:34,40` | `window.location.hash = id` sets hash for card selection, but `goBack()` uses `replaceState` which strips the hash. Card detail view is not in browser history -- user cannot use back button to return to a previously viewed card. |
+| C19-04 | LOW | High | `FileDropzone.svelte:217` | Navigation after successful upload uses `window.location.href = buildPageUrl('dashboard')` causing full page reload instead of client-side navigation. This discards all JS state and causes a visible flash. With Astro's ClientRouter, `navigate()` would provide smoother transition. |
+| C19-05 | LOW | High | `CardDetail.svelte:276` | Same as C19-04 pattern: `window.location.href = buildPageUrl('cards')` causes full page reload when navigating from card detail back to card list. Card list data must be re-fetched. |
+| C19-06 | LOW | High | `csv.ts:141` | `AMOUNT_PATTERNS[1]` (`/^-?[\d,]+\.?\d*원?$/`) matches amounts with decimal fractions like "1,234.56" but `parseAmount` uses `parseInt` which silently truncates decimals. The regex pattern suggests decimal amounts are supported when they will be truncated. For Korean Won this is irrelevant but the pattern is misleading. |
+| C19-07 | LOW | Medium | `store.svelte.ts:139-150` | `isValidTx` uses `tx.amount !== 0` to filter out zero-amount transactions, but the function name `isValidTx` is misleading -- it should be `isSpendableTx` or similar to clarify that zero-amount transactions are considered invalid for optimization purposes. |
 
 ---
 
@@ -94,14 +101,14 @@ All prior cycle 1-17 findings are confirmed fixed except as noted below:
 | C7-06 | LOW | analyzeMultipleFiles returns all-month transactions but optimizes only latest month |
 | C7-07 | LOW | BANK_SIGNATURES duplicated between packages/parser and apps/web |
 | C7-11 | LOW | persistWarning message misleading for data corruption vs size truncation |
-| C7-12/C8-06 | LOW | CardDetail + FileDropzone use full page reload — **FIXED** via buildPageUrl |
+| C7-12/C8-06 | LOW | CardDetail + FileDropzone use full page reload -- **FIXED** via buildPageUrl |
 | C7-13 | LOW | toCoreCardRuleSets cache keyed by reference equality (now uses null check, improved) |
 | C8-01 | MEDIUM | AI categorizer disabled but dead code in TransactionReview |
 | C8-08 | LOW | inferYear() timezone edge case near midnight Dec 31 |
 | C8-09 | LOW | Test duplicates production code |
 | C8-10 | LOW | csv.ts installment NaN fragile implicit filter |
 | C8-11 | LOW | pdf.ts fallback date regex could match decimals |
-| C11-02 | LOW | BASE_URL trailing slash assumption — **FIXED** via buildPageUrl |
+| C11-02 | LOW | BASE_URL trailing slash assumption -- **FIXED** via buildPageUrl |
 | C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro |
 | C53-03 | LOW | CardDetail performance tier header dark mode contrast |
 | C14-03 | LOW | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
