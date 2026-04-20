@@ -1,19 +1,21 @@
-# Review Aggregate -- 2026-04-21 (Cycle 43)
+# Review Aggregate -- 2026-04-21 (Cycle 44)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle43-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-21-cycle44-comprehensive.md` (full re-read of all source files, gate verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-42 per-agent and aggregate files
+- All cycle 1-43 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-42 findings are confirmed fixed except as noted below:
+All prior cycle 1-43 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C43-01 | FIXED | `isOptimizableTx` at `store.svelte.ts:168` now uses `obj.amount > 0` |
+| C43-02 | FIXED | `analyzer.ts:210` now uses `tx.amount` directly (not `Math.abs(tx.amount)`) |
 | C42-01 | FIXED | All parsers now use `amount <= 0`: web-side PDF, CSV, XLSX, all 10 server-side CSV adapters, server-side generic |
 | C42-02 | FIXED | `analyzer.ts:290` and `store.svelte.ts:425` now use `tx.amount` instead of `Math.abs(tx.amount)` |
 | C53-01 | FIXED | `TransactionReview.svelte:131` now uses `editedTxs[idx] = updated` (spread-copy + index assignment) |
@@ -47,9 +49,8 @@ All prior cycle 1-42 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | Description | File+line |
 |---|---|---|---|---|
-| C43-01 | MEDIUM | High | `isOptimizableTx` allows negative amounts through sessionStorage restoration -- inconsistent with parser-level `amount <= 0` filter | `apps/web/src/lib/store.svelte.ts:168` |
-| C43-02 | LOW | High | `Math.abs(tx.amount)` in performanceExclusions is redundant after C42-01 fix | `apps/web/src/lib/analyzer.ts:210` |
-| C43-03 | LOW | Medium | maxPercentage initial value 1 -- theoretical edge case (same as C41-04/C42-03, carried forward) | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:129` |
+| C44-01 | LOW | Medium | `reoptimize` does not forward original `previousMonthSpending` option -- manual input silently dropped after category edit | `apps/web/src/lib/store.svelte.ts:400` |
+| C44-03 | LOW | Medium | Card filter result count changes lack ARIA live region for screen reader announcement | `apps/web/src/components/cards/CardGrid.svelte` |
 
 ---
 
