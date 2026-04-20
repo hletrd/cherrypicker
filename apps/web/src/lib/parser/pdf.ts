@@ -2,6 +2,13 @@ import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js
 import { detectBank } from './detect.js';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
+/** Minimal representation of pdfjs-dist TextContent.items members.
+ *  Defined locally because pdfjs-dist does not re-export these types
+ *  from its main entry point. Matches the official TextItem / TextMarkedContent
+ *  union — only `str` is accessed, so we narrow with `'str' in item`. */
+type PdfTextItem = { str: string; dir: string; transform: unknown[]; width: number; height: number; hasEOL: boolean };
+type PdfTextMarkedContent = { type: string; id: string };
+
 // ---------------------------------------------------------------------------
 // Table parser (ported from packages/parser/src/pdf/table-parser.ts)
 // ---------------------------------------------------------------------------
@@ -320,7 +327,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
       const page = await doc.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items
-        .map((item: any) => ('str' in item ? item.str : ''))
+        .map((item: PdfTextItem | PdfTextMarkedContent) => ('str' in item ? item.str : ''))
         .join(' ');
       fullText += pageText + '\n';
     }
