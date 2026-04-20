@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-22 (Cycle 22)
+# Review Aggregate -- 2026-04-20 (Cycle 23)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle22-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle23-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-21 per-agent and aggregate files
+- All cycle 1-22 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-21 findings are confirmed fixed except as noted below:
+All prior cycle 1-22 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -38,7 +38,12 @@ All prior cycle 1-21 findings are confirmed fixed except as noted below:
 | C21-05 | **FIXED** | FileDropzone now uses separate primaryFileInputEl and addFileInputEl refs |
 | C20-02 | OPEN (LOW) | csv.ts DATE_PATTERNS/AMOUNT_PATTERNS divergence risk with date-utils.ts |
 | C20-04 | OPEN (LOW) | pdf.ts module-level regex constants not shared with date-utils.ts |
-| D-106 | OPEN (LOW) | `apps/web/src/lib/parser/pdf.ts:243` bare `catch {}` |
+| C22-01 | **FIXED** | pdf.ts parseAmount now uses `Math.round(parseFloat(...))` |
+| C22-02 | **FIXED** | SavingsComparison now checks prefers-reduced-motion |
+| C22-03 | **FIXED** | persistToStorage now tracks truncatedTxCount in PersistResult |
+| C22-04 | OPEN (LOW) | CSV adapter registry only covers 10 of 24 detected banks (deferred) |
+| C22-05 | OPEN (LOW) | TransactionReview changeCategory O(n) array copy (deferred) |
+| D-106 | OPEN (LOW) | `apps/web/src/lib/parser/pdf.ts:260` bare `catch {}` |
 
 ---
 
@@ -46,11 +51,11 @@ All prior cycle 1-21 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C22-01 | MEDIUM | High | `pdf.ts:166-172` | `parseAmount` in pdf.ts uses `parseInt` which is inconsistent with the csv.ts (C21-03 fix) and xlsx.ts (C20-01 fix) parsers, which now both use `Math.round(parseFloat(...))`. For a string like "1,234.56", pdf.ts would produce 1234 while csv.ts would produce 1235. Same class of inconsistency as C21-03 but in a different parser. |
-| C22-02 | LOW | High | `SavingsComparison.svelte:53-71` | The count-up animation `$effect` uses `requestAnimationFrame` without checking for `prefers-reduced-motion`. Users with reduced motion preferences will still see the animation. WCAG 2.2 criterion 2.3.3. |
-| C22-03 | LOW | High | `store.svelte.ts:107-137` | `persistToStorage` truncates transactions when over 4MB but does not record how many transactions were omitted. The truncation warning gives no indication of data loss magnitude. |
-| C22-04 | LOW | Medium | `detect.ts:8-105` vs `csv.ts:209-903` | BANK_SIGNATURES has 24 bank entries but CSV adapter registry only handles 10 banks. 14 banks (kakao, toss, kbank, bnk, dgb, suhyup, jb, kwangju, jeju, sc, mg, cu, kdb, epost) fall through to `parseGenericCSV()` with no bank-specific header detection. XLSX parser has column configs for all 24 banks. Asymmetry means CSV files from unsupported banks are less reliably parsed. |
-| C22-05 | LOW | Medium | `TransactionReview.svelte:130` | `changeCategory` uses `editedTxs = editedTxs.map(...)` which creates a new array on every category change. O(n) per change. Could use indexed update for O(1) but not a practical problem for typical statement sizes. |
+| C23-01 | MEDIUM | High | `packages/core/src/optimizer/greedy.ts:265-267` | Greedy optimizer filters `tx.amount > 0` but does not guard against `NaN` amounts. If a NaN amount somehow passes upstream validation, `NaN > 0` is `false` (filtered out), but the sort `b.amount - a.amount` produces `NaN` comparisons which sort inconsistently across JS engines. Adding `Number.isFinite(tx.amount)` makes the optimizer defensive against upstream parser bugs. |
+| C23-02 | LOW | High | `apps/web/src/lib/analyzer.ts:46-70` | `toCoreCardRuleSets()` caches the full unfiltered list (`cachedCoreRules`) with no invalidation mechanism. Currently safe because `cards.json` is static, but the assumption "rules from static JSON don't change per session" would break if the data source becomes dynamic. Same class of issue as C21-04 (cachedCategoryLabels). |
+| C23-03 | LOW | Medium | `apps/web/src/components/dashboard/SpendingSummary.svelte:131-138` | Monthly difference calculation can produce "NaN개월 전 실적" in the UI if `monthDiff` is `NaN` (e.g. from corrupted month strings). The `monthDiff === 1` check fails correctly, but the else-branch template interpolates `NaN` directly. A `!Number.isFinite(monthDiff)` guard would prevent the display artifact. |
+| C23-04 | LOW | Medium | `apps/web/src/lib/parser/csv.ts:100-108` | Generic CSV header detection uses `hasNonNumeric` (any Korean/Latin text) to identify the header row. If a CSV has Korean title text before the actual header, the title row would be incorrectly selected as the header, causing bad column mapping. Bank-specific adapters avoid this by checking for specific header keywords. |
+| C23-05 | LOW | High | `apps/web/src/lib/parser/csv.ts:922-969` | When `parseCSV` is called without a bank hint and no adapter's `detect()` matches, the function falls through to `parseGenericCSV(content, null)` with no bank knowledge. This is expected behavior but means files from unrecognized banks have reduced parsing reliability. |
 
 ---
 
@@ -81,6 +86,8 @@ All prior cycle 1-21 findings are confirmed fixed except as noted below:
 | C20-04 | LOW | pdf.ts module-level regex constants divergence risk with date-utils.ts |
 | C21-02 | LOW | cards.ts shared fetch AbortSignal race (deferred) |
 | C21-04 | LOW | cachedCategoryLabels never invalidated (deferred) |
+| C22-04 | LOW | CSV adapter gap for 14 banks (deferred) |
+| C22-05 | LOW | TransactionReview O(n) changeCategory (deferred) |
 | C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro |
 | C53-03 | LOW | CardDetail performance tier header dark mode contrast |
 | C14-03 | LOW | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
