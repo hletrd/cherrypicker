@@ -97,7 +97,7 @@ export function parseDateStringToISO(raw: string): string {
   if (shortMatch) {
     const month = parseInt(shortMatch[1]!, 10);
     const day = parseInt(shortMatch[2]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+    if (month >= 1 && month <= 12 && day >= 1) {
       const year = inferYear(month, day);
       if (isValidDayForMonth(year, month, day)) {
         return `${year}-${shortMatch[1]!.padStart(2, '0')}-${shortMatch[2]!.padStart(2, '0')}`;
@@ -121,7 +121,7 @@ export function parseDateStringToISO(raw: string): string {
   if (koreanShort) {
     const month = parseInt(koreanShort[1]!, 10);
     const day = parseInt(koreanShort[2]!, 10);
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+    if (month >= 1 && month <= 12 && day >= 1) {
       const year = inferYear(month, day);
       if (isValidDayForMonth(year, month, day)) {
         return `${year}-${koreanShort[1]!.padStart(2, '0')}-${koreanShort[2]!.padStart(2, '0')}`;
