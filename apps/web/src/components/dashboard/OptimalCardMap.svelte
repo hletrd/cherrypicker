@@ -17,10 +17,11 @@
   let maxRate = $derived.by(() => {
     if (!assignments.length) return 1;
     const computed = assignments.reduce((max, a) => Math.max(max, a.rate), 0);
-    // Guard against division by zero in bar width calculation; use a small
-    // epsilon proportional to typical rate magnitudes rather than a fixed 0.001
-    // to avoid inflating bars when all rates are very small (< 0.1%).
-    return computed > 0 ? computed : 0.0001;
+    // Guard against division by zero in bar width calculation; use a minimum
+    // of 0.5% (0.005) so that when all rates are near-zero, bars are
+    // proportionally small rather than appearing full-width due to a tiny
+    // denominator. A 0.01% epsilon would make any tiny rate fill the bar.
+    return computed > 0.005 ? computed : 0.005;
   });
 
   let sortedAssignments = $derived.by(() => {
