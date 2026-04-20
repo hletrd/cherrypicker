@@ -184,13 +184,9 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
     const amount = parseAmount(amountRaw);
-    if (Number.isNaN(amount)) {
-      if (amountRaw) errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}`, raw: line });
-      continue;
-    }
-    // Skip zero-amount rows (balance inquiries, declined transactions) —
-    // matching the PDF parser and bank-specific adapter behavior (C26-02).
-    if (amount === 0) continue;
+    // Use the shared isValidAmount() helper which handles both NaN and
+    // zero-amount filtering (C26-02), matching the bank-specific adapters.
+    if (!isValidAmount(amount, amountRaw, i, errors)) continue;
 
     const tx: RawTransaction = {
       date: parseDateToISO(dateRaw),
