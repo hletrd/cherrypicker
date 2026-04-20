@@ -1,7 +1,7 @@
 // Shared Svelte 5 state store for analysis results across dashboard components
 // Must be .svelte.ts so that $state runes are compiled properly
 
-import { analyzeMultipleFiles, optimizeFromTransactions, getLatestMonth } from './analyzer.js';
+import { analyzeMultipleFiles, optimizeFromTransactions, getLatestMonth, invalidateAnalyzerCaches } from './analyzer.js';
 import type { CategorizedTx } from './analyzer.js';
 import { loadCategories } from './cards.js';
 
@@ -489,6 +489,7 @@ function createAnalysisStore() {
       _loadPersistWarningKind = null;
       _loadTruncatedTxCount = null;
       cachedCategoryLabels = undefined;
+      invalidateAnalyzerCaches();
       clearStorage();
     },
   };

@@ -69,6 +69,14 @@ function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
   }));
 }
 
+/** Invalidate the cached core rules so the next call to
+ *  optimizeFromTransactions() re-fetches and re-transforms card data.
+ *  Called from analysisStore.reset() alongside cachedCategoryLabels
+ *  invalidation to maintain consistency (C26-03). */
+export function invalidateAnalyzerCaches(): void {
+  cachedCoreRules = null;
+}
+
 export interface CategorizedTx {
   id: string;
   date: string;
