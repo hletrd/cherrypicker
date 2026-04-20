@@ -21,38 +21,34 @@
 
 ## Implementation Steps
 
-### Step 1: Fix VisibilityToggle formatWonStat divergence (C28-01)
+### Step 1: Fix VisibilityToggle formatWonStat divergence (C28-01) -- DONE
 
 - File: `apps/web/src/components/ui/VisibilityToggle.svelte`
-- Change: Remove the local `formatWonStat()` function and import `formatWon` from `../../lib/formatters.js` instead
-- Rationale: `formatWon` includes -0 normalization that `formatWonStat` lacks. All other dashboard components already use `formatWon`. This eliminates the maintenance drift risk.
-- Behavioral impact: `formatWon` normalizes `-0` to `+0` which `formatWonStat` does not. In practice this difference is never triggered (optimizer never produces -0 amounts), so the change is safe.
+- Change: Removed the local `formatWonStat()` function and replaced calls with imported `formatWon` from `../../lib/formatters.js`
+- Commit: `00000002f0618d4d746f3eb9e83d35453c284390`
 
-### Step 2: Add zero-amount filter to XLSX parser (C28-02)
+### Step 2: Add zero-amount filter to XLSX parser (C28-02) -- DONE
 
 - File: `apps/web/src/lib/parser/xlsx.ts`
-- Change: After `if (amount === null) { ... continue; }` (lines 386-395), add `if (amount === 0) continue;` with a comment explaining the consistency with CSV/PDF parsers
-- Rationale: CSV parser (via `isValidAmount`) and PDF parser both skip zero-amount rows. Adding this to XLSX ensures consistency and prevents zero-amount entries from reaching the optimizer.
-- Behavioral impact: Zero-amount rows in XLSX files will now be skipped. This matches the behavior of the other parsers and the optimizer's own `tx.amount > 0` filter.
+- Change: Added `if (amount === 0) continue;` after null check with explanatory comment
+- Commit: `0000000b4204982102e00a924d400199b296ee29`
 
-### Step 3: Verify C27-01 inner catch comment
+### Step 3: Verify C27-01 inner catch comment -- DONE (already fixed)
 
 - File: `apps/web/src/lib/store.svelte.ts`
-- Check that line 253's inner catch has the explanatory comment added in a prior cycle. If not, add it.
-- Status: Per cycle 27 review, the comment was already present: `catch { /* best-effort cleanup: corrupted data removal, SecurityError in sandboxed iframes is expected */ }`. Verify and close.
+- Status: The comment was already present on line 253: `catch { /* best-effort cleanup: corrupted data removal, SecurityError in sandboxed iframes is expected */ }`. No change needed.
 
-### Step 4: Unify parseGenericCSV amount validation (C27-02)
+### Step 4: Unify parseGenericCSV amount validation (C27-02) -- DONE (already fixed)
 
 - File: `apps/web/src/lib/parser/csv.ts`
-- Change: Replace inline `Number.isNaN(amount)` and `amount === 0` checks with `if (!isValidAmount(amount, amountRaw, i, errors)) continue;`
-- Rationale: The `isValidAmount()` helper already handles both NaN and zero-amount checks. Using it in parseGenericCSV eliminates the maintenance divergence.
+- Status: The code already uses `isValidAmount()` on line 189. The C27-02 fix was applied in a prior cycle. No change needed.
 
-### Step 5: Run quality gates
+### Step 5: Run quality gates -- DONE
 
-- Lint: `bun run lint` across all workspaces
-- Typecheck: `bun run typecheck` across all workspaces
-- Tests: `bun test` across all workspaces
-- Build: `bun run build` for apps/web
+- Lint: `bun run lint` -- 0 errors, 0 warnings
+- Typecheck: `bun run typecheck` -- 0 errors, 0 warnings
+- Tests: `bun test` -- 266 pass, 0 fail
+- Build: `bun run build` -- success, 5 pages built
 
 ## Deferred Items
 
