@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-21 (Cycle 27)
+# Review Aggregate -- 2026-04-22 (Cycle 28)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle27-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
+- `.context/reviews/2026-04-22-cycle28-comprehensive.md` (full re-read of all source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-26 per-agent and aggregate files
+- All cycle 1-27 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-26 findings are confirmed fixed except as noted below:
+All prior cycle 1-27 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -35,9 +35,8 @@ All prior cycle 1-26 findings are confirmed fixed except as noted below:
 | C24-06 | OPEN (LOW) | buildCardResults totalSpending no negative amount guard (safe in practice) |
 | C25-01 | OPEN (MEDIUM) | CATEGORY_COLORS poor dark mode contrast: water/gas/electricity nearly invisible on dark backgrounds |
 | C25-09 | OPEN (MEDIUM) | CardDetail performance tier header dark mode contrast |
-| C26-01 | **FIXED** | SpendingSummary dismiss catch block now has explanatory comment |
-| C26-02 | **FIXED** | parseGenericCSV now skips zero-amount rows after isValidAmount check |
-| C26-03 | **FIXED** | analyzer.ts now exports invalidateAnalyzerCaches(); store.reset() calls it |
+| C27-01 | OPEN (MEDIUM) | Bare `catch {}` in loadFromStorage inner cleanup inconsistent with C24-02 and C26-01 fix patterns |
+| C27-02 | OPEN (LOW) | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
 
 ---
 
@@ -45,9 +44,8 @@ All prior cycle 1-26 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C27-01 | MEDIUM | High | `store.svelte.ts:253` | Bare `catch {}` in loadFromStorage inner cleanup inconsistent with C24-02 and C26-01 fix patterns |
-| C27-02 | LOW | High | `csv.ts:187-193` | Duplicate NaN/zero checks in parseGenericCSV (inline) vs isValidAmount() (bank adapters) -- maintenance divergence |
-| C27-03 | LOW | -- | `SpendingSummary.svelte:133-137` | parseInt without NaN guard in template -- no action needed, Number.isFinite guard is sufficient |
+| C28-01 | LOW | High | `VisibilityToggle.svelte:13` | Duplicated `formatWonStat()` diverges from `formatters.ts:formatWon()` -- missing -0 normalization, maintenance drift risk |
+| C28-02 | LOW | Medium | `xlsx.ts:386-395` | XLSX parser does not filter zero-amount rows, inconsistent with CSV (isValidAmount) and PDF parsers |
 
 ---
 
@@ -80,6 +78,8 @@ All prior cycle 1-26 findings are confirmed fixed except as noted below:
 | C22-04 | LOW | CSV adapter gap for 14 banks (deferred) |
 | C22-05/C25-11 | LOW | TransactionReview O(n) changeCategory (deferred) |
 | C24-06/C25-04 | LOW | buildCardResults totalSpending no negative guard (safe in practice) |
+| C27-01 | MEDIUM | Bare catch {} in loadFromStorage inner cleanup -- inconsistent with C24-02/C26-01 pattern |
+| C27-02 | LOW | parseGenericCSV inline NaN/zero checks vs isValidAmount() divergence |
 | C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro |
 | C53-03/C25-09 | MEDIUM | CardDetail performance tier header dark mode contrast |
 | D-01 through D-111 | Various | See deferred items file for full list |
