@@ -1,27 +1,17 @@
 ---
+import { readCardStats } from '../lib/build-stats.js';
+
 interface Props {
   title: string;
   description?: string;
 }
 
-import { readFile } from 'fs/promises';
-import { resolve } from 'path';
-
 const { title, description = '내 소비에 맞는 카드 조합 찾기' } = Astro.props;
 const pathname = Astro.url.pathname;
 const base = import.meta.env.BASE_URL;
 
-// Read card stats from built JSON at build time
-let totalCards = 683;
-let totalIssuers = 24;
-let totalCategories = 45;
-try {
-  const raw = await readFile(resolve(process.cwd(), 'public/data/cards.json'), 'utf-8');
-  const data = JSON.parse(raw);
-  totalCards = data.meta?.totalCards ?? totalCards;
-  totalIssuers = data.meta?.totalIssuers ?? totalIssuers;
-  totalCategories = data.meta?.categories?.length ?? totalCategories;
-} catch (err) { console.warn('[cherrypicker] cards.json not found at build time, using fallback stats:', err); }
+// Read card stats from built JSON at build time (shared module)
+const { totalCards, totalIssuers, totalCategories } = await readCardStats();
 
 function isActive(href: string) {
   if (href === base) return pathname === base || pathname === base.replace(/\/$/, '');
