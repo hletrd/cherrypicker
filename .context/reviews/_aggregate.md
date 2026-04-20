@@ -1,7 +1,7 @@
-# Review Aggregate -- 2026-04-20 (Cycle 4)
+# Review Aggregate -- 2026-04-20 (Cycle 5)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-20-cycle4-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
+- `.context/reviews/2026-04-20-cycle5-comprehensive.md` (full re-read of all 40+ source files, re-verified all prior findings)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-53 per-agent and aggregate files
@@ -18,11 +18,6 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 | C7-02 | **FIXED** | `SpendingSummary.svelte:111` uses `formatRatePrecise()` |
 | C7-03 | **FIXED** | `SavingsComparison.svelte:179` uses `formatRatePrecise()` |
 | C7-08 | **FIXED** | `pdf.ts` now has `inferYear()` and handles short Korean dates + MM/DD |
-| C7-13 | **FIXED** | `analyzer.ts:167-168` caches by null check, not reference equality |
-| C6R-M01 | **FIXED** | Server-side XLSX uses `Number.isNaN()` |
-| C6R-M02 | **FIXED** | Web-side CSV/XLSX use `Number.isNaN()` |
-| C47-L01 | **STILL FIXED** | Terminal `formatWon` has `Number.isFinite` guard + negative-zero normalization |
-| C47-L02 | **STILL FIXED** | Terminal `formatRate` has `Number.isFinite` guard |
 | C9-01 | **FIXED** | `analyzer.ts:47` -- `cachedCoreRulesRef` removed, cache uses null check |
 | C9-05 | **FIXED** | `store.svelte.ts:419` -- error set when result is null |
 | C9-11 | **FIXED** | `store.svelte.ts:143-149` -- non-empty checks for id, date, category |
@@ -31,12 +26,15 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 | C10-06 | **FIXED** | `FileDropzone.svelte:211` -- checks `analysisStore.error` after analyze |
 | C10-09 | **FIXED** | `store.svelte.ts:363-366` -- reoptimize filters to latest month |
 | C10-13 | **FIXED** | `matcher.ts:40` -- guards empty/single-char merchant names |
+| C47-L01 | **STILL FIXED** | Terminal `formatWon` has `Number.isFinite` guard + negative-zero normalization |
+| C47-L02 | **STILL FIXED** | Terminal `formatRate` has `Number.isFinite` guard |
 | C52-01/D-107 | **FIXED** | `csv.ts:966-974` now collects adapter failures into `fallbackResult.errors` |
 | C52-02 | **FIXED** | `TransactionReview.svelte:108-130` now uses `updatedTxs.map()` for AI categorization |
 | C52-06/C4-07 | **FIXED** | `SpendingSummary.svelte:10,128` now uses `sessionStorage` (not `localStorage`) |
 | C53-01 | **FIXED** | `TransactionReview.svelte:187-205` `changeCategory` now uses replacement pattern |
 | C53-02 | **FIXED** | Duplicated card stats reading logic extracted to `apps/web/src/lib/build-stats.ts` |
 | C53-03 | **FIXED** | `CardDetail.svelte:222` now has `dark:text-blue-300` for dark mode |
+| C4-01 | **FIXED** | `build-stats.ts:25-30` catch block now differentiates ENOENT, EACCES, and other errors |
 
 ---
 
@@ -44,8 +42,8 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | Finding | Prior Status | New Assessment |
 |---|---|---|
-| C3-02 | LOW/LOW | NOT A REAL ISSUE -- The "duplicate guard" in SavingsComparison count-up is a correct early-return pattern, not a bug |
-| C3-03 | MEDIUM/MEDIUM | NOT A REAL ISSUE -- On careful re-analysis, keyboard accessibility works correctly via onfocusin/onfocusout combination |
+| C3-02 | LOW/LOW | NOT A REAL ISSUE -- The "duplicate guard" in SavingsComparison count-up is a correct early-return pattern |
+| C3-03 | MEDIUM/MEDIUM | NOT A REAL ISSUE -- Keyboard accessibility works correctly via onfocusin/onfocusout combination |
 | C3-05 | LOW/HIGH | NOT A REAL ISSUE -- Reoptimize catch correctly preserves old result; clearing sessionStorage would destroy valid data |
 
 ---
@@ -54,7 +52,7 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C4-01 | LOW | HIGH | `apps/web/src/lib/build-stats.ts:25-30` | `catch (err)` block logs misleading "not found" message when JSON.parse fails with SyntaxError vs when file is actually not found |
+| C5-01 | LOW | MEDIUM | `apps/web/src/components/dashboard/SpendingSummary.svelte:119` | `parseInt` on month slice without NaN guard in prevLabel computation |
 
 ---
 
@@ -76,8 +74,8 @@ All prior cycle 1-53 findings are confirmed fixed except as noted below:
 | C9-12 | LOW | Module-level cache persists across store resets |
 | D-106 | LOW | `apps/web/src/lib/parser/pdf.ts:284` bare `catch {}` |
 | D-110 | LOW | Non-latest month edits have no visible optimization effect |
-| C3-01 | LOW | `build-stats.ts:25` catch block misleading message (superseded by C4-01 which is the same finding re-verified) |
-| C3-04 | LOW | OptimalCardMap rate bar epsilon distortion (same as C4-13/C9-08) |
+| D-66 | LOW | CardGrid issuer filter shows issuers with 0 cards after type filter |
+| D-01 through D-111 | Various | See deferred items file for full list |
 
 ---
 
