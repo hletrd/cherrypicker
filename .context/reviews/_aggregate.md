@@ -1,30 +1,31 @@
-# Review Aggregate -- 2026-04-22 (Cycle 70)
+# Review Aggregate -- 2026-04-22 (Cycle 71)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle70-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle71-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-69 per-agent and aggregate files
+- All cycle 1-70 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-69 findings are confirmed fixed except as noted below.
+All prior cycle 1-70 findings are confirmed fixed except as noted below.
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C70-01 | **FIXED** | `detectBank` caps confidence at 0.5 for single-pattern banks in both web and server detect.ts. |
+| C69-02 | **FIXED** | `parseCSVAmount` handles parenthesized negatives. |
 | C68-01 | **FIXED** | Server-side PDF `isValidShortDate` uses `MAX_DAYS_PER_MONTH` table. |
 | C68-02 | **FIXED** | `scoreCardsForTransaction` uses push/pop instead of spread array. |
-| C69-01 | OPEN (LOW) | Tiny savings animation flicker -- informational only. |
-| C69-02 | **FIXED** | `parseCSVAmount` handles parenthesized negatives. |
+| C70-02 | OPEN (LOW) | `cachedCategoryLabels` not invalidated on Astro View Transitions. |
+| C70-03 | OPEN (LOW) | `parseDateStringToISO` warns but returns raw input. Partially addressed. |
+| C70-04 | OPEN (LOW) | csv.ts reimplements shared.ts. NOTE comment added but not migrated. |
+| C70-05 | OPEN (LOW) | BANK_SIGNATURES duplicated between web and server. |
+| C69-01 | OPEN (LOW) | Tiny savings animation flicker. |
 | C67-01 | OPEN (MEDIUM) | Greedy optimizer O(m*n*k) quadratic behavior unchanged. |
-| C66-02 | OPEN (MEDIUM) | `cachedCategoryLabels` stale across redeployments. 13+ cycles agree. |
+| C66-02 | OPEN (MEDIUM) | `cachedCategoryLabels` stale across redeployments. 14+ cycles agree. |
 | C66-03 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction. 11+ cycles agree. |
-| C66-04 | OPEN (LOW) | `persistToStorage` now returns 'error' for non-quota failures (C69 fix). Partially addressed. |
-| C66-05 | OPEN (LOW) | `FALLBACK_CATEGORIES` hardcoded 13 categories vs 40+ in taxonomy. |
-| C66-08 | OPEN (LOW) | `formatIssuerNameKo` and `CATEGORY_COLORS` hardcoded maps will drift. |
-| C66-10 | OPEN (LOW) | `BANK_SIGNATURES` duplicated between server and web. |
 
 ---
 
@@ -32,31 +33,28 @@ All prior cycle 1-69 findings are confirmed fixed except as noted below.
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C70-01 | MEDIUM | HIGH | `apps/web/src/lib/parser/detect.ts:91-105` | `detectBank` single-pattern banks (cu, kdb, etc.) achieve 100% confidence on one keyword match, causing false-positive bank detection when the keyword appears in transaction text rather than statement headers. |
-| C70-02 | LOW | MEDIUM | `apps/web/src/lib/store.svelte.ts:330-337` | `cachedCategoryLabels` not invalidated on Astro View Transitions -- only cleared on reset(). Aligns with C66-02. |
-| C70-03 | LOW | HIGH | `apps/web/src/lib/parser/date-utils.ts:134` | `parseDateStringToISO` returns raw input for unparseable dates without error indicator. Matches C56-04 (9 cycles agree). |
-| C70-04 | LOW | HIGH | `apps/web/src/lib/parser/csv.ts:8-86` | Web CSV parser reimplements `splitLine`, `parseAmount`, `parseInstallments` from `shared.ts` instead of importing. |
-| C70-05 | LOW | HIGH | `apps/web/src/lib/parser/detect.ts` + `packages/parser/src/detect.ts` | `BANK_SIGNATURES` array duplicated between web and server detect modules. Matches C66-10/C7-07. |
+| C71-01 | MEDIUM | HIGH | `apps/web/src/components/upload/FileDropzone.svelte:182-188` | `clearAllFiles()` and last-file `removeFile()` do not reset `bank` and `previousSpending` state, causing stale bank/spending values to silently carry over to the next analysis. |
+| C71-02 | MEDIUM | HIGH | `apps/web/src/lib/cards.ts:266` + `apps/web/src/lib/analyzer.ts:106-112` | `loadCategories()` returns empty array on AbortError; `analyzeMultipleFiles()` proceeds with empty MerchantMatcher, producing silently wrong "all uncategorized" results without any error shown to the user. |
+| C71-03 | LOW | MEDIUM | `apps/web/src/components/dashboard/SavingsComparison.svelte:219` | Annual projection multiplies by 12 (known finding C4-06 -- carried forward, confirming unchanged). |
+| C71-04 | LOW | HIGH | `apps/web/src/lib/parser/date-utils.ts:140-142` | `parseDateStringToISO` warns but still returns raw string for unparseable dates (known finding C56-04/C70-03 -- partially addressed, confirming remaining gap). |
+| C71-05 | LOW | MEDIUM | `apps/web/src/lib/parser/detect.ts:132-149` | BANK_SIGNATURES array order affects tie-breaking for overlapping patterns (e.g., ibk vs kdb when both score 1). Document or improve tie-breaking. |
 
 ---
 
 ## Cross-Agent Agreement (Multi-Cycle Convergence)
 
-The following findings have been flagged by multiple cycles, indicating high signal:
-
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| MerchantMatcher/taxonomy O(n) scan | C16, C33, C50, C62-C69 | OPEN (MEDIUM) -- 11+ cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21, C23, C25, C26, C33, C62-C69, C70 | OPEN (MEDIUM) -- 14 cycles agree |
-| persistToStorage bare catch / error handling | C62-C69 | PARTIALLY FIXED (C69 added 'error' kind) |
-| Annual savings simple *12 projection | C7, C18, C62-C69 | OPEN (LOW) -- 10 cycles agree |
-| date-utils unparseable passthrough | C56-C69, C70 | OPEN (LOW) -- 10 cycles agree |
-| CSV DATE_PATTERNS divergence risk | C20, C25, C62-C69 | OPEN (LOW) -- 9 cycles agree |
-| Hardcoded fallback drift (CATEGORY_NAMES_KO / build-stats) | C8, C64-C69, C70 | OPEN (LOW) -- 7 cycles agree |
-| BANK_SIGNATURES duplication | C7, C66-C69, C70 | OPEN (LOW) -- 6 cycles agree |
-| inferYear() timezone dependence | C8, C67-C69 | OPEN (LOW) -- 4 cycles agree (60+ cycles deferred) |
-| Greedy optimizer O(m*n*k) quadratic | C67-C69 | OPEN (MEDIUM) -- 3 cycles agree |
-| detectBank single-pattern 100% confidence | C70 | NEW (MEDIUM) -- related to D-65 |
+| MerchantMatcher/taxonomy O(n) scan | C16-C70 | OPEN (MEDIUM) -- 11+ cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21-C70 | OPEN (MEDIUM) -- 14 cycles agree |
+| persistToStorage bare catch / error handling | C62-C70 | PARTIALLY FIXED (C69 added 'error' kind) |
+| Annual savings simple *12 projection | C7-C70 | OPEN (LOW) -- 10 cycles agree |
+| date-utils unparseable passthrough | C56-C71 | PARTIALLY FIXED (C70 added warn) |
+| CSV DATE_PATTERNS divergence risk | C20-C70 | OPEN (LOW) -- 9 cycles agree |
+| Hardcoded fallback drift | C8-C70 | OPEN (LOW) -- 7 cycles agree |
+| BANK_SIGNATURES duplication | C7-C70 | OPEN (LOW) -- 6 cycles agree |
+| inferYear() timezone dependence | C8-C70 | OPEN (LOW) -- 4 cycles agree (60+ cycles deferred) |
+| Greedy optimizer O(m*n*k) quadratic | C67-C70 | OPEN (MEDIUM) -- 4 cycles agree |
 
 ---
 
@@ -64,7 +62,7 @@ The following findings have been flagged by multiple cycles, indicating high sig
 
 | Finding | Severity | Note |
 |---|---|---|
-| C4-06/C52-03/C9-02/D-40/D-82/C9R-04/C18-03/C39-06 | LOW | Annual savings projection label unchanged / visual inconsistency |
+| C4-06/C52-03/C9-02/D-40/D-82/C9R-04/C18-03/C39-06/C71-03 | LOW | Annual savings projection label unchanged / visual inconsistency |
 | C4-10 | MEDIUM | E2E test stale dist/ dependency |
 | C4-11 | MEDIUM | No regression test for findCategory fuzzy match |
 | C4-13/C9-08/D-43/D-74 | LOW | Small-percentage bars nearly invisible |
@@ -85,16 +83,18 @@ The following findings have been flagged by multiple cycles, indicating high sig
 | C22-04 | LOW | CSV adapter registry only covers 10 of 24 detected banks |
 | C33-01/C66-03 | MEDIUM | MerchantMatcher substring scan O(n) per transaction |
 | C33-02/C66-02 | MEDIUM | cachedCategoryLabels stale across redeployments |
-| C41-05/C42-04 | LOW | cards.ts loadCategories returns empty array on AbortError |
-| C56-04/C70-03 | LOW | date-utils.ts returns raw input for unparseable dates without error reporting |
+| C41-05/C42-04/C71-02 | MEDIUM | loadCategories returns empty array on AbortError -- silently wrong results |
+| C56-04/C70-03/C71-04 | LOW | date-utils.ts returns raw input for unparseable dates without error reporting |
 | C56-05 | LOW | Zero savings shows "0원" without plus sign |
 | C62-11/C66-04 | LOW | persistToStorage returns 'corrupted' for non-quota errors -- PARTIALLY FIXED |
 | C64-03/C66-05/C67-03 | LOW | CATEGORY_NAMES_KO hardcoded map can drift from YAML taxonomy |
 | C66-08 | LOW | formatIssuerNameKo and CATEGORY_COLORS hardcoded maps will drift |
 | C67-01 | MEDIUM | Greedy optimizer O(m*n*k) quadratic behavior |
 | C69-01 | LOW | SavingsComparison tiny savings animation flicker (informational) |
-| C70-01 | MEDIUM | detectBank single-pattern banks can false-positive with 100% confidence |
+| C70-02 | LOW | cachedCategoryLabels not invalidated on Astro View Transitions |
 | C70-04 | LOW | csv.ts reimplements shared.ts instead of importing from it |
+| C71-01 | MEDIUM | FileDropzone does not reset bank/previousSpending on clearAllFiles |
+| C71-05 | LOW | BANK_SIGNATURES array order affects detection accuracy for overlapping patterns |
 
 ---
 
