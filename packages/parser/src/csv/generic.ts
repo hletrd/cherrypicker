@@ -136,9 +136,11 @@ function splitCSVLine(line: string, delimiter: string): string[] {
     const result: string[] = [];
     let inQuotes = false;
     let current = '';
-    for (const char of line) {
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]!;
       if (char === '"') {
-        inQuotes = !inQuotes;
+        if (inQuotes && line[i + 1] === '"') { current += '"'; i++; } // RFC 4180 escaped quote
+        else { inQuotes = !inQuotes; }
       } else if (char === delimiter && !inQuotes) {
         result.push(current.trim());
         current = '';
