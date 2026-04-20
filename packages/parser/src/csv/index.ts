@@ -68,11 +68,24 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
     }
   }
 
-  // Fall back to generic parser
-  const result = parseGenericCSV(content, resolvedBank);
-  // Collect any signature-detection adapter failures into the result
-  for (const msg of signatureFailures) {
-    result.errors.unshift({ message: msg });
+  // Fall back to generic parser — wrap in try/catch for defensive consistency
+  // with the bank-specific adapter path above and the web-side parser (C30-02/C32-03).
+  try {
+    const result = parseGenericCSV(content, resolvedBank);
+    // Collect any signature-detection adapter failures into the result
+    for (const msg of signatureFailures) {
+      result.errors.unshift({ message: msg });
+    }
+    return result;
+  } catch (err) {
+    return {
+      bank: resolvedBank,
+      format: 'csv',
+      transactions: [],
+      errors: [
+        ...signatureFailures.map(msg => ({ message: msg })),
+        { message: `제네릭 파서 실패: ${err instanceof Error ? err.message : String(err)}` },
+      ],
+    };
   }
-  return result;
 }
