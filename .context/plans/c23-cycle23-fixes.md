@@ -6,13 +6,13 @@
 - **File:** `packages/core/src/optimizer/greedy.ts`
 - **Problem:** The greedy optimizer filters `tx.amount > 0` (line 266) but does not guard against `NaN` amounts. If a NaN amount somehow passes upstream validation, `NaN > 0` is `false` (filtered out), but the sort `b.amount - a.amount` on line 267 would produce `NaN` comparisons which sort inconsistently across JS engines.
 - **Fix:** Add `Number.isFinite(tx.amount)` to the filter on line 266, changing from `.filter((tx) => tx.amount > 0)` to `.filter((tx) => tx.amount > 0 && Number.isFinite(tx.amount))`. This makes the optimizer defensive against upstream parser bugs without changing behavior for valid data.
-- **Status:** PENDING
+- **Status:** DONE -- committed as `0000000abe6071bd5038dd0de612abb4b148135f`
 
 ### C23-03 (LOW): SpendingSummary monthDiff can display "NaN개월 전 실적"
 - **File:** `apps/web/src/components/dashboard/SpendingSummary.svelte`
 - **Problem:** The monthly difference calculation at lines 131-138 can produce "NaN개월 전 실적" in the UI if `monthDiff` is `NaN` (e.g. from corrupted month strings). The `monthDiff === 1` check fails correctly, but the else-branch template interpolates `NaN` directly.
 - **Fix:** Add a guard for `!Number.isFinite(monthDiff)` on line 138. Change from `{@const prevLabel = monthDiff === 1 ? '전월실적' : `${monthDiff}개월 전 실적`}` to `{@const prevLabel = !Number.isFinite(monthDiff) ? '이전 실적' : monthDiff === 1 ? '전월실적' : `${monthDiff}개월 전 실적`}`. This provides a safe fallback display instead of "NaN개월 전 실적".
-- **Status:** PENDING
+- **Status:** DONE -- committed as `00000005621797fc88446b6113c25a77348b9a9c`
 
 ## Previously Open Findings Addressable This Cycle
 
