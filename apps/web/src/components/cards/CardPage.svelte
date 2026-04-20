@@ -67,10 +67,11 @@
       </li>
       <li class="select-none text-[var(--color-border)]">/</li>
       <li>
-        <button
-          class="transition-colors hover:text-[var(--color-primary)] cursor-pointer"
-          onclick={goBack}
-        >카드 목록</button>
+        <a
+          href="#"
+          class="transition-colors hover:text-[var(--color-primary)]"
+          onclick={(e) => { e.preventDefault(); goBack(); }}
+        >카드 목록</a>
       </li>
       <li class="select-none text-[var(--color-border)]">/</li>
       <li class="font-medium text-[var(--color-text)]" aria-current="page">
