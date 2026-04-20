@@ -1,16 +1,16 @@
-# Review Aggregate -- 2026-04-21 (Cycle 37)
+# Review Aggregate -- 2026-04-21 (Cycle 38)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-21-cycle37-comprehensive.md` (full re-read of all source files, re-verified all prior findings, cross-verified parseAmount consistency across ALL parsers)
+- `.context/reviews/2026-04-21-cycle38-comprehensive.md` (full re-read of all source files, re-verified all prior findings, cross-verified parseAmount consistency across ALL parsers)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-36 per-agent and aggregate files
+- All cycle 1-37 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-36 findings are confirmed fixed except as noted below:
+All prior cycle 1-37 findings are confirmed fixed except as noted below:
 
 | Finding | Status | Evidence |
 |---|---|---|
@@ -37,22 +37,15 @@ All prior cycle 1-36 findings are confirmed fixed except as noted below:
 | C33-01 | OPEN (MEDIUM) | MerchantMatcher substring scan O(n) per transaction -- partially fixed with SUBSTRING_SAFE_ENTRIES |
 | C33-02 | OPEN (MEDIUM) | cachedCategoryLabels stale across redeployments |
 | C34-04 | OPEN (LOW) | Server-side PDF has no fallback line scanner -- architectural gap |
-| C36-01 | FIXED | Web-side PDF parseAmount now handles parenthesized negatives |
-| C36-02 | FIXED | Server-side CSV adapters now use shared.ts utilities |
-| C36-03 | FIXED | categoryLabels Map construction centralized into buildCategoryLabelMap() |
-| C53-01 | FIXED | TransactionReview changeCategory now uses replacement pattern |
-| C53-02 | FIXED | Card stats reading logic centralized into build-stats.ts |
-| C53-03 | FIXED | CardDetail performance tier header dark mode contrast fixed |
+| C37-01 | FIXED | Web-side CSV parseAmount now returns null instead of NaN |
+| C37-02 | FIXED | isValidAmount now acts as type guard separating null check from zero filter |
+| C37-03 | FIXED | FileDropzone page-level drag handlers now have active guard for unmount race |
 
 ---
 
 ## New Findings (This Cycle)
 
-| ID | Severity | Confidence | File | Description |
-|---|---|---|---|---|
-| C37-01 | MEDIUM | High | `apps/web/src/lib/parser/csv.ts:33-45` | Web-side CSV `parseAmount` returns NaN (not null) for unparseable inputs -- inconsistent with all other parsers which return null. The `number` return type hides the risk of NaN propagation. |
-| C37-02 | LOW | High | `apps/web/src/lib/parser/csv.ts:49-61` | `isValidAmount` combines NaN check and zero-amount filter in one function, diverging from the separated pattern used by PDF/XLSX/server parsers |
-| C37-03 | MEDIUM | High | `apps/web/src/components/upload/FileDropzone.svelte:11-43` | Page-level drag handlers lack an `active` guard for unmount race -- stale closures could cause stuck drag-over state during Astro View Transitions |
+No new findings beyond carry-forward from prior cycles. The C38-01/02/03 items documented in the cycle 38 review are carry-forwards from C8-05/C7-11/C18-01 respectively and do not represent new issues.
 
 ---
 
@@ -67,7 +60,6 @@ All prior cycle 1-36 findings are confirmed fixed except as noted below:
 | C20-02/C25-03 | LOW | csv.ts DATE_PATTERNS/AMOUNT_PATTERNS divergence risk with date-utils.ts |
 | C20-04/C25-10 | LOW | pdf.ts module-level regex constants divergence risk with date-utils.ts |
 | C34-04 | LOW | Server-side PDF has no fallback line scanner |
-| C53-02 | LOW | Duplicated card stats reading logic in index.astro and Layout.astro -- NOW FIXED via build-stats.ts |
 | D-01 through D-111 | Various | See deferred items file for full list |
 
 ---
