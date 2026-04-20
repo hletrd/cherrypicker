@@ -5,14 +5,16 @@
 
 /** Return the number of days in a given month (1-12) for a given year.
  *  Uses the Date constructor which correctly handles leap years including
- *  the 100/400-year rules (C66-01). */
-function daysInMonth(year: number, month: number): number {
+ *  the 100/400-year rules (C66-01). Exported for use by the XLSX serial-date
+ *  validation path (C67-04). */
+export function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
 /** Validate that a day number is within the valid range for the given
- *  year and month. Rejects impossible dates like Feb 31 or Apr 31 (C66-01). */
-function isValidDayForMonth(year: number, month: number, day: number): boolean {
+ *  year and month. Rejects impossible dates like Feb 31 or Apr 31 (C66-01).
+ *  Exported for use by the XLSX serial-date validation path (C67-04). */
+export function isValidDayForMonth(year: number, month: number, day: number): boolean {
   return day >= 1 && day <= daysInMonth(year, month);
 }
 
