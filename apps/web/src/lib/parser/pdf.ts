@@ -167,7 +167,12 @@ function parseDateToISO(raw: string): string {
  *  so callers can distinguish between genuinely zero amounts and parse failures,
  *  matching the CSV parser's isValidAmount() pattern (C33-03). */
 function parseAmount(raw: string): number | null {
-  const cleaned = raw.replace(/원$/, '').replace(/,/g, '');
+  let cleaned = raw.replace(/원$/, '').replace(/,/g, '');
+  // Handle parenthesized negatives: (1,234) → -1234 (C36-01).
+  // All other parsers (web CSV/XLSX, server CSV/XLSX/PDF) handle this format;
+  // the web PDF parser was the only one missing it.
+  const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
+  if (isNeg) cleaned = cleaned.slice(1, -1);
   if (!cleaned.trim()) return null;
   // Use Math.round(parseFloat(...)) to match the csv.ts (C21-03) and xlsx.ts
   // (C20-01) parsers' rounding behavior. Korean Won amounts are always
@@ -175,7 +180,7 @@ function parseAmount(raw: string): number | null {
   // formula cells; rounding is more correct than truncation.
   const n = Math.round(parseFloat(cleaned));
   if (Number.isNaN(n)) return null;
-  return n;
+  return isNeg ? -n : n;
 }
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
