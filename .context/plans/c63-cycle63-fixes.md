@@ -29,14 +29,14 @@ function isValidDayForMonth(year: number, month: number, day: number): boolean {
 This uses the `Date` constructor which correctly handles leap years (including the 100/400 year rules).
 
 **Steps:**
-1. Add `daysInMonth()` and `isValidDayForMonth()` helpers to `date-utils.ts`
-2. Update full-year date branches to use `isValidDayForMonth()` instead of the simple `day <= 31` check
-3. Update YYYYMMDD branch similarly
-4. Update short-year branch similarly
-5. Update MM/DD branch with the inferred year
-6. Update Korean full-date and short-date branches similarly
-7. Run all gates to confirm no regressions
-8. Commit with message: `fix(parser): 🐛 add month-aware day validation to parseDateStringToISO`
+1. ~~Add `daysInMonth()` and `isValidDayForMonth()` helpers to `date-utils.ts`~~ DONE
+2. ~~Update full-year date branches to use `isValidDayForMonth()` instead of the simple `day <= 31` check~~ DONE
+3. ~~Update YYYYMMDD branch similarly~~ DONE
+4. ~~Update short-year branch similarly~~ DONE
+5. ~~Update MM/DD branch with the inferred year~~ DONE
+6. ~~Update Korean full-date and short-date branches similarly~~ DONE
+7. ~~Run all gates to confirm no regressions~~ DONE (tsc PASS, vitest 189 pass, bun test 58 pass)
+8. ~~Commit with message: `fix(parser): 🐛 add month-aware day validation to parseDateStringToISO`~~ DONE (commit 00000004)
 
 ---
 
@@ -65,10 +65,10 @@ for (const encoding of ENCODINGS) {
 ```
 
 **Steps:**
-1. Remove the early-break optimization (`if (replacementCount < 5) break`) from the encoding loop
-2. Add comment explaining why we check all encodings
-3. Run all gates to confirm no regressions
-4. Commit with message: `fix(parser): 🐛 improve encoding detection by checking all candidates instead of early break`
+1. ~~Remove the early-break optimization (`if (replacementCount < 5) break`) from the encoding loop~~ DONE
+2. ~~Add comment explaining why we check all encodings~~ DONE
+3. ~~Run all gates to confirm no regressions~~ DONE (tsc PASS, vitest 189 pass, bun test 58 pass)
+4. ~~Commit with message: `fix(parser): 🐛 improve encoding detection by checking all candidates instead of early break`~~ DONE (commit 00000000)
 
 ---
 
