@@ -129,11 +129,12 @@ function isAmountLike(value: string): boolean {
 }
 
 function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
-  // Strip UTF-8 BOM defensively — parseCSV() already strips before calling
-  // here, but this guards against direct calls from other code paths (C52-01).
-  const cleanContent = content.replace(/^\uFEFF/, '');
-  const delimiter = detectCSVDelimiter(cleanContent);
-  const lines = cleanContent.split('\n').filter((l) => l.trim());
+  // BOM stripping is the responsibility of parseCSV() (the public entry
+  // point). It is NOT repeated here to avoid redundant work — parseCSV()
+  // always strips BOM before delegating to bank adapters or this function
+  // (C73-04).
+  const delimiter = detectCSVDelimiter(content);
+  const lines = content.split('\n').filter((l) => l.trim());
   const errors: ParseError[] = [];
   const transactions: RawTransaction[] = [];
 
