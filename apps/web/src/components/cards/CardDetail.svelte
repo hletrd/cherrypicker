@@ -21,14 +21,22 @@
   // rewards table doesn't briefly flash raw category IDs before labels arrive (C61-04).
   let categoryLabelsReady = $state(false);
 
-  onMount(async () => {
-    try {
-      const nodes = await loadCategories();
-      categoryLabels = buildCategoryLabelMap(nodes);
-    } catch {
-      // Fall back to showing raw IDs — non-critical
-    }
-    categoryLabelsReady = true;
+  onMount(() => {
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const nodes = await loadCategories(controller.signal);
+        if (!controller.signal.aborted) {
+          categoryLabels = buildCategoryLabelMap(nodes);
+        }
+      } catch {
+        // Fall back to showing raw IDs — non-critical
+      }
+      if (!controller.signal.aborted) {
+        categoryLabelsReady = true;
+      }
+    })();
+    return () => controller.abort();
   });
 
   function rateColorClass(rate: number): string {
