@@ -134,8 +134,11 @@
         continue;
       }
       if (isValidFile(f)) {
-        // Avoid duplicates by name
-        if (!uploadedFiles.some(existing => existing.name === f.name)) {
+        // Avoid duplicates by name AND size — same name with different size
+        // is likely a different statement (e.g., "statement.csv" from a
+        // different month). Same name AND same size is likely the same file
+        // re-uploaded (C80-01/D-47).
+        if (!uploadedFiles.some(existing => existing.name === f.name && existing.size === f.size)) {
           valid.push(f);
         } else {
           duplicateNames.push(f.name);
