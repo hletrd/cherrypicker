@@ -286,6 +286,7 @@
                   </td>
                   <td class="px-3 py-2">
                     <select
+                      disabled={reoptimizing}
                       value={tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category}
                       aria-label={tx.merchant + " 카테고리"}
                       onchange={(e) => changeCategory(tx.id, (e.target as HTMLSelectElement).value)}
