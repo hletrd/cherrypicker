@@ -43,8 +43,10 @@
   let displayedAnnualSavings = $state(0);
   // Track the last target value so rapid re-renders animate from the
   // previous target, not a mid-animation intermediate value (C82-02).
-  let lastTargetSavings = $state(0);
-  let lastTargetAnnual = $state(0);
+  // Plain let instead of $state -- these are only read/written within
+  // the same $effect and no other binding depends on them (C83-02).
+  let lastTargetSavings = 0;
+  let lastTargetAnnual = 0;
 
   $effect(() => {
     const target = opt?.savingsVsSingleCard ?? 0;
@@ -227,7 +229,10 @@
            the minimum meaningful amount in Korean banking). Values below 100 during
            animation are just rounding artifacts that would cause a brief "+1원"
            flash before settling to "0원" (C82-03). -->
-      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 100 ? '+' : ''}{formatWon(displayedSavings)}</div>
+      <!-- When savings is negative ("추가 비용"), show the absolute value since
+           the label already communicates the negative direction. Without this,
+           the display reads "추가 비용: -5,000원" which is redundant (C83-03). -->
+      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 100 ? '+' : ''}{formatWon(displayedSavings < 0 ? Math.abs(displayedSavings) : displayedSavings)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
         연간 약 {formatWon(displayedAnnualSavings)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
       </div>
