@@ -1,22 +1,23 @@
-# Review Aggregate -- 2026-04-22 (Cycle 90)
+# Review Aggregate -- 2026-04-22 (Cycle 91)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle90-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle91-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-89 per-agent and aggregate files
+- All cycle 1-90 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-89 findings are confirmed fixed except as noted below. C89 findings verified this cycle:
+All prior cycle 1-89 findings are confirmed fixed except as noted below. C89/C90 findings verified this cycle:
 
 | Finding | Status | Evidence |
 |---|---|---|
 | C89-01 | **CONFIRMED OPEN (LOW)** | `VisibilityToggle.svelte:70-71` forward-direction `classList.toggle` has no `isConnected` guard. Cleanup at line 123 has guard. No-op on disconnected element. |
 | C89-02 | **CONFIRMED OPEN (LOW)** | `CategoryBreakdown.svelte:129` `rawPct < 2` threshold uses unrounded value. Known design choice documented in code comment. |
 | C89-03 | **CONFIRMED OPEN (LOW)** | `formatters.ts:155-157` `m!` non-null assertion after length check. Defensive chain works via `Number.isNaN`. |
+| C90-02 | **CONFIRMED OPEN (LOW)** | KakaoBank issuer badge `#fee500` (yellow) on white text fails WCAG AA. Same as C4-09/C8-05. |
 
 ---
 
@@ -24,10 +25,7 @@ All prior cycle 1-89 findings are confirmed fixed except as noted below. C89 fin
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C90-01 | LOW | MEDIUM | `SpendingSummary.svelte:137-150` | Multi-month breakdown uses `{@const}` guards correctly. `prevMonth?.spending` optional chaining is defensive but correct since `{#if}` confirms length > 1. No issue -- verified as correct. |
-| C90-02 | LOW | MEDIUM | `OptimalCardMap.svelte:91-93`, `SavingsComparison.svelte:198`, `TransactionReview.svelte:112` | KakaoBank issuer badge uses `#fee500` (yellow) background with white text -- fails WCAG AA contrast (ratio ~1.8:1 vs required 4.5:1). Same scope as prior CATEGORY_COLORS dark mode contrast finding. |
-| C90-03 | LOW | LOW | `csv.ts:950-960` | ADAPTERS has 10 entries vs 24 in BANK_SIGNATURES. 14 banks fall through to generic parser. Same as C22-04/C74-08. |
-| C90-04 | LOW | LOW | `ReportContent.svelte:48` | Report savings display uses final value (not animated) with `>= 100` threshold and `Math.abs()` for negative. Consistent with SavingsComparison. No issue. |
+| C91-01 | MEDIUM | HIGH | `SavingsComparison.svelte:238,240` | Animated display sign contradicts direction label during negative-to-positive transition. When `opt.savingsVsSingleCard` (final) is positive but `displayedSavings` (animated intermediate) is still negative, `formatWon()` renders "-X원" under the "추가 절약" label for ~60ms. The conditional `Math.abs` only applies when the final target is negative, missing the transition window. Fix: apply `Math.abs()` unconditionally to both displayed values since the direction is always communicated by the label. |
 
 ---
 
@@ -35,31 +33,33 @@ All prior cycle 1-89 findings are confirmed fixed except as noted below. C89 fin
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| SavingsComparison annual projection sign-prefix | C85-C88 | **FIXED** in commit `00000006d3` |
-| MerchantMatcher/taxonomy O(n) scan | C16-C90 | OPEN (MEDIUM) -- 30 cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21-C90 | OPEN (MEDIUM) -- 33 cycles agree |
-| persistToStorage bare catch / error handling | C62-C90 | PARTIALLY FIXED (C69 added 'error' kind) |
-| Annual savings simple *12 projection | C7-C90 | OPEN (LOW) -- 29 cycles agree |
-| date-utils unparseable passthrough | C56-C90 | PARTIALLY FIXED (C70 added warn) |
-| CSV DATE_PATTERNS divergence risk | C20-C90 | OPEN (LOW) -- 28 cycles agree |
-| Hardcoded fallback drift | C8-C90 | OPEN (LOW) -- 26 cycles agree (C76-05) |
-| BANK_SIGNATURES duplication | C7-C90 | OPEN (LOW) -- 25 cycles agree |
-| inferYear() timezone dependence | C8-C90 | OPEN (LOW) -- 23 cycles agree (60+ cycles deferred) |
-| Greedy optimizer O(m*n*k) quadratic | C67-C90 | OPEN (MEDIUM) -- 23 cycles agree |
-| CATEGORY_COLORS dark mode contrast | C4-C90 | OPEN (LOW) -- many cycles agree |
-| Multi-location bank data sync | C74-C90 | OPEN (LOW) -- 17 cycles noting all 5+ locations |
-| BOM handling redundancy | C73-C90 | OPEN (LOW) -- 18 cycles |
-| XLSX HTML-as-XLS double decode | C73-C90 | OPEN (LOW) -- 18 cycles (C75-01 simplified to boolean) |
-| VisibilityToggle direct DOM mutation | C18-C90 | OPEN (LOW) -- many cycles agree (C76-04/C79-02/C82-05/C86-04/C89-01) |
-| No integration test for multi-file upload | C86-C90 | OPEN (MEDIUM) -- 5 cycles agree |
-| Mobile menu focus trap | C86-C90 | OPEN (LOW) -- 5 cycles agree |
-| KakaoBank badge contrast | C90 | OPEN (LOW) -- 1 cycle (C90-02) |
+| SavingsComparison sign-prefix animation | C82-C90 | **NEW FIX NEEDED** (C91-01) -- prior fixes addressed sign decisions using final target; this is a remaining edge case where the animated intermediate value contradicts the label |
+| MerchantMatcher/taxonomy O(n) scan | C16-C91 | OPEN (MEDIUM) -- 31 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21-C91 | OPEN (MEDIUM) -- 34 cycles agree |
+| persistToStorage bare catch / error handling | C62-C91 | PARTIALLY FIXED (C69 added 'error' kind) |
+| Annual savings simple *12 projection | C7-C91 | OPEN (LOW) -- 30 cycles agree |
+| date-utils unparseable passthrough | C56-C91 | PARTIALLY FIXED (C70 added warn) |
+| CSV DATE_PATTERNS divergence risk | C20-C91 | OPEN (LOW) -- 29 cycles agree |
+| Hardcoded fallback drift | C8-C91 | OPEN (LOW) -- 27 cycles agree (C76-05) |
+| BANK_SIGNATURES duplication | C7-C91 | OPEN (LOW) -- 26 cycles agree |
+| inferYear() timezone dependence | C8-C91 | OPEN (LOW) -- 24 cycles agree (60+ cycles deferred) |
+| Greedy optimizer O(m*n*k) quadratic | C67-C91 | OPEN (MEDIUM) -- 24 cycles agree |
+| CATEGORY_COLORS dark mode contrast | C4-C91 | OPEN (LOW) -- many cycles agree |
+| Multi-location bank data sync | C74-C91 | OPEN (LOW) -- 18 cycles noting all 5+ locations |
+| BOM handling redundancy | C73-C91 | OPEN (LOW) -- 19 cycles |
+| XLSX HTML-as-XLS double decode | C73-C91 | OPEN (LOW) -- 19 cycles (C75-01 simplified to boolean) |
+| VisibilityToggle direct DOM mutation | C18-C91 | OPEN (LOW) -- many cycles agree (C76-04/C79-02/C82-05/C86-04/C89-01) |
+| No integration test for multi-file upload | C86-C91 | OPEN (MEDIUM) -- 6 cycles agree |
+| Mobile menu focus trap | C86-C91 | OPEN (LOW) -- 6 cycles agree |
+| KakaoBank badge contrast | C90-C91 | OPEN (LOW) -- 2 cycles (C90-02) |
 
 ---
 
 ## Still-Open Actionable Findings (fixable this cycle)
 
-No actionable findings this cycle. All remaining open findings are LOW severity and deferred.
+| ID | Severity | Description | Action |
+|---|---|---|---|
+| C91-01 | MEDIUM | SavingsComparison animated display sign contradicts label during transition | Apply `Math.abs()` unconditionally to displayed animated values on lines 238 and 240 |
 
 ---
 
