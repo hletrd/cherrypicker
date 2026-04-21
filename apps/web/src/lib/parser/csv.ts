@@ -142,14 +142,28 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     return { bank, format: 'csv', transactions: [], errors: [{ message: 'Empty file' }] };
   }
 
-  // Find header row
+  // Find header row — search for the first row with Korean/alpha text that
+  // also contains at least one known header keyword. Rows with Korean text
+  // but no header keywords are likely metadata (bank name, statement period)
+  // rather than the actual column header row (C77-03).
+  const HEADER_KEYWORDS = [
+    '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일',
+    '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
+    '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
+  ];
   let headerIdx = 0;
   for (let i = 0; i < Math.min(20, lines.length); i++) {
     const cells = splitLine(lines[i] ?? '', delimiter);
     const hasNonNumeric = cells.some((c) => /[가-힣a-zA-Z]/.test(c));
     if (hasNonNumeric) {
-      headerIdx = i;
-      break;
+      // Validate that this row contains at least one known header keyword.
+      // Without this check, metadata rows (bank name, statement period) that
+      // contain Korean text would be misidentified as the header row (C77-03).
+      const hasHeaderKeyword = cells.some((c) => HEADER_KEYWORDS.includes(c.trim()));
+      if (hasHeaderKeyword) {
+        headerIdx = i;
+        break;
+      }
     }
   }
 
