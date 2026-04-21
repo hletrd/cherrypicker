@@ -10,7 +10,9 @@
   // is re-warned about the new data being at risk of loss (C78-01).
   // Without this, once dismissed, the warning stays hidden across all
   // subsequent analyses until the tab is closed.
-  let lastWarningGeneration = $state(0);
+  // Plain let instead of $state -- only read/written within the same
+  // $effect, no other binding depends on it (C83-04).
+  let lastWarningGeneration = 0;
   $effect(() => {
     const gen = analysisStore.generation;
     if (gen > 0 && gen !== lastWarningGeneration) {
