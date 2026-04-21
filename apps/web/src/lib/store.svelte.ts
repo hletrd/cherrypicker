@@ -492,6 +492,14 @@ function createAnalysisStore() {
           return;
         }
 
+        // Snapshot the result immediately after the null guard so that all
+        // subsequent reads use the same value. Without this, the reactive
+        // $state variable could change during the async gaps (e.g., if
+        // analyze() is called concurrently), causing the ...result! spread
+        // at the end of this method to mix data from two different analysis
+        // runs (C81-01).
+        const snapshot = result;
+
         const categoryLabels = await getCategoryLabels();
         // Filter to the latest month to match the initial optimization behavior.
         // analyzeMultipleFiles only optimizes the latest month; reoptimize must
@@ -534,9 +542,9 @@ function createAnalysisStore() {
         if (options?.previousMonthSpending !== undefined) {
           // Caller explicitly provided a value — use it
           previousMonthSpending = options.previousMonthSpending;
-        } else if (result.previousMonthSpendingOption !== undefined) {
+        } else if (snapshot.previousMonthSpendingOption !== undefined) {
           // User provided a value during the initial analysis — preserve it
-          previousMonthSpending = result.previousMonthSpendingOption;
+          previousMonthSpending = snapshot.previousMonthSpendingOption;
         } else if (latestMonth) {
           // No explicit value — compute from the fresh monthly breakdown
           const months = updatedMonthlyBreakdown.map(m => m.month).sort();
@@ -555,8 +563,11 @@ function createAnalysisStore() {
         // result is guaranteed non-null here (early null guard at top of try block).
         // Keep all months in the transactions field for display/editing,
         // but the optimization only covers the latest month.
+        // Use the snapshot captured at function entry instead of reading the
+        // reactive result variable, which may have changed during the async
+        // gaps above (C81-01).
         result = {
-          ...result!,
+          ...snapshot,
           transactions: editedTransactions,
           optimization,
           monthlyBreakdown: updatedMonthlyBreakdown,
