@@ -1,7 +1,7 @@
-# Review Aggregate -- 2026-04-22 (Cycle 5)
+# Review Aggregate -- 2026-04-22 (Cycle 6)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle5-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle6-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
 - All cycle 1-94 per-agent and aggregate files
@@ -10,12 +10,11 @@
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-93 findings are confirmed fixed except as noted below. Cycle 5 findings verified this cycle:
+All prior cycle 1-94 findings are confirmed fixed except as noted below. Cycle 6 findings verified this cycle:
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C92-01 | **CONFIRMED FIXED** | `formatSavingsValue()` in `formatters.ts:215-218` now centralizes sign-prefix logic. All three components (SavingsComparison:242, VisibilityToggle:97, ReportContent:48) use it. Triplication resolved. |
-| C94-01 | **CONFIRMED FIXED** | `formatSavingsValue()` uses unconditional `Math.abs(value)` (formatters.ts:217), so the conditional vs unconditional Math.abs style inconsistency is eliminated. |
+| C92-01/C94-01 | **CONFIRMED FIXED** | `formatSavingsValue()` in `formatters.ts:215-218` now centralizes sign-prefix logic. All three components (SavingsComparison:242, VisibilityToggle:97, ReportContent:48) use it. Triplication resolved. |
 | C89-01 | **CONFIRMED OPEN (LOW)** | `VisibilityToggle.svelte:70-71` forward-direction `classList.toggle` has no `isConnected` guard. |
 | C89-02 | **CONFIRMED OPEN (LOW)** | `CategoryBreakdown.svelte:129` `rawPct < 2` threshold uses unrounded value. |
 | C89-03 | **CONFIRMED OPEN (LOW)** | `formatters.ts:155-157` `m!` non-null assertion after length check. |
@@ -26,9 +25,7 @@ All prior cycle 1-93 findings are confirmed fixed except as noted below. Cycle 5
 
 ## New Findings (This Cycle)
 
-| ID | Severity | Confidence | File | Description |
-|---|---|---|---|---|
-| C5-01 | LOW | LOW | `csv.ts:109-116` | DATE_PATTERNS/AMOUNT_PATTERNS column-detection heuristics could diverge from `parseDateStringToISO()` in `date-utils.ts`. Same concern already tracked as C20-02/C25-03. Not a new finding — consolidating reference. |
+No new findings this cycle. The codebase is in a stable state.
 
 ---
 
@@ -37,25 +34,25 @@ All prior cycle 1-93 findings are confirmed fixed except as noted below. Cycle 5
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
 | SavingsComparison sign-prefix animation | C82-C91 | **FIXED** (C91-01) |
-| Savings sign-prefix logic triplication | C92-C94, C4-C5 | **FIXED** (formatSavingsValue centralized) |
-| MerchantMatcher/taxonomy O(n) scan | C16-C94, C4-C5 | OPEN (MEDIUM) -- 35+ cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21-C94, C4-C5 | OPEN (MEDIUM) -- 38+ cycles agree |
-| persistToStorage bare catch / error handling | C62-C94, C4-C5 | PARTIALLY FIXED (C69 added 'error' kind) |
-| Annual savings simple *12 projection | C7-C94, C4-C5 | OPEN (LOW) -- 34+ cycles agree |
-| date-utils unparseable passthrough | C56-C94, C4-C5 | PARTIALLY FIXED (C70 added warn) |
-| CSV DATE_PATTERNS divergence risk | C20-C94, C4-C5 | OPEN (LOW) -- 33+ cycles agree |
-| Hardcoded fallback drift | C8-C94, C4-C5 | OPEN (LOW) -- 31+ cycles agree |
-| BANK_SIGNATURES duplication | C7-C94, C4-C5 | OPEN (LOW) -- 30+ cycles agree |
-| inferYear() timezone dependence | C8-C94, C4-C5 | OPEN (LOW) -- 28+ cycles agree |
-| Greedy optimizer O(m*n*k) quadratic | C67-C94, C4-C5 | OPEN (MEDIUM) -- 28+ cycles agree |
-| CATEGORY_COLORS dark mode contrast | C4-C94, C4-C5 | OPEN (LOW) -- many cycles agree |
-| Multi-location bank data sync | C74-C94, C4-C5 | OPEN (LOW) -- 22+ cycles noting all 5+ locations |
-| BOM handling redundancy | C73-C94, C4-C5 | OPEN (LOW) -- 23+ cycles |
-| XLSX HTML-as-XLS double decode | C73-C94, C4-C5 | OPEN (LOW) -- 23+ cycles |
-| VisibilityToggle direct DOM mutation | C18-C94, C4-C5 | OPEN (LOW) -- many cycles agree |
-| No integration test for multi-file upload | C86-C94, C4-C5 | OPEN (MEDIUM) -- 10+ cycles agree |
-| Mobile menu focus trap | C86-C94, C4-C5 | OPEN (LOW) -- 10+ cycles agree |
-| KakaoBank badge contrast | C90-C94, C4-C5 | OPEN (LOW) -- 6+ cycles |
+| Savings sign-prefix logic triplication | C92-C94, C4-C6 | **FIXED** (formatSavingsValue centralized) |
+| MerchantMatcher/taxonomy O(n) scan | C16-C94, C4-C6 | OPEN (MEDIUM) -- 35+ cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21-C94, C4-C6 | OPEN (MEDIUM) -- 38+ cycles agree |
+| persistToStorage bare catch / error handling | C62-C94, C4-C6 | PARTIALLY FIXED (C69 added 'error' kind) |
+| Annual savings simple *12 projection | C7-C94, C4-C6 | OPEN (LOW) -- 34+ cycles agree |
+| date-utils unparseable passthrough | C56-C94, C4-C6 | PARTIALLY FIXED (C70 added warn) |
+| CSV DATE_PATTERNS divergence risk | C20-C94, C4-C6 | OPEN (LOW) -- 33+ cycles agree |
+| Hardcoded fallback drift | C8-C94, C4-C6 | OPEN (LOW) -- 31+ cycles agree |
+| BANK_SIGNATURES duplication | C7-C94, C4-C6 | OPEN (LOW) -- 30+ cycles agree |
+| inferYear() timezone dependence | C8-C94, C4-C6 | OPEN (LOW) -- 28+ cycles agree |
+| Greedy optimizer O(m*n*k) quadratic | C67-C94, C4-C6 | OPEN (MEDIUM) -- 28+ cycles agree |
+| CATEGORY_COLORS dark mode contrast | C4-C94, C4-C6 | OPEN (LOW) -- many cycles agree |
+| Multi-location bank data sync | C74-C94, C4-C6 | OPEN (LOW) -- 22+ cycles noting all 5+ locations |
+| BOM handling redundancy | C73-C94, C4-C6 | OPEN (LOW) -- 23+ cycles |
+| XLSX HTML-as-XLS double decode | C73-C94, C4-C6 | OPEN (LOW) -- 23+ cycles |
+| VisibilityToggle direct DOM mutation | C18-C94, C4-C6 | OPEN (LOW) -- many cycles agree |
+| No integration test for multi-file upload | C86-C94, C4-C6 | OPEN (MEDIUM) -- 10+ cycles agree |
+| Mobile menu focus trap | C86-C94, C4-C6 | OPEN (LOW) -- 10+ cycles agree |
+| KakaoBank badge contrast | C90-C94, C4-C6 | OPEN (LOW) -- 6+ cycles |
 
 ---
 
