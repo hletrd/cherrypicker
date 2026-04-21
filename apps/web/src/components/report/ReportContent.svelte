@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRate, formatRatePrecise, formatYearMonthKo, getIssuerColor, getIssuerFromCardId, formatIssuerNameKo } from '../../lib/formatters.js';
+  import { formatWon, formatRate, formatRatePrecise, formatYearMonthKo, getIssuerColor, getIssuerFromCardId, formatIssuerNameKo, formatSavingsValue } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let opt = $derived(analysisStore.optimization);
@@ -45,7 +45,7 @@
         <tr class="border-b border-[var(--color-border)]">
           <td class="px-4 py-3 font-medium text-[var(--color-text-muted)] bg-[var(--color-bg)]">{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}</td>
           <td class="px-4 py-3 font-mono {opt.savingsVsSingleCard >= 0 ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}">
-            {opt.savingsVsSingleCard >= 100 ? '+' : ''}{formatWon(opt.savingsVsSingleCard < 0 ? Math.abs(opt.savingsVsSingleCard) : opt.savingsVsSingleCard)}
+            {formatSavingsValue(opt.savingsVsSingleCard)}
           </td>
         </tr>
         <tr class="border-b border-[var(--color-border)]">

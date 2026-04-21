@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRate, formatRatePrecise, getIssuerColor, getIssuerFromCardId } from '../../lib/formatters.js';
+  import { formatWon, formatRate, formatRatePrecise, getIssuerColor, getIssuerFromCardId, formatSavingsValue } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let opt = $derived(analysisStore.optimization);
@@ -239,9 +239,9 @@
            Previously, Math.abs was conditional on the final target's sign (C83-03),
            but unconditional abs is correct because the label always determines
            the direction and the number should always show magnitude. -->
-      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{opt.savingsVsSingleCard >= 0 && opt.savingsVsSingleCard >= 100 ? '+' : ''}{formatWon(Math.abs(displayedSavings))}</div>
+      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{formatSavingsValue(displayedSavings, opt.savingsVsSingleCard)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
-        연간 약 {opt.savingsVsSingleCard >= 0 && opt.savingsVsSingleCard * 12 >= 100 ? '+' : ''}{formatWon(Math.abs(displayedAnnualSavings))} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
+        연간 약 {formatSavingsValue(displayedAnnualSavings, opt.savingsVsSingleCard * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
       </div>
       {#if savingsPct === Infinity}
         <!-- Defensive badge (C28-04): currently unreachable — see savingsPct comment -->

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon } from '../../lib/formatters.js';
+  import { formatWon, formatSavingsValue } from '../../lib/formatters.js';
 
   interface Props {
     dataContentId: string;
@@ -94,7 +94,7 @@
         // (C82-03/C84-01). Use Math.abs() when negative to avoid redundant minus under
         // the "추가 비용" label, matching the pattern in SavingsComparison and ReportContent
         // (C83-03/C84-02).
-        cachedStatTotalSavings.textContent = (opt.savingsVsSingleCard >= 100 ? '+' : '') + formatWon(opt.savingsVsSingleCard < 0 ? Math.abs(opt.savingsVsSingleCard) : opt.savingsVsSingleCard);
+        cachedStatTotalSavings.textContent = formatSavingsValue(opt.savingsVsSingleCard);
       }
 
       if (cachedStatCardsNeeded) {

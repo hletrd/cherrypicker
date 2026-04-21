@@ -195,6 +195,29 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
+ * Format a savings-vs-single-card value with sign prefix and magnitude.
+ * Uses unconditional Math.abs() so the number always shows magnitude;
+ * the calling component's label ("추가 절약" vs "추가 비용") determines
+ * direction. Only shows '+' prefix when the prefix-decision value is
+ * >= 100 won (the minimum meaningful amount in Korean banking) to avoid
+ * brief "+1원" flashes during animation (C82-03/C91-01/C94-01).
+ *
+ * @param value - The numeric value to display (may be an animated intermediate).
+ * @param prefixValue - The value used to decide the '+' prefix. Defaults to
+ *  `value` when omitted. Pass the final target value separately from the
+ *  animated display value to prevent the '+' prefix from flickering during
+ *  count-up animation in SavingsComparison (C82-03).
+ *
+ * This helper centralizes the sign-prefix logic that was previously
+ * triplicated across SavingsComparison, VisibilityToggle, and
+ * ReportContent (C92-01/C94-01).
+ */
+export function formatSavingsValue(value: number, prefixValue?: number): string {
+  const effectivePrefixValue = prefixValue ?? value;
+  return (effectivePrefixValue >= 100 ? '+' : '') + formatWon(Math.abs(value));
+}
+
+/**
  * Build a page URL from a path segment, handling BASE_URL with or without
  * a trailing slash.  Astro guarantees BASE_URL ends with `/`, but defensive
  * coding ensures it works regardless.
