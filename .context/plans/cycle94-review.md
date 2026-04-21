@@ -20,7 +20,7 @@
 4. Update `ReportContent.svelte:48` -- replace conditional `Math.abs()` + `formatWon()` with `formatSavingsValue(opt.savingsVsSingleCard)`.
 5. Update `VisibilityToggle.svelte:97` -- replace inline sign-prefix + `formatWon()` with `formatSavingsValue(opt.savingsVsSingleCard)`.
 
-**Status:** **PENDING IMPLEMENTATION**
+**Status:** **IMPLEMENTED** in `0000000d798b699c2a29bcb2a7bc64ea900c12dd`
 
 ---
 
@@ -32,7 +32,7 @@
 
 **Plan:** Addressed by C94-01 implementation above -- the shared `formatSavingsValue` helper eliminates the triplication.
 
-**Status:** **PENDING IMPLEMENTATION** (merged with C94-01)
+**Status:** **IMPLEMENTED** in `0000000d798b699c2a29bcb2a7bc64ea900c12dd`
 
 ---
 
