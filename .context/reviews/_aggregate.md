@@ -1,19 +1,24 @@
-# Review Aggregate -- 2026-04-22 (Cycle 83)
+# Review Aggregate -- 2026-04-22 (Cycle 84)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle83-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle84-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-82 per-agent and aggregate files
+- All cycle 1-83 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-81 findings are confirmed fixed except as noted below. C82 findings verified this cycle:
+All prior cycle 1-82 findings are confirmed fixed except as noted below. C83 findings verified this cycle:
 
 | Finding | Status | Evidence |
 |---|---|---|
+| C83-01 | **FIXED** | `ReportContent.svelte:48` now uses `>= 100` threshold matching SavingsComparison. |
+| C83-02 | **FIXED** | `SavingsComparison.svelte:48-49` now uses plain `let` instead of `$state`. |
+| C83-03 | **FIXED** | Both SavingsComparison and ReportContent use `Math.abs()` for negative values under "추가 비용". |
+| C83-04 | **FIXED** | `SpendingSummary.svelte:15` now uses plain `let` instead of `$state`. |
+| C83-05 | **FIXED** | `detect.ts:175` now slices to first 30 lines for delimiter detection. |
 | C82-01 | **FIXED** | `TransactionReview.svelte:133-148` reads `analysisStore.result` once into `currentResult` and derives both `gen` and `txs` from the snapshot. |
 | C82-02 | **FIXED** | `SavingsComparison.svelte:46-47` tracks `lastTargetSavings`/`lastTargetAnnual`; animation starts from last target value. |
 | C82-03 | **FIXED** | `SavingsComparison.svelte:230` uses `displayedSavings >= 100` threshold for `+` prefix. |
@@ -51,11 +56,9 @@ All prior cycle 1-81 findings are confirmed fixed except as noted below. C82 fin
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C83-01 | MEDIUM | HIGH | `apps/web/src/components/report/ReportContent.svelte:48` | Sign-prefix threshold inconsistent with SavingsComparison. ReportContent uses `> 0` while SavingsComparison uses `>= 100` (C82-03 fix). For small savings (1-99 won), report shows "+1원" while dashboard shows "1원". Same 100-won threshold should apply. |
-| C83-02 | LOW | MEDIUM | `apps/web/src/components/dashboard/SavingsComparison.svelte:46-47` | `lastTargetSavings`/`lastTargetAnnual` are `$state` but only read/written within the same `$effect`. No other binding depends on them. Plain `let` would be semantically correct and avoid unnecessary reactivity tracking. |
-| C83-03 | LOW | MEDIUM | `apps/web/src/components/report/ReportContent.svelte:46-49` + `SavingsComparison.svelte:230` | When cherry-picking is worse, "추가 비용" label already indicates negative direction but the amount still shows a minus sign (e.g., "추가 비용: -5,000원"). Showing the absolute value under "추가 비용" would be less redundant. |
-| C83-04 | LOW | MEDIUM | `apps/web/src/components/dashboard/SpendingSummary.svelte:13` | Same pattern as C83-02: `lastWarningGeneration` is `$state` but only used within the same `$effect`. Plain `let` would suffice. |
-| C83-05 | LOW | MEDIUM | `apps/web/src/lib/parser/detect.ts:171-188` | `detectCSVDelimiter` scans all lines without a limit. For large files, sampling first 30 lines (matching header scan limit) would be sufficient and significantly faster. |
+| C84-01 | MEDIUM | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte:93` | Sign-prefix threshold inconsistent with SavingsComparison and ReportContent. VisibilityToggle uses `> 0` while others use `>= 100` (C82-03/C83-01). For small savings (1-99 won), results page shows "+1원" while dashboard shows "1원". Same 100-won threshold should apply. |
+| C84-02 | LOW | MEDIUM | `apps/web/src/components/ui/VisibilityToggle.svelte:93` | Negative savings redundant minus sign under "추가 비용" label. VisibilityToggle shows raw `formatWon(opt.savingsVsSingleCard)` with minus sign. SavingsComparison and ReportContent now use `Math.abs()` for this case. |
+| C84-03 | LOW | LOW | `apps/web/src/lib/store.svelte.ts:206-209` | `isOptimizableTx` does not guard against `Infinity` amount. `typeof Infinity === 'number'` and `Infinity > 0` are both true, so an Infinity amount would pass validation. JSON.parse never produces Infinity, making this a theoretical concern only. |
 
 ---
 
@@ -63,41 +66,44 @@ All prior cycle 1-81 findings are confirmed fixed except as noted below. C82 fin
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| MerchantMatcher/taxonomy O(n) scan | C16-C83 | OPEN (MEDIUM) -- 23 cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21-C83 | OPEN (MEDIUM) -- 26 cycles agree |
-| persistToStorage bare catch / error handling | C62-C83 | PARTIALLY FIXED (C69 added 'error' kind) |
-| Annual savings simple *12 projection | C7-C83 | OPEN (LOW) -- 22 cycles agree |
-| date-utils unparseable passthrough | C56-C83 | PARTIALLY FIXED (C70 added warn) |
-| CSV DATE_PATTERNS divergence risk | C20-C83 | OPEN (LOW) -- 21 cycles agree |
-| Hardcoded fallback drift | C8-C83 | OPEN (LOW) -- 19 cycles agree (C76-05) |
-| BANK_SIGNATURES duplication | C7-C83 | OPEN (LOW) -- 18 cycles agree |
-| inferYear() timezone dependence | C8-C83 | OPEN (LOW) -- 16 cycles agree (60+ cycles deferred) |
-| Greedy optimizer O(m*n*k) quadratic | C67-C83 | OPEN (MEDIUM) -- 16 cycles agree |
-| CATEGORY_COLORS dark mode contrast | C4-C83 | OPEN (LOW) -- many cycles agree |
-| Multi-location bank data sync | C74-C83 | OPEN (LOW) -- 10 cycles noting all 5+ locations |
-| BOM handling redundancy | C73-C83 | OPEN (LOW) -- 11 cycles |
-| XLSX HTML-as-XLS double decode | C73-C83 | OPEN (LOW) -- 11 cycles (C75-01 simplified to boolean) |
-| FALLBACK_CATEGORIES incomplete subcategory coverage | C75-C83 | FIXED (C75-02 added missing entries) |
-| loadFromStorage version check lacks migration | C75-C83 | FIXED (C75-03 added framework; C76-01 fixed undefined-_v gap) |
-| VisibilityToggle direct DOM mutation | C18-C83 | OPEN (LOW) -- many cycles agree (C76-04/C79-02/C82-05) |
-| Generic CSV header detection can misidentify metadata rows | C77-C83 | FIXED (C77-03 added keyword validation; C78-03 defaults to -1) |
-| SpendingSummary dismissed not reset on store.reset() | C76-C83 | FIXED (C78-01 added generation-based reset + clearStorage cleanup) |
-| TransactionReview changeCategory stale rawCategory | C79-C83 | FIXED (C79-01 added rawCategory: undefined on manual override) |
-| FileDropzone filename-only dedup | C80-C83 | FIXED (C80-01 now uses name+size) |
-| TransactionReview select not disabled during reoptimizing | C80-C83 | FIXED (C80-02 added disabled={reoptimizing}) |
-| CSV header scan limit (20) vs XLSX (30) | C80-C83 | FIXED (C80-03 both now 30) |
-| CATEGORY_COLORS missing subcategory keys | C81-C83 | FIXED (C81-04 added dot-notation keys) |
-| Bank adapter header scan limit (10) vs generic (30) | C81-C83 | FIXED (C81-02 all adapters now use 30) |
-| reoptimize() result! spread without snapshot | C81-C83 | FIXED (C81-01 now uses snapshot) |
-| parseAndCategorize redundant loadCategories | C81-C83 | FIXED (C81-03 passes categoryNodes from caller) |
-| SavingsComparison animation mid-value start | C82-C83 | FIXED (C82-02 tracks lastTargetSavings) |
-| SavingsComparison "+1원" flash at zero | C82-C83 | FIXED (C82-03 uses >= 100 threshold) |
-| TransactionReview $effect non-atomic reads | C82-C83 | FIXED (C82-01 reads result once into snapshot) |
-| parseFile double memory for CSV | C82-C83 | DEFERRED (C82-04 encoding detection requires ArrayBuffer) |
-| ReportContent sign-prefix inconsistency with SavingsComparison | C83 | NEW (MEDIUM) |
-| Unnecessary $state for effect-local variables | C83 | NEW (LOW) |
-| Negative savings shows redundant minus under "추가 비용" | C83 | NEW (LOW) |
-| detectCSVDelimiter scans all lines without limit | C83 | NEW (LOW) |
+| MerchantMatcher/taxonomy O(n) scan | C16-C84 | OPEN (MEDIUM) -- 24 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21-C84 | OPEN (MEDIUM) -- 27 cycles agree |
+| persistToStorage bare catch / error handling | C62-C84 | PARTIALLY FIXED (C69 added 'error' kind) |
+| Annual savings simple *12 projection | C7-C84 | OPEN (LOW) -- 23 cycles agree |
+| date-utils unparseable passthrough | C56-C84 | PARTIALLY FIXED (C70 added warn) |
+| CSV DATE_PATTERNS divergence risk | C20-C84 | OPEN (LOW) -- 22 cycles agree |
+| Hardcoded fallback drift | C8-C84 | OPEN (LOW) -- 20 cycles agree (C76-05) |
+| BANK_SIGNATURES duplication | C7-C84 | OPEN (LOW) -- 19 cycles agree |
+| inferYear() timezone dependence | C8-C84 | OPEN (LOW) -- 17 cycles agree (60+ cycles deferred) |
+| Greedy optimizer O(m*n*k) quadratic | C67-C84 | OPEN (MEDIUM) -- 17 cycles agree |
+| CATEGORY_COLORS dark mode contrast | C4-C84 | OPEN (LOW) -- many cycles agree |
+| Multi-location bank data sync | C74-C84 | OPEN (LOW) -- 11 cycles noting all 5+ locations |
+| BOM handling redundancy | C73-C84 | OPEN (LOW) -- 12 cycles |
+| XLSX HTML-as-XLS double decode | C73-C84 | OPEN (LOW) -- 12 cycles (C75-01 simplified to boolean) |
+| FALLBACK_CATEGORIES incomplete subcategory coverage | C75-C84 | FIXED (C75-02 added missing entries) |
+| loadFromStorage version check lacks migration | C75-C84 | FIXED (C75-03 added framework; C76-01 fixed undefined-_v gap) |
+| VisibilityToggle direct DOM mutation | C18-C84 | OPEN (LOW) -- many cycles agree (C76-04/C79-02/C82-05) |
+| Generic CSV header detection can misidentify metadata rows | C77-C84 | FIXED (C77-03 added keyword validation; C78-03 defaults to -1) |
+| SpendingSummary dismissed not reset on store.reset() | C76-C84 | FIXED (C78-01 added generation-based reset + clearStorage cleanup) |
+| TransactionReview changeCategory stale rawCategory | C79-C84 | FIXED (C79-01 added rawCategory: undefined on manual override) |
+| FileDropzone filename-only dedup | C80-C84 | FIXED (C80-01 now uses name+size) |
+| TransactionReview select not disabled during reoptimizing | C80-C84 | FIXED (C80-02 added disabled={reoptimizing}) |
+| CSV header scan limit (20) vs XLSX (30) | C80-C84 | FIXED (C80-03 both now 30) |
+| CATEGORY_COLORS missing subcategory keys | C81-C84 | FIXED (C81-04 added dot-notation keys) |
+| Bank adapter header scan limit (10) vs generic (30) | C81-C84 | FIXED (C81-02 all adapters now use 30) |
+| reoptimize() result! spread without snapshot | C81-C84 | FIXED (C81-01 now uses snapshot) |
+| parseAndCategorize redundant loadCategories | C81-C84 | FIXED (C81-03 passes categoryNodes from caller) |
+| SavingsComparison animation mid-value start | C82-C84 | FIXED (C82-02 tracks lastTargetSavings) |
+| SavingsComparison "+1원" flash at zero | C82-C84 | FIXED (C82-03 uses >= 100 threshold) |
+| TransactionReview $effect non-atomic reads | C82-C84 | FIXED (C82-01 reads result once into snapshot) |
+| parseFile double memory for CSV | C82-C84 | DEFERRED (C82-04 encoding detection requires ArrayBuffer) |
+| ReportContent sign-prefix inconsistency with SavingsComparison | C83-C84 | FIXED (C83-01 applied >= 100 threshold) |
+| Unnecessary $state for effect-local variables | C83-C84 | FIXED (C83-02/C83-04 changed to plain let) |
+| Negative savings shows redundant minus under "추가 비용" | C83-C84 | FIXED (C83-03 added Math.abs in SavingsComparison and ReportContent) |
+| detectCSVDelimiter scans all lines without limit | C83-C84 | FIXED (C83-05 added 30-line slice) |
+| VisibilityToggle sign-prefix threshold inconsistent | C84 | NEW (MEDIUM) |
+| VisibilityToggle negative savings redundant minus | C84 | NEW (LOW) |
+| isOptimizableTx Infinity guard missing | C84 | NEW (LOW) |
 
 ---
 
@@ -143,13 +149,10 @@ All prior cycle 1-81 findings are confirmed fixed except as noted below. C82 fin
 | C74-07 | LOW | AbortError vs genuine fetch failure not distinguished in error message |
 | C75-02/C76-02/C78-02 | LOW | FALLBACK_CATEGORIES leading-space labels cause browser-inconsistent dropdown rendering |
 | C77-02 | LOW | Annual savings projection uses simple *12 multiplication (labeled transparently) |
-| C82-01 | MEDIUM | TransactionReview $effect non-atomic reactive reads -- NOW FIXED by C82-01 |
 | C82-04 | LOW | parseFile double memory for CSV (ArrayBuffer + decoded string) |
-| C83-01 | MEDIUM | ReportContent sign-prefix threshold inconsistent with SavingsComparison |
-| C83-02 | LOW | SavingsComparison lastTargetSavings/lastTargetAnnual unnecessarily $state |
-| C83-03 | LOW | Negative savings shows redundant minus under "추가 비용" label |
-| C83-04 | LOW | SpendingSummary lastWarningGeneration unnecessarily $state |
-| C83-05 | LOW | detectCSVDelimiter scans all lines without limit |
+| C84-01 | MEDIUM | VisibilityToggle sign-prefix threshold inconsistent with SavingsComparison/ReportContent |
+| C84-02 | LOW | VisibilityToggle negative savings shows redundant minus under "추가 비용" |
+| C84-03 | LOW | isOptimizableTx does not guard against Infinity amount |
 
 ---
 
