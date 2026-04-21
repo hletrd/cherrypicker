@@ -6,6 +6,19 @@
 
   let dismissed = $state(false);
 
+  // Reset dismissal when a new analysis result is produced, so the user
+  // is re-warned about the new data being at risk of loss (C78-01).
+  // Without this, once dismissed, the warning stays hidden across all
+  // subsequent analyses until the tab is closed.
+  let lastWarningGeneration = $state(0);
+  $effect(() => {
+    const gen = analysisStore.generation;
+    if (gen > 0 && gen !== lastWarningGeneration) {
+      dismissed = false;
+      lastWarningGeneration = gen;
+    }
+  });
+
   // Total spending across all months (computed once via $derived instead of
   // inline reduce in the template for better change detection and consistency
   // with other dashboard components).

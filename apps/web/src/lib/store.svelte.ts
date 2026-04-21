@@ -333,6 +333,9 @@ function clearStorage(): void {
   try {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(STORAGE_KEY);
+      // Also clear the dismissed-warning flag so the data-loss warning
+      // re-appears after a reset+re-upload (C78-01).
+      sessionStorage.removeItem('cherrypicker:dismissed-warning');
     }
   } catch (err) {
     // SSR environments don't have sessionStorage — that's expected.
