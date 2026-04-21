@@ -1,24 +1,27 @@
-# Review Aggregate -- 2026-04-22 (Cycle 74)
+# Review Aggregate -- 2026-04-22 (Cycle 75)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle74-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle75-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-73 per-agent and aggregate files
+- All cycle 1-74 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-73 findings are confirmed fixed except as noted below.
+All prior cycle 1-74 findings are confirmed fixed except as noted below.
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C72-01 | **FIXED** | `handleRetry()` now clears `navigateTimeout` at line 266. |
-| C72-02 | **FIXED** | `optimizeFromTransactions()` guards `transformed.length > 0` before caching (lines 189-191). |
-| C72-03 | **FIXED** | `getCategoryLabels()` guards `nodes.length > 0` before caching (lines 341-343). |
-| C72-04 | **FIXED** | `addFiles()` now accumulates all error types into `errorParts[]` (lines 162-175). |
-| C72-05 | **FIXED** | `loadCardsData()` and `loadCategories()` both retry on undefined/aborted promise (lines 237-240, 276-278). |
+| C74-01 | **FIXED** | `FALLBACK_CATEGORIES` now includes 25 dot-notation subcategory entries. |
+| C74-02 | **FIXED** | `STORAGE_VERSION = 1`; `persistToStorage` writes `_v`; `loadFromStorage` checks version and warns on mismatch. |
+| C74-03 | **FIXED** | `isHTMLContent` refactored to `checkHTMLContent` returning `{ isHTML, prefix }`. |
+| C72-01 | **FIXED** | `handleRetry()` clears `navigateTimeout` at line 266. |
+| C72-02 | **FIXED** | `optimizeFromTransactions()` guards `transformed.length > 0` before caching. |
+| C72-03 | **FIXED** | `getCategoryLabels()` guards `nodes.length > 0` before caching. |
+| C72-04 | **FIXED** | `addFiles()` accumulates all error types into `errorParts[]`. |
+| C72-05 | **FIXED** | `loadCardsData()` and `loadCategories()` retry on undefined/aborted promise. |
 | C73-02 | **FIXED** | TransactionReview now uses AbortController in onMount with cleanup. |
 | C70-01 | **FIXED** | `detectBank` caps confidence at 0.5 for single-pattern banks. |
 | C69-02 | **FIXED** | `parseCSVAmount`/`parseAmount` handle parenthesized negatives. |
@@ -39,15 +42,9 @@ All prior cycle 1-73 findings are confirmed fixed except as noted below.
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C74-01 | LOW | HIGH | `apps/web/src/components/dashboard/TransactionReview.svelte:76` | `categoryMap` fallback (FALLBACK_CATEGORIES) lacks dot-notation subcategory keys, so subcategory label search fails when categories.json fetch fails. Rare edge case. |
-| C74-02 | LOW | MEDIUM | `apps/web/src/lib/store.svelte.ts:271` | `loadFromStorage` removes sessionStorage on ANY malformed data without migration path or version check. Version-breaking schema changes cause silent data loss. |
-| C74-03 | LOW | HIGH | `apps/web/src/lib/parser/xlsx.ts:283-287` | Re-confirmation of C73-06: HTML-as-XLS files decoded twice (isHTMLContent + main path). Minor memory overhead bounded by 10MB limit. |
-| C74-04 | LOW | HIGH | `apps/web/src/lib/formatters.ts:51-78,115-143` | Re-confirmation of C66-08: `formatIssuerNameKo` and `getIssuerColor` hardcoded maps will drift from BANK_SIGNATURES. Currently in sync. |
-| C74-05 | LOW | MEDIUM | `apps/web/src/components/upload/FileDropzone.svelte:80-105` | `ALL_BANKS` array is yet another copy of the bank list (5th location) that must sync with BANK_SIGNATURES, formatters, and xlsx BANK_COLUMN_CONFIGS. |
-| C74-06 | LOW | MEDIUM | `packages/core/src/optimizer/greedy.ts:329-340` | `bestSingleCard` calculation redundantly calls `calculateCardOutput` for cards already computed in `buildCardResults`. Constant-factor (2x) overhead on already-quadratic algorithm. |
-| C74-07 | LOW | HIGH | `apps/web/src/lib/cards.ts:281` + `apps/web/src/lib/analyzer.ts:271-273` | Error message "카테고리 데이터를 불러올 수 없어요" does not distinguish abort-from-navigation vs genuine fetch failure. |
-| C74-08 | LOW | MEDIUM | `apps/web/src/lib/parser/csv.ts:910-921` | Re-confirmation of C22-04: CSV adapter registry covers 10 of 24 banks; remaining 14 fall to generic parser. Intentional design tradeoff. |
-| C74-09 | LOW | HIGH | `apps/web/src/lib/store.svelte.ts:127-171` | `persistToStorage` does not validate per-field sizes before serialization. Bounded by practical data sizes. |
+| C75-01 | LOW | HIGH | `apps/web/src/lib/parser/xlsx.ts:262-297` | `checkHTMLContent` returns `prefix` but the caller does not use it to avoid re-decoding. The C74-03 refactor added the return field but the caller was not updated to consume it. The `prefix` is computed but dead. Full buffer is still decoded unconditionally. |
+| C75-02 | LOW | HIGH | `apps/web/src/components/dashboard/TransactionReview.svelte:16-57` | `FALLBACK_CATEGORIES` does not include all subcategories present in the YAML taxonomy. Missing entries: `offline_shopping.department_store`, `grocery.traditional_market`, `grocery.online_grocery`, `insurance.*`, and others. The 25 dot-notation entries cover the most common subcategories. |
+| C75-03 | LOW | MEDIUM | `apps/web/src/lib/store.svelte.ts:219-225` | `loadFromStorage` version check warns but does not attempt migration. If a future schema adds a required field, old data would pass current validation but components accessing the new field would get `undefined`. Foundation is correct for v1 but migration logic is needed when the schema actually changes. |
 
 ---
 
@@ -55,21 +52,22 @@ All prior cycle 1-73 findings are confirmed fixed except as noted below.
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| MerchantMatcher/taxonomy O(n) scan | C16-C74 | OPEN (MEDIUM) -- 14 cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21-C74 | OPEN (MEDIUM) -- 17 cycles agree |
-| persistToStorage bare catch / error handling | C62-C74 | PARTIALLY FIXED (C69 added 'error' kind) |
-| Annual savings simple *12 projection | C7-C74 | OPEN (LOW) -- 13 cycles agree |
-| date-utils unparseable passthrough | C56-C74 | PARTIALLY FIXED (C70 added warn) |
-| CSV DATE_PATTERNS divergence risk | C20-C74 | OPEN (LOW) -- 12 cycles agree |
-| Hardcoded fallback drift | C8-C74 | OPEN (LOW) -- 10 cycles agree |
-| BANK_SIGNATURES duplication | C7-C74 | OPEN (LOW) -- 9 cycles agree |
-| inferYear() timezone dependence | C8-C74 | OPEN (LOW) -- 7 cycles agree (60+ cycles deferred) |
-| Greedy optimizer O(m*n*k) quadratic | C67-C74 | OPEN (MEDIUM) -- 7 cycles agree |
-| CATEGORY_COLORS dark mode contrast | C4-C74 | OPEN (LOW) -- many cycles agree |
-| Multi-location bank data sync | C74 | NEW (LOW) -- first cycle noting all 5 locations |
-| BOM handling redundancy | C73-C74 | OPEN (LOW) -- 2 cycles |
-| TransactionReview orphaned fetch | C73 | **FIXED** (C73-02 / C74 verified AbortController) |
-| XLSX HTML-as-XLS double decode | C73-C74 | OPEN (LOW) -- 2 cycles |
+| MerchantMatcher/taxonomy O(n) scan | C16-C75 | OPEN (MEDIUM) -- 15 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21-C75 | OPEN (MEDIUM) -- 18 cycles agree |
+| persistToStorage bare catch / error handling | C62-C75 | PARTIALLY FIXED (C69 added 'error' kind) |
+| Annual savings simple *12 projection | C7-C75 | OPEN (LOW) -- 14 cycles agree |
+| date-utils unparseable passthrough | C56-C75 | PARTIALLY FIXED (C70 added warn) |
+| CSV DATE_PATTERNS divergence risk | C20-C75 | OPEN (LOW) -- 13 cycles agree |
+| Hardcoded fallback drift | C8-C75 | OPEN (LOW) -- 11 cycles agree |
+| BANK_SIGNATURES duplication | C7-C75 | OPEN (LOW) -- 10 cycles agree |
+| inferYear() timezone dependence | C8-C75 | OPEN (LOW) -- 8 cycles agree (60+ cycles deferred) |
+| Greedy optimizer O(m*n*k) quadratic | C67-C75 | OPEN (MEDIUM) -- 8 cycles agree |
+| CATEGORY_COLORS dark mode contrast | C4-C75 | OPEN (LOW) -- many cycles agree |
+| Multi-location bank data sync | C74-C75 | OPEN (LOW) -- 2 cycles noting all 5 locations |
+| BOM handling redundancy | C73-C75 | OPEN (LOW) -- 3 cycles |
+| XLSX HTML-as-XLS double decode | C73-C75 | OPEN (LOW) -- 3 cycles (C75-01 refines: prefix dead code) |
+| FALLBACK_CATEGORIES incomplete subcategory coverage | C75 | NEW (LOW) -- first cycle noting incompleteness |
+| loadFromStorage version check lacks migration | C75 | NEW (LOW) -- first cycle noting this gap |
 
 ---
 
@@ -111,9 +109,9 @@ All prior cycle 1-73 findings are confirmed fixed except as noted below.
 | C71-05 | LOW | BANK_SIGNATURES array order affects detection accuracy for overlapping patterns |
 | C73-01 | LOW | SavingsComparison annual projection stale briefly after reset (cosmetic) |
 | C73-04 | LOW | BOM stripping redundancy across parser chain |
-| C73-06/C74-03 | LOW | XLSX HTML-as-XLS double memory for re-encoded buffer |
-| C74-01 | LOW | TransactionReview categoryMap fallback lacks dot-notation subcategory keys |
-| C74-02 | LOW | loadFromStorage removes sessionStorage on any malformed data without migration |
+| C73-06/C74-03/C75-01 | LOW | XLSX HTML-as-XLS: checkHTMLContent returns unused prefix; full buffer still decoded twice |
+| C74-01/C75-02 | LOW | TransactionReview FALLBACK_CATEGORIES incomplete subcategory coverage |
+| C74-02/C75-03 | LOW | loadFromStorage version check lacks migration path for future schema changes |
 | C74-05 | LOW | ALL_BANKS in FileDropzone is 5th copy of bank list needing sync |
 | C74-07 | LOW | AbortError vs genuine fetch failure not distinguished in error message |
 
