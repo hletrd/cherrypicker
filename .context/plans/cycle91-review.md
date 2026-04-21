@@ -45,7 +45,7 @@ Line 240 change:
 - When transitioning from negative to positive: abs prevents the brief "-X원" flash under "추가 절약"
 - When transitioning from positive to negative: abs prevents a brief "+X원" flash under "추가 비용"
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
