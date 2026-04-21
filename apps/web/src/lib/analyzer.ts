@@ -97,17 +97,21 @@ export async function parseAndCategorize(
   options?: AnalyzeOptions,
   fileIndex?: number,
   matcher?: MerchantMatcher,
+  categoryNodes?: CategoryNode[],
 ): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string }[]; categoryNodes: CategoryNode[] }> {
   const parseResult = await parseFile(file, options?.bank as BankId | undefined);
   if (parseResult.transactions.length === 0) {
     throw new Error('거래 내역을 찾을 수 없어요');
   }
 
-  const categoryNodes = await loadCategories();
+  // Use provided categoryNodes (from analyzeMultipleFiles) or fetch fresh.
+  // When a matcher is provided, the caller already loaded categories — skip
+  // the redundant loadCategories() call to avoid an unnecessary await (C81-03).
+  const nodes = categoryNodes ?? await loadCategories();
   // Guard against empty categories — loadCategories() returns [] on AbortError
   // (component unmount during fetch). Proceeding would produce silently wrong
   // results with all transactions as "uncategorized" (C71-02).
-  if (categoryNodes.length === 0) {
+  if (nodes.length === 0) {
     throw new Error('카테고리 데이터를 불러올 수 없어요. 다시 시도해 보세요.');
   }
   // Reuse the provided matcher (from analyzeMultipleFiles) or construct a new
@@ -115,7 +119,7 @@ export async function parseAndCategorize(
   // MerchantMatcher expects CategoryNode[] from @cherrypicker/rules which has
   // { id, labelKo, labelEn, keywords, subcategories? }. We project our local
   // type (which has an extra `label` field) to the rules shape via the adapter.
-  const effectiveMatcher = matcher ?? new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
+  const effectiveMatcher = matcher ?? new MerchantMatcher(toRulesCategoryNodes(nodes));
 
   // Include fileIndex in the ID to prevent collisions when multiple files
   // are uploaded — without it, each file produces tx-0 through tx-N and
@@ -148,7 +152,7 @@ export async function parseAndCategorize(
     format: parseResult.format ?? 'csv',
     statementPeriod: parseResult.statementPeriod,
     parseErrors: parseResult.errors ?? [],
-    categoryNodes,
+    categoryNodes: nodes,
   };
 }
 
@@ -274,8 +278,10 @@ export async function analyzeMultipleFiles(
   const sharedMatcher = new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
 
   // 2. Parse and categorize ALL files using the shared matcher
+  // Pass categoryNodes to avoid redundant loadCategories() calls inside
+  // parseAndCategorize() — the caller already has the data (C81-03).
   const allParsed = await Promise.all(
-    files.map((f, i) => parseAndCategorize(f, options, i, sharedMatcher))
+    files.map((f, i) => parseAndCategorize(f, options, i, sharedMatcher, categoryNodes))
   );
 
   // 2. Merge all transactions and build category labels from the first parsed result
