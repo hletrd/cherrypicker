@@ -151,7 +151,10 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
     '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
   ];
-  let headerIdx = 0;
+  // Default to -1 so we can detect when no valid header row was found.
+  // Previously defaulted to 0, which would treat the first line as the
+  // header even when it's a metadata row with no known header keywords (C78-03).
+  let headerIdx = -1;
   for (let i = 0; i < Math.min(20, lines.length); i++) {
     const cells = splitLine(lines[i] ?? '', delimiter);
     const hasNonNumeric = cells.some((c) => /[가-힣a-zA-Z]/.test(c));
@@ -165,6 +168,13 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
         break;
       }
     }
+  }
+
+  // No row with known header keywords found — return an error instead of
+  // falling back to row 0 (which is likely a metadata row). This matches
+  // the behavior of bank-specific adapters (C78-03).
+  if (headerIdx === -1) {
+    return { bank, format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
   }
 
   const headers = splitLine(lines[headerIdx] ?? '', delimiter);
