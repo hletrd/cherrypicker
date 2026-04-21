@@ -178,12 +178,14 @@
         let updated: CategorizedTx;
         if (parentCategory) {
           // User selected a subcategory (fully-qualified ID like "dining.cafe")
-          // — set both parent category and subcategory
+          // — set both parent category and subcategory. Clear rawCategory since
+          // the manual override no longer corresponds to the bank-provided
+          // classification (C79-01).
           const subId = newCategory.includes('.') ? newCategory.split('.')[1] ?? newCategory : newCategory;
-          updated = { ...tx, category: parentCategory, subcategory: subId, confidence: 1.0 };
+          updated = { ...tx, category: parentCategory, subcategory: subId, confidence: 1.0, rawCategory: undefined };
         } else {
           // User selected a top-level category
-          updated = { ...tx, category: newCategory, subcategory: undefined, confidence: 1.0 };
+          updated = { ...tx, category: newCategory, subcategory: undefined, confidence: 1.0, rawCategory: undefined };
         }
         // Svelte 5 $state tracks array index mutations — editedTxs[idx] = updated
         // is both correct and more performant than the previous editedTxs.map(...)
