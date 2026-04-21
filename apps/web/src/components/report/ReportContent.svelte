@@ -77,10 +77,10 @@
       </thead>
       <tbody>
         {#each assignments as a}
+          {@const issuer = getIssuerFromCardId(a.assignedCardId)}
           <tr class="border-b border-[var(--color-border)] last:border-0">
             <td class="px-4 py-2.5 font-medium text-[var(--color-text)]">{a.categoryNameKo}</td>
             <td class="px-4 py-2.5">
-              {@const issuer = getIssuerFromCardId(a.assignedCardId)}
               <span
                 class="inline-block rounded-full px-2 py-0.5 text-xs text-white"
                 style="background-color: {getIssuerColor(issuer)}"
@@ -113,9 +113,9 @@
         </thead>
         <tbody>
           {#each cardResults as cr}
+            {@const issuer = getIssuerFromCardId(cr.cardId)}
             <tr class="border-b border-[var(--color-border)] last:border-0">
               <td class="px-4 py-2.5">
-                {@const issuer = getIssuerFromCardId(cr.cardId)}
                 <span
                   class="inline-block rounded-full px-2 py-0.5 text-xs text-white"
                   style="background-color: {getIssuerColor(issuer)}"
