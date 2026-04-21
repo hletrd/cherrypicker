@@ -124,9 +124,16 @@
   // Sync from store when transactions change — re-sync on new upload (generation change)
   let lastSyncedGeneration = $state(0);
 
+  // Read analysisStore.result once to get an atomic snapshot of both
+  // generation and transactions. Reading .generation and .transactions
+  // as separate reactive getter calls is not atomic — between them the
+  // result backing store could change (e.g., during Astro View Transition
+  // re-mounts). Deriving both values from the same snapshot ensures
+  // consistency (C82-01).
   $effect(() => {
+    const currentResult = analysisStore.result;
     const gen = analysisStore.generation;
-    const txs = analysisStore.transactions;
+    const txs = currentResult?.transactions ?? [];
     if (gen !== lastSyncedGeneration) {
       if (txs.length > 0) {
         editedTxs = txs.map(tx => ({ ...tx }));
