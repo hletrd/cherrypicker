@@ -147,7 +147,9 @@
     {/each}
   </div>
 {:else if opt}
-  <!-- Visual bar comparison -->
+  <!-- Visual bar comparison — hidden when both rewards are zero (zero-width bars
+       look broken and provide no useful information) (C86-07) -->
+  {#if opt.totalReward > 0 || (opt.bestSingleCard && opt.bestSingleCard.totalReward > 0)}
   <div class="mt-4 mb-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
     <div class="mb-3 text-xs font-medium text-[var(--color-text-muted)]">혜택 비교</div>
     <div class="space-y-2.5">
@@ -179,6 +181,7 @@
       </div>
     </div>
   </div>
+  {/if}
 
   <!-- Three cards -->
   <div class="grid gap-5 md:grid-cols-3">
