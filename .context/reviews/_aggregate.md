@@ -56,9 +56,9 @@ All prior cycle 1-82 findings are confirmed fixed except as noted below. C83 fin
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C84-01 | MEDIUM | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte:93` | Sign-prefix threshold inconsistent with SavingsComparison and ReportContent. VisibilityToggle uses `> 0` while others use `>= 100` (C82-03/C83-01). For small savings (1-99 won), results page shows "+1원" while dashboard shows "1원". Same 100-won threshold should apply. |
-| C84-02 | LOW | MEDIUM | `apps/web/src/components/ui/VisibilityToggle.svelte:93` | Negative savings redundant minus sign under "추가 비용" label. VisibilityToggle shows raw `formatWon(opt.savingsVsSingleCard)` with minus sign. SavingsComparison and ReportContent now use `Math.abs()` for this case. |
-| C84-03 | LOW | LOW | `apps/web/src/lib/store.svelte.ts:206-209` | `isOptimizableTx` does not guard against `Infinity` amount. `typeof Infinity === 'number'` and `Infinity > 0` are both true, so an Infinity amount would pass validation. JSON.parse never produces Infinity, making this a theoretical concern only. |
+| C84-01 | **FIXED** | `VisibilityToggle.svelte:93` now uses `>= 100` threshold matching SavingsComparison and ReportContent. |
+| C84-02 | **FIXED** | `VisibilityToggle.svelte:93` now uses `Math.abs()` for negative values under "추가 비용", matching SavingsComparison and ReportContent. |
+| C84-03 | FALSE POSITIVE | `Number.isFinite(obj.amount)` already guards against Infinity at store.svelte.ts:206. |
 
 ---
 
@@ -101,9 +101,9 @@ All prior cycle 1-82 findings are confirmed fixed except as noted below. C83 fin
 | Unnecessary $state for effect-local variables | C83-C84 | FIXED (C83-02/C83-04 changed to plain let) |
 | Negative savings shows redundant minus under "추가 비용" | C83-C84 | FIXED (C83-03 added Math.abs in SavingsComparison and ReportContent) |
 | detectCSVDelimiter scans all lines without limit | C83-C84 | FIXED (C83-05 added 30-line slice) |
-| VisibilityToggle sign-prefix threshold inconsistent | C84 | NEW (MEDIUM) |
-| VisibilityToggle negative savings redundant minus | C84 | NEW (LOW) |
-| isOptimizableTx Infinity guard missing | C84 | NEW (LOW) |
+| VisibilityToggle sign-prefix threshold inconsistent | C84 | FIXED (C84-01 applied >= 100 threshold and Math.abs) |
+| VisibilityToggle negative savings redundant minus | C84 | FIXED (C84-02 applied Math.abs, merged into C84-01 fix) |
+| isOptimizableTx Infinity guard missing | C84 | FALSE POSITIVE (Number.isFinite already present) |
 
 ---
 
@@ -150,9 +150,9 @@ All prior cycle 1-82 findings are confirmed fixed except as noted below. C83 fin
 | C75-02/C76-02/C78-02 | LOW | FALLBACK_CATEGORIES leading-space labels cause browser-inconsistent dropdown rendering |
 | C77-02 | LOW | Annual savings projection uses simple *12 multiplication (labeled transparently) |
 | C82-04 | LOW | parseFile double memory for CSV (ArrayBuffer + decoded string) |
-| C84-01 | MEDIUM | VisibilityToggle sign-prefix threshold inconsistent with SavingsComparison/ReportContent |
-| C84-02 | LOW | VisibilityToggle negative savings shows redundant minus under "추가 비용" |
-| C84-03 | LOW | isOptimizableTx does not guard against Infinity amount |
+| C84-01 | **FIXED** | VisibilityToggle sign-prefix threshold now uses >= 100 (C84-01) |
+| C84-02 | **FIXED** | VisibilityToggle negative savings now uses Math.abs() (C84-02) |
+| C84-03 | FALSE POSITIVE | isOptimizableTx already has Number.isFinite guard |
 
 ---
 
