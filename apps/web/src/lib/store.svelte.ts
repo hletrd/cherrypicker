@@ -102,6 +102,15 @@ const STORAGE_KEY = 'cherrypicker:analysis';
  *  the old data may still be partially valid (C74-02). */
 const STORAGE_VERSION = 1;
 
+/** Migration functions keyed by source version. Each function receives the
+ *  raw parsed object and returns a (possibly transformed) object. Migrations
+ *  run BEFORE validation so the validation logic sees the current schema shape.
+ *  Example: when STORAGE_VERSION becomes 2, add: `1: (data) => ({ ...data, newField: data.newField ?? defaultValue })`
+ *  (C75-03). */
+const MIGRATIONS: Record<number, (data: any) => any> = {
+  // No migrations yet -- v1 is the first versioned schema
+};
+
 type PersistedAnalysisResult = Pick<
   AnalysisResult,
   'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown' | 'transactions' | 'previousMonthSpendingOption'
@@ -222,6 +231,13 @@ function loadFromStorage(): AnalysisResult | null {
       if (parsed._v !== undefined && parsed._v !== STORAGE_VERSION) {
         if (typeof console !== 'undefined') {
           console.warn(`[cherrypicker] Session storage schema version mismatch: stored=${parsed._v}, current=${STORAGE_VERSION}. Attempting to load anyway.`);
+        }
+        // Apply migrations from the stored version to the current version
+        // before validation, so the validator sees the current schema shape
+        // (C75-03).
+        for (let v = parsed._v; v < STORAGE_VERSION; v++) {
+          const migrator = MIGRATIONS[v];
+          if (migrator) parsed = migrator(parsed);
         }
       }
       if (
