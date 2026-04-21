@@ -124,7 +124,7 @@ The following findings from this cycle's review are deferred per the repo's rule
 
 ## Progress
 
-- [ ] Task 1: Remove dead `prefix` return from checkHTMLContent
-- [ ] Task 2: Add missing subcategory entries to FALLBACK_CATEGORIES and fix label mismatches
-- [ ] Task 3: Add migration framework to loadFromStorage
-- [ ] Task 4: Quality gates
+- [x] Task 1: Remove dead `prefix` return from checkHTMLContent
+- [x] Task 2: Add missing subcategory entries to FALLBACK_CATEGORIES and fix label mismatches
+- [x] Task 3: Add migration framework to loadFromStorage
+- [x] Task 4: Quality gates -- all pass (astro check: 0 errors, vitest: 189/189 pass, bun test: 58/58 pass)
