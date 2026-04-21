@@ -228,14 +228,24 @@ function loadFromStorage(): AnalysisResult | null {
       // Check schema version — log a warning on mismatch but continue
       // validation so we don't silently delete data that may still be
       // partially valid after an app upgrade (C74-02).
-      if (parsed._v !== undefined && parsed._v !== STORAGE_VERSION) {
-        if (typeof console !== 'undefined') {
-          console.warn(`[cherrypicker] Session storage schema version mismatch: stored=${parsed._v}, current=${STORAGE_VERSION}. Attempting to load anyway.`);
+      // Legacy data persisted before the versioning fix has no _v field,
+      // so treat undefined as version 0 (pre-versioning) to ensure
+      // migrations run correctly for all data (C76-01).
+      const storedVersion = parsed._v ?? 0;
+      if (storedVersion < STORAGE_VERSION) {
+        if (storedVersion === 0) {
+          if (typeof console !== 'undefined') {
+            console.warn(`[cherrypicker] Session storage has legacy (unversioned) data. Attempting migration to v${STORAGE_VERSION}.`);
+          }
+        } else if (typeof console !== 'undefined') {
+          console.warn(`[cherrypicker] Session storage schema version mismatch: stored=${storedVersion}, current=${STORAGE_VERSION}. Attempting to load anyway.`);
         }
         // Apply migrations from the stored version to the current version
         // before validation, so the validator sees the current schema shape
-        // (C75-03).
-        for (let v = parsed._v; v < STORAGE_VERSION; v++) {
+        // (C75-03). Legacy data (_v undefined, treated as version 0) will
+        // run all migrations from v0 up, ensuring pre-versioning data is
+        // correctly transformed (C76-01).
+        for (let v = storedVersion; v < STORAGE_VERSION; v++) {
           const migrator = MIGRATIONS[v];
           if (migrator) parsed = migrator(parsed);
         }
