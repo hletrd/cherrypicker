@@ -155,7 +155,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   // Previously defaulted to 0, which would treat the first line as the
   // header even when it's a metadata row with no known header keywords (C78-03).
   let headerIdx = -1;
-  for (let i = 0; i < Math.min(20, lines.length); i++) {
+  for (let i = 0; i < Math.min(30, lines.length); i++) {
     const cells = splitLine(lines[i] ?? '', delimiter);
     const hasNonNumeric = cells.some((c) => /[가-힣a-zA-Z]/.test(c));
     if (hasNonNumeric) {
