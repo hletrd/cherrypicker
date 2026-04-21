@@ -19,7 +19,7 @@ to:
 {opt.savingsVsSingleCard >= 100 ? '+' : ''}{formatWon(opt.savingsVsSingleCard)}
 ```
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
@@ -44,7 +44,7 @@ let lastTargetSavings = 0;
 let lastTargetAnnual = 0;
 ```
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
@@ -79,7 +79,7 @@ to:
 
 Also update the label at line 223 from `{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}` -- this is already correct (the label changes based on sign).
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
@@ -102,7 +102,7 @@ to:
 let lastWarningGeneration = 0;
 ```
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
@@ -125,7 +125,7 @@ to:
 const lines = content.split('\n').map((l) => l.trim()).filter((l) => l.length > 0).slice(0, 30);
 ```
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
