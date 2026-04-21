@@ -285,7 +285,9 @@ const samsungAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    // Scan up to 30 rows for header — matching the generic parser's limit
+    // (C81-02). Some bank exports have 10+ metadata rows before the header.
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       const hasDate = cells.includes('이용일');
       const hasMerchant = cells.includes('가맹점명');
@@ -352,7 +354,7 @@ const shinhanAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       if (cells.includes('이용일') && cells.includes('이용처')) {
         headerIdx = i;
@@ -418,7 +420,7 @@ const kbAdapter: BankAdapter = {
     const KB_HEADERS = ['거래일시', '가맹점명', '이용금액', '할부개월', '업종'];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       if (cells.some((c) => KB_HEADERS.includes(c))) {
         headerIdx = i;
@@ -484,7 +486,7 @@ const hyundaiAdapter: BankAdapter = {
     const HYUNDAI_HEADERS = ['이용일', '이용처', '이용금액', '할부', '비고'];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       if (cells.some((c) => HYUNDAI_HEADERS.includes(c))) {
         headerIdx = i;
@@ -549,7 +551,7 @@ const lotteAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       if (cells.includes('거래일') && cells.includes('이용가맹점')) {
         headerIdx = i;
@@ -614,7 +616,7 @@ const hanaAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       if (cells.includes('이용일자') && cells.includes('가맹점명')) {
         headerIdx = i;
@@ -680,7 +682,7 @@ const wooriAdapter: BankAdapter = {
     const WOORI_HEADERS = ['이용일자', '이용가맹점', '이용금액', '할부기간', '비고'];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       if (cells.some((c) => WOORI_HEADERS.includes(c))) {
         headerIdx = i;
@@ -745,7 +747,7 @@ const nhAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       if (cells.includes('거래일') && cells.includes('이용처') && cells.includes('거래금액')) {
         headerIdx = i;
@@ -811,7 +813,7 @@ const ibkAdapter: BankAdapter = {
     const IBK_HEADERS = ['거래일', '가맹점', '거래금액', '할부', '적요'];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       if (cells.some((c) => IBK_HEADERS.includes(c))) {
         headerIdx = i;
@@ -876,7 +878,7 @@ const bcAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
+    for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       if (cells.includes('이용일') && cells.includes('가맹점') && cells.includes('이용금액')) {
         headerIdx = i;
