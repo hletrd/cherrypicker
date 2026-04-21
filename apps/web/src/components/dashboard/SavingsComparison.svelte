@@ -41,11 +41,15 @@
   // visual inconsistency where the two numbers are mathematically out of
   // sync during the animation.
   let displayedAnnualSavings = $state(0);
+  // Track the last target value so rapid re-renders animate from the
+  // previous target, not a mid-animation intermediate value (C82-02).
+  let lastTargetSavings = $state(0);
+  let lastTargetAnnual = $state(0);
 
   $effect(() => {
     const target = opt?.savingsVsSingleCard ?? 0;
     if (target === 0 && displayedSavings === 0) return;
-    if (target === displayedSavings) return;
+    if (target === lastTargetSavings) return;
 
     // Skip animation when the user prefers reduced motion
     const prefersReducedMotion = typeof window !== 'undefined'
@@ -53,12 +57,19 @@
     if (prefersReducedMotion) {
       displayedSavings = target;
       displayedAnnualSavings = target * 12;
+      lastTargetSavings = target;
+      lastTargetAnnual = target * 12;
       return;
     }
 
-    const startVal = displayedSavings;
+    // Always animate from the last target (not the current displayed value)
+    // to prevent "dips" during rapid reoptimize clicks (C82-02).
+    const startVal = lastTargetSavings;
     const annualTarget = target * 12;
-    const startAnnual = displayedAnnualSavings;
+    const startAnnual = lastTargetAnnual;
+    lastTargetSavings = target;
+    lastTargetAnnual = annualTarget;
+
     let cancelled = false;
     let rafId: number;
     const start = performance.now();
@@ -212,9 +223,11 @@
       <div class="mb-3 text-xs font-medium text-green-700 dark:text-green-400">{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}</div>
       <!-- formatWon normalizes -0 to +0 internally, so displayedSavings >= 0
            correctly determines the sign prefix without Object.is(-0) guard (C12-04).
-           The Math.abs guard suppresses the '+' prefix when the animated value
-           rounds to 0 during sign transitions, preventing "+0원" flicker (C56-01). -->
-      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings > 0 && Math.abs(displayedSavings) >= 1 ? '+' : ''}{formatWon(displayedSavings)}</div>
+           Only show '+' when displayedSavings is meaningfully positive (>= 100 won,
+           the minimum meaningful amount in Korean banking). Values below 100 during
+           animation are just rounding artifacts that would cause a brief "+1원"
+           flash before settling to "0원" (C82-03). -->
+      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 100 ? '+' : ''}{formatWon(displayedSavings)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
         연간 약 {formatWon(displayedAnnualSavings)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
       </div>
