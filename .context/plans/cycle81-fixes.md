@@ -24,7 +24,7 @@ const snapshot = result;
 // Line 558: ...snapshot,
 ```
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
@@ -39,7 +39,7 @@ const snapshot = result;
 
 **Implementation:** Change all 10 occurrences of `Math.min(10, lines.length)` to `Math.min(30, lines.length)` in the bank adapter `parseCSV` methods.
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
@@ -77,7 +77,7 @@ const allParsed = await Promise.all(
 );
 ```
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
@@ -118,7 +118,7 @@ const allParsed = await Promise.all(
 'utilities.apartment_mgmt': '#6b7280',   // parent color (utilities)
 ```
 
-**Status:** TODO
+**Status:** DONE
 
 ---
 
