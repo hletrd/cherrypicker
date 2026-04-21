@@ -234,7 +234,7 @@
            the display reads "추가 비용: -5,000원" which is redundant (C83-03). -->
       <div class="text-3xl font-bold text-green-700 dark:text-green-400">{displayedSavings >= 100 ? '+' : ''}{formatWon(displayedSavings < 0 ? Math.abs(displayedSavings) : displayedSavings)}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
-        연간 약 {formatWon(displayedAnnualSavings)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
+        연간 약 {displayedAnnualSavings >= 100 ? '+' : ''}{formatWon(displayedAnnualSavings < 0 ? Math.abs(displayedAnnualSavings) : displayedAnnualSavings)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
       </div>
       {#if savingsPct === Infinity}
         <!-- Defensive badge (C28-04): currently unreachable — see savingsPct comment -->
