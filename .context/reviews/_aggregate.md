@@ -1,31 +1,37 @@
-# Review Aggregate -- 2026-04-22 (Cycle 87)
+# Review Aggregate -- 2026-04-22 (Cycle 88)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle87-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle88-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/c88-code-reviewer.md` (code quality, logic, SOLID, maintainability)
+- `.context/reviews/c88-security-reviewer.md` (OWASP top 10, secrets, unsafe patterns)
+- `.context/reviews/c88-perf-reviewer.md` (performance, concurrency, CPU/memory)
+- `.context/reviews/c88-test-engineer.md` (test coverage gaps, TDD opportunity)
+- `.context/reviews/c88-architect.md` (architectural/design risks, coupling, layering)
+- `.context/reviews/c88-designer.md` (UI/UX, accessibility, responsive, dark mode)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-86 per-agent and aggregate files
+- All cycle 1-87 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-86 findings are confirmed fixed except as noted below. C86 findings verified this cycle:
+All prior cycle 1-87 findings are confirmed fixed except as noted below. C87 findings verified this cycle:
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C85-01 | **CONFIRMED OPEN** | `SavingsComparison.svelte:240` annual projection line still uses `displayedAnnualSavings` (animated value) for `Math.abs()` and `+` prefix decision instead of `opt.savingsVsSingleCard * 12`. |
-| C85-02 | **CONFIRMED OPEN** | `SavingsComparison.svelte:240` annual projection `+` prefix uses `displayedAnnualSavings >= 100` instead of final target. |
-| C85-03 | **CONFIRMED OPEN** | `CardDetail.svelte:22` `categoryLabelsReady` blocks rewards table until categories load. |
-| C86-01 | **DUPLICATE of C85-01** | Same root cause as above. |
-| C86-02 | **CONFIRMED OPEN** | `CategoryBreakdown.svelte:91-96` getCategoryColor falls through to gray for unknown dot-notation keys. |
-| C86-03 | **CONFIRMED OPEN** | `csv.ts:149-184` Header detection requires 2+ keyword categories but date keyword not strictly required. |
-| C86-04 | **CONFIRMED OPEN** | `VisibilityToggle.svelte:62-131` $effect directly mutates DOM (known deferred, 18+ cycles). |
-| C86-05 | **CONFIRMED OPEN** | `xlsx.ts:371-387` Same residual risk as C86-03. |
-| C86-07 | **FIXED** | `SavingsComparison.svelte:152` now hides bar comparison when both rewards zero. |
-| C86-08 | **FIXED** | `TransactionReview.svelte:294-300` now uses `<optgroup>`. |
-| C86-13 | **CONFIRMED OPEN** | `Layout.astro:121-148` Mobile menu lacks focus trap. |
-| C86-16 | **CONFIRMED OPEN** | No integration test for multi-file upload. |
+| C87-01 | **FIXED** | `SavingsComparison.svelte:240` annual projection line now correctly uses `opt.savingsVsSingleCard` for sign decisions. Commit `00000006d3`. |
+| C87-02 | **NOT A BUG** | ReportContent uses correct static threshold. |
+| C87-03 | **CONFIRMED OPEN (LOW)** | `CategoryBreakdown.svelte:95` unreachable `?? OTHER_COLOR` fallback. |
+| C85-01/C86-01 | **DUPLICATE of C87-01/C88-01** | Same root cause. |
+| C85-02 | **SUBSUMED by C88-01** | Same fix as C88-01. |
+| C85-03 | **CONFIRMED OPEN (LOW)** | CardDetail categoryLabelsReady blocks rewards table. |
+| C86-02 | **CONFIRMED OPEN (LOW)** | CategoryBreakdown getCategoryColor gray fallback. |
+| C86-03 | **CONFIRMED OPEN (LOW)** | CSV header detection residual risk. |
+| C86-04 | **CONFIRMED OPEN (KNOWN DEFERRED)** | VisibilityToggle DOM mutation. |
+| C86-05 | **CONFIRMED OPEN (LOW)** | XLSX header detection residual risk. |
+| C86-13 | **CONFIRMED OPEN (LOW)** | Mobile menu focus trap. |
+| C86-16 | **CONFIRMED OPEN (MEDIUM)** | No integration test for multi-file upload. |
 
 ---
 
@@ -33,9 +39,21 @@ All prior cycle 1-86 findings are confirmed fixed except as noted below. C86 fin
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C87-01 | MEDIUM | HIGH | `SavingsComparison.svelte:240` | Annual projection sign-prefix uses animated `displayedAnnualSavings` for sign decisions instead of final target `opt.savingsVsSingleCard * 12`. Same root cause as C85-01/C86-01 but with specific fix: use `opt.savingsVsSingleCard` (not animated annual) for all sign-related decisions on line 240, matching line 238's pattern. |
-| C87-02 | LOW | HIGH | `ReportContent.svelte:48` | Report savings `+` prefix threshold (100 won) is consistent with SavingsComparison but the animated-vs-static difference should be documented. Not a bug. |
-| C87-03 | LOW | MEDIUM | `CategoryBreakdown.svelte:91-96` | `getCategoryColor()` final `?? OTHER_COLOR` fallback is unreachable because `CATEGORY_COLORS.uncategorized` always exists. Dead code, not a bug. |
+| C88-01 | MEDIUM | HIGH | `SavingsComparison.svelte:240` | **ALREADY FIXED** — Commit `00000006d3` already applied this fix. Line 240 now correctly uses `opt.savingsVsSingleCard * 12 >= 100` for `+` prefix threshold and `opt.savingsVsSingleCard < 0` for Math.abs decision. This was a false positive for cycle 88. |
+| C88-02 | LOW | HIGH | `SavingsComparison.svelte:238` | Monthly savings display logic uses different variable for sign decision vs display value, which is correct but could be clearer. Not a bug. |
+| C88-03 | LOW | MEDIUM | `CategoryBreakdown.svelte:6-84` | CATEGORY_COLORS hardcoded 84-entry map not auto-generated from YAML taxonomy. New subcategories will get gray fallback. Same as C86-02 but noting the drift mechanism. |
+| C88-04 | LOW | MEDIUM | `FileDropzone.svelte:80-105` | ALL_BANKS is 5th copy of bank list needing sync. Same as C74-05. |
+| C88-05 | LOW | MEDIUM | `formatters.ts:51-79` | formatIssuerNameKo hardcoded map will drift from data. Same as C64-03/C66-05/C67-03. |
+| C88-06 | LOW | MEDIUM | `formatters.ts:115-143` | getIssuerColor hardcoded map will drift from data. Same pattern as C88-05. |
+| C88-07 | LOW | LOW | `xlsx.ts:266-275` | isHTMLContent only checks UTF-8 decoding. EUC-KR encoded HTML-as-XLS files would not be detected. Known limitation documented in code. |
+| C88-08 | LOW | LOW | `pdf.ts:354` | fallbackAmountPattern uses `g` flag correctly for matchAll() but fragile if refactored to module scope. |
+| C88-09 | MEDIUM | HIGH | N/A | No integration test for multi-file upload. Same as C86-16. |
+| C88-10 | LOW | MEDIUM | N/A | No test for SavingsComparison sign-prefix behavior. |
+| C88-11 | LOW | HIGH | `Layout.astro:121-148` | Mobile menu lacks focus trap and Escape-to-close. Same as C86-13. |
+| C88-12 | LOW | LOW | `Layout.astro:49-51` | Skip-to-content link works correctly. Not an issue. |
+| C88-13 | LOW | MEDIUM | `CategoryBreakdown.svelte:6-84` | Dark mode color contrast for several CATEGORY_COLORS entries. Same as C4-10/C8-05/C8-09. |
+| C88-14 | LOW | LOW | Multiple components | Loading skeleton uses light-mode-only `bg-gray-200`/`bg-gray-300` colors. |
+| C88-15 | LOW | LOW | `FileDropzone.svelte:278` | Step indicator uses `role="progressbar"` instead of stepper pattern. |
 
 ---
 
@@ -43,24 +61,30 @@ All prior cycle 1-86 findings are confirmed fixed except as noted below. C86 fin
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| MerchantMatcher/taxonomy O(n) scan | C16-C87 | OPEN (MEDIUM) -- 27 cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21-C87 | OPEN (MEDIUM) -- 30 cycles agree |
-| persistToStorage bare catch / error handling | C62-C87 | PARTIALLY FIXED (C69 added 'error' kind) |
-| Annual savings simple *12 projection | C7-C87 | OPEN (LOW) -- 26 cycles agree |
-| date-utils unparseable passthrough | C56-C87 | PARTIALLY FIXED (C70 added warn) |
-| CSV DATE_PATTERNS divergence risk | C20-C87 | OPEN (LOW) -- 25 cycles agree |
-| Hardcoded fallback drift | C8-C87 | OPEN (LOW) -- 23 cycles agree (C76-05) |
-| BANK_SIGNATURES duplication | C7-C87 | OPEN (LOW) -- 22 cycles agree |
-| inferYear() timezone dependence | C8-C87 | OPEN (LOW) -- 20 cycles agree (60+ cycles deferred) |
-| Greedy optimizer O(m*n*k) quadratic | C67-C87 | OPEN (MEDIUM) -- 20 cycles agree |
-| CATEGORY_COLORS dark mode contrast | C4-C87 | OPEN (LOW) -- many cycles agree |
-| Multi-location bank data sync | C74-C87 | OPEN (LOW) -- 14 cycles noting all 5+ locations |
-| BOM handling redundancy | C73-C87 | OPEN (LOW) -- 15 cycles |
-| XLSX HTML-as-XLS double decode | C73-C87 | OPEN (LOW) -- 15 cycles (C75-01 simplified to boolean) |
-| VisibilityToggle direct DOM mutation | C18-C87 | OPEN (LOW) -- many cycles agree (C76-04/C79-02/C82-05/C86-04) |
-| SavingsComparison annual projection redundant minus under "추가 비용" | C85-C87 | OPEN (MEDIUM) -- C87-01 is the fix |
-| SavingsComparison annual projection missing `+` prefix | C85-C87 | OPEN (LOW) -- same fix as C87-01 |
-| No integration test for multi-file upload | C86-C87 | OPEN (MEDIUM) -- C86-16 |
+| SavingsComparison annual projection sign-prefix | C85-C88 | **FIXED** in commit `00000006d3` -- C88-01 was a false positive |
+| MerchantMatcher/taxonomy O(n) scan | C16-C88 | OPEN (MEDIUM) -- 28 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21-C88 | OPEN (MEDIUM) -- 31 cycles agree |
+| persistToStorage bare catch / error handling | C62-C88 | PARTIALLY FIXED (C69 added 'error' kind) |
+| Annual savings simple *12 projection | C7-C88 | OPEN (LOW) -- 27 cycles agree |
+| date-utils unparseable passthrough | C56-C88 | PARTIALLY FIXED (C70 added warn) |
+| CSV DATE_PATTERNS divergence risk | C20-C88 | OPEN (LOW) -- 26 cycles agree |
+| Hardcoded fallback drift | C8-C88 | OPEN (LOW) -- 24 cycles agree (C76-05) |
+| BANK_SIGNATURES duplication | C7-C88 | OPEN (LOW) -- 23 cycles agree |
+| inferYear() timezone dependence | C8-C88 | OPEN (LOW) -- 21 cycles agree (60+ cycles deferred) |
+| Greedy optimizer O(m*n*k) quadratic | C67-C88 | OPEN (MEDIUM) -- 21 cycles agree |
+| CATEGORY_COLORS dark mode contrast | C4-C88 | OPEN (LOW) -- many cycles agree |
+| Multi-location bank data sync | C74-C88 | OPEN (LOW) -- 15 cycles noting all 5+ locations |
+| BOM handling redundancy | C73-C88 | OPEN (LOW) -- 16 cycles |
+| XLSX HTML-as-XLS double decode | C73-C88 | OPEN (LOW) -- 16 cycles (C75-01 simplified to boolean) |
+| VisibilityToggle direct DOM mutation | C18-C88 | OPEN (LOW) -- many cycles agree (C76-04/C79-02/C82-05/C86-04) |
+| No integration test for multi-file upload | C86-C88 | OPEN (MEDIUM) -- 3 cycles agree |
+| Mobile menu focus trap | C86-C88 | OPEN (LOW) -- 3 cycles agree |
+
+---
+
+## Still-Open Actionable Findings (fixable this cycle)
+
+No actionable findings this cycle. C88-01 was already fixed in prior commit `00000006d3`. All remaining open findings are LOW severity and deferred.
 
 ---
 
@@ -106,17 +130,17 @@ All prior cycle 1-86 findings are confirmed fixed except as noted below. C86 fin
 | C75-02/C76-02/C78-02 | LOW | FALLBACK_CATEGORIES leading-space labels cause browser-inconsistent dropdown rendering |
 | C77-02 | LOW | Annual savings projection uses simple *12 multiplication (labeled transparently) |
 | C82-04 | LOW | parseFile double memory for CSV (ArrayBuffer + decoded string) |
-| C85-01/C86-01/C87-01 | MEDIUM | SavingsComparison annual projection redundant minus under "추가 비용" |
-| C85-02 | LOW | SavingsComparison annual projection missing `+` prefix |
+| C85-01/C86-01/C87-01/C88-01 | MEDIUM | **FIXED** — SavingsComparison annual projection sign-prefix now uses `opt.savingsVsSingleCard` for sign decisions (commit `00000006d3`) |
+| C85-02 | LOW | **FIXED** — SavingsComparison annual projection `+` prefix now uses `opt.savingsVsSingleCard * 12 >= 100` (commit `00000006d3`) |
 | C85-03 | LOW | CardDetail loadCategories without AbortSignal on unmount |
 | C86-02/C87-03 | LOW | CategoryBreakdown getCategoryColor gray fallback for unknown dot-notation keys |
 | C86-03 | LOW | Generic CSV header detection matches summary rows |
 | C86-05 | LOW | XLSX header detection matchCount without category weighting |
-| C86-13 | LOW | Mobile menu lacks focus trap and Escape-to-close |
-| C86-16 | MEDIUM | No integration test for multi-file upload |
+| C86-13/C88-11 | LOW | Mobile menu lacks focus trap and Escape-to-close |
+| C86-16/C88-09 | MEDIUM | No integration test for multi-file upload |
 
 ---
 
 ## Agent Failures
 
-No agent failures. Single comprehensive review completed successfully.
+No agent failures. All reviews completed successfully.
