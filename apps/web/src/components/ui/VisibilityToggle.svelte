@@ -90,7 +90,11 @@
       cachedStatTotalSpending.textContent = formatWon(opt.totalSpending);
 
       if (cachedStatTotalSavings) {
-        cachedStatTotalSavings.textContent = (opt.savingsVsSingleCard > 0 ? '+' : '') + formatWon(opt.savingsVsSingleCard);
+        // Use >= 100 threshold for '+' prefix matching SavingsComparison and ReportContent
+        // (C82-03/C84-01). Use Math.abs() when negative to avoid redundant minus under
+        // the "추가 비용" label, matching the pattern in SavingsComparison and ReportContent
+        // (C83-03/C84-02).
+        cachedStatTotalSavings.textContent = (opt.savingsVsSingleCard >= 100 ? '+' : '') + formatWon(opt.savingsVsSingleCard < 0 ? Math.abs(opt.savingsVsSingleCard) : opt.savingsVsSingleCard);
       }
 
       if (cachedStatCardsNeeded) {
