@@ -4,6 +4,7 @@
   import Icon from '../ui/Icon.svelte';
 
   const CATEGORY_COLORS: Record<string, string> = {
+    // Parent categories
     dining: '#ef4444',
     restaurant: '#ef4444',
     fast_food: '#f87171',
@@ -46,6 +47,40 @@
     fashion: '#e879f9',
     general: '#94a3b8',
     uncategorized: '#d1d5db',
+
+    // Dot-notation subcategory keys — ensure getCategoryColor() finds a match
+    // for the fully-qualified keys used by the optimizer instead of falling
+    // back to gray (C81-04). Colors match the corresponding leaf ID above.
+    'dining.restaurant': '#ef4444',
+    'dining.cafe': '#92400e',
+    'dining.fast_food': '#f87171',
+    'dining.delivery': '#84cc16',
+    'grocery.supermarket': '#f97316',
+    'grocery.traditional_market': '#f97316',
+    'grocery.online_grocery': '#fb923c',
+    'grocery.convenience_store': '#eab308',
+    'online_shopping.general': '#22c55e',
+    'online_shopping.fashion': '#e879f9',
+    'offline_shopping.department_store': '#15803d',
+    'public_transit.subway': '#3b82f6',
+    'public_transit.bus': '#60a5fa',
+    'public_transit.taxi': '#818cf8',
+    'transportation.fuel': '#7c3aed',
+    'transportation.parking': '#78716c',
+    'transportation.toll': '#a8a29e',
+    'medical.hospital': '#0d9488',
+    'medical.pharmacy': '#0f766e',
+    'education.academy': '#d97706',
+    'education.books': '#b45309',
+    'entertainment.movie': '#f472b6',
+    'entertainment.streaming': '#a855f7',
+    'entertainment.subscription': '#c084fc',
+    'travel.hotel': '#0284c7',
+    'travel.airline': '#0369a1',
+    'utilities.electricity': '#facc15',
+    'utilities.gas': '#fb923c',
+    'utilities.water': '#38bdf8',
+    'utilities.apartment_mgmt': '#6b7280',
   };
 
   const OTHER_COLOR = '#cbd5e1';
