@@ -9,60 +9,41 @@
   // Category options loaded dynamically from categories.yaml taxonomy
   let categoryOptions = $state<{ id: string; label: string }[]>([]);
 
-  // Fallback used if categories fail to load. Includes both top-level
-  // categories and dot-notation subcategory keys so that the categoryMap
-  // search (line ~120) can match subcategory labels even in fallback mode
-  // (C74-01).
-  const FALLBACK_CATEGORIES = [
-    // Top-level categories
-    { id: 'dining', label: '외식' },
-    { id: 'grocery', label: '식료품/마트' },
-    { id: 'convenience_store', label: '편의점' },
-    { id: 'public_transit', label: '대중교통' },
-    { id: 'transportation', label: '교통/주유' },
-    { id: 'telecom', label: '통신' },
-    { id: 'insurance', label: '보험' },
-    { id: 'online_shopping', label: '온라인쇼핑' },
-    { id: 'offline_shopping', label: '오프라인쇼핑' },
-    { id: 'medical', label: '의료' },
-    { id: 'education', label: '교육' },
-    { id: 'entertainment', label: '여가/문화' },
-    { id: 'travel', label: '여행' },
-    { id: 'subscription', label: '구독' },
-    { id: 'utilities', label: '공과금' },
-    { id: 'uncategorized', label: '기타' },
-    // Subcategories (dot-notation keys) — labels match the YAML taxonomy
-    // in packages/rules/data/categories.yaml (C75-02)
-    { id: 'dining.restaurant', label: '  일반음식점' },
-    { id: 'dining.cafe', label: '  카페' },
-    { id: 'dining.fast_food', label: '  패스트푸드' },
-    { id: 'dining.delivery', label: '  배달' },
-    { id: 'grocery.supermarket', label: '  대형마트' },
-    { id: 'grocery.traditional_market', label: '  전통시장' },
-    { id: 'grocery.online_grocery', label: '  온라인식품' },
-    { id: 'public_transit.bus', label: '  버스' },
-    { id: 'public_transit.subway', label: '  지하철' },
-    { id: 'public_transit.taxi', label: '  택시' },
-    { id: 'transportation.fuel', label: '  주유' },
-    { id: 'transportation.parking', label: '  주차' },
-    { id: 'transportation.toll', label: '  고속도로통행료' },
-    { id: 'online_shopping.general', label: '  종합쇼핑몰' },
-    { id: 'online_shopping.fashion', label: '  패션' },
-    { id: 'offline_shopping.department_store', label: '  백화점' },
-    { id: 'medical.hospital', label: '  병원' },
-    { id: 'medical.pharmacy', label: '  약국' },
-    { id: 'education.academy', label: '  학원' },
-    { id: 'education.books', label: '  도서' },
-    { id: 'entertainment.movie', label: '  영화' },
-    { id: 'entertainment.streaming', label: '  스트리밍' },
-    { id: 'travel.airline', label: '  항공' },
-    { id: 'travel.hotel', label: '  호텔/숙박' },
-    { id: 'travel.travel_agency', label: '  여행사' },
-    { id: 'utilities.electricity', label: '  전기요금' },
-    { id: 'utilities.gas', label: '  가스요금' },
-    { id: 'utilities.water', label: '  수도요금' },
-    { id: 'utilities.apartment_mgmt', label: '  관리비' },
+  // Grouped category options for rendering with <optgroup> in the select
+  // dropdown. Each group has a label (parent category) and a list of
+  // options including the parent itself and its subcategories. This
+  // replaces the flat leading-space indentation which is trimmed by some
+  // mobile browsers, making subcategories visually indistinguishable
+  // from parent categories (C86-08).
+  interface CategoryGroup {
+    label: string;
+    options: { id: string; label: string }[];
+  }
+  let categoryGroups = $state<CategoryGroup[]>([]);
+
+  // Fallback used if categories fail to load. Uses grouped format so
+  // the optgroup rendering works even in fallback mode (C74-01).
+  const FALLBACK_GROUPS: CategoryGroup[] = [
+    { label: '외식', options: [{ id: 'dining', label: '전체' }, { id: 'dining.restaurant', label: '일반음식점' }, { id: 'dining.cafe', label: '카페' }, { id: 'dining.fast_food', label: '패스트푸드' }, { id: 'dining.delivery', label: '배달' }] },
+    { label: '식료품/마트', options: [{ id: 'grocery', label: '전체' }, { id: 'grocery.supermarket', label: '대형마트' }, { id: 'grocery.traditional_market', label: '전통시장' }, { id: 'grocery.online_grocery', label: '온라인식품' }] },
+    { label: '편의점', options: [{ id: 'convenience_store', label: '전체' }] },
+    { label: '대중교통', options: [{ id: 'public_transit', label: '전체' }, { id: 'public_transit.bus', label: '버스' }, { id: 'public_transit.subway', label: '지하철' }, { id: 'public_transit.taxi', label: '택시' }] },
+    { label: '교통/주유', options: [{ id: 'transportation', label: '전체' }, { id: 'transportation.fuel', label: '주유' }, { id: 'transportation.parking', label: '주차' }, { id: 'transportation.toll', label: '고속도로통행료' }] },
+    { label: '통신', options: [{ id: 'telecom', label: '전체' }] },
+    { label: '보험', options: [{ id: 'insurance', label: '전체' }] },
+    { label: '온라인쇼핑', options: [{ id: 'online_shopping', label: '전체' }, { id: 'online_shopping.general', label: '종합쇼핑몰' }, { id: 'online_shopping.fashion', label: '패션' }] },
+    { label: '오프라인쇼핑', options: [{ id: 'offline_shopping', label: '전체' }, { id: 'offline_shopping.department_store', label: '백화점' }] },
+    { label: '의료', options: [{ id: 'medical', label: '전체' }, { id: 'medical.hospital', label: '병원' }, { id: 'medical.pharmacy', label: '약국' }] },
+    { label: '교육', options: [{ id: 'education', label: '전체' }, { id: 'education.academy', label: '학원' }, { id: 'education.books', label: '도서' }] },
+    { label: '여가/문화', options: [{ id: 'entertainment', label: '전체' }, { id: 'entertainment.movie', label: '영화' }, { id: 'entertainment.streaming', label: '스트리밍' }] },
+    { label: '여행', options: [{ id: 'travel', label: '전체' }, { id: 'travel.airline', label: '항공' }, { id: 'travel.hotel', label: '호텔/숙박' }, { id: 'travel.travel_agency', label: '여행사' }] },
+    { label: '구독', options: [{ id: 'subscription', label: '전체' }] },
+    { label: '공과금', options: [{ id: 'utilities', label: '전체' }, { id: 'utilities.electricity', label: '전기요금' }, { id: 'utilities.gas', label: '가스요금' }, { id: 'utilities.water', label: '수도요금' }, { id: 'utilities.apartment_mgmt', label: '관리비' }] },
+    { label: '기타', options: [{ id: 'uncategorized', label: '기타' }] },
   ];
+
+  // Flat fallback list for categoryMap construction (all IDs + labels)
+  const FALLBACK_CATEGORIES = FALLBACK_GROUPS.flatMap(g => g.options);
 
   let categoryMap = $state<Map<string, string>>(new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label])));
 
@@ -91,12 +72,17 @@
         // so fall back to the hardcoded list (C73-02).
         if (nodes.length === 0) {
           categoryOptions = FALLBACK_CATEGORIES;
+          categoryGroups = FALLBACK_GROUPS;
           categoryMap = new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label]));
           return;
         }
         const options: { id: string; label: string }[] = [];
+        const groups: CategoryGroup[] = [];
         const parentMap = new Map<string, string>();
         for (const node of nodes) {
+          const groupOptions: { id: string; label: string }[] = [
+            { id: node.id, label: '전체' },
+          ];
           options.push({ id: node.id, label: node.labelKo });
           if (node.subcategories) {
             for (const sub of node.subcategories) {
@@ -104,17 +90,21 @@
               // to avoid duplicate option values when a subcategory ID also
               // exists as a standalone top-level category.
               const fqId = `${node.id}.${sub.id}`;
-              options.push({ id: fqId, label: `  ${sub.labelKo}` });
+              options.push({ id: fqId, label: sub.labelKo });
+              groupOptions.push({ id: fqId, label: sub.labelKo });
               parentMap.set(fqId, node.id);
             }
           }
+          groups.push({ label: node.labelKo, options: groupOptions });
         }
         subcategoryToParent = parentMap;
         categoryOptions = options;
+        categoryGroups = groups;
         categoryMap = new Map(options.map(c => [c.id, c.label]));
       } catch {
         // Fall back to hardcoded list
         categoryOptions = FALLBACK_CATEGORIES;
+        categoryGroups = FALLBACK_GROUPS;
         categoryMap = new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label]));
       }
     })();
@@ -301,8 +291,12 @@
                         {tx.confidence < 0.5 ? 'border-amber-300 bg-amber-50 text-amber-700' : ''}
                         {tx.category === 'uncategorized' ? 'border-red-300 bg-red-50 text-red-700' : ''}"
                     >
-                      {#each categoryOptions as cat}
-                        <option value={cat.id}>{cat.label}</option>
+                      {#each categoryGroups as group}
+                        <optgroup label={group.label}>
+                          {#each group.options as opt}
+                            <option value={opt.id}>{opt.label}</option>
+                          {/each}
+                        </optgroup>
                       {/each}
                     </select>
                   </td>
