@@ -1,26 +1,30 @@
-# Review Aggregate -- 2026-04-22 (Cycle 81)
+# Review Aggregate -- 2026-04-22 (Cycle 82)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle81-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle82-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-80 per-agent and aggregate files
+- All cycle 1-81 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-80 findings are confirmed fixed except as noted below.
+All prior cycle 1-80 findings are confirmed fixed except as noted below. C81 findings verified this cycle:
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C80-01 | **FIXED** | `FileDropzone.svelte:141` now uses `existing.name === f.name && existing.size === f.size` for dedup (name+size instead of name-only). |
-| C80-02 | **FIXED** | `TransactionReview.svelte:289` now has `disabled={reoptimizing}` on the category `<select>`. |
-| C80-03 | **FIXED** | `csv.ts:158` now uses `Math.min(30, lines.length)` for generic header scan (was 20). |
-| C79-01 | **FIXED** | `TransactionReview.svelte:185` sets `rawCategory: undefined` on manual category override. |
-| C78-02 | OPEN (LOW) | FALLBACK_CATEGORIES leading-space labels in categoryMap (same as C75-02/C76-02). Search works correctly via `includes()`. |
+| C81-01 | **FIXED** | `store.svelte.ts:501` now captures `const snapshot = result;` after the null guard and uses `...snapshot` at line 569 instead of `...result!`. |
+| C81-02 | **FIXED** | All 10 bank adapters in `csv.ts` now scan `Math.min(30, lines.length)` for header detection. |
+| C81-03 | **FIXED** | `analyzer.ts:110` uses `categoryNodes ??` with nullish coalescing; `analyzeMultipleFiles` passes `categoryNodes` at line 284. |
+| C81-04 | **FIXED** | `CategoryBreakdown.svelte:51-84` now includes dot-notation subcategory keys in `CATEGORY_COLORS`. |
+| C80-01 | **FIXED** | `FileDropzone.svelte:141` uses name+size dedup. |
+| C80-02 | **FIXED** | `TransactionReview.svelte:289` has `disabled={reoptimizing}`. |
+| C80-03 | **FIXED** | `csv.ts:158` uses `Math.min(30, lines.length)` for generic header scan. |
+| C79-01 | **FIXED** | `TransactionReview.svelte:185` sets `rawCategory: undefined` on manual override. |
+| C78-02 | OPEN (LOW) | FALLBACK_CATEGORIES leading-space labels (same as C75-02/C76-02). |
 | C78-03 | **FIXED** | `parseGenericCSV` defaults `headerIdx = -1` and returns error when no header found. |
-| C77-03 | **FIXED** | `parseGenericCSV` header detection validates candidate rows against `HEADER_KEYWORDS` list. |
+| C77-03 | **FIXED** | `parseGenericCSV` header detection validates against `HEADER_KEYWORDS` list. |
 | C76-01 | **FIXED** | `loadFromStorage` migration loop treats `_v ?? 0` as version 0. |
 | C75-01 | **FIXED** | `isHTMLContent` reverted to boolean return. |
 | C75-02 | **FIXED** | `FALLBACK_CATEGORIES` now includes 29 subcategory entries. |
@@ -42,10 +46,11 @@ All prior cycle 1-80 findings are confirmed fixed except as noted below.
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C81-01 | MEDIUM | MEDIUM | `apps/web/src/lib/store.svelte.ts:558` | `reoptimize()` uses `...result!` spread at line 558, which reads the current reactive `$state` value, not a snapshot captured at function entry. If `result` changes between the initial null guard (line 489) and the final assignment (line 558) -- for example, if `analyze()` is called concurrently during the `await` at line 495 or 551 -- the spread would mix data from two different analysis runs. Practical risk is low because `loading=true` disables UI, but the pattern is unsafe. A snapshot (`const snapshot = result;` after the null guard) would be safer. |
-| C81-02 | LOW | HIGH | `apps/web/src/lib/parser/csv.ts` bank adapters (lines 288, 355, 421, 487, 552, 617, 683, 748, 814, 879) | Bank-specific CSV adapters scan only `Math.min(10, lines.length)` rows for header detection, while the generic parser scans `Math.min(30, lines.length)`. If a bank export has 10+ metadata rows before the header, the bank-specific adapter fails, then falls through to the generic parser which succeeds. The adapter's failure message is prepended to the result, confusing users who see an error message despite successful parsing. |
-| C81-03 | LOW | HIGH | `apps/web/src/lib/analyzer.ts:106` | `parseAndCategorize()` calls `loadCategories()` at line 106 even when a `MerchantMatcher` is provided (indicating the caller already loaded categories). In `analyzeMultipleFiles()` (line 266), the caller already fetched categories and built the matcher. The redundant `loadCategories()` call returns from cache, but creates an unnecessary `await` and makes the data flow unclear. |
-| C81-04 | LOW | MEDIUM | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:56-61` | `getCategoryColor()` tries dot-notation key, then leaf ID, then uncategorized fallback. But `CATEGORY_COLORS` does not include all dot-notation subcategory keys. For `utilities.apartment_mgmt`, the function tries the full key (not found), then leaf `apartment_mgmt` (not found), then falls back to gray. This makes some subcategory expenses appear as uncategorized gray in the chart. |
+| C82-01 | MEDIUM | MEDIUM | `apps/web/src/components/dashboard/TransactionReview.svelte:127-142` | `$effect` sync reads `analysisStore.generation` and `analysisStore.transactions` reactively from separate getter calls. The two reads are not atomic -- if `result` changes between them during Astro View Transition re-mounts, the effect may copy stale/inconsistent data. Reading `analysisStore.result` once into a snapshot and deriving both values from it would be safer. |
+| C82-02 | LOW | HIGH | `apps/web/src/components/dashboard/SavingsComparison.svelte:45-76` | `displayedSavings` animation reads its own reactive value as the animation start point. During rapid reoptimize clicks, two animation loops can overlap, causing the second animation to start from a mid-animation value rather than the previous target, creating a visible "dip" or "jump" in the displayed number. |
+| C82-03 | LOW | HIGH | `apps/web/src/lib/formatters.ts:8` + `SavingsComparison.svelte:217` | `formatWon` normalizes `-0` to `+0` but the sign-prefix logic in SavingsComparison uses `displayedSavings > 0`. During the count-up animation, small positive values from rounding (e.g., 1 won) cause a brief "+1원" flash before settling to "0원" when savings is actually 0. A threshold check (e.g., `>= 100`) would prevent this. |
+| C82-04 | LOW | MEDIUM | `apps/web/src/lib/parser/index.ts:17-68` | For CSV files, `parseFile` reads the file into an ArrayBuffer (~10MB) then decodes it with TextDecoder into a JavaScript string (~30MB UTF-16), creating ~40MB peak memory for a 10MB file. Using `file.text()` directly for CSV would avoid the intermediate ArrayBuffer. |
+| C82-05 | LOW | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte:70-71,90-108,119-125` | Re-confirmation of C18-01/C76-04/C79-02: direct DOM mutation via `textContent` and `classList.toggle` outside Svelte's reactivity system. No new regression, but the architectural risk persists. |
 
 ---
 
@@ -53,33 +58,37 @@ All prior cycle 1-80 findings are confirmed fixed except as noted below.
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| MerchantMatcher/taxonomy O(n) scan | C16-C81 | OPEN (MEDIUM) -- 21 cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21-C81 | OPEN (MEDIUM) -- 24 cycles agree |
-| persistToStorage bare catch / error handling | C62-C81 | PARTIALLY FIXED (C69 added 'error' kind) |
-| Annual savings simple *12 projection | C7-C81 | OPEN (LOW) -- 20 cycles agree |
-| date-utils unparseable passthrough | C56-C81 | PARTIALLY FIXED (C70 added warn) |
-| CSV DATE_PATTERNS divergence risk | C20-C81 | OPEN (LOW) -- 19 cycles agree |
-| Hardcoded fallback drift | C8-C81 | OPEN (LOW) -- 17 cycles agree (C76-05) |
-| BANK_SIGNATURES duplication | C7-C81 | OPEN (LOW) -- 16 cycles agree |
-| inferYear() timezone dependence | C8-C81 | OPEN (LOW) -- 14 cycles agree (60+ cycles deferred) |
-| Greedy optimizer O(m*n*k) quadratic | C67-C81 | OPEN (MEDIUM) -- 14 cycles agree |
-| CATEGORY_COLORS dark mode contrast | C4-C81 | OPEN (LOW) -- many cycles agree |
-| Multi-location bank data sync | C74-C81 | OPEN (LOW) -- 8 cycles noting all 5+ locations |
-| BOM handling redundancy | C73-C81 | OPEN (LOW) -- 9 cycles |
-| XLSX HTML-as-XLS double decode | C73-C81 | OPEN (LOW) -- 9 cycles (C75-01 simplified to boolean) |
-| FALLBACK_CATEGORIES incomplete subcategory coverage | C75-C81 | FIXED (C75-02 added missing entries) |
-| loadFromStorage version check lacks migration | C75-C81 | FIXED (C75-03 added framework; C76-01 fixed undefined-_v gap) |
-| VisibilityToggle direct DOM mutation | C18-C81 | OPEN (LOW) -- many cycles agree (C76-04/C79-02) |
-| Generic CSV header detection can misidentify metadata rows | C77-C81 | FIXED (C77-03 added keyword validation; C78-03 defaults to -1) |
-| SpendingSummary dismissed not reset on store.reset() | C76-C81 | FIXED (C78-01 added generation-based reset + clearStorage cleanup) |
-| TransactionReview changeCategory stale rawCategory | C79-C81 | FIXED (C79-01 added rawCategory: undefined on manual override) |
-| FileDropzone filename-only dedup | C80-C81 | FIXED (C80-01 now uses name+size) |
-| TransactionReview select not disabled during reoptimizing | C80-C81 | FIXED (C80-02 added disabled={reoptimizing}) |
-| CSV header scan limit (20) vs XLSX (30) | C80-C81 | FIXED (C80-03 both now 30) |
-| CATEGORY_COLORS missing subcategory keys | C81 | NEW (LOW) |
-| Bank adapter header scan limit (10) vs generic (30) | C81 | NEW (LOW) |
-| reoptimize() result! spread without snapshot | C81 | NEW (MEDIUM) |
-| parseAndCategorize redundant loadCategories | C81 | NEW (LOW) |
+| MerchantMatcher/taxonomy O(n) scan | C16-C82 | OPEN (MEDIUM) -- 22 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21-C82 | OPEN (MEDIUM) -- 25 cycles agree |
+| persistToStorage bare catch / error handling | C62-C82 | PARTIALLY FIXED (C69 added 'error' kind) |
+| Annual savings simple *12 projection | C7-C82 | OPEN (LOW) -- 21 cycles agree |
+| date-utils unparseable passthrough | C56-C82 | PARTIALLY FIXED (C70 added warn) |
+| CSV DATE_PATTERNS divergence risk | C20-C82 | OPEN (LOW) -- 20 cycles agree |
+| Hardcoded fallback drift | C8-C82 | OPEN (LOW) -- 18 cycles agree (C76-05) |
+| BANK_SIGNATURES duplication | C7-C82 | OPEN (LOW) -- 17 cycles agree |
+| inferYear() timezone dependence | C8-C82 | OPEN (LOW) -- 15 cycles agree (60+ cycles deferred) |
+| Greedy optimizer O(m*n*k) quadratic | C67-C82 | OPEN (MEDIUM) -- 15 cycles agree |
+| CATEGORY_COLORS dark mode contrast | C4-C82 | OPEN (LOW) -- many cycles agree |
+| Multi-location bank data sync | C74-C82 | OPEN (LOW) -- 9 cycles noting all 5+ locations |
+| BOM handling redundancy | C73-C82 | OPEN (LOW) -- 10 cycles |
+| XLSX HTML-as-XLS double decode | C73-C82 | OPEN (LOW) -- 10 cycles (C75-01 simplified to boolean) |
+| FALLBACK_CATEGORIES incomplete subcategory coverage | C75-C82 | FIXED (C75-02 added missing entries) |
+| loadFromStorage version check lacks migration | C75-C82 | FIXED (C75-03 added framework; C76-01 fixed undefined-_v gap) |
+| VisibilityToggle direct DOM mutation | C18-C82 | OPEN (LOW) -- many cycles agree (C76-04/C79-02/C82-05) |
+| Generic CSV header detection can misidentify metadata rows | C77-C82 | FIXED (C77-03 added keyword validation; C78-03 defaults to -1) |
+| SpendingSummary dismissed not reset on store.reset() | C76-C82 | FIXED (C78-01 added generation-based reset + clearStorage cleanup) |
+| TransactionReview changeCategory stale rawCategory | C79-C82 | FIXED (C79-01 added rawCategory: undefined on manual override) |
+| FileDropzone filename-only dedup | C80-C82 | FIXED (C80-01 now uses name+size) |
+| TransactionReview select not disabled during reoptimizing | C80-C82 | FIXED (C80-02 added disabled={reoptimizing}) |
+| CSV header scan limit (20) vs XLSX (30) | C80-C82 | FIXED (C80-03 both now 30) |
+| CATEGORY_COLORS missing subcategory keys | C81-C82 | FIXED (C81-04 added dot-notation keys) |
+| Bank adapter header scan limit (10) vs generic (30) | C81-C82 | FIXED (C81-02 all adapters now use 30) |
+| reoptimize() result! spread without snapshot | C81-C82 | FIXED (C81-01 now uses snapshot) |
+| parseAndCategorize redundant loadCategories | C81-C82 | FIXED (C81-03 passes categoryNodes from caller) |
+| SavingsComparison animation mid-value start | C82 | NEW (LOW) |
+| SavingsComparison "+1원" flash at zero | C82 | NEW (LOW) |
+| TransactionReview $effect non-atomic reads | C82 | NEW (MEDIUM) |
+| parseFile double memory for CSV | C82 | NEW (LOW) |
 
 ---
 
@@ -99,7 +108,7 @@ All prior cycle 1-80 findings are confirmed fixed except as noted below.
 | C8-07/C4-14/C66-07/C76-05 | LOW | build-stats.ts fallback values will drift |
 | C8-08/C67-02 | LOW | inferYear() timezone-dependent near midnight Dec 31 |
 | C8-09 | LOW | Test duplicates production code instead of testing it directly |
-| C18-01/C50-08/C76-04/C79-02 | LOW | VisibilityToggle $effect directly mutates DOM |
+| C18-01/C50-08/C76-04/C79-02/C82-05 | LOW | VisibilityToggle $effect directly mutates DOM |
 | C18-02 | LOW | Results page stat elements queried every effect run even on dashboard page |
 | C18-04 | LOW | xlsx.ts isHTMLContent only checks UTF-8 decoding of first 512 bytes |
 | C20-02/C25-03 | LOW | csv.ts DATE_PATTERNS/AMOUNT_PATTERNS divergence risk with date-utils.ts |
@@ -115,7 +124,7 @@ All prior cycle 1-80 findings are confirmed fixed except as noted below.
 | C64-03/C66-05/C67-03 | LOW | CATEGORY_NAMES_KO hardcoded map can drift from YAML taxonomy |
 | C66-08/C74-04/C77-04 | LOW | formatIssuerNameKo and CATEGORY_COLORS hardcoded maps will drift |
 | C67-01/C74-06 | MEDIUM | Greedy optimizer O(m*n*k) quadratic behavior |
-| C69-01/C73-01/C79-03 | LOW | SavingsComparison tiny savings animation flicker (informational) |
+| C69-01/C73-01/C79-03/C82-02 | LOW | SavingsComparison animation flicker / mid-value start |
 | C70-02 | LOW | cachedCategoryLabels not invalidated on Astro View Transitions |
 | C70-04 | LOW | csv.ts reimplements shared.ts instead of importing from it |
 | C71-05 | LOW | BANK_SIGNATURES array order affects detection accuracy for overlapping patterns |
@@ -125,11 +134,9 @@ All prior cycle 1-80 findings are confirmed fixed except as noted below.
 | C74-07 | LOW | AbortError vs genuine fetch failure not distinguished in error message |
 | C75-02/C76-02/C78-02 | LOW | FALLBACK_CATEGORIES leading-space labels cause browser-inconsistent dropdown rendering |
 | C77-02 | LOW | Annual savings projection uses simple *12 multiplication (labeled transparently) |
-| C78-02 | LOW | FALLBACK_CATEGORIES leading-space labels cause browser-inconsistent dropdown rendering |
-| C81-01 | MEDIUM | reoptimize() result! spread without snapshot |
-| C81-02 | LOW | Bank adapter header scan limit (10) vs generic (30) |
-| C81-03 | LOW | parseAndCategorize redundant loadCategories call |
-| C81-04 | LOW | CATEGORY_COLORS missing dot-notation subcategory keys |
+| C82-01 | MEDIUM | TransactionReview $effect non-atomic reactive reads |
+| C82-03 | LOW | SavingsComparison "+1원" flash at zero savings |
+| C82-04 | LOW | parseFile double memory for CSV (ArrayBuffer + decoded string) |
 
 ---
 
