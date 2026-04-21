@@ -232,12 +232,16 @@
            the minimum meaningful amount in Korean banking). Values below 100 during
            animation are just rounding artifacts that would cause a brief "+1원"
            flash before settling to "0원" (C82-03). -->
-      <!-- When savings is negative ("추가 비용"), show the absolute value since
-           the label already communicates the negative direction. Without this,
-           the display reads "추가 비용: -5,000원" which is redundant (C83-03). -->
-      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{opt.savingsVsSingleCard >= 0 && opt.savingsVsSingleCard >= 100 ? '+' : ''}{formatWon(opt.savingsVsSingleCard < 0 ? Math.abs(displayedSavings) : displayedSavings)}</div>
+      <!-- Always show the absolute value of the animated number since the
+           direction is communicated by the label ("추가 절약" vs "추가 비용").
+           Using Math.abs() unconditionally prevents the animated intermediate
+           value from contradicting the label during sign transitions (C91-01).
+           Previously, Math.abs was conditional on the final target's sign (C83-03),
+           but unconditional abs is correct because the label always determines
+           the direction and the number should always show magnitude. -->
+      <div class="text-3xl font-bold text-green-700 dark:text-green-400">{opt.savingsVsSingleCard >= 0 && opt.savingsVsSingleCard >= 100 ? '+' : ''}{formatWon(Math.abs(displayedSavings))}</div>
       <div class="mt-1 text-xs text-green-600 dark:text-green-400">
-        연간 약 {opt.savingsVsSingleCard >= 0 && opt.savingsVsSingleCard * 12 >= 100 ? '+' : ''}{formatWon(opt.savingsVsSingleCard < 0 ? Math.abs(displayedAnnualSavings) : displayedAnnualSavings)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
+        연간 약 {opt.savingsVsSingleCard >= 0 && opt.savingsVsSingleCard * 12 >= 100 ? '+' : ''}{formatWon(Math.abs(displayedAnnualSavings))} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
       </div>
       {#if savingsPct === Infinity}
         <!-- Defensive badge (C28-04): currently unreachable — see savingsPct comment -->
