@@ -224,7 +224,7 @@ function loadFromStorage(): AnalysisResult | null {
     if (typeof sessionStorage !== 'undefined') {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      const parsed = JSON.parse(raw);
+      let parsed = JSON.parse(raw);
       // Check schema version — log a warning on mismatch but continue
       // validation so we don't silently delete data that may still be
       // partially valid after an app upgrade (C74-02).
