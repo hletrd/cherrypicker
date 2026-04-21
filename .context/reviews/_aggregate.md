@@ -1,20 +1,20 @@
-# Review Aggregate -- 2026-04-22 (Cycle 79)
+# Review Aggregate -- 2026-04-22 (Cycle 80)
 
 **Source reviews (this cycle):**
-- `.context/reviews/2026-04-22-cycle79-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
+- `.context/reviews/2026-04-22-cycle80-comprehensive.md` (full re-read of all source files, fix verification, cross-file interaction analysis)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-78 per-agent and aggregate files
+- All cycle 1-79 per-agent and aggregate files
 
 ---
 
 ## Verification of Prior Cycle Fixes
 
-All prior cycle 1-78 findings are confirmed fixed except as noted below.
+All prior cycle 1-79 findings are confirmed fixed except as noted below.
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C78-01 | **FIXED** | `SpendingSummary.svelte` lines 13-20: `$effect` resets `dismissed = false` when generation changes. `clearStorage()` line 338 also removes `cherrypicker:dismissed-warning` from sessionStorage. |
+| C79-01 | **FIXED** | `TransactionReview.svelte` line 185 sets `rawCategory: undefined` on manual category override. |
 | C78-02 | OPEN (LOW) | FALLBACK_CATEGORIES leading-space labels in categoryMap (same as C75-02/C76-02). Search works correctly via `includes()`. |
 | C78-03 | **FIXED** | `parseGenericCSV` defaults `headerIdx = -1` and returns error when no header found. |
 | C77-03 | **FIXED** | `parseGenericCSV` header detection validates candidate rows against `HEADER_KEYWORDS` list. |
@@ -47,9 +47,9 @@ All prior cycle 1-78 findings are confirmed fixed except as noted below.
 
 | ID | Severity | Confidence | File | Description |
 |---|---|---|---|---|
-| C79-01 | MEDIUM | MEDIUM | `apps/web/src/components/dashboard/TransactionReview.svelte:172-195` | `changeCategory()` does not clear `rawCategory` when user manually changes category. The stale `rawCategory` (bank-provided category string) no longer matches the new category/subcategory assignment. Currently unused by optimizer, but persists in sessionStorage and could mislead future code. |
-| C79-02 | LOW | HIGH | `apps/web/src/components/ui/VisibilityToggle.svelte:70-126` | `$effect` directly mutates DOM classList and textContent instead of using Svelte reactive bindings. Known issue (C18-01/C50-08/C76-04). Functional but non-idiomatic. |
-| C79-03 | LOW | MEDIUM | `apps/web/src/components/dashboard/SavingsComparison.svelte:43-76` | `displayedAnnualSavings` initializes to 0, causing brief "0원" flash before count-up animation starts. Known cosmetic issue (C69-01/C73-01). |
+| C80-01 | MEDIUM | HIGH | `apps/web/src/components/upload/FileDropzone.svelte:138` | Duplicate-file detection uses filename only (`existing.name === f.name`). Two different credit card statements with the same filename (e.g., "statement.csv" from different months) are silently dropped. The user may not realize the second file is a different statement that should be included in multi-month analysis. |
+| C80-02 | LOW | MEDIUM | `apps/web/src/components/dashboard/TransactionReview.svelte:252-259` | Category `<select>` dropdowns are NOT disabled during reoptimization. If the user changes a category while reoptimization is in progress, that edit is lost — reoptimization result overwrites `editedTxs` from the captured call-time value. |
+| C80-03 | LOW | MEDIUM | `apps/web/src/lib/parser/csv.ts:158` vs `apps/web/src/lib/parser/xlsx.ts:365` | CSV generic parser scans up to 20 lines for header detection, while XLSX parser scans up to 30 rows. Some bank CSV exports may have more than 20 metadata rows. |
 
 ---
 
@@ -57,26 +57,29 @@ All prior cycle 1-78 findings are confirmed fixed except as noted below.
 
 | Finding | Flagged by Cycles | Current Status |
 |---|---|---|
-| MerchantMatcher/taxonomy O(n) scan | C16-C79 | OPEN (MEDIUM) -- 19 cycles agree |
-| cachedCategoryLabels/coreRules staleness | C21-C79 | OPEN (MEDIUM) -- 22 cycles agree |
-| persistToStorage bare catch / error handling | C62-C79 | PARTIALLY FIXED (C69 added 'error' kind) |
-| Annual savings simple *12 projection | C7-C79 | OPEN (LOW) -- 18 cycles agree |
-| date-utils unparseable passthrough | C56-C79 | PARTIALLY FIXED (C70 added warn) |
-| CSV DATE_PATTERNS divergence risk | C20-C79 | OPEN (LOW) -- 17 cycles agree |
-| Hardcoded fallback drift | C8-C79 | OPEN (LOW) -- 15 cycles agree (C76-05) |
-| BANK_SIGNATURES duplication | C7-C79 | OPEN (LOW) -- 14 cycles agree |
-| inferYear() timezone dependence | C8-C79 | OPEN (LOW) -- 12 cycles agree (60+ cycles deferred) |
-| Greedy optimizer O(m*n*k) quadratic | C67-C79 | OPEN (MEDIUM) -- 12 cycles agree |
-| CATEGORY_COLORS dark mode contrast | C4-C79 | OPEN (LOW) -- many cycles agree |
-| Multi-location bank data sync | C74-C79 | OPEN (LOW) -- 6 cycles noting all 5+ locations |
-| BOM handling redundancy | C73-C79 | OPEN (LOW) -- 7 cycles |
-| XLSX HTML-as-XLS double decode | C73-C79 | OPEN (LOW) -- 7 cycles (C75-01 simplified to boolean) |
-| FALLBACK_CATEGORIES incomplete subcategory coverage | C75-C79 | FIXED (C75-02 added missing entries) |
-| loadFromStorage version check lacks migration | C75-C79 | FIXED (C75-03 added framework; C76-01 fixed undefined-_v gap) |
-| VisibilityToggle direct DOM mutation | C18-C79 | OPEN (LOW) -- many cycles agree (C76-04/C79-02) |
-| Generic CSV header detection can misidentify metadata rows | C77-C79 | FIXED (C77-03 added keyword validation; C78-03 defaults to -1) |
-| SpendingSummary dismissed not reset on store.reset() | C76-C79 | FIXED (C78-01 added generation-based reset + clearStorage cleanup) |
-| TransactionReview changeCategory stale rawCategory | C79 | NEW (MEDIUM) |
+| MerchantMatcher/taxonomy O(n) scan | C16-C80 | OPEN (MEDIUM) -- 20 cycles agree |
+| cachedCategoryLabels/coreRules staleness | C21-C80 | OPEN (MEDIUM) -- 23 cycles agree |
+| persistToStorage bare catch / error handling | C62-C80 | PARTIALLY FIXED (C69 added 'error' kind) |
+| Annual savings simple *12 projection | C7-C80 | OPEN (LOW) -- 19 cycles agree |
+| date-utils unparseable passthrough | C56-C80 | PARTIALLY FIXED (C70 added warn) |
+| CSV DATE_PATTERNS divergence risk | C20-C80 | OPEN (LOW) -- 18 cycles agree |
+| Hardcoded fallback drift | C8-C80 | OPEN (LOW) -- 16 cycles agree (C76-05) |
+| BANK_SIGNATURES duplication | C7-C80 | OPEN (LOW) -- 15 cycles agree |
+| inferYear() timezone dependence | C8-C80 | OPEN (LOW) -- 13 cycles agree (60+ cycles deferred) |
+| Greedy optimizer O(m*n*k) quadratic | C67-C80 | OPEN (MEDIUM) -- 13 cycles agree |
+| CATEGORY_COLORS dark mode contrast | C4-C80 | OPEN (LOW) -- many cycles agree |
+| Multi-location bank data sync | C74-C80 | OPEN (LOW) -- 7 cycles noting all 5+ locations |
+| BOM handling redundancy | C73-C80 | OPEN (LOW) -- 8 cycles |
+| XLSX HTML-as-XLS double decode | C73-C80 | OPEN (LOW) -- 8 cycles (C75-01 simplified to boolean) |
+| FALLBACK_CATEGORIES incomplete subcategory coverage | C75-C80 | FIXED (C75-02 added missing entries) |
+| loadFromStorage version check lacks migration | C75-C80 | FIXED (C75-03 added framework; C76-01 fixed undefined-_v gap) |
+| VisibilityToggle direct DOM mutation | C18-C80 | OPEN (LOW) -- many cycles agree (C76-04/C79-02) |
+| Generic CSV header detection can misidentify metadata rows | C77-C80 | FIXED (C77-03 added keyword validation; C78-03 defaults to -1) |
+| SpendingSummary dismissed not reset on store.reset() | C76-C80 | FIXED (C78-01 added generation-based reset + clearStorage cleanup) |
+| TransactionReview changeCategory stale rawCategory | C79-C80 | FIXED (C79-01 added rawCategory: undefined on manual override) |
+| FileDropzone filename-only dedup | C80 | NEW (MEDIUM) |
+| TransactionReview select not disabled during reoptimizing | C80 | NEW (LOW) |
+| CSV header scan limit (20) vs XLSX (30) | C80 | NEW (LOW) |
 
 ---
 
@@ -121,12 +124,10 @@ All prior cycle 1-78 findings are confirmed fixed except as noted below.
 | C74-05 | LOW | ALL_BANKS in FileDropzone is 5th copy of bank list needing sync |
 | C74-07 | LOW | AbortError vs genuine fetch failure not distinguished in error message |
 | C75-02/C76-02/C78-02 | LOW | FALLBACK_CATEGORIES leading-space labels cause browser-inconsistent dropdown rendering |
-| C76-03/C78-01 | FIXED | SpendingSummary dismissal not reset on store.reset() -- NOW FIXED |
 | C77-02 | LOW | Annual savings projection uses simple *12 multiplication (labeled transparently) |
-| C78-03 | FIXED | parseGenericCSV defaults headerIdx=0 when no header keywords found -- NOW FIXED (defaults to -1) |
-| C79-01 | MEDIUM | TransactionReview changeCategory does not clear stale rawCategory on manual override |
-| C79-02 | LOW | VisibilityToggle $effect directly mutates DOM (same as C18-01/C76-04) |
-| C79-03 | LOW | SavingsComparison annual savings 0 flash before animation (same as C69-01/C73-01) |
+| C80-01 | MEDIUM | FileDropzone filename-only dedup silently drops different statements with same name |
+| C80-02 | LOW | TransactionReview category select not disabled during reoptimization |
+| C80-03 | LOW | CSV header scan limit 20 vs XLSX 30 |
 
 ---
 
