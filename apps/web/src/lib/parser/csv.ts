@@ -151,6 +151,12 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
     '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
   ];
+  // Keyword categories for header detection — a valid header row should contain
+  // keywords from at least 2 distinct categories (date, merchant, amount) to
+  // avoid matching summary table rows that only have amount keywords (C86-03).
+  const DATE_KEYWORDS = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
+  const MERCHANT_KEYWORDS = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
+  const AMOUNT_KEYWORDS = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
   // Default to -1 so we can detect when no valid header row was found.
   // Previously defaulted to 0, which would treat the first line as the
   // header even when it's a metadata row with no known header keywords (C78-03).
@@ -163,9 +169,17 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
       // Without this check, metadata rows (bank name, statement period) that
       // contain Korean text would be misidentified as the header row (C77-03).
       const hasHeaderKeyword = cells.some((c) => HEADER_KEYWORDS.includes(c.trim()));
+      // Additionally require keywords from at least 2 distinct categories
+      // (date, merchant, amount) to avoid matching summary table rows that
+      // only contain amount keywords like "이용금액, 승인금액" (C86-03).
       if (hasHeaderKeyword) {
-        headerIdx = i;
-        break;
+        const matchedCategories = [DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS]
+          .filter(catSet => cells.some((c) => catSet.has(c.trim())))
+          .length;
+        if (matchedCategories >= 2) {
+          headerIdx = i;
+          break;
+        }
       }
     }
   }

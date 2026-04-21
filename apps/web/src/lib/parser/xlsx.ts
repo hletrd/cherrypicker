@@ -361,15 +361,28 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
     '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
   ];
+  // Keyword categories for header detection — a valid header row should contain
+  // keywords from at least 2 distinct categories (date, merchant, amount) to
+  // avoid matching summary table rows that only have amount keywords (C86-05).
+  const xlsxDateKeywords = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
+  const xlsxMerchantKeywords = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
+  const xlsxAmountKeywords = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
 
   for (let i = 0; i < Math.min(30, rows.length); i++) {
     const row = rows[i] ?? [];
     const rowStrings = row.map((c) => String(c ?? '').trim());
     const matchCount = rowStrings.filter((c) => allHeaderKeywords.includes(c)).length;
+    // Require matchCount >= 2 AND keywords from at least 2 distinct categories
+    // to avoid matching summary rows with only amount keywords (C86-05).
     if (matchCount >= 2) {
-      headerRowIdx = i;
-      headers = rowStrings;
-      break;
+      const matchedCategories = [xlsxDateKeywords, xlsxMerchantKeywords, xlsxAmountKeywords]
+        .filter(catSet => rowStrings.some((c) => catSet.has(c)))
+        .length;
+      if (matchedCategories >= 2) {
+        headerRowIdx = i;
+        headers = rowStrings;
+        break;
+      }
     }
   }
 
