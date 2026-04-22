@@ -84,7 +84,14 @@ function findRule(rules: RewardRule[], tx: CategorizedTransaction): RewardRule |
 
   if (candidates.length === 0) return undefined;
 
-  return candidates.sort((a, b) => ruleSpecificity(b) - ruleSpecificity(a))[0];
+  // Secondary sort by index ensures deterministic ordering when two rules
+  // have equal specificity. Without this, Array.sort is not guaranteed
+  // stable across JS engines, causing non-deterministic rule selection (C1-12).
+  return candidates.sort((a, b) => {
+    const diff = ruleSpecificity(b) - ruleSpecificity(a);
+    if (diff !== 0) return diff;
+    return rules.indexOf(a) - rules.indexOf(b);
+  })[0];
 }
 
 type RewardCalcFn = (
