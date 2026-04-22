@@ -122,11 +122,10 @@
     for (const a of sorted) {
       const rawPct = (a.spending / totalSpending) * 100;
       const pct = Math.round(rawPct * 10) / 10;
-      // Use the raw (unrounded) percentage for the threshold decision so that
-      // values like 1.95% (which rounds to 2.0% visible) and 1.94% (which
-      // rounds to 1.9% hidden) are treated consistently — both below 2% raw
-      // and both grouped into "other". The displayed value uses the rounded pct.
-      if (rawPct < 2) {
+      // Use the rounded percentage for the threshold decision so the
+      // grouping matches the displayed value: a category showing 2.0%
+      // stays visible, while 1.9% goes into "other" (C89-02).
+      if (pct < 2) {
         others.push(a);
       } else {
         main.push({
