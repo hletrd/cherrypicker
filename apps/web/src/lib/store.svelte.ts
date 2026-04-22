@@ -353,7 +353,12 @@ function createAnalysisStore() {
   let result = $state<AnalysisResult | null>(loadFromStorage());
   let loading = $state(false);
   let error = $state<string | null>(null);
-  let generation = $state(0);
+  // Initialize generation to 1 when data is restored from sessionStorage so
+  // that TransactionReview's sync effect triggers on mount (1 !== 0). Without
+  // this, both generation and lastSyncedGeneration start at 0 after a page
+  // refresh, the condition `gen !== lastSyncedGeneration` is false, and
+  // editedTxs stays empty even though the store has transactions (C7-01).
+  let generation = $state(result !== null ? 1 : 0);
   // Set when sessionStorage persistence was partial (transactions truncated)
   // or failed entirely (quota exceeded). Reset on successful full save.
   // Only set the warning when we have evidence the data came from storage
