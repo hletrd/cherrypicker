@@ -225,6 +225,10 @@ export async function optimizeFromTransactions(
       const exclusions = new Set(rule.performanceExclusions);
       const qualifying = transactions
         .filter(tx =>
+          // Only positive amounts contribute to 전월실적 (gross spending convention).
+          // Including refunds (negative) or zero-amount rows would understate the
+          // user's performance, placing them in a lower tier with worse rewards (C1-01/C5-01).
+          tx.amount > 0 &&
           !exclusions.has(tx.category) &&
           !(tx.subcategory && exclusions.has(tx.subcategory)) &&
           !(tx.subcategory && exclusions.has(`${tx.category}.${tx.subcategory}`))

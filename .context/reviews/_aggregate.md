@@ -1,10 +1,10 @@
-# Review Aggregate -- Cycle 4 (2026-04-22)
+# Review Aggregate -- Cycle 5 (2026-04-22)
 
 **Source reviews (this cycle):**
-- `.context/reviews/cycle4-review.md` (1 new finding: LOW, fixed)
+- `.context/reviews/2026-04-22-cycle5-rpf-review.md` (1 new finding: MEDIUM, fixed)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-94 and cycle 1-3 per-agent and aggregate files
+- All cycle 1-94 and cycle 1-4 per-agent and aggregate files
 
 ---
 
@@ -23,17 +23,16 @@ All prior cycle 1-94 findings are confirmed fixed except as noted in the prior a
 | C89-01 classList.toggle without isConnected | **CONFIRMED FIXED** | VisibilityToggle uses `cached && cached.isConnected` guard |
 | C89-02 rawPct threshold uses unrounded value | **CONFIRMED FIXED** | CategoryBreakdown uses rounded `pct` for `< 2` threshold |
 | C2-01 buildCategoryTable includes refunds | **CONFIRMED FIXED** | `generator.ts:69` now skips `tx.amount <= 0` |
+| C3-01 buildCategoryTable summary row count | **CONFIRMED FIXED** | `generator.ts:119` uses `includedCount` |
+| C4-01 printSpendingSummary summary row count | **CONFIRMED FIXED** | `summary.ts:69` uses `includedCount` |
 
 ---
 
 ## New Findings (This Cycle)
 
-All new findings are LOW severity:
-
-| ID | Finding | File | Confidence | Status |
-|---|---|---|---|---|
-| C3-01 | buildCategoryTable summary row count includes skipped transactions | `packages/viz/src/report/generator.ts:119` | High | **FIXED** |
-| C4-01 | printSpendingSummary summary row count includes skipped transactions (same bug as C3-01, terminal path) | `packages/viz/src/terminal/summary.ts:65` | High | **FIXED** |
+| ID | Finding | Severity | File | Confidence | Status |
+|---|---|---|---|---|---|
+| C5-01 | performanceExclusions qualifying sum includes negative/zero amounts | MEDIUM | `apps/web/src/lib/analyzer.ts:226-232` | High | **FIXED** |
 
 ---
 
@@ -50,4 +49,4 @@ All new findings are LOW severity:
 
 ## Summary
 
-The codebase is stable after 94+ cycles of fixes. All gates pass. No new HIGH or MEDIUM findings. This cycle found C4-01, the same LOW-severity count-inconsistency bug as C3-01 but in the terminal summary path (`printSpendingSummary`) instead of the HTML report generator. The terminal summary used `transactions.length` in the total row, including skipped (negative/zero amount) transactions in the count, making it inconsistent with `grandTotal`. Fixed by tracking `includedCount` that only increments for transactions passing the filter, matching the C3-01 fix pattern. The remaining open items are all LOW-severity drift/maintenance concerns.
+This cycle found one MEDIUM-severity bug: the `performanceExclusions` qualifying sum in `optimizeFromTransactions` did not filter out negative/zero-amount transactions, causing 전월실적 (previous month performance) to understate when the user has refunds. This is the same class of bug as C1-01 but in the per-card exclusion path. Fixed by adding `tx.amount > 0` to the filter, matching the convention used everywhere else in the codebase. All gates pass.
