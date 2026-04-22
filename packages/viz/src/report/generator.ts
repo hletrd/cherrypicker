@@ -65,11 +65,13 @@ function buildSummary(result: OptimizationResult): string {
 function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabels?: Map<string, string>): string {
   const byCategory = new Map<string, { labelKo: string; total: number; count: number }>();
   let grandTotal = 0;
+  let includedCount = 0;
 
   for (const tx of transactions) {
     // Skip negative/zero amounts (refunds, balance inquiries) so category totals
     // reflect actual spending, matching the optimizer's positive-only filter (C2-01).
     if (tx.amount <= 0) continue;
+    includedCount++;
     const categoryKey = tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category;
     const existing = byCategory.get(categoryKey);
     if (existing) {
@@ -116,7 +118,7 @@ function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabe
         <tr class="highlight-row">
           <td>합계</td>
           <td class="right">${formatWon(grandTotal)}</td>
-          <td class="right">${transactions.length}건</td>
+          <td class="right">${includedCount}건</td>
           <td class="right">100.0%</td>
         </tr>
       </tbody>
