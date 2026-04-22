@@ -237,7 +237,12 @@ describe('multi-month transaction handling', () => {
       // matches the guard in analyzer.ts analyzeMultipleFiles().
       if (!tx.date || tx.date.length < 7) continue;
       const month = tx.date.slice(0, 7);
-      monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + Math.abs(tx.amount));
+      // Only accumulate positive amounts for monthlySpending to match Korean
+      // 전월실적 (gross spending) convention (C1-01/C6-01). Using Math.abs()
+      // would incorrectly include refunds as positive spending.
+      if (tx.amount > 0) {
+        monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
+      }
       monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
     }
 
@@ -281,11 +286,50 @@ describe('multi-month transaction handling', () => {
     expect(latestMonth).toBe('2026-02');
     expect(previousMonth).toBe('2026-01');
 
+    // Only accumulate positive amounts for monthlySpending to match Korean
+    // 전월실적 (gross spending) convention (C1-01/C6-01). Using Math.abs()
+    // would incorrectly include refunds as positive spending.
     const prevMonthSpending = txs
-      .filter(tx => tx.date.startsWith(previousMonth!))
-      .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+      .filter(tx => tx.date.startsWith(previousMonth!) && tx.amount > 0)
+      .reduce((sum, tx) => sum + tx.amount, 0);
 
     expect(prevMonthSpending).toBe(80000);
+  });
+
+  test('monthlyBreakdown excludes negative-amount transactions (refunds) from spending (C6-01)', () => {
+    // Refunds should NOT contribute to monthlySpending — Korean 전월실적
+    // counts gross spending only. A Math.abs() bug would include the
+    // -15000 refund as +15000, inflating January to 95000 instead of 80000.
+    const txs = [
+      makeTx('t1', '2026-01-15', 50000, 'dining'),
+      makeTx('t2', '2026-01-20', 30000, 'grocery'),
+      makeTx('t3', '2026-01-22', -15000, 'dining'),  // refund
+      makeTx('t4', '2026-02-10', 40000, 'dining'),
+    ];
+
+    const monthlySpending = new Map<string, number>();
+    const monthlyTxCount = new Map<string, number>();
+    for (const tx of txs) {
+      if (!tx.date || tx.date.length < 7) continue;
+      const month = tx.date.slice(0, 7);
+      if (tx.amount > 0) {
+        monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
+      }
+      monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
+    }
+
+    const breakdown = [...monthlySpending.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, spending]) => ({
+        month,
+        spending,
+        transactionCount: monthlyTxCount.get(month) ?? 0,
+      }));
+
+    expect(breakdown.length).toBe(2);
+    // January: 50000 + 30000 = 80000 (refund -15000 excluded from spending)
+    expect(breakdown[0]).toEqual({ month: '2026-01', spending: 80000, transactionCount: 3 });
+    expect(breakdown[1]).toEqual({ month: '2026-02', spending: 40000, transactionCount: 1 });
   });
 
   test('filtering to latest month preserves only latest transactions', () => {
