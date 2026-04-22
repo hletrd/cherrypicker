@@ -1,11 +1,10 @@
-# Review Aggregate -- Cycle 2 (2026-04-22)
+# Review Aggregate -- Cycle 3 (2026-04-22)
 
 **Source reviews (this cycle):**
-- `.context/reviews/cycle2-review.md` (1 new finding: LOW, fixed)
-- `.context/reviews/2026-04-22-cycle1-comprehensive.md` (4 new findings: all LOW, carried forward)
+- `.context/reviews/cycle3-review.md` (1 new finding: LOW, fixed)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-94 per-agent and aggregate files
+- All cycle 1-94 and cycle 1-2 per-agent and aggregate files
 
 ---
 
@@ -33,7 +32,7 @@ All new findings are LOW severity:
 
 | ID | Finding | File | Confidence | Status |
 |---|---|---|---|---|
-| C2-01 | buildCategoryTable includes negative/zero amounts in totals | `packages/viz/src/report/generator.ts:69` | High | **FIXED** |
+| C3-01 | buildCategoryTable summary row count includes skipped transactions | `packages/viz/src/report/generator.ts:119` | High | **FIXED** |
 
 ---
 
@@ -50,4 +49,4 @@ All new findings are LOW severity:
 
 ## Summary
 
-The codebase is stable after 94+ cycles of fixes. All gates pass. No new HIGH or MEDIUM findings. The one new finding (C2-01) was a LOW-severity bug in the HTML report generator that has been fixed. The remaining open items are all LOW-severity drift/maintenance concerns.
+The codebase is stable after 94+ cycles of fixes. All gates pass. No new HIGH or MEDIUM findings. The one new finding (C3-01) was a LOW-severity bug in the HTML report generator where the summary row count included skipped (negative/zero amount) transactions, making it inconsistent with the total amount. This has been fixed by tracking an `includedCount` that only increments for transactions passing the filter. The remaining open items are all LOW-severity drift/maintenance concerns.
