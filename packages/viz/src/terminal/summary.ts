@@ -28,6 +28,10 @@ export function printSpendingSummary(transactions: CategorizedTransaction[], cat
   let grandTotal = 0;
 
   for (const tx of transactions) {
+    // Skip zero/negative amounts (refunds, balance inquiries) — these don't
+    // contribute to spending and would distort category totals and grandTotal.
+    // Matches the filter applied by the optimizer and all CSV/PDF parsers.
+    if (tx.amount <= 0) continue;
     const categoryKey = tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category;
     const existing = byCategory.get(categoryKey);
     if (existing) {

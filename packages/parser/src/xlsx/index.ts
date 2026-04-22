@@ -225,6 +225,11 @@ function parseXLSXSheet(
       }
       continue;
     }
+    // Skip zero- and negative-amount rows (e.g., balance inquiries, declined
+    // transactions, refunds). These don't contribute to spending optimization
+    // and would inflate monthly spending totals (C42-01/C42-02). All other
+    // parsers (CSV, web CSV/XLSX/PDF) apply the same filter.
+    if (amount <= 0) continue;
 
     const tx = {
       date: parseDateToISO(dateRaw),

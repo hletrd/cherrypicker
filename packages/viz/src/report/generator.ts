@@ -67,6 +67,9 @@ function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabe
   let grandTotal = 0;
 
   for (const tx of transactions) {
+    // Skip negative/zero amounts (refunds, balance inquiries) so category totals
+    // reflect actual spending, matching the optimizer's positive-only filter (C2-01).
+    if (tx.amount <= 0) continue;
     const categoryKey = tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category;
     const existing = byCategory.get(categoryKey);
     if (existing) {
