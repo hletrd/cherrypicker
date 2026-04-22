@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRate, getIssuerColor, formatIssuerNameKo, getIssuerFromCardId } from '../../lib/formatters.js';
+  import { formatWon, formatRate, getIssuerColor, getIssuerTextColor, formatIssuerNameKo, getIssuerFromCardId } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   type SortKey = 'spending' | 'rate' | 'reward';
@@ -109,7 +109,7 @@
             <td class="py-3">
               <div class="flex flex-col gap-0.5">
                 <span
-                  class="inline-block rounded-full px-2 py-0.5 text-xs text-white w-fit"
+                  class="inline-block rounded-full px-2 py-0.5 text-xs {getIssuerTextColor(issuer)} w-fit"
                   style="background-color: {issuerColor}"
                 >
                   {a.assignedCardName}

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRate, formatRatePrecise, getIssuerColor, getIssuerFromCardId, formatSavingsValue } from '../../lib/formatters.js';
+  import { formatWon, formatRate, formatRatePrecise, getIssuerColor, getIssuerTextColor, getIssuerFromCardId, formatSavingsValue } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let opt = $derived(analysisStore.optimization);
@@ -193,7 +193,7 @@
         {#if opt.bestSingleCard.cardId}
           {@const issuer = getIssuerFromCardId(opt.bestSingleCard.cardId)}
           <span
-            class="rounded-full px-2 py-0.5 text-xs text-white"
+            class="rounded-full px-2 py-0.5 text-xs {getIssuerTextColor(issuer)}"
             style="background-color: {getIssuerColor(issuer)}"
           >
             {issuer.toUpperCase()}
@@ -288,7 +288,7 @@
               <tr class="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)]">
                 <td class="px-4 py-3">
                   <span
-                    class="inline-block rounded-full px-2 py-0.5 text-xs text-white"
+                    class="inline-block rounded-full px-2 py-0.5 text-xs {getIssuerTextColor(issuer)}"
                     style="background-color: {issuerColor}"
                   >
                     {card.cardName}

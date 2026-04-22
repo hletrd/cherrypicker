@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRate, formatRatePrecise, formatYearMonthKo, getIssuerColor, getIssuerFromCardId, formatIssuerNameKo, formatSavingsValue } from '../../lib/formatters.js';
+  import { formatWon, formatRate, formatRatePrecise, formatYearMonthKo, getIssuerColor, getIssuerTextColor, getIssuerFromCardId, formatIssuerNameKo, formatSavingsValue } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let opt = $derived(analysisStore.optimization);
@@ -82,7 +82,7 @@
             <td class="px-4 py-2.5 font-medium text-[var(--color-text)]">{a.categoryNameKo}</td>
             <td class="px-4 py-2.5">
               <span
-                class="inline-block rounded-full px-2 py-0.5 text-xs text-white"
+                class="inline-block rounded-full px-2 py-0.5 text-xs {getIssuerTextColor(issuer)}"
                 style="background-color: {getIssuerColor(issuer)}"
               >
                 {a.assignedCardName}
@@ -117,7 +117,7 @@
             <tr class="border-b border-[var(--color-border)] last:border-0">
               <td class="px-4 py-2.5">
                 <span
-                  class="inline-block rounded-full px-2 py-0.5 text-xs text-white"
+                  class="inline-block rounded-full px-2 py-0.5 text-xs {getIssuerTextColor(issuer)}"
                   style="background-color: {getIssuerColor(issuer)}"
                 >
                   {cr.cardName}

@@ -143,6 +143,16 @@ export function getIssuerColor(issuer: string): string {
 }
 
 /**
+ * Return the appropriate text color class for an issuer badge.
+ * Issuers with light backgrounds (kakao #fee500, jeju #ff6b00) need dark text
+ * to meet WCAG AA contrast; all others use white text (C1-03/C90-02).
+ */
+export function getIssuerTextColor(issuer: string): string {
+  const darkTextIssuers = new Set(['kakao', 'jeju']);
+  return darkTextIssuers.has(issuer) ? 'text-gray-900' : 'text-white';
+}
+
+/**
  * Format a date string to Korean year-month format.
  * Example: "2026-03-15" → "2026년 3월"
  * Used by SpendingSummary formatPeriod to avoid duplicating the
@@ -151,8 +161,8 @@ export function getIssuerColor(issuer: string): string {
 export function formatYearMonthKo(dateStr: string): string {
   const parts = dateStr.split('-');
   if (parts.length < 2) return '-';
-  const [y, m] = parts;
-  const mNum = parseInt(m!, 10);
+  const y = parts[0];
+  const mNum = parseInt(parts[1], 10);
   if (Number.isNaN(mNum)) return '-';
   return `${y}년 ${mNum}월`;
 }
@@ -164,9 +174,9 @@ export function formatYearMonthKo(dateStr: string): string {
 export function formatDateKo(dateStr: string): string {
   const parts = dateStr.split('-');
   if (parts.length !== 3) return '-';
-  const [y, m, d] = parts;
-  const mNum = parseInt(m!, 10);
-  const dNum = parseInt(d!, 10);
+  const y = parts[0];
+  const mNum = parseInt(parts[1], 10);
+  const dNum = parseInt(parts[2], 10);
   if (Number.isNaN(mNum) || Number.isNaN(dNum)) return '-';
   return `${y}년 ${mNum}월 ${dNum}일`;
 }
@@ -178,9 +188,8 @@ export function formatDateKo(dateStr: string): string {
 export function formatDateShort(dateStr: string): string {
   const parts = dateStr.split('-');
   if (parts.length !== 3) return '-';
-  const [, m, d] = parts;
-  const mNum = parseInt(m!, 10);
-  const dNum = parseInt(d!, 10);
+  const mNum = parseInt(parts[1], 10);
+  const dNum = parseInt(parts[2], 10);
   if (Number.isNaN(mNum) || Number.isNaN(dNum)) return '-';
   return `${mNum}/${dNum}`;
 }
