@@ -521,7 +521,11 @@ function createAnalysisStore() {
           // matches the guard in analyzer.ts getLatestMonth().
           if (!tx.date || tx.date.length < 7) continue;
           const month = tx.date.slice(0, 7);
-          monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
+          // Only accumulate positive amounts for monthlySpending to match
+          // Korean 전월실적 (gross spending) convention (C1-01).
+          if (tx.amount > 0) {
+            monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
+          }
           monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
         }
         const updatedMonthlyBreakdown = [...monthlySpending.entries()]
