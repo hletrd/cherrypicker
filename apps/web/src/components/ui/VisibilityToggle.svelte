@@ -67,8 +67,8 @@
     cachedDataEl = getOrRefreshElement(cachedDataEl, dataContentId);
     cachedEmptyEl = getOrRefreshElement(cachedEmptyEl, emptyStateId);
 
-    if (cachedDataEl) cachedDataEl.classList.toggle('hidden', !hasData);
-    if (cachedEmptyEl) cachedEmptyEl.classList.toggle('hidden', hasData);
+    if (cachedDataEl && cachedDataEl.isConnected) cachedDataEl.classList.toggle('hidden', !hasData);
+    if (cachedEmptyEl && cachedEmptyEl.isConnected) cachedEmptyEl.classList.toggle('hidden', hasData);
 
     // Only query stat elements if we have data and a valid data container
     // (i.e., we're on the results page). On the dashboard page these elements
