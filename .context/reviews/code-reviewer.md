@@ -1,89 +1,234 @@
-# Overall verdict
+# Code Review — cherrypicker monorepo
 
-**REQUEST CHANGES.** The recent parser work solves a real problem (HTML-as-`.xls` exports), but the repo still has multiple correctness failures that are worse than normal polish issues. The highest-risk problems are not stylistic: the reward engine is structurally incapable of honoring a large chunk of the rule data, and the parser/detection changes introduce silent misclassification and silent row loss.
+**Date:** 2026-04-22
+**Reviewer:** code-reviewer (Opus 4.6)
+**Scope:** All source files across packages/core, packages/parser, packages/rules, packages/viz, apps/web, tools/cli, tools/scraper (excluding node_modules, build output, data YAML)
 
-Brief positive note: the HTML-as-XLS path and broader header matching are directionally right, and the new total-row skipping in the core CSV adapters is useful. The rest of this review focuses on the blocking problems.
+## Review Summary
 
----
+**Files Reviewed:** ~55 source files
+**Total Issues:** 14
 
-## CRITICAL
-
-### 1) The reward engine drops fixed-amount / unit-based rules on the floor, so many cards will compute **0 or nonsense rewards**
-- **Where:** `packages/rules/src/types.ts:12-30`, `packages/rules/src/schema.ts:14-19`, `packages/core/src/calculator/reward.ts:24-26`, `packages/core/src/calculator/reward.ts:123-176`
-- **Concrete examples in data:** `packages/rules/data/cards/lotte/digiloca-auto.yaml:35-56`, `packages/rules/data/cards/kb/min-check.yaml:60-73`
-- **Why this is bad:** the schema only preserves `rate`, `monthlyCap`, and `perTransactionCap`. Fields like `fixedAmount` and `unit` are present in the rule data but are not represented in the types/schema, so Zod strips them. Worse, `rewardTierRateSchema` converts `rate: null` to `0` (`packages/rules/src/schema.ts:16`). For cards like `digiloca-auto`, that means a “100원/리터” or “150원/리터” reward becomes a plain zero-rate cashback rule.
-- **Impact:** a non-trivial part of `packages/rules/data/cards/**` cannot be evaluated correctly today; results for those cards are materially wrong, not just slightly off.
-- **Fix:** extend the rule model to preserve `fixedAmount`, `unit`, and any other non-rate reward semantics; add calculator branches for those modes; add regression tests that load one fixed-amount rule and assert non-zero reward output.
-
-### 2) `subcategory` exists in the card YAML, but the loader/optimizer/reward matcher ignore it, so subcategory-specific rewards collapse into broad category matches
-- **Where:** `packages/rules/src/types.ts:25-30`, `packages/rules/src/schema.ts:27-32`, `packages/core/src/optimizer/constraints.ts:13-16`, `packages/core/src/calculator/reward.ts:44-47`
-- **Concrete examples in data:** `packages/rules/data/cards/mg/plus-blue.yaml:32-68`
-- **Why this is bad:** many rule files distinguish `dining.restaurant` vs `dining.cafe` (represented as `category: dining` + `subcategory: ...`). The rule schema never preserves `subcategory`, so that information is discarded during load. Then the optimizer aggregates only by `tx.category`, and the reward engine matches only on `rule.category === category`.
-- **Impact:** category-specific cards are over-rewarded or mis-rewarded. In `mg/plus-blue`, restaurant and cafe rewards become indistinguishable, and the first `dining` rule wins.
-- **Fix:** add `subcategory?: string` to rule types/schema, carry `tx.subcategory` through constraint building, and match `(category, subcategory)` before falling back to category-only or wildcard rules.
+### By Severity
+- CRITICAL: 1 (must fix)
+- HIGH: 3 (should fix)
+- MEDIUM: 6 (consider fixing)
+- LOW: 4 (optional)
 
 ---
 
-## HIGH
+## Issues
 
-### 3) New bank detection signatures are dangerously over-broad; they will misclassify statements based on merchant names
-- **Where:** `packages/parser/src/detect.ts:51-106`, `apps/web/src/lib/parser/detect.ts:49-104`
-- **Examples that currently mis-detect:** merchant strings containing `CU`, `토스`, `MG`, or `JB` are enough to produce `cu`, `toss`, `mg`, or `jb` matches. I verified this with representative strings like `CU편의점 강남점`, `토스페이먼츠주식회사`, `메가MG`, and `JB타워점`.
-- **Why this is bad:** patterns like `/토스/`, `/MG/`, `/JB/`, and `/cu\b/i` are not bank signatures. They are common merchant/payment strings. On multi-line statement content, this is guaranteed to produce false positives.
-- **Amplifier:** the XLSX HTML path trusts the full-document bank hint without validation (`packages/parser/src/xlsx/index.ts:104-107`, `packages/parser/src/xlsx/index.ts:155-158`; web mirror at `apps/web/src/lib/parser/xlsx.ts:273-276`, `apps/web/src/lib/parser/xlsx.ts:314-315`). Once the HTML hint is wrong, the parser never re-checks against sheet headers.
-- **Fix:** remove generic abbreviations unless paired with bank-only context, require stronger co-signals (brand + statement header tokens), and treat HTML-derived bank hints as tentative until validated by headers.
+### [CRITICAL] Greedy optimizer O(n*m) re-calculation per transaction causes quadratic blowup on large card sets
 
-### 4) The browser parser and the core parser have already drifted apart; the same file can parse differently in web vs CLI
-- **Where:** `packages/parser/src/xlsx/adapters/index.ts:83-163` vs `apps/web/src/lib/parser/xlsx.ts:89-172`
-- **Concrete mismatch:** for `kakao`, `toss`, `kbank`, `bnk`, `dgb`, `suhyup`, `jb`, `kwangju`, `jeju`, `sc`, `mg`, `cu`, `kdb`, and `epost`, the browser column configs do not match the core configs. Example: `kakao` is `{ merchant: '이용처', amount: '이용금액' }` in core but `{ merchant: '가맹점명', amount: '거래금액' }` in web.
-- **Additional drift:** the core XLSX parser handles parenthesized negative amounts (`packages/parser/src/xlsx/index.ts:74-85`), while the browser XLSX parser does not (`apps/web/src/lib/parser/xlsx.ts:230-237`). Core CSV adapters also gained total-row skipping (`packages/parser/src/csv/kb.ts:70-74`, same pattern across adapters), but the browser CSV adapters still parse those rows (`apps/web/src/lib/parser/csv.ts:374-398`, `apps/web/src/lib/parser/csv.ts:437-460`, etc.).
-- **Impact:** web and CLI/server outputs are no longer trustworthy relative to each other.
-- **Fix:** stop maintaining a second parser fork in `apps/web/src/lib/parser/*`; extract shared pure parsing modules and consume them from both sides.
+**File:** `packages/core/src/optimizer/greedy.ts:132-139`
+**Confidence:** High
 
-### 5) The recent amount-handling changes now silently drop rows instead of surfacing parse errors, and they lose real charges in the checked-in `.xls` samples
-- **Where:** `packages/parser/src/csv/generic.ts:73-79`, `packages/parser/src/csv/generic.ts:184-185`, `packages/parser/src/xlsx/index.ts:218-229`, `apps/web/src/lib/parser/xlsx.ts:382-395`
-- **Why this is bad:** `parseAmount()` returns `0` for both legitimate zeroes and parse failures. The caller then treats `amount === 0` as “skip this row”. That converts malformed data into silent data loss.
-- **Concrete repo evidence:** the checked-in HTML-as-XLS files `202602.xls` and `202603.xls` contain `연회비` rows where `이용금액` is `0` but `수수료(이자)` carries the actual charge (10,000 / 30,000). The current parser does not read the fee column and will drop those rows entirely.
-- **Impact:** totals are understated, annual fees disappear, and bad parses leave no trace in `errors`.
-- **Fix:** distinguish “failed to parse” from numeric zero, emit errors for malformed rows, and explicitly handle fee/interest columns for statement formats that place charges there.
+**Issue:** In `scoreCardsForTransaction`, for every transaction, the optimizer calls `calculateCardOutput` twice per card (before and after push) to compute the marginal reward. `calculateCardOutput` runs the full reward calculation across all assigned transactions for that card. With N transactions and M cards, this is O(N * M * T) where T is the average number of transactions already assigned per card — yielding O(N^2 * M) total. For a user with 500 transactions and 10 cards, this means ~50,000 full reward recalculations.
 
-### 6) `excludeOnline` rules cannot work because the parser never populates `isOnline`, and the web re-optimizer hardcodes it to `false`
-- **Where:** parser transaction construction omits `isOnline` in `packages/parser/src/csv/generic.ts:187-190`, `packages/parser/src/xlsx/index.ts:231-244`, `packages/parser/src/pdf/index.ts:63-67`; the reward engine depends on it at `packages/core/src/calculator/reward.ts:137-139`; the web path hardcodes `isOnline: false` at `apps/web/src/lib/analyzer.ts:69-81`
-- **Concrete rules depending on it:** `packages/rules/data/cards/lotte/loca-for-shopping.yaml:43-49`, `packages/rules/data/cards/lotte/digiloca-auto.yaml:55-56`
-- **Impact:** offline-only rewards are applied to transactions that should be excluded, because “unknown” is effectively treated as “offline”.
-- **Fix:** either infer `isOnline` during parsing (PG/payment-gateway heuristics, bank channel fields, etc.) or remove/disable `excludeOnline` until the signal is real.
+**Concrete failure scenario:** A user uploads a 12-month statement with 1000+ transactions and selects 10 cards. The optimization takes multiple seconds on the main thread, freezing the web UI. With the web app running in the browser, this directly impacts UX.
 
-### 7) The repo currently does not typecheck cleanly
-- **Where:** `packages/core/src/categorizer/keywords-niche.ts:597` and `packages/core/src/categorizer/keywords-niche.ts:640` duplicate `자동차세`; `packages/core/src/categorizer/keywords-niche.ts:844` and `packages/core/src/categorizer/keywords-niche.ts:888` duplicate `면세점`; `apps/web/src/lib/categorizer-ai.ts:81` imports a CDN URL that TypeScript cannot resolve
-- **Verification:** `tsc --noEmit` reports `TS1117` for the duplicate keys and `TS2307` for the unresolved CDN import.
-- **Impact:** basic static verification is already broken, which makes the parser regressions above harder to catch before release.
-- **Fix:** remove duplicate object keys, and wrap the AI categorizer behind a typed local module or ambient declaration instead of a raw URL import.
+**Fix:** Instead of full recalculation, implement incremental reward tracking per card. Maintain running totals per rule-key (for cap tracking) and compute only the marginal reward for the new transaction against existing state. This reduces per-transaction scoring from O(T) to O(1) for the common case (no cap hit). Alternatively, consider running the optimizer in a Web Worker.
 
 ---
 
-## MEDIUM
+### [HIGH] Duplicate `applyMonthlyCap` function diverges from `calculatePercentageReward`
 
-### 8) The new short-date parsing is non-deterministic and will mis-year year-boundary statements
-- **Where:** `packages/parser/src/csv/generic.ts:56-67`, `packages/parser/src/xlsx/index.ts:62-67`, `apps/web/src/lib/parser/csv.ts:40-58`, `apps/web/src/lib/parser/xlsx.ts:218-223`
-- **Why this is bad:** formats like `1월 15일` or `03/25` are now forced into `new Date().getFullYear()`. That means the same statement parses differently depending on when you run the code, and January statements imported in the following year will be wrong.
-- **Fix:** infer the base year from statement metadata/header rows or neighboring full dates, and thread that context into the date parser instead of using wall-clock time.
+**File:** `packages/core/src/calculator/reward.ts:123-139` vs `packages/core/src/calculator/types.ts:46-67`
+**Confidence:** High
 
-### 9) The web app owns a full parser fork without any automated test surface
-- **Where:** `apps/web/package.json:6-9` (no test script), plus the large duplicated implementation under `apps/web/src/lib/parser/*`
-- **Why this is bad:** the parser drift in issue #4 is exactly what happens when a critical data parser is copy-pasted into the app with no parity tests.
-- **Fix:** either delete the fork and consume shared code, or add golden-file parity tests that assert browser-vs-core output equivalence for the same fixtures.
+**Issue:** There are two implementations of monthly cap logic. `calculatePercentageReward` in `types.ts` computes `raw = Math.floor(amount * rate)` and then applies the cap. `applyMonthlyCap` in `reward.ts` takes a pre-computed `rawReward` and applies the cap. While the cap logic is structurally identical, having two implementations creates a maintenance hazard: a bug fix applied to one will likely be missed in the other. Additionally, `calculateDiscount`, `calculatePoints`, and `calculateCashback` are all aliases for `calculatePercentageReward`, but `reward.ts` calls `applyMonthlyCap` instead of using the `calcFn` with its built-in cap logic — meaning the `calcFn` call at line 270/276 always passes `monthlyCap: null, currentMonthUsed: 0` and then re-applies the cap separately.
 
----
+**Concrete failure scenario:** A developer fixes an edge case in `calculatePercentageReward` (e.g., handling negative remaining cap), but the fix does not propagate to `applyMonthlyCap` because they are separate functions. Reward calculations silently diverge.
 
-## LOW
-
-### 10) The CLI command code is carrying type-level contortions instead of validating inputs at the boundary
-- **Where:** `tools/cli/src/commands/analyze.ts:39`, `tools/cli/src/commands/optimize.ts:61`, `tools/cli/src/commands/report.ts:67`
-- **Why this is bad:** the `Parameters<typeof parseStatement>[1] ...` cast is a smell, not a solution. It hides invalid `--bank` values instead of validating them.
-- **Fix:** validate CLI `bank` args against the actual `BankId` enum/union at parse time and fail fast with a user-facing error.
+**Fix:** Remove `applyMonthlyCap` from `reward.ts`. Instead, pass the real `monthlyCap` and `currentMonthUsed` directly to the `calcFn` (which is already `calculatePercentageReward`). This eliminates the duplicate cap logic and ensures all cap-handling code paths go through a single function.
 
 ---
 
-## Verification notes
-- I was able to run package-level TypeScript checks with `tsc --noEmit`; they fail on the issues in item #7.
-- I could not rerun the Bun test suite in this environment because `bun` is not installed here, so parser/runtime verification beyond static inspection is still partially blocked.
+### [HIGH] Server-side bank detection signature order differs from web-side, causing different detection results
+
+**File:** `packages/parser/src/detect.ts:10-107` vs `apps/web/src/lib/parser/detect.ts:8-105`
+**Confidence:** High
+
+**Issue:** The `BANK_SIGNATURES` arrays in the server-side and web-side detection modules are identical in content but duplicated — they are two separate arrays that must be maintained in lockstep. The server-side `detectCSVDelimiter` processes ALL lines in the file, while the web-side version (at `apps/web/src/lib/parser/detect.ts:175`) correctly limits to the first 30 lines for performance. This means the same file can produce different delimiter detection results on the server vs the browser for large files.
+
+**Concrete failure scenario:** A large CSV file with a comma-heavy header section but tab-delimited data section is parsed differently on the CLI (server-side, counts all commas) vs the web app (browser-side, counts only first 30 lines). The CLI selects comma as delimiter, producing garbled rows; the web app correctly selects tab.
+
+**Fix:** (1) Unify the `BANK_SIGNATURES` constant into a shared module (as noted in the C70-04 TODO in `csv.ts`). (2) Apply the 30-line limit to the server-side `detectCSVDelimiter` as well, matching the web-side optimization. The server-side version at `packages/parser/src/detect.ts:149` currently processes the entire file content.
+
+---
+
+### [HIGH] Server-side CSV parsers lack BOM stripping, silently failing on Windows-generated exports
+
+**File:** `packages/parser/src/csv/index.ts:29` (the `parseCSV` function)
+**Confidence:** High
+
+**Issue:** The web-side `parseCSV` (at `apps/web/src/lib/parser/csv.ts:969`) strips the UTF-8 BOM character (`﻿`) before processing. The server-side `parseCSV` does NOT strip the BOM. When a Windows-generated CSV file starts with a BOM, the first header cell becomes `﻿이용일` instead of `이용일`, causing `headers.indexOf('이용일')` to return -1. The parser falls through to the generic parser or fails entirely.
+
+**Concrete failure scenario:** A Korean user downloads a CSV statement from their bank on Windows, where the export includes a BOM. The CLI tool (`tools/cli`) parses it with the server-side parser and either returns 0 transactions or falls back to the generic parser with misaligned columns. The same file works fine when uploaded to the web app because the browser-side parser strips the BOM.
+
+**Fix:** Add BOM stripping at the top of the server-side `parseCSV` function: `const cleanContent = content.replace(/^﻿/, '');` and use `cleanContent` throughout. This matches the web-side fix already present in `apps/web/src/lib/parser/csv.ts:969`.
+
+---
+
+### [MEDIUM] `RewardConditions` index signature `[key: string]: unknown` weakens type safety
+
+**File:** `packages/rules/src/types.ts:28`
+**Confidence:** High
+
+**Issue:** The `RewardConditions` interface has `[key: string]: unknown` which allows arbitrary properties. This means `rule.conditions.anyTypo` compiles without error and silently returns `undefined` at runtime. The `rewardConditionsSchema` uses `.passthrough()` which also allows unknown keys through Zod validation. Together, these create a gap where typos in condition property names are not caught at compile time or validation time.
+
+**Concrete failure scenario:** A YAML file contains `excludeOnlie: true` (typo for `excludeOnline`). The Zod schema passes it through via passthrough. The `ruleConditionsMatch` function in `reward.ts` checks `rule.conditions?.excludeOnline` which is `undefined`, so the rule incorrectly applies to online transactions.
+
+**Fix:** (1) Remove `[key: string]: unknown` from the `RewardConditions` interface and list all known condition properties explicitly. (2) Change `.passthrough()` to `.strict()` in `rewardConditionsSchema` to reject unknown keys at validation time, forcing YAML authors to fix typos. (3) Add a Zod `refine` that warns on unrecognized keys if strict mode is too aggressive for forward compatibility.
+
+---
+
+### [MEDIUM] `inferYear` uses wall-clock time, producing inconsistent results across timezones
+
+**File:** `packages/parser/src/date-utils.ts:24-31` and `apps/web/src/lib/parser/date-utils.ts:35-43`
+**Confidence:** Medium
+
+**Issue:** `inferYear` uses `new Date()` which is timezone-dependent. The function determines whether a short date (MM/DD) belongs to the current or previous year based on whether it is more than 90 days in the future. On 2026-01-01 at 00:30 KST (UTC+9), `new Date()` in a UTC context returns 2025-12-31, causing the function to assign the date to 2025 instead of 2026.
+
+**Concrete failure scenario:** A user in Korea uploads a January statement late at night. The server runs in UTC. The `inferYear` function incorrectly assigns January transactions to the previous year, causing them to be excluded from the latest-month optimization.
+
+**Fix:** Use `Date.now()` with an explicit timezone offset, or pass a reference date as a parameter with a default of `new Date()`. For the server-side, consider using the file's metadata (e.g., the statement period) to infer the year rather than wall-clock time.
+
+---
+
+### [MEDIUM] `loadCardsData` retry-after-abort can produce a pending Promise that never resolves
+
+**File:** `apps/web/src/lib/cards.ts:237-240`
+**Confidence:** Medium
+
+**Issue:** After an AbortError, `loadCardsData` checks `if (result === undefined && cardsPromise)` and returns `cardsPromise`. However, if the new fetch also aborts before resolving, `cardsPromise` may have been reset to `null` inside the catch handler. The returned promise then resolves to `undefined` on the next await, and the caller gets `undefined` instead of the expected `CardsJson`.
+
+**Concrete failure scenario:** A component calls `loadCardsData()` during a rapid mount/unmount cycle. The first fetch aborts, a second fetch starts, but also aborts before resolving. The second call returns the second promise, which resolves to `undefined`. `getAllCardRules()` then returns `[]`, and the optimizer produces 0 rewards. The user sees "no card data available" despite valid data being on the server.
+
+**Fix:** Add a loop with a maximum retry count (e.g., 2) inside `loadCardsData` so that consecutive aborts do not silently return `undefined`. Alternatively, propagate the abort error to the caller so they can decide whether to retry.
+
+---
+
+### [MEDIUM] `CategoryTaxonomy.findCategory` iterates all keywords on every call — O(K) per match where K is total keyword count
+
+**File:** `packages/core/src/categorizer/taxonomy.ts:58-111`
+**Confidence:** Medium
+
+**Issue:** The `findCategory` method performs three sequential full scans of `keywordMap`: exact match (O(1) via Map.get), then substring match (O(K*L) where K is keyword count and L is merchant name length), then fuzzy match (same). The substring and fuzzy scans iterate all entries. For the 394KB keywords file, this is potentially thousands of entries per transaction.
+
+**Concrete failure scenario:** Categorizing 500 transactions from a statement, each with a merchant name that doesn't match exactly, triggers 1000+ full keyword map scans. On a mobile device, this adds measurable latency to the analysis step.
+
+**Fix:** Pre-build a trie or Aho-Corasick automaton from the keyword map for efficient substring matching. Short term, cache the Map entries as an array at construction time (avoiding iterator overhead) and consider early termination when a high-confidence match is found.
+
+---
+
+### [MEDIUM] `buildStats.ts` hardcodes fallback card counts that silently drift from reality
+
+**File:** `apps/web/src/lib/build-stats.ts:16-18`
+**Confidence:** High
+
+**Issue:** The `readCardStats` function hardcodes fallback values (`totalCards: 683`, `totalIssuers: 24`, `totalCategories: 45`). When `cards.json` is unavailable at build time, these stale numbers are shown to users. As cards are added or removed, these numbers silently diverge from the actual data.
+
+**Concrete failure scenario:** After 20 new cards are added to the YAML files, the landing page still shows "683 cards" until someone manually updates the fallback values. Users see incorrect card counts.
+
+**Fix:** Remove the hardcoded fallbacks. If `cards.json` is unavailable at build time, fail the build rather than showing incorrect numbers. Alternatively, read the count from the YAML file directory at build time (the build script has filesystem access).
+
+---
+
+### [MEDIUM] `CATEGORY_NAMES_KO` in greedy.ts is a manually maintained duplicate of the YAML taxonomy
+
+**File:** `packages/core/src/optimizer/greedy.ts:11-86`
+**Confidence:** High
+
+**Issue:** The `CATEGORY_NAMES_KO` map duplicates the Korean labels from `packages/rules/data/categories.yaml`. The code has a TODO comment (C64-03) acknowledging this drift risk. When a new category is added to the YAML taxonomy, the optimizer's label map must be updated in lockstep or the new category will display as its English ID.
+
+**Concrete failure scenario:** A new category `tax_payment` is added to `categories.yaml` with label `세금납부`. The optimizer displays "tax_payment" instead of "세금납부" in the CLI output because `CATEGORY_NAMES_KO` was not updated.
+
+**Fix:** Import the category labels from the rules package at runtime (already done in the web app via `buildCategoryLabelMap`). For CLI usage, load the labels from the YAML taxonomy file at startup. This is acknowledged in the TODO comment — the fix is to prioritize it.
+
+---
+
+### [LOW] `formatWon` normalizes negative zero with a no-op
+
+**File:** `packages/viz/src/terminal/summary.ts:8`, `packages/viz/src/terminal/comparison.ts:7`, `apps/web/src/lib/formatters.ts:8`
+**Confidence:** High
+
+**Issue:** The `formatWon` function contains `if (amount === 0) amount = 0;`. In JavaScript, `-0 === 0` is `true`, so this reassignment is a no-op — it does NOT convert `-0` to `0`. To normalize negative zero, you need `amount = amount + 0` or `Object.is(amount, -0) ? 0 : amount`. However, since `amount` arrives as a `number` (not from JSON parse which can produce -0), and all arithmetic in the codebase produces positive zero, this is not a functional bug — just a misleading comment/intent mismatch.
+
+**Concrete failure scenario:** Unlikely in practice. If a calculation somehow produced `-0` (e.g., `0 * -1`), the current code would NOT normalize it, and `toLocaleString` would render "0원" anyway (most locales do not distinguish -0).
+
+**Fix:** Either remove the comment and the no-op line (it does nothing), or change it to `if (Object.is(amount, -0)) amount = 0;` to correctly handle the edge case.
+
+---
+
+### [LOW] `getCalcFn` default case returns `calculateDiscount` for unknown reward types
+
+**File:** `packages/core/src/calculator/reward.ts:108-110`
+**Confidence:** Medium
+
+**Issue:** The `default` case in `getCalcFn` returns `calculateDiscount` when an unknown reward type is encountered. This silently treats unrecognized types as discounts, which could produce incorrect reward calculations if a new type is added to the YAML schema but not to this switch statement.
+
+**Concrete failure scenario:** A new reward type `"mileage_special"` is added to the YAML schema and processed by the optimizer. It falls through to the default case and is calculated as a discount, potentially producing incorrect amounts if the mileage valuation differs from the discount rate.
+
+**Fix:** Change the default case to log a warning and return a no-op function (returning 0 reward), or throw an error for truly unknown types. This makes misconfiguration visible rather than silent.
+
+---
+
+### [LOW] Web-side CSV parser duplicates server-side bank adapter code
+
+**File:** `apps/web/src/lib/parser/csv.ts:288-944` vs `packages/parser/src/csv/` (10 files)
+**Confidence:** High
+
+**Issue:** The web-side CSV parser contains full copies of all 10 bank adapters (hyundai, kb, samsung, etc.) within a single 1030-line file. The server-side versions are in separate files under `packages/parser/src/csv/`. The two codebases have already diverged in minor ways (the web side has BOM stripping, the server side does not; header scan limits differ). This is acknowledged in the C70-04 comment in `csv.ts`.
+
+**Concrete failure scenario:** A bug fix applied to `packages/parser/src/csv/kb.ts` is not applied to the web-side `kbAdapter` in `apps/web/src/lib/parser/csv.ts`. The same KB card statement parses correctly on the CLI but fails in the web app.
+
+**Fix:** As noted in the TODO, the long-term fix is a shared module that works in both Bun and browser environments. Short-term, add a comment at the top of each duplicated section pointing to the canonical server-side implementation, so maintainers know to update both.
+
+---
+
+### [LOW] `isValidISODate` does not validate the date is actually valid (e.g., accepts "2026-02-31")
+
+**File:** `apps/web/src/lib/parser/date-utils.ts:148-150` and `packages/parser/src/date-utils.ts` (missing)
+**Confidence:** Low
+
+**Issue:** `isValidISODate` only checks the format `^\d{4}-\d{2}-\d{2}$` but does not validate that the date is actually valid (e.g., 2026-02-31 passes). The `parseDateStringToISO` function uses `isValidDayForMonth` to reject impossible dates during parsing, but if an impossible date somehow makes it into the data (e.g., from an XLSX serial number that bypasses validation), `isValidISODate` would not catch it.
+
+**Concrete failure scenario:** An XLSX file contains a serial date number that SheetJS parses as Feb 31 in a non-leap year. The serial date validation path catches this, but if a future code change bypasses that validation, the invalid date would pass `isValidISODate` and be treated as a valid transaction date.
+
+**Fix:** Extend `isValidISODate` to also check that the date is calendar-valid using `isValidDayForMonth`. This is a defense-in-depth measure.
+
+---
+
+## Positive Observations
+
+1. **Excellent cap tracking and rollback logic** in `packages/core/src/calculator/reward.ts:314-319`. The code correctly rolls back the rule-level monthly-used tracker when the global cap clips a reward, preventing cap double-counting. This is a subtle correctness concern that was handled well.
+
+2. **Robust sessionStorage persistence** in `apps/web/src/lib/store.svelte.ts`. The store handles quota errors, AbortError, schema migration, version tracking, and truncation with appropriate warnings. This is production-quality resilience.
+
+3. **Defensive `console.debug` in ILP stub** at `packages/core/src/optimizer/ilp.ts:48`. Using `console.debug` (not `console.warn`) for the ILP fallback is the right choice — it is informational, not a problem.
+
+4. **Consistent use of `Math.round(parseFloat(...))`** across all parsers for amount parsing. This correctly handles Korean Won's integer-only amounts and avoids the truncation bugs that `parseInt` would introduce.
+
+5. **Well-structured Zod schemas** in `packages/rules/src/schema.ts`. The `.refine()` on `rewardTierRateSchema` enforcing mutual exclusivity of rate and fixedAmount is a good schema-level constraint that prevents misconfiguration.
+
+6. **Comprehensive error propagation** in the CSV parser chain. Bank-specific adapter failures are caught and reported in the result, with fallback to the generic parser. This is the right approach — never silently lose data.
+
+7. **BOM handling on the web side** at `apps/web/src/lib/parser/csv.ts:969`. The UTF-8 BOM strip is a real-world concern for Korean bank exports, and it was handled correctly on the web side.
+
+---
+
+## Recommendation
+
+**REQUEST CHANGES**
+
+The CRITICAL issue (quadratic optimizer performance) directly impacts the web app's usability for real-world statement sizes. The HIGH issues (duplicate cap logic, BOM stripping inconsistency, and server/web detection divergence) are correctness risks that should be addressed before the next release. The MEDIUM issues are maintainability concerns that will compound over time if not addressed.
+
+### Priority order for fixes:
+1. CRITICAL: Optimizer performance (consider Web Worker or incremental tracking)
+2. HIGH: BOM stripping in server-side CSV parser (one-line fix)
+3. HIGH: Unify `applyMonthlyCap` with `calculatePercentageReward`
+4. HIGH: Unify server/web bank detection and delimiter detection
+5. MEDIUM: Address `RewardConditions` type safety
+6. MEDIUM: Replace `CATEGORY_NAMES_KO` with taxonomy-driven labels
