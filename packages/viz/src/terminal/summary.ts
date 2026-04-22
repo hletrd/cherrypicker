@@ -26,12 +26,14 @@ export function printSpendingSummary(transactions: CategorizedTransaction[], cat
   // Aggregate by category
   const byCategory = new Map<string, CategorySummary>();
   let grandTotal = 0;
+  let includedCount = 0;
 
   for (const tx of transactions) {
     // Skip zero/negative amounts (refunds, balance inquiries) — these don't
     // contribute to spending and would distort category totals and grandTotal.
     // Matches the filter applied by the optimizer and all CSV/PDF parsers.
     if (tx.amount <= 0) continue;
+    includedCount++;
     const categoryKey = tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category;
     const existing = byCategory.get(categoryKey);
     if (existing) {
@@ -61,8 +63,10 @@ export function printSpendingSummary(transactions: CategorizedTransaction[], cat
     table.push([row.labelKo, formatWon(row.total), String(row.count), `${pct}%`]);
   }
 
-  // Total row
-  table.push(['합계', formatWon(grandTotal), String(transactions.length), '100.0%']);
+  // Total row — use includedCount instead of transactions.length so the count
+  // reflects only the positive-amount transactions that contributed to grandTotal,
+  // matching the fix applied to the HTML report generator (C3-01/C4-01).
+  table.push(['합계', formatWon(grandTotal), String(includedCount), '100.0%']);
 
   console.log('\n지출 내역 요약');
   console.log('='.repeat(60));

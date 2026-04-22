@@ -1,10 +1,10 @@
-# Review Aggregate -- Cycle 3 (2026-04-22)
+# Review Aggregate -- Cycle 4 (2026-04-22)
 
 **Source reviews (this cycle):**
-- `.context/reviews/cycle3-review.md` (1 new finding: LOW, fixed)
+- `.context/reviews/cycle4-review.md` (1 new finding: LOW, fixed)
 
 **Prior cycle reviews (still relevant):**
-- All cycle 1-94 and cycle 1-2 per-agent and aggregate files
+- All cycle 1-94 and cycle 1-3 per-agent and aggregate files
 
 ---
 
@@ -33,6 +33,7 @@ All new findings are LOW severity:
 | ID | Finding | File | Confidence | Status |
 |---|---|---|---|---|
 | C3-01 | buildCategoryTable summary row count includes skipped transactions | `packages/viz/src/report/generator.ts:119` | High | **FIXED** |
+| C4-01 | printSpendingSummary summary row count includes skipped transactions (same bug as C3-01, terminal path) | `packages/viz/src/terminal/summary.ts:65` | High | **FIXED** |
 
 ---
 
@@ -49,4 +50,4 @@ All new findings are LOW severity:
 
 ## Summary
 
-The codebase is stable after 94+ cycles of fixes. All gates pass. No new HIGH or MEDIUM findings. The one new finding (C3-01) was a LOW-severity bug in the HTML report generator where the summary row count included skipped (negative/zero amount) transactions, making it inconsistent with the total amount. This has been fixed by tracking an `includedCount` that only increments for transactions passing the filter. The remaining open items are all LOW-severity drift/maintenance concerns.
+The codebase is stable after 94+ cycles of fixes. All gates pass. No new HIGH or MEDIUM findings. This cycle found C4-01, the same LOW-severity count-inconsistency bug as C3-01 but in the terminal summary path (`printSpendingSummary`) instead of the HTML report generator. The terminal summary used `transactions.length` in the total row, including skipped (negative/zero amount) transactions in the count, making it inconsistent with `grandTotal`. Fixed by tracking `includedCount` that only increments for transactions passing the filter, matching the C3-01 fix pattern. The remaining open items are all LOW-severity drift/maintenance concerns.
