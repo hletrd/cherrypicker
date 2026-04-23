@@ -251,9 +251,11 @@ test.describe('Dashboard', () => {
     // `.first()` — "항목별 지출" could match the heading AND a sub-heading
     // in SpendingSummary or OptimalCardMap on some states (C7E-bucket-A).
     await expect(page.getByText('항목별 지출').first()).toBeVisible();
-    // At least one category should be visible
-    const categoryRows = page.locator('[role="row"]');
-    await expect(categoryRows.first()).toBeVisible();
+    // CategoryBreakdown uses a custom div layout (not <tr>/[role="row"]);
+    // verify the category label row via the per-assignment category name
+    // that appears in OptimalCardMap (which IS rendered on the dashboard
+    // under the '항목별 추천 카드' heading) (C7E-bucket-A).
+    await expect(page.getByText('공과금').first()).toBeVisible();
   });
 
   test('shows savings comparison', async ({ page }) => {
@@ -442,13 +444,11 @@ test.describe('Empty states', () => {
     // On the empty dashboard, all Svelte islands live inside a hidden
     // container and never hydrate until VisibilityToggle unhides them —
     // so waitForFunction(astro-island:not([ssr])) would time out (C7E-B1).
-    // Rely on the built-in auto-retry of the toBeVisible assertion instead.
-    // Multiple components each render the same empty-state copy (dashboard
-    // page container + SpendingSummary empty + SavingsComparison empty) —
-    // scope the assertion via .first() (C7E-bucket-A).
-    await expect(
-      page.getByText('아직 분석한 내역이 없어요').first().or(page.getByText('아직 비교 데이터가 없어요').first())
-    ).toBeVisible({ timeout: 10_000 });
+    // Multiple components render their own empty-state copy — assert on
+    // the visible empty-state container on the page wrapper directly via
+    // its id #dashboard-empty-state (C7E-bucket-A).
+    await expect(page.locator('#dashboard-empty-state')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#dashboard-empty-state')).toContainText('아직 분석 결과가 없어요');
   });
 
   test('results empty state shows CTA', async ({ page }) => {
