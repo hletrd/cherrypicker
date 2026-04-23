@@ -317,7 +317,7 @@
   }
 </script>
 
-<div class="flex flex-col gap-5">
+<div class="flex flex-col gap-5" aria-busy={uploadStatus === 'uploading'}>
 
   <!-- Step indicator — a stepper is an ordered list with aria-current="step"
        on the active item per WAI-ARIA APG; role="progressbar" was incorrect
