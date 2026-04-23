@@ -213,6 +213,9 @@
   <div class="mt-4">
     <button
       class="flex w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-[var(--color-bg)]"
+      aria-expanded={expanded}
+      aria-controls="tx-review-panel"
+      data-testid="tx-review-toggle"
       onclick={() => (expanded = !expanded)}
     >
       <span class="flex items-center gap-2">
@@ -231,7 +234,7 @@
     </button>
 
     {#if expanded}
-      <div class="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+      <div id="tx-review-panel" data-testid="tx-review-panel" class="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
         <!-- Controls bar -->
         <div class="flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] p-3">
           <div class="relative flex-1 min-w-[150px]">
@@ -257,9 +260,10 @@
           {/if}
         </div>
 
-        <!-- Transaction list -->
-        <div class="max-h-[400px] overflow-y-auto">
-          <table class="w-full text-xs">
+        <!-- Transaction list — overflow-x-auto lets narrow viewports scroll
+             horizontally instead of overflowing the dashboard (C6UI-26). -->
+        <div class="max-h-[400px] overflow-x-auto overflow-y-auto">
+          <table class="w-full min-w-max text-xs">
             <thead class="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
               <tr class="text-left text-[var(--color-text-muted)]">
                 <th class="px-3 py-2 font-medium">날짜</th>
@@ -286,10 +290,10 @@
                       disabled={reoptimizing}
                       value={tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category}
                       aria-label={tx.merchant + " 카테고리"}
+                      data-testid={`tx-category-select-${tx.id}`}
                       onchange={(e) => changeCategory(tx.id, (e.target as HTMLSelectElement).value)}
                       class="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-xs outline-none focus:border-[var(--color-primary)] cursor-pointer
-                        {tx.confidence < 0.5 ? 'border-amber-300 bg-amber-50 text-amber-700' : ''}
-                        {tx.category === 'uncategorized' ? 'border-red-300 bg-red-50 text-red-700' : ''}"
+                        {tx.category === 'uncategorized' ? 'border-red-300 bg-red-50 text-red-700' : tx.confidence < 0.5 ? 'border-amber-300 bg-amber-50 text-amber-700' : ''}"
                     >
                       {#each categoryGroups as group}
                         <optgroup label={group.label}>

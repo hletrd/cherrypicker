@@ -215,7 +215,9 @@
         체리피킹 혜택
       </div>
       <div class="text-3xl font-bold text-[var(--color-primary)]">{formatWon(opt.totalReward)}</div>
-      <div class="mt-1 text-xs text-blue-500 dark:text-blue-400">
+      <!-- text-blue-600 on from-blue-50/-100 gradient = 5.17:1 (passes WCAG AA
+           4.5:1); text-blue-500 was 4.14:1 (fails) — C6UI-22. -->
+      <div class="mt-1 text-xs text-blue-600 dark:text-blue-300">
         실효 혜택률 {formatRatePrecise(opt.effectiveRate)}
       </div>
       <div class="mt-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
