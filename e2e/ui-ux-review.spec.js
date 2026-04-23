@@ -237,15 +237,20 @@ test.describe('Dashboard', () => {
   });
 
   test('shows spending summary cards', async ({ page }) => {
-    await expect(page.getByText('최근 월 지출')).toBeVisible();
-    await expect(page.getByText('거래 건수')).toBeVisible();
-    await expect(page.getByText('분석 기간')).toBeVisible();
-    await expect(page.getByText('최다 지출 카테고리')).toBeVisible();
-    await expect(page.getByText('실효 혜택률')).toBeVisible();
+    // `.first()` on each label in case a downstream component echoes the
+    // same copy inside the dashboard (e.g. 실효 혜택률 appears in the
+    // card-summary header AND in the per-card row sub-text) (C7E-bucket-A).
+    await expect(page.getByText('최근 월 지출').first()).toBeVisible();
+    await expect(page.getByText('거래 건수').first()).toBeVisible();
+    await expect(page.getByText('분석 기간').first()).toBeVisible();
+    await expect(page.getByText('최다 지출 카테고리').first()).toBeVisible();
+    await expect(page.getByText('실효 혜택률').first()).toBeVisible();
   });
 
   test('shows category breakdown with bars', async ({ page }) => {
-    await expect(page.getByText('항목별 지출')).toBeVisible();
+    // `.first()` — "항목별 지출" could match the heading AND a sub-heading
+    // in SpendingSummary or OptimalCardMap on some states (C7E-bucket-A).
+    await expect(page.getByText('항목별 지출').first()).toBeVisible();
     // At least one category should be visible
     const categoryRows = page.locator('[role="row"]');
     await expect(categoryRows.first()).toBeVisible();
@@ -346,7 +351,11 @@ test.describe('Results page', () => {
 test.describe('Report page', () => {
   test('shows empty state when no data', async ({ page }) => {
     await page.goto(BASE + 'report');
-    await expect(page.getByText('아직 분석 결과가 없어요')).toBeVisible();
+    // The report page renders the empty copy in BOTH the visible empty-state
+    // container AND the hidden data container (which holds a placeholder
+    // "아직 분석 결과가 없어요" until the store has data). Scope to the
+    // visible container explicitly (C7E-bucket-A).
+    await expect(page.locator('#report-empty-state').getByText('아직 분석 결과가 없어요')).toBeVisible({ timeout: 10_000 });
   });
 
   test('shows populated state after analysis', async ({ page }) => {
@@ -378,8 +387,10 @@ test.describe('Cards page', () => {
     await expect(page.getByRole('heading', { name: '카드 목록' })).toBeVisible();
     // Search input
     await expect(page.getByPlaceholder('카드 이름으로 검색')).toBeVisible();
-    // Type filter tabs
-    await expect(page.getByText('전체')).toBeVisible();
+    // Type filter tabs — the CardGrid renders multiple filter-pill sets
+    // (card-type + issuer) where "전체" appears in both; anchor via .first()
+    // (C7E-bucket-A).
+    await expect(page.getByText('전체').first()).toBeVisible();
     await expect(page.getByText('신용카드')).toBeVisible();
     await expect(page.getByText('체크카드')).toBeVisible();
   });
@@ -389,8 +400,10 @@ test.describe('Cards page', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     // Wait for cards to load
     await page.waitForTimeout(2000);
-    // Should have card count
-    await expect(page.getByText(/개 카드/)).toBeVisible();
+    // Should have card count — the footer also renders "683+ 카드 수록",
+    // which matches /개 카드/ loosely; use the live count badge explicitly
+    // (C7E-bucket-A).
+    await expect(page.getByText(/\d+개 카드/).first()).toBeVisible();
   });
 
   test('search filters cards', async ({ page }) => {
@@ -399,8 +412,9 @@ test.describe('Cards page', () => {
     await page.waitForTimeout(2000);
     const searchInput = page.getByPlaceholder('카드 이름으로 검색');
     await searchInput.fill('삼성');
-    // Count should change
-    const countText = await page.getByText(/개 카드/).textContent();
+    // Count should change — use .first() to avoid strict-mode collision with
+    // the footer copy "... 카드 수록" (C7E-bucket-A).
+    const countText = await page.getByText(/\d+개 카드/).first().textContent();
     expect(countText).toBeTruthy();
   });
 
@@ -412,8 +426,10 @@ test.describe('Cards page', () => {
     const firstCard = page.locator('button[class*="rounded-xl"][class*="border"]').first();
     if (await firstCard.isVisible()) {
       await firstCard.click();
-      // Should show detail view with back button
-      await expect(page.getByText('목록으로')).toBeVisible();
+      // Detail view shows two "목록으로" affordances (top back-link and
+      // bottom secondary button); use .first() to pick the top one
+      // (C7E-bucket-A).
+      await expect(page.getByText('목록으로').first()).toBeVisible();
     }
   });
 });
@@ -427,8 +443,11 @@ test.describe('Empty states', () => {
     // container and never hydrate until VisibilityToggle unhides them —
     // so waitForFunction(astro-island:not([ssr])) would time out (C7E-B1).
     // Rely on the built-in auto-retry of the toBeVisible assertion instead.
+    // Multiple components each render the same empty-state copy (dashboard
+    // page container + SpendingSummary empty + SavingsComparison empty) —
+    // scope the assertion via .first() (C7E-bucket-A).
     await expect(
-      page.getByText('아직 분석한 내역이 없어요').or(page.getByText('아직 비교 데이터가 없어요'))
+      page.getByText('아직 분석한 내역이 없어요').first().or(page.getByText('아직 비교 데이터가 없어요').first())
     ).toBeVisible({ timeout: 10_000 });
   });
 
