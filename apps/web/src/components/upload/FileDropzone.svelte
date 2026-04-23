@@ -233,14 +233,23 @@
     if (raw === undefined || raw === null || raw === '') return undefined;
     if (typeof raw === 'number') {
       if (!Number.isFinite(raw) || raw < 0) return undefined;
-      return Math.min(Math.round(raw), MAX_PREVIOUS_SPENDING_KRW);
+      // Coerce -0 → +0 for asymmetric downstream consumers (e.g., string
+      // concatenation, Object.is checks). Math.round(-0) === -0 and -0 >= 0,
+      // so the existing guards don't catch this (D7-M4 / C8-02).
+      const rounded = Math.round(raw);
+      const normalized = rounded === 0 ? 0 : rounded;
+      return Math.min(normalized, MAX_PREVIOUS_SPENDING_KRW);
     }
     if (typeof raw !== 'string') return undefined;
     const v = raw.trim();
     if (v === '') return undefined;
     const n = Math.round(Number(v));
     if (!(Number.isFinite(n) && n >= 0)) return undefined;
-    return Math.min(n, MAX_PREVIOUS_SPENDING_KRW);
+    // Coerce -0 → +0 (D7-M4 / C8-02). For string inputs like "-0" or "-0.1"
+    // (rounded to 0), Number(v) produces -0 which survives Math.round and
+    // fails Object.is(result, 0) assertions.
+    const normalized = n === 0 ? 0 : n;
+    return Math.min(normalized, MAX_PREVIOUS_SPENDING_KRW);
   }
 
   /** Guard against data loss during upload: browsers show a native
