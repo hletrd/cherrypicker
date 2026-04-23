@@ -1059,3 +1059,33 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **C6UI-04, C6UI-05** — MEDIUM — axe-core cycle (same as D7-M8).
 - **C6UI-23** — LOW — AAA 44×44 target-size upgrade.
 
+---
+
+## Cycle 9 resolutions and status re-affirmation
+
+### Resolved (previously deferred)
+
+- **D7-M2 — `setResult` footgun with no callers** — RESOLVED by C9-01 (commit `refactor(web): 🔥 remove dead setResult method from analysisStore`). Cycle-9 re-audit confirmed zero callers across `apps/`, `e2e/`, `packages/`, `tools/` (only `.context/**` documentation matches). Exit criterion "method is deleted" satisfied literally. Method deleted in full (8 lines).
+- **C8CR-01 — `setResult` would skip analyzer-cache invalidation** — RESOLVED (subsumed by D7-M2 deletion). No path exists to inject an un-cached result; `analyze()` and `reoptimize()` are the only result-setters and both go through the cache-hygiene pipeline.
+
+### Remaining deferrals (severity preserved, exit criteria unchanged)
+
+- **D7-M5 — silent drop of malformed-date rows** — LOW / Medium — unchanged.
+- **D7-M6 — module-level mutable `_loadPersistWarningKind`** — MEDIUM / High — unchanged (tied to A7-02 persistence extraction).
+- **D7-M7 — `reuseExistingServer` masks stale builds** — MEDIUM / Medium — unchanged.
+- **D7-M8 — no axe-core gate** — MEDIUM / Medium — unchanged.
+- **D7-M9 — `ui-ux-screenshots.spec.js` has no assertions** — LOW / Low — unchanged (intentional).
+- **D7-M11 — architectural refactors (A7-01/02/03)** — MEDIUM / Medium — unchanged.
+- **D7-M12 — `getAllCardRules` refetched per reoptimize** — LOW / High — unchanged.
+- **D7-M13 — `unsafe-inline` in script-src CSP** — MEDIUM / High — unchanged; Astro nonce upstream gate.
+- **D7-M14 — test-selector polish** — LOW / Medium — unchanged.
+- **C8CR-02, P8-01, P8-02, D8-01, D8-02** — all LOW — unchanged.
+- **C6UI-04, C6UI-05** — MEDIUM — tied to D7-M8.
+- **C6UI-23** — LOW — AAA upgrade.
+
+### New findings during cycle 9
+
+None. The single new finding (C9-01 / D7-M2 promotion) is resolved in-cycle.
+
+No security, correctness, or data-loss finding is deferred this cycle.
+
