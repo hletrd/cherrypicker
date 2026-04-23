@@ -1089,3 +1089,37 @@ None. The single new finding (C9-01 / D7-M2 promotion) is resolved in-cycle.
 
 No security, correctness, or data-loss finding is deferred this cycle.
 
+---
+
+## Cycle 10 resolutions and status re-affirmation
+
+### Resolved (previously deferred)
+
+None this cycle. Cycle 9 closed D7-M2 and C8CR-01; cycle 10 is a pure re-affirmation cycle.
+
+### Remaining deferrals (severity preserved, exit criteria unchanged)
+
+- **D7-M5 — silent drop of malformed-date rows** — LOW / Medium — unchanged.
+- **D7-M6 — module-level mutable `_loadPersistWarningKind`** — MEDIUM / High — unchanged (tied to A7-02 persistence extraction).
+- **D7-M7 — `reuseExistingServer` masks stale builds** — MEDIUM / Medium — unchanged.
+- **D7-M8 — no axe-core gate** — MEDIUM / Medium — unchanged.
+- **D7-M9 — `ui-ux-screenshots.spec.js` has no assertions** — LOW / Low — unchanged (intentional).
+- **D7-M11 — architectural refactors (A7-01/02/03)** — MEDIUM / Medium — unchanged.
+- **D7-M12 — `getAllCardRules` refetched per reoptimize** — LOW / High — unchanged.
+- **D7-M13 — `unsafe-inline` in script-src CSP** — MEDIUM / High — unchanged; Astro nonce upstream gate.
+- **D7-M14 — test-selector polish** — LOW / Medium — unchanged.
+- **C8CR-02, P8-01, P8-02, D8-01, D8-02** — all LOW — unchanged.
+- **C6UI-04, C6UI-05** — MEDIUM — tied to D7-M8.
+- **C6UI-23** — LOW — AAA upgrade.
+
+### New findings during cycle 10
+
+None. All 11 review angles (code-reviewer, critic, security-reviewer, perf-reviewer, verifier, test-engineer, architect, debugger, tracer, document-specialist, designer) report zero net-new actionable findings. The cycle is a pure re-affirmation pass.
+
+### Gate evidence
+- `bun run verify` — PASS (FULL TURBO, 10/10 cached).
+- `bun run build` — PASS (exit 0).
+- `bun run test:e2e` — PASS (74/74 green).
+
+No security, correctness, or data-loss finding is deferred this cycle.
+
