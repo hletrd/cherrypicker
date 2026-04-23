@@ -1,43 +1,80 @@
-# Review Aggregate -- Cycle 8 (2026-04-22)
+# Review Aggregate — Cycle 95 (2026-04-23)
 
-**Source reviews (this cycle):**
-- `.context/reviews/cycle8-review.md` (0 new findings)
-
-**Prior cycle reviews (still relevant):**
-- All cycle 1-94 and cycle 1-7 per-agent and aggregate files
+**Cycle:** 95 of repo-numbered review history (cycle 1/100 of this orchestrator run)
+**Scope:** Entire repository with emphasis on net-new issues since cycle 94.
+**Reviewer fan-out:** code-reviewer, perf-reviewer, security-reviewer, debugger, test-engineer, tracer, architect, verifier, designer, document-specialist, critic (11 reviewer passes).
 
 ---
 
-## Verification of Prior Cycle Fixes
+## Source Files (This Cycle)
 
-All prior cycle 1-94 findings are confirmed fixed except as noted in the prior aggregate. This cycle verified the following code paths as correct:
+- `.context/reviews/cycle95-code-reviewer.md`
+- `.context/reviews/cycle95-perf-reviewer.md`
+- `.context/reviews/cycle95-security-reviewer.md`
+- `.context/reviews/cycle95-debugger.md`
+- `.context/reviews/cycle95-test-engineer.md`
+- `.context/reviews/cycle95-tracer.md`
+- `.context/reviews/cycle95-architect.md`
+- `.context/reviews/cycle95-verifier.md`
+- `.context/reviews/cycle95-designer.md`
+- `.context/reviews/cycle95-document-specialist.md`
+- `.context/reviews/cycle95-critic.md`
+
+---
+
+## Executive Summary
+
+**Total new findings: 0.** Cycle 95 is the 8th consecutive cycle (88, 89, 90, 91, 92, 93, 94, 95) with 0 new actionable findings. All prior fixes remain in place and verified. Baseline gates (`bun run verify`, `bun run build`, `bun run typecheck`) are all green with turbo cache-hit.
+
+The backlog of still-open items is fully captured as deferred findings in `.context/plans/00-deferred-items.md` (items D-01 through D-111), with severity preserved and exit criteria recorded. None are regressions from prior cycles.
+
+---
+
+## Per-Agent Results
+
+| Reviewer | New Findings | Notes |
+|---|---|---|
+| code-reviewer | 0 | Verified 15 prior-cycle fixes still in place; re-examined 15 areas without new findings. |
+| perf-reviewer | 0 | Hot paths remain within budget at current scale. |
+| security-reviewer | 0 | No secrets; escape/CSP/SRI posture unchanged. |
+| debugger | 0 | Race / null-guard / ordering patterns remain correct. |
+| test-engineer | 0 | All suites pass (core 95, viz 1, scraper 1, cli 4). |
+| tracer | 0 | End-to-end flows match documented intent. |
+| architect | 0 | Layering sound; deferred refactors unchanged. |
+| verifier | 0 | All 3 gates (verify, build, typecheck) green. |
+| designer | 0 | Accessibility, responsive, motion-respectful UI maintained. |
+| document-specialist | 0 | Docs/code alignment holds. |
+| critic | 0 | Accepted tradeoffs defensible under skeptical re-examination. |
+
+**Cross-agent agreement: all 11 reviewers converge on 0 new findings.**
+
+---
+
+## Verified Prior Fixes (Sampled)
 
 | Finding | Status | Evidence |
 |---|---|---|
-| C1-01 monthlySpending includes refunds | **CONFIRMED FIXED** | `analyzer.ts:329` only accumulates `tx.amount > 0` |
-| C1-12 findRule sort instability | **CONFIRMED FIXED** | `reward.ts:87-93` secondary sort by indexOf |
-| C1-21 Truncation + reoptimize | **CONFIRMED FIXED** | `store.svelte.ts` recalculates monthlyBreakdown |
-| C7-01 TransactionReview fails to sync after page refresh | **CONFIRMED FIXED** | `store.svelte.ts:361` initializes `generation` to 1 when storage has data |
-| C92-01/C94-01 formatSavingsValue | **CONFIRMED FIXED** | Centralized in `formatters.ts:215-218` |
-| C93-01 {@const} position | **CONFIRMED FIXED** | ReportContent.svelte valid Svelte 5 |
-| C1-03/C90-02 KakaoBank WCAG contrast | **CONFIRMED FIXED** | `getIssuerTextColor()` returns `text-gray-900` for kakao/jeju issuers |
-| C89-01 classList.toggle without isConnected | **CONFIRMED FIXED** | VisibilityToggle uses `cached && cached.isConnected` guard |
-| C89-02 rawPct threshold uses unrounded value | **CONFIRMED FIXED** | CategoryBreakdown uses rounded `pct` for `< 2` threshold |
-| C2-01 buildCategoryTable includes refunds | **CONFIRMED FIXED** | `generator.ts:69` now skips `tx.amount <= 0` |
-| C3-01 buildCategoryTable summary row count | **CONFIRMED FIXED** | `generator.ts:119` uses `includedCount` |
-| C4-01 printSpendingSummary summary row count | **CONFIRMED FIXED** | `summary.ts:69` uses `includedCount` |
-| C5-01 performanceExclusions qualifying sum includes negative/zero | **CONFIRMED FIXED** | `analyzer.ts:231` filters `tx.amount > 0` |
+| C1-01 monthlySpending positive-only | CONFIRMED | `analyzer.ts:329`, `store.svelte.ts:531` |
+| C1-12 findRule sort stability | CONFIRMED | `reward.ts:90-94` |
+| C7-01 generation init from storage | CONFIRMED | `store.svelte.ts:361` |
+| C44-01 previousMonthSpendingOption preserved | CONFIRMED | `store.svelte.ts:470-472, 551-566` |
+| C81-01 reoptimize snapshot | CONFIRMED | `store.svelte.ts:504-506, 578-583` |
+| C82-01 atomic TransactionReview sync | CONFIRMED | `TransactionReview.svelte:123-139` |
+| C82-02 / C82-03 animation target tracking | CONFIRMED | `SavingsComparison.svelte:48-73` |
+| C92-01 / C94-01 formatSavingsValue helper | CONFIRMED | `formatters.ts:224-227` |
+| C89-01 VisibilityToggle isConnected guard | CONFIRMED | `VisibilityToggle.svelte` |
+| C89-02 rawPct rounded threshold | CONFIRMED | `CategoryBreakdown.svelte:124-128` |
+| C40-04 buildCardResults pre-filtered input comment | CONFIRMED | `greedy.ts:237-239, 285` |
+| C72-02 / C72-03 empty-array cache poison guards | CONFIRMED | `analyzer.ts:193-195`, `store.svelte.ts:393-397` |
+| C79-01 changeCategory clears rawCategory | CONFIRMED | `TransactionReview.svelte:182, 185` |
 
 ---
 
-## New Findings (This Cycle)
+## Deferred Findings
 
-No new actionable findings in cycle 8.
+All deferred items from prior cycles (D-01 through D-111) remain deferred with severity preserved, per-item exit criteria recorded in `.context/plans/00-deferred-items.md`, and no re-classification this cycle.
 
-### Observations (not actionable)
-
-1. CLI/web savings-rate denominator inconsistency — `comparison.ts:48` uses `totalSpending` while `SavingsComparison.svelte:113` uses `bestSingleCard.totalReward`. Both are valid interpretations; not a bug.
-2. HTML report "+0원" edge case — `generator.ts:41-42` shows "+" prefix for zero savings, while web `formatSavingsValue` hides it under 100 won. Cosmetic only.
+No finding from this cycle is being newly deferred (because there are no new findings).
 
 ---
 
@@ -50,8 +87,24 @@ No new actionable findings in cycle 8.
 | 3 | C1-N04 | Web parser CSV helpers duplicated from server shared.ts | Large | Maintenance |
 | 4 | C89-03 | formatters.ts m! non-null assertion after length check | Small | Type safety |
 
+These four items are known maintenance concerns, not bugs or security issues. Tracked across multiple cycles without measurable impact.
+
 ---
 
-## Summary
+## Agent Failures
 
-Cycle 8 found 0 new actionable findings. All previously identified bugs remain fixed. The four LOW-priority carried-forward items (C1-N01, C1-N02, C1-N04, C89-03) remain open but are maintenance concerns rather than bugs or security issues.
+None. All 11 reviewer passes returned successfully.
+
+---
+
+## Convergence Note
+
+Cycles 88-95 have all reported 0 new actionable findings. The review-plan-fix loop has effectively converged against the current code surface. Continuing to run the loop remains valuable for catching regressions from future feature work, but each cycle will legitimately produce 0 findings until new code is added.
+
+---
+
+## Gate Status
+
+- `bun run verify`: 10/10 turbo tasks successful (FULL TURBO cache-hit). Tests: core 95, scraper 1, viz 1, cli 4 — all pass.
+- `bun run build`: 7/7 turbo tasks successful. Pre-existing chunk-size warning unchanged.
+- `bun run typecheck`: all workspaces exit 0. Astro check 27 files: 0 errors / 0 warnings / 0 hints.
