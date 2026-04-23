@@ -73,9 +73,9 @@ test('browser flow classifies regression merchants and renders dashboard/results
   await page.getByRole('link', { name: '리포트 보기' }).click();
   await page.waitForURL('**/report', { timeout: 15_000 });
   await expect(page.getByRole('heading', { name: '분석 리포트' })).toBeVisible();
-  await expect(page.locator('#report-content')).toContainText('분석 요약');
-  await expect(page.locator('#report-content')).toContainText('추천 카드 조합');
-  await expect(page.locator('#report-content')).not.toContainText('아직 분석 결과가 없어요');
+  await expect(page.locator('#report-data-content')).toContainText('분석 요약');
+  await expect(page.locator('#report-data-content')).toContainText('추천 카드 조합');
+  await expect(page.locator('#report-data-content')).not.toContainText('아직 분석 결과가 없어요');
 
   expect(pageErrors).toEqual([]);
 });

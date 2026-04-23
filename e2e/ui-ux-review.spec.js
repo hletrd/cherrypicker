@@ -8,13 +8,13 @@ const { expect, test } = require('@playwright/test');
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/cherrypicker/';
 const FIXTURE = require('path').join(__dirname, 'fixtures', 'regression-upload.csv');
 
-// Serial mode: ui-ux-review shares one Astro preview server with the other
-// specs. Running all describes in parallel swamps the single-process preview
-// with concurrent upload pipelines, causing waitForURL('**/dashboard') to
-// cascade-timeout (C7E-02 / D6-01 parallel-contention tail). Serial mode
-// keeps the latency budget within 30s per test while still exercising every
-// describe.
-test.describe.configure({ mode: 'serial' });
+// The real cycle-6 D6-01 root cause was a runtime type mismatch in
+// parsePreviousSpending (C7-E01). With that fix in place, parallel describe
+// mode is safe — the upload pipeline no longer hangs under concurrency.
+// We DO NOT use serial at file level because in Playwright a single
+// failure in serial mode stops every subsequent test in the file, which
+// prevents downstream diagnosis of unrelated failures.
+test.describe.configure({ mode: 'parallel' });
 // CSP now includes 'unsafe-inline' for script-src, so Playwright should
 // enforce it and surface any real CSP violations in production.
 
@@ -123,7 +123,9 @@ test.describe('Navigation', () => {
     const footer = page.locator('footer');
     await expect(footer).toBeVisible();
     await expect(footer.getByText('카드 수록')).toBeVisible();
-    await expect(footer.getByText(/CherryPicker/)).toBeVisible();
+    // Regex matches both the brand heading and the "© 2026 CherryPicker"
+    // copyright line; .first() picks the brand heading (C7E-bucket-A).
+    await expect(footer.getByText(/CherryPicker/).first()).toBeVisible();
   });
 });
 
@@ -357,7 +359,7 @@ test.describe('Report page', () => {
     await page.goto(BASE + 'report');
     await page.waitForLoadState('networkidle');
     // Report should load from sessionStorage
-    const content = page.locator('#report-content');
+    const content = page.locator('#report-data-content');
     await expect(content).toBeVisible();
   });
 
