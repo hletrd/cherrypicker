@@ -282,6 +282,11 @@
         uploadStatus = 'error';
       } else {
         uploadStatus = 'success';
+        // Defensive: clear any prior pending navigate timer before scheduling
+        // a new one. Under a rapid double-invocation race (physically blocked
+        // by the disabled button, but defense-in-depth), two timers could
+        // otherwise stack and both fire navigate() back-to-back (D7-M3 / C8-04).
+        if (navigateTimeout) { clearTimeout(navigateTimeout); navigateTimeout = null; }
         navigateTimeout = setTimeout(async () => {
           // Use Astro client-side navigation to preserve in-memory store
           // state instead of a full page reload (C62-15). Fall back to
