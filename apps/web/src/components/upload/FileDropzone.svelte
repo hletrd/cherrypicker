@@ -221,18 +221,34 @@
 
   /** Parse the previous-month-spending input field into a validated number.
    *  Returns undefined for empty or invalid inputs, matching the store's
-   *  expected type. Extracted from inline IIFE for readability (C41-03). */
+   *  expected type. Extracted from inline IIFE for readability (C41-03).
+   *  Clamped to MAX_PREVIOUS_SPENDING_KRW to prevent a typo from inflating
+   *  performance-tier selection and downstream projected rewards (C6UI-34). */
+  const MAX_PREVIOUS_SPENDING_KRW = 10_000_000_000; // 100억원 sanity bound
   function parsePreviousSpending(raw: string): number | undefined {
     const v = raw.trim();
     if (v === '') return undefined;
     const n = Math.round(Number(v));
-    return Number.isFinite(n) && n >= 0 ? n : undefined;
+    if (!(Number.isFinite(n) && n >= 0)) return undefined;
+    return Math.min(n, MAX_PREVIOUS_SPENDING_KRW);
+  }
+
+  /** Guard against data loss during upload: browsers show a native
+   *  "leave site?" confirmation if beforeunload returns a non-empty value.
+   *  Installed only while uploadStatus === 'uploading' and removed in the
+   *  finally branch so routine navigation is unaffected (C6UI-16). */
+  function beforeUnloadGuard(e: BeforeUnloadEvent): string {
+    const msg = '분석이 진행 중이에요. 페이지를 벗어나면 분석 결과가 사라져요.';
+    e.preventDefault();
+    e.returnValue = msg; // legacy Chromium
+    return msg;
   }
 
   async function handleUpload() {
     if (uploadedFiles.length === 0) return;
     uploadStatus = 'uploading';
     errorMessage = '';
+    window.addEventListener('beforeunload', beforeUnloadGuard);
 
     try {
       await analysisStore.analyze(uploadedFiles, {
@@ -262,6 +278,11 @@
     } catch (e) {
       errorMessage = e instanceof Error ? e.message : '분석 실패';
       uploadStatus = 'error';
+    } finally {
+      // Always remove the beforeunload guard — success path hands off to
+      // the navigate timer, error path shows the error card. Neither should
+      // block future navigation (C6UI-16).
+      window.removeEventListener('beforeunload', beforeUnloadGuard);
     }
   }
 
@@ -274,13 +295,16 @@
 
 <div class="flex flex-col gap-5">
 
-  <!-- Step indicator -->
-  <div class="flex items-center justify-center gap-0" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={4} aria-label="업로드 진행">
+  <!-- Step indicator — a stepper is an ordered list with aria-current="step"
+       on the active item per WAI-ARIA APG; role="progressbar" was incorrect
+       because screen readers read it as a single 1-of-4 percentage and never
+       announce the step labels (C6UI-02). -->
+  <ol class="flex items-center justify-center gap-0 list-none p-0 m-0" aria-label="업로드 단계" data-testid="step-indicator">
     {#each STEPS as step, i}
       {@const stepNum = i + 1}
       {@const isActive = currentStep === stepNum}
       {@const isDone = currentStep > stepNum}
-      <div class="flex items-center">
+      <li class="flex items-center" aria-current={isActive ? 'step' : undefined} data-testid={`step-${stepNum}`}>
         <div class="flex flex-col items-center gap-1">
           <div
             class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all duration-300
@@ -300,7 +324,7 @@
           </div>
           <span
             class="text-xs transition-colors duration-200
-              {isActive ? 'font-semibold text-[var(--color-primary)]' : isDone ? 'text-green-600' : 'text-[var(--color-text-muted)]'}"
+              {isActive ? 'font-semibold text-[var(--color-primary)]' : isDone ? 'text-green-700' : 'text-[var(--color-text-muted)]'}"
           >
             {step}
           </span>
@@ -309,11 +333,12 @@
           <div
             class="mb-4 h-px w-8 transition-colors duration-300 sm:w-12
               {currentStep > stepNum ? 'bg-green-400' : 'bg-[var(--color-border)]'}"
+            aria-hidden="true"
           ></div>
         {/if}
-      </div>
+      </li>
     {/each}
-  </div>
+  </ol>
 
   <!-- Drop zone -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -337,7 +362,9 @@
           </svg>
         </div>
         <p class="text-base font-semibold text-green-700">분석 완료</p>
-        <p class="text-sm text-green-600">대시보드로 이동할게요</p>
+        <!-- text-green-700 on white is 5.09:1 (passes WCAG AA 4.5:1);
+             text-green-600 was 3.77:1 (fails) — C6UI-31. -->
+        <p class="text-sm text-green-700">대시보드로 이동할게요</p>
       </div>
     {:else if uploadedFiles.length > 0}
       <!-- File list -->
@@ -406,6 +433,8 @@
               {bank === ''
                 ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-sm'
                 : 'border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] hover:border-gray-400'}"
+            aria-pressed={bank === ''}
+            data-testid="bank-pill-auto"
             onclick={() => (bank = '')}
           >
             자동 인식
@@ -416,6 +445,8 @@
                 {bank === b.value
                   ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-sm'
                   : 'border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] hover:border-gray-400'}"
+              aria-pressed={bank === b.value}
+              data-testid={`bank-pill-${b.value}`}
               onclick={() => (bank = b.value)}
             >
               {b.label}
@@ -441,7 +472,9 @@
             bind:value={previousSpending}
             placeholder="500,000"
             min="0"
+            max="10000000000"
             step="10000"
+            data-testid="previous-spending-input"
             class="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
           />
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)]">원</span>
@@ -480,7 +513,7 @@
 
   <!-- Error state -->
   {#if uploadStatus === 'error'}
-    <div class="flex items-start gap-3 rounded-xl bg-red-50 dark:bg-red-950 p-4 text-sm text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
+    <div role="alert" data-testid="upload-error-banner" class="flex items-start gap-3 rounded-xl bg-red-50 dark:bg-red-950 p-4 text-sm text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
       <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
