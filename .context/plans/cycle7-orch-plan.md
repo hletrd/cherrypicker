@@ -72,10 +72,19 @@ Repo-rule compliance for deferred items: `~/.claude/CLAUDE.md` does not explicit
 
 ## Verification plan
 
-1. `bun run verify` — lint + typecheck + unit tests.
-2. `bun run build` — turbo build.
-3. `bun run test:e2e` — target ≥ 68/74 passing, with each remaining failure documented.
+1. `bun run verify` — lint + typecheck + unit tests. **PASSED (exit 0).**
+2. `bun run build` — turbo build. **PASSED (covered by test:e2e prebuild).**
+3. `bun run test:e2e` — target ≥ 68/74 passing. **74/74 passed (1.5m).** Baseline at cycle-6 head was 36/74.
 
 ## Archive sweep
 
 Cycle-6 `cycle6-orch-plan.md` items P1-01 through P1-15 are all implemented (see cycle 6 commits). Archive the plan to `.context/plans/archive/` once the cycle-7 commits land.
+
+## Cycle 7 result
+
+- D6-01 RESOLVED via C7-E01 (runtime trim coercion).
+- D6-02 RESOLVED via C7-E03 (feature-card testids).
+- 38 of 38 previously-failing e2e tests now green.
+- All HIGH cycle-7 findings (C7-E01…C7-E07) implemented and committed.
+- 14 MEDIUM/LOW items documented as deferred with severity preserved and exit criteria in `00-deferred-items.md`.
+- No security / correctness / data-loss finding deferred.
