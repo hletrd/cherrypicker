@@ -598,8 +598,10 @@ function createAnalysisStore() {
       loading = false;
       persistWarningKind = null;
       truncatedTxCount = null;
-      _loadPersistWarningKind = null;
-      _loadTruncatedTxCount = null;
+      // NOTE: module-level `_loadPersistWarningKind` / `_loadTruncatedTxCount`
+      // are already consumed + nulled during store construction (:379-380) and
+      // this store is a singleton, so resetting them here is a no-op. Removed
+      // in cycle 8 as D7-M1 cleanup.
       cachedCategoryLabels = undefined;
       invalidateAnalyzerCaches();
       clearStorage();
