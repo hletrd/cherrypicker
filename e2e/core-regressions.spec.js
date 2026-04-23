@@ -125,13 +125,18 @@ test('optimizer uses transaction-level facts and keeps card totals aligned', () 
       isOnline: false,
     },
     {
+      // Non-cafe dining transaction so the broad-dining fixture legitimately
+      // matches it. The calculator intentionally excludes broad rules from
+      // subcategorized transactions (packages/core/src/calculator/reward.ts:63-80
+      // — Korean credit card terms typically separate 카페 from 외식). The
+      // prior 스타벅스 fixture assumed the broad rule covered `dining.cafe`,
+      // which the code deliberately disallows (C6UI-40).
       id: 't2',
       date: '2026-02-01',
-      merchant: '스타벅스 강남',
+      merchant: '한식당 강남점',
       amount: 20_000,
       currency: 'KRW',
       category: 'dining',
-      subcategory: 'cafe',
       confidence: 1,
       isOnline: false,
     },
