@@ -8,7 +8,13 @@ const { expect, test } = require('@playwright/test');
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/cherrypicker/';
 const FIXTURE = require('path').join(__dirname, 'fixtures', 'regression-upload.csv');
 
-test.describe.configure({ mode: 'parallel' });
+// Serial mode: ui-ux-review shares one Astro preview server with the other
+// specs. Running all describes in parallel swamps the single-process preview
+// with concurrent upload pipelines, causing waitForURL('**/dashboard') to
+// cascade-timeout (C7E-02 / D6-01 parallel-contention tail). Serial mode
+// keeps the latency budget within 30s per test while still exercising every
+// describe.
+test.describe.configure({ mode: 'serial' });
 // CSP now includes 'unsafe-inline' for script-src, so Playwright should
 // enforce it and surface any real CSP violations in production.
 
@@ -66,9 +72,12 @@ test.describe('Home page', () => {
 
   test('feature cards render', async ({ page }) => {
     await page.goto(BASE);
-    await expect(page.getByText('지출 분석')).toBeVisible();
-    await expect(page.getByText('최적 카드 추천')).toBeVisible();
-    await expect(page.getByText('절약 비교')).toBeVisible();
+    // Use testids scoped to the feature-card section so these assertions
+    // don't collide with the how-it-works step headings (which share the
+    // same Korean copy) — D6-02 / C7E-03.
+    await expect(page.getByTestId('feature-card-analysis')).toBeVisible();
+    await expect(page.getByTestId('feature-card-recommend')).toBeVisible();
+    await expect(page.getByTestId('feature-card-savings')).toBeVisible();
   });
 });
 
@@ -165,6 +174,9 @@ test.describe('Upload flow', () => {
     await expect(page.getByText('현대카드')).toBeVisible();
     await expect(page.getByText('KB국민')).toBeVisible();
     await expect(page.getByText('삼성카드')).toBeVisible();
+    // 우체국 is hidden behind 더보기 (top-8 pills rendered by default) — click
+    // through before asserting its visibility (D6-02 tail / C7E-bucket-D).
+    await page.getByRole('button', { name: /더보기/ }).click();
     await expect(page.getByText('우체국')).toBeVisible();
   });
 
@@ -239,8 +251,11 @@ test.describe('Dashboard', () => {
 
   test('shows savings comparison', async ({ page }) => {
     await expect(page.getByText('절약 비교')).toBeVisible();
-    await expect(page.getByText('체리피킹')).toBeVisible();
-    await expect(page.getByText('카드 한 장')).toBeVisible();
+    // "체리피킹" / "카드 한 장" render both as bar labels and card headers
+    // inside SavingsComparison.svelte; use .first() to resolve ambiguity
+    // (C7E-bucket-A).
+    await expect(page.getByText('체리피킹').first()).toBeVisible();
+    await expect(page.getByText('카드 한 장').first()).toBeVisible();
   });
 
   test('shows transaction review section', async ({ page }) => {
@@ -303,7 +318,8 @@ test.describe('Results page', () => {
 
   test('savings comparison shows bar chart', async ({ page }) => {
     await expect(page.getByText('혜택 비교')).toBeVisible();
-    await expect(page.getByText('체리피킹')).toBeVisible();
+    // "체리피킹" matches both the bar label and the card header (C7E-bucket-A).
+    await expect(page.getByText('체리피킹').first()).toBeVisible();
   });
 
   test('optimal card map shows category assignments', async ({ page }) => {
@@ -405,17 +421,23 @@ test.describe('Cards page', () => {
 test.describe('Empty states', () => {
   test('dashboard empty state shows CTA', async ({ page }) => {
     await page.goto(BASE + 'dashboard');
-    await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
-    await expect(page.getByText('아직 분석한 내역이 없어요').or(page.getByText('아직 비교 데이터가 없어요'))).toBeVisible();
+    // On the empty dashboard, all Svelte islands live inside a hidden
+    // container and never hydrate until VisibilityToggle unhides them —
+    // so waitForFunction(astro-island:not([ssr])) would time out (C7E-B1).
+    // Rely on the built-in auto-retry of the toBeVisible assertion instead.
+    await expect(
+      page.getByText('아직 분석한 내역이 없어요').or(page.getByText('아직 비교 데이터가 없어요'))
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test('results empty state shows CTA', async ({ page }) => {
     await page.goto(BASE + 'results');
-    await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
-    // Should show placeholder or empty state
+    // Same reasoning as the dashboard empty-state test above — avoid the
+    // astro-island wait on pages whose islands are inside a hidden
+    // container (C7E-B2).
     const hasContent = await page.locator('#stat-total-spending').isVisible().catch(() => false);
     if (!hasContent) {
-      await expect(page.getByText(/아직|명세서를 올/).first()).toBeVisible();
+      await expect(page.getByText(/아직|명세서를 올/).first()).toBeVisible({ timeout: 10_000 });
     }
   });
 });
