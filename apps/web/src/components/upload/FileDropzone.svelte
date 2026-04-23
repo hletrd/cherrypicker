@@ -223,9 +223,19 @@
    *  Returns undefined for empty or invalid inputs, matching the store's
    *  expected type. Extracted from inline IIFE for readability (C41-03).
    *  Clamped to MAX_PREVIOUS_SPENDING_KRW to prevent a typo from inflating
-   *  performance-tier selection and downstream projected rewards (C6UI-34). */
+   *  performance-tier selection and downstream projected rewards (C6UI-34).
+   *  Accepts unknown because Svelte 5's `bind:value` on `<input type="number">`
+   *  coerces the bound variable to `number` at runtime regardless of the
+   *  declared type — calling `.trim()` on a number throws "t.trim is not a
+   *  function" and breaks the upload flow (C7E-01). */
   const MAX_PREVIOUS_SPENDING_KRW = 10_000_000_000; // 100억원 sanity bound
-  function parsePreviousSpending(raw: string): number | undefined {
+  function parsePreviousSpending(raw: unknown): number | undefined {
+    if (raw === undefined || raw === null || raw === '') return undefined;
+    if (typeof raw === 'number') {
+      if (!Number.isFinite(raw) || raw < 0) return undefined;
+      return Math.min(Math.round(raw), MAX_PREVIOUS_SPENDING_KRW);
+    }
+    if (typeof raw !== 'string') return undefined;
     const v = raw.trim();
     if (v === '') return undefined;
     const n = Math.round(Number(v));
