@@ -1021,3 +1021,41 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **C6UI-04, C6UI-05 (WCAG 1.4.11 non-text contrast, MEDIUM)** — remain deferred. Severity NOT downgraded to LOW (cycle-6 plan implied LOW; cycle 7 re-classifies to match WCAG AA). Exit criterion: axe-core gate cycle (same as D7-M8).
 - **C6UI-23 (target size, LOW)** — remains deferred. Already meets SC 2.5.8 at 24×24; exit criterion is upgrade to 44×44 for WCAG AAA.
 
+---
+
+## Cycle 8 resolutions and status re-affirmation
+
+### Resolved (previously deferred)
+
+- **D7-M1 — dead `_loadPersistWarningKind` reset in `reset()`** — RESOLVED by C8-01 (commit `refactor(web): 🔥 remove dead _loadPersistWarningKind reset in store.reset()`). Verified module-level vars are already nullified during construction; singleton store makes reset path redundant.
+- **D7-M3 — timer leak on rapid re-upload** — RESOLVED by C8-04 (commit `fix(web): 🐛 defensive clearTimeout before navigateTimeout reassignment`). Defense-in-depth 1-line guard; physical button-disable already blocks normal-flow double-invocation.
+- **D7-M4 — `parsePreviousSpending` accepts `-0`** — RESOLVED by C8-02 (commit `fix(web): 🐛 coerce -0 to +0 in parsePreviousSpending`). `-0` now normalized to `+0` on both number and string branches; downstream consumers using `Object.is(x, 0)` or string-concat behave symmetrically.
+- **D7-M10 — submit spinner lacks `aria-busy`** — RESOLVED by C8-03 (commit `feat(web): ♿ add aria-busy to upload form`). Screen readers now announce busy state during uploading.
+
+### Remaining deferrals (severity preserved, exit criteria unchanged)
+
+- **D7-M2 — `setResult` footgun with no callers** — MEDIUM / Medium — keep deferred. Cycle-8 re-audit confirmed zero callers across apps + e2e + tests; candidate for deletion next cycle. Exit criterion: first caller appears, or method is deleted.
+- **D7-M5 — silent drop of malformed-date rows** — LOW / Medium — unchanged.
+- **D7-M6 — module-level mutable `_loadPersistWarningKind`** — MEDIUM / High — unchanged (tied to A7-02 persistence extraction).
+- **D7-M7 — `reuseExistingServer` masks stale builds** — MEDIUM / Medium — unchanged.
+- **D7-M8 — no axe-core gate** — MEDIUM / Medium — unchanged.
+- **D7-M9 — `ui-ux-screenshots.spec.js` has no assertions** — LOW / Low — unchanged (intentional).
+- **D7-M11 — architectural refactors (A7-01/02/03)** — MEDIUM / Medium — unchanged.
+- **D7-M12 — `getAllCardRules` refetched per reoptimize** — LOW / High — unchanged.
+- **D7-M13 — `unsafe-inline` in script-src CSP** — MEDIUM / High — unchanged; Astro nonce upstream gate.
+- **D7-M14 — test-selector polish** — LOW / Medium — unchanged.
+
+### New findings during cycle 8 (not promoted, not regressed)
+
+- **C8CR-01 — `setResult` would skip analyzer-cache invalidation** — LOW / Medium. If D7-M2 is resolved by deletion, this also resolves. Otherwise defer. Not shipping a fix this cycle.
+- **C8CR-02 — `loadFromStorage` shallow-validates `cardResults[].byCategory` entries** — LOW / Low. Same-origin sessionStorage; zero real impact. Defer.
+- **P8-01 — `reoptimize` rebuilds monthlyBreakdown fully** — LOW / Medium. Negligible at scale (<5ms on 10k transactions). Defer.
+- **P8-02 — persist serializes entire result on every reoptimize** — LOW / High. User-paced edits make debouncing unnecessary. Defer.
+- **D8-01 — no `prefers-reduced-motion` rule for spinner** — LOW / Low. Defer to a11y cycle (D7-M8 gate).
+- **D8-02 — dashboard cards lack `role="region"` + `aria-labelledby`** — LOW / Low. Defer to a11y cycle.
+
+### Severity-preserved cycle-6 deferrals, unchanged in cycle 8
+
+- **C6UI-04, C6UI-05** — MEDIUM — axe-core cycle (same as D7-M8).
+- **C6UI-23** — LOW — AAA 44×44 target-size upgrade.
+
