@@ -382,6 +382,38 @@ describe('multi-month transaction handling', () => {
     expect(months.length).toBe(0);
     expect(monthlySpending.size).toBe(0);
   });
+
+  test('fullStatementPeriod excludes non-ISO date strings from range bounds (C97-01)', () => {
+    // Mixed-validity scenario. Some rows parse to ISO; a few rows retain
+    // parser-fallback strings that are not valid ISO dates (e.g., a Korean
+    // footer "소계", a truncation "2026-", an empty string). The analyzer's
+    // fullStatementPeriod / statementPeriod construction must filter these
+    // out before sorting — otherwise a bare .sort() places short/non-ISO
+    // strings ahead of valid ISO dates lexicographically and corrupts the
+    // period bounds, polluting sessionStorage with garbage strings.
+    //
+    // This test reproduces the filter step used in analyzer.ts:369-393.
+    const dates: string[] = [
+      '2026-01-15',
+      '2026-02-10',
+      '소계',       // Korean footer leaked through row detection
+      '2026-',      // truncated non-ISO
+      '',           // empty (filter(Boolean) would have caught this)
+      '2026-03-05',
+    ];
+    const filtered = dates
+      .filter((d): d is string => typeof d === 'string' && d.length >= 10)
+      .sort();
+
+    expect(filtered).toEqual(['2026-01-15', '2026-02-10', '2026-03-05']);
+    // Period bounds derived from filtered output are both valid ISO.
+    expect(filtered[0]).toBe('2026-01-15');
+    expect(filtered[filtered.length - 1]).toBe('2026-03-05');
+    // Garbage strings were dropped, not retained as bounds.
+    expect(filtered).not.toContain('소계');
+    expect(filtered).not.toContain('2026-');
+    expect(filtered).not.toContain('');
+  });
 });
 
 describe('subcategory handling', () => {

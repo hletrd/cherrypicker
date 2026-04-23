@@ -366,12 +366,25 @@ export async function analyzeMultipleFiles(
   // 8. Calculate statement periods from transactions
   // - fullStatementPeriod / totalTransactionCount: all uploaded months
   // - statementPeriod / transactionCount: optimized month only
-  const allDates = allTransactions.map(tx => tx.date).filter(Boolean).sort();
+  // Filter to valid ISO dates (YYYY-MM-DD, length 10) before sorting. Short
+  // or non-ISO strings (e.g., Korean footer rows "소계", truncated "2026-")
+  // survived into `allTransactions` because the length guard at line 323 only
+  // gates monthlySpending accumulation, not the underlying array. A bare
+  // .sort() places these ahead of valid ISO dates lexicographically and
+  // corrupts the period bounds — polluting sessionStorage even though the UI
+  // formatter (formatYearMonthKo) degrades gracefully to '-' (C97-01).
+  const allDates = allTransactions
+    .map(tx => tx.date)
+    .filter((d): d is string => typeof d === 'string' && d.length >= 10)
+    .sort();
   const fullStatementPeriod = allDates.length > 0
     ? { start: allDates[0]!, end: allDates[allDates.length - 1]! }
     : undefined;
 
-  const optimizedDates = latestTransactions.map(tx => tx.date).filter(Boolean).sort();
+  const optimizedDates = latestTransactions
+    .map(tx => tx.date)
+    .filter((d): d is string => typeof d === 'string' && d.length >= 10)
+    .sort();
   const statementPeriod = optimizedDates.length > 0
     ? { start: optimizedDates[0]!, end: optimizedDates[optimizedDates.length - 1]! }
     : undefined;
