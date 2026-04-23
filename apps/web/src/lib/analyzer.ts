@@ -332,8 +332,18 @@ export async function analyzeMultipleFiles(
     monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
   }
 
-  // 5. Find the latest month's transactions for optimization
+  // 5. Find the latest month's transactions for optimization.
+  // If monthlySpending is empty, it means every transaction was filtered
+  // out by the date-length guard (line 323) — i.e., all rows had
+  // unparseable dates that parsers returned as-is. Without this guard,
+  // `months[months.length - 1]!` would be `undefined`, `latestTransactions`
+  // would be `[]` (since `startsWith("undefined")` never matches), and the
+  // optimizer would silently return a zero-reward result. Surface the
+  // failure as an error instead of pretending success (C96-01).
   const months = [...monthlySpending.keys()].sort();
+  if (months.length === 0) {
+    throw new Error('거래 내역의 날짜를 해석할 수 없어요. 파일 형식을 확인해 주세요.');
+  }
   const latestMonth = months[months.length - 1]!;
   const previousMonth = months.length >= 2 ? months[months.length - 2]! : null;
 

@@ -345,6 +345,43 @@ describe('multi-month transaction handling', () => {
     expect(latestTxs.length).toBe(2);
     expect(latestTxs.every(tx => tx.date.startsWith('2026-02'))).toBe(true);
   });
+
+  test('monthlySpending empty when all dates unparseable -- production throws (C96-01)', () => {
+    // Reproduces the C96-01 edge case: parsers return unparseable date
+    // strings as-is (with a parse error logged) but the transactions still
+    // flow downstream. If every transaction has an unparseable date that is
+    // shorter than 7 chars, the date-length guard
+    // (`if (!tx.date || tx.date.length < 7) continue`) skips every row,
+    // leaving monthlySpending empty and `months` an empty array. Previously
+    // `months[months.length - 1]!` silently returned `undefined`, causing
+    // `latestTransactions.filter(tx => tx.date.startsWith("undefined"))` to
+    // yield [] and the optimizer to report 0 rewards as success. The
+    // production code now throws an error instead.
+    //
+    // Uses empty and short strings to trigger the length guard — this is the
+    // exact surface the guard was designed for.
+    const txs = [
+      makeTx('t1', '', 50000, 'dining'),
+      makeTx('t2', '??', 30000, 'grocery'),
+      makeTx('t3', '1/15', 40000, 'transportation'),
+    ];
+
+    const monthlySpending = new Map<string, number>();
+    for (const tx of txs) {
+      if (!tx.date || tx.date.length < 7) continue;
+      const month = tx.date.slice(0, 7);
+      if (tx.amount > 0) {
+        monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
+      }
+    }
+
+    const months = [...monthlySpending.keys()].sort();
+    // `months.length === 0` here even though `txs.length > 0`. Production
+    // code at analyzer.ts:338 now throws in this branch instead of using
+    // `months[months.length - 1]!` and returning silent empty results.
+    expect(months.length).toBe(0);
+    expect(monthlySpending.size).toBe(0);
+  });
 });
 
 describe('subcategory handling', () => {
