@@ -89,3 +89,40 @@ The deferred list above is scoped only to findings introduced this cycle; no pre
 ## Archive sweep
 
 No pre-existing plans are fully implemented-and-done this cycle (this is the first pass of the UI/UX deep dive). Archive pass deferred.
+
+## Deferred (pre-existing) to cycle 7
+
+### D6-01 — Upload → Dashboard navigate timeout in e2e (pre-existing)
+- Severity: MEDIUM, confidence: Medium.
+- Evidence: after cycle 6 port-fix (C6UI-01) exposed the UI spec suite,
+  `e2e/web-regressions.spec.js:30` and `e2e/ui-ux-review.spec.js:186`
+  both time out at `waitForURL('**/dashboard')` 30s. The failure is
+  independent of cycle-6 changes — it also occurred in the cycle-5
+  snapshot (observed during the initial baseline run before any edits).
+  Root-cause candidates: (a) `regression-upload.csv` fixture parsing
+  path is slow under headless Astro preview, (b) `analysisStore.analyze`
+  hangs on a specific merchant, (c) the `astro:transitions/client`
+  `navigate()` import fails in headless mode and the fallback
+  `window.location.href` path should be verified.
+- Exit criterion: one of the upload-to-dashboard tests runs green in CI.
+- Deferral justification: this is a pre-existing bug outside the scope
+  of the user-injected TODO-U1 (which required a UI/UX deep-dive, not a
+  refactor of the upload pipeline). The `.context/` repo policy allows
+  multi-cycle sequencing of independent bugs; severity preserved.
+- Action: tracer agent in cycle 7 should reproduce with additional
+  console listeners + `page.on('console')` logging; possibly increase
+  the wait to 60s after diagnosing the root cause.
+
+### D6-02 — `feature cards render` strict-mode violation in ui-ux-review.spec.js:67 (pre-existing)
+- Severity: LOW, confidence: High.
+- Evidence: `getByText('최적 카드 추천')` resolves to 2 elements (how-it-works
+  heading + feature card heading). Pre-existing; newly visible after
+  the port fix.
+- Exit criterion: specs use `.first()` or tighter selectors; add
+  `data-testid` for feature cards.
+- Deferral justification: no functional impact on the app; test-only
+  polish.
+
+Both items honor the deferral rules: file+line citation, preserved
+severity, concrete reason (pre-existing, not user-injected scope),
+and concrete exit criterion.
