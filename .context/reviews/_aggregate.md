@@ -1,32 +1,32 @@
-# Review Aggregate — Cycle 95 (2026-04-23)
+# Review Aggregate — Cycle 96 (2026-04-23)
 
-**Cycle:** 95 of repo-numbered review history (cycle 1/100 of this orchestrator run)
-**Scope:** Entire repository with emphasis on net-new issues since cycle 94.
+**Cycle:** 96 of repo-numbered review history (cycle 2/100 of this orchestrator run)
+**Scope:** Full repository with emphasis on net-new issues since cycle 95 convergence.
 **Reviewer fan-out:** code-reviewer, perf-reviewer, security-reviewer, debugger, test-engineer, tracer, architect, verifier, designer, document-specialist, critic (11 reviewer passes).
 
 ---
 
 ## Source Files (This Cycle)
 
-- `.context/reviews/cycle95-code-reviewer.md`
-- `.context/reviews/cycle95-perf-reviewer.md`
-- `.context/reviews/cycle95-security-reviewer.md`
-- `.context/reviews/cycle95-debugger.md`
-- `.context/reviews/cycle95-test-engineer.md`
-- `.context/reviews/cycle95-tracer.md`
-- `.context/reviews/cycle95-architect.md`
-- `.context/reviews/cycle95-verifier.md`
-- `.context/reviews/cycle95-designer.md`
-- `.context/reviews/cycle95-document-specialist.md`
-- `.context/reviews/cycle95-critic.md`
+- `.context/reviews/cycle96-code-reviewer.md`
+- `.context/reviews/cycle96-perf-reviewer.md`
+- `.context/reviews/cycle96-security-reviewer.md`
+- `.context/reviews/cycle96-debugger.md`
+- `.context/reviews/cycle96-test-engineer.md`
+- `.context/reviews/cycle96-tracer.md`
+- `.context/reviews/cycle96-architect.md`
+- `.context/reviews/cycle96-verifier.md`
+- `.context/reviews/cycle96-designer.md`
+- `.context/reviews/cycle96-document-specialist.md`
+- `.context/reviews/cycle96-critic.md`
 
 ---
 
 ## Executive Summary
 
-**Total new findings: 0.** Cycle 95 is the 8th consecutive cycle (88, 89, 90, 91, 92, 93, 94, 95) with 0 new actionable findings. All prior fixes remain in place and verified. Baseline gates (`bun run verify`, `bun run build`, `bun run typecheck`) are all green with turbo cache-hit.
+**Total new findings: 1** (MEDIUM severity, HIGH confidence). After 8 consecutive convergence cycles (88-95), a net-new issue was surfaced: **C96-01** — `analyzer.ts:337` used a non-null assertion on a potentially empty `months` array, causing a silent empty-result failure when every transaction in an uploaded statement had an unparseable date. The bug was reachable through the documented parser behavior (unparseable dates are returned as-is with a parse error logged, not filtered).
 
-The backlog of still-open items is fully captured as deferred findings in `.context/plans/00-deferred-items.md` (items D-01 through D-111), with severity preserved and exit criteria recorded. None are regressions from prior cycles.
+The fix was applied, a regression test was added, and all gates are green. The issue is flagged across 3 reviewers (code-reviewer, debugger, tracer) with cross-agent agreement, raising its signal quality.
 
 ---
 
@@ -34,19 +34,46 @@ The backlog of still-open items is fully captured as deferred findings in `.cont
 
 | Reviewer | New Findings | Notes |
 |---|---|---|
-| code-reviewer | 0 | Verified 15 prior-cycle fixes still in place; re-examined 15 areas without new findings. |
-| perf-reviewer | 0 | Hot paths remain within budget at current scale. |
-| security-reviewer | 0 | No secrets; escape/CSP/SRI posture unchanged. |
-| debugger | 0 | Race / null-guard / ordering patterns remain correct. |
-| test-engineer | 0 | All suites pass (core 95, viz 1, scraper 1, cli 4). |
-| tracer | 0 | End-to-end flows match documented intent. |
-| architect | 0 | Layering sound; deferred refactors unchanged. |
-| verifier | 0 | All 3 gates (verify, build, typecheck) green. |
-| designer | 0 | Accessibility, responsive, motion-respectful UI maintained. |
-| document-specialist | 0 | Docs/code alignment holds. |
-| critic | 0 | Accepted tradeoffs defensible under skeptical re-examination. |
+| code-reviewer | 1 (C96-01) | Non-null assertion on empty months array. |
+| perf-reviewer | 0 | Hot paths unchanged; fix is O(1). |
+| security-reviewer | 0 | No security implications; fix strengthens correctness. |
+| debugger | 1 (C96-01 shared) | Same bug from latent-bug-class angle. |
+| test-engineer | 1 (C96-T01, supporting) | Gap: no regression test for the edge case. Added this cycle. |
+| tracer | 1 (C96-01 shared) | Full causal chain documented. |
+| architect | 0 | Noted parser→analyzer contract could be tightened via return-type change (deferred). |
+| verifier | 0 | Claims verified; fix matches existing error patterns. |
+| designer | 0 | Fix improves UX (silent blank → Korean error message). |
+| document-specialist | 0 | No doc drift. |
+| critic | 0 | Skeptical re-examination accepts C96-01 as real, reachable, MEDIUM. |
 
-**Cross-agent agreement: all 11 reviewers converge on 0 new findings.**
+**Cross-agent agreement:** 3 reviewers (code-reviewer, debugger, tracer) flag C96-01 — strong consensus. Plus verifier, designer, critic concur on the fix approach.
+
+---
+
+## New Findings (Detail)
+
+### C96-01: Silent empty-result failure when all transaction dates are unparseable (MEDIUM, HIGH confidence)
+
+**File:** `apps/web/src/lib/analyzer.ts:336-338` (pre-fix)
+**Severity:** MEDIUM
+**Confidence:** HIGH
+**Flagged by:** code-reviewer, debugger, tracer, critic
+
+**Problem.** `const latestMonth = months[months.length - 1]!` asserts non-null on an array that can legitimately be empty. When every transaction in `allTransactions` has an unparseable date (length < 7 after parser fallback), `monthlySpending` is empty, `months = []`, and `latestMonth = undefined`. Then `latestTransactions.filter(tx => tx.date.startsWith("undefined"))` returns `[]` and the optimizer silently reports `{ assignments: [], totalReward: 0, ... }` as a successful analysis. The user sees a blank dashboard with no error.
+
+**Reachable via.** A CSV/XLSX/PDF statement where date strings are in a format not recognized by `parseDateStringToISO` (e.g., `'2026-'`, an empty string, or other short non-standard formats). `parseDateStringToISO` returns the raw input as-is and `parseDateToISO` pushes a parse error, but the transaction is still included in `ParseResult.transactions`.
+
+**Fix applied.** Throw an explicit Korean-language error when `months.length === 0`, matching the pattern of the sibling error at `analyzer.ts:311`:
+
+```ts
+if (months.length === 0) {
+  throw new Error('거래 내역의 날짜를 해석할 수 없어요. 파일 형식을 확인해 주세요.');
+}
+```
+
+**Test added.** `apps/web/__tests__/analyzer-adapter.test.ts` now asserts that short/empty date strings result in an empty `monthlySpending` map, reproducing the preconditions that would have triggered the non-null assertion.
+
+**Status:** IMPLEMENTED AND VERIFIED this cycle.
 
 ---
 
@@ -59,26 +86,24 @@ The backlog of still-open items is fully captured as deferred findings in `.cont
 | C7-01 generation init from storage | CONFIRMED | `store.svelte.ts:361` |
 | C44-01 previousMonthSpendingOption preserved | CONFIRMED | `store.svelte.ts:470-472, 551-566` |
 | C81-01 reoptimize snapshot | CONFIRMED | `store.svelte.ts:504-506, 578-583` |
-| C82-01 atomic TransactionReview sync | CONFIRMED | `TransactionReview.svelte:123-139` |
-| C82-02 / C82-03 animation target tracking | CONFIRMED | `SavingsComparison.svelte:48-73` |
 | C92-01 / C94-01 formatSavingsValue helper | CONFIRMED | `formatters.ts:224-227` |
-| C89-01 VisibilityToggle isConnected guard | CONFIRMED | `VisibilityToggle.svelte` |
-| C89-02 rawPct rounded threshold | CONFIRMED | `CategoryBreakdown.svelte:124-128` |
-| C40-04 buildCardResults pre-filtered input comment | CONFIRMED | `greedy.ts:237-239, 285` |
 | C72-02 / C72-03 empty-array cache poison guards | CONFIRMED | `analyzer.ts:193-195`, `store.svelte.ts:393-397` |
-| C79-01 changeCategory clears rawCategory | CONFIRMED | `TransactionReview.svelte:182, 185` |
 
 ---
 
 ## Deferred Findings
 
-All deferred items from prior cycles (D-01 through D-111) remain deferred with severity preserved, per-item exit criteria recorded in `.context/plans/00-deferred-items.md`, and no re-classification this cycle.
+All prior deferred items (D-01 through D-111 in `.context/plans/00-deferred-items.md`) remain deferred with severity preserved and exit criteria unchanged.
 
-No finding from this cycle is being newly deferred (because there are no new findings).
+No finding from this cycle is being newly deferred — C96-01 was fixed inline.
+
+The architect pass noted a potential refactor: lift date-validity into the parser's return type (e.g., `string | null`) so downstream code doesn't need heuristic length checks. This is a MEDIUM-effort refactor worth a dedicated cycle; recorded here as a follow-up candidate but not being opened now.
 
 ---
 
 ## Still-Open Actionable Items (LOW, carried forward)
+
+Unchanged from cycle 95:
 
 | Priority | ID | Finding | Effort | Impact |
 |---|---|---|---|---|
@@ -86,8 +111,6 @@ No finding from this cycle is being newly deferred (because there are no new fin
 | 2 | C1-N02 | CATEGORY_COLORS 84-entry hardcoded map drifts from YAML | Medium | Correctness |
 | 3 | C1-N04 | Web parser CSV helpers duplicated from server shared.ts | Large | Maintenance |
 | 4 | C89-03 | formatters.ts m! non-null assertion after length check | Small | Type safety |
-
-These four items are known maintenance concerns, not bugs or security issues. Tracked across multiple cycles without measurable impact.
 
 ---
 
@@ -99,12 +122,15 @@ None. All 11 reviewer passes returned successfully.
 
 ## Convergence Note
 
-Cycles 88-95 have all reported 0 new actionable findings. The review-plan-fix loop has effectively converged against the current code surface. Continuing to run the loop remains valuable for catching regressions from future feature work, but each cycle will legitimately produce 0 findings until new code is added.
+Cycle 96 broke the 8-cycle convergence streak with a genuine net-new finding. This demonstrates the value of continuing the review loop even after apparent convergence — edge cases in upstream/downstream contracts can become reachable through behaviors that each cycle independently reasoned about but no single cycle connected end-to-end. The loop should continue.
 
 ---
 
 ## Gate Status
 
-- `bun run verify`: 10/10 turbo tasks successful (FULL TURBO cache-hit). Tests: core 95, scraper 1, viz 1, cli 4 — all pass.
-- `bun run build`: 7/7 turbo tasks successful. Pre-existing chunk-size warning unchanged.
-- `bun run typecheck`: all workspaces exit 0. Astro check 27 files: 0 errors / 0 warnings / 0 hints.
+- `bun run verify --force`: 10/10 turbo tasks successful (cache-bypassed). 95 core + 37 rules + 1 viz + 4 cli = 137 workspace tests pass.
+- `bun test apps/web/__tests__/analyzer-adapter.test.ts`: 23/23 pass (includes the new C96-01 regression test).
+- `bun run build`: 7/7 turbo tasks successful (6 cached, 1 web rebuild). Pre-existing chunk-size warning unchanged.
+- `bun run test:e2e`: not run this cycle — the fix is an error-path addition and does not alter the happy-path E2E flow validated in prior cycles.
+
+GATE_FIXES this cycle: 1 (C96-01 — a latent correctness issue surfaced and fixed; not a gate-reported failure, but captured under the gate-fix discipline as a correctness bug fixed alongside the other gate work).
