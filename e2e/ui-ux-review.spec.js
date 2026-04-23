@@ -5,7 +5,7 @@
  */
 const { expect, test } = require('@playwright/test');
 
-const BASE = 'http://127.0.0.1:4174/cherrypicker/';
+const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/cherrypicker/';
 const FIXTURE = require('path').join(__dirname, 'fixtures', 'regression-upload.csv');
 
 test.describe.configure({ mode: 'parallel' });
@@ -223,7 +223,7 @@ test.describe('Dashboard', () => {
   });
 
   test('shows spending summary cards', async ({ page }) => {
-    await expect(page.getByText('총 지출')).toBeVisible();
+    await expect(page.getByText('최근 월 지출')).toBeVisible();
     await expect(page.getByText('거래 건수')).toBeVisible();
     await expect(page.getByText('분석 기간')).toBeVisible();
     await expect(page.getByText('최다 지출 카테고리')).toBeVisible();

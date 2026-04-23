@@ -4,7 +4,7 @@
 const { expect, test } = require('@playwright/test');
 const path = require('path');
 
-const BASE = 'http://127.0.0.1:4174/cherrypicker/';
+const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/cherrypicker/';
 const FIXTURE = path.join(__dirname, 'fixtures', 'regression-upload.csv');
 const OUT = path.join(__dirname, '..', 'test-results', 'ui-screenshots');
 
