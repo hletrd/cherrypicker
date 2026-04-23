@@ -1,55 +1,65 @@
-# Cycle 6 — Aggregate review (deduped across agents)
+# Cycle 7 — aggregate review
 
-Previous cumulative aggregate retained at `.context/reviews/cycle98-*.md` and related files for provenance. This aggregate is cycle-6 specific.
+Deduplicated findings across `cycle7-test-engineer.md`, `cycle7-e2e-failure-diagnosis.md`, `cycle7-code-reviewer.md`, `cycle7-critic.md`, `cycle7-tracer.md`, `cycle7-perf-reviewer.md`, `cycle7-security-reviewer.md`, `cycle7-designer.md`, `cycle7-architect.md`, `cycle7-debugger.md`.
 
-Provenance files: `cycle6-*.md` per agent + `cycle6-ui-ux-deep.md` (user-injected designer primary).
+Provenance files retained at the per-agent `cycle7-*.md` and the cycle-6 set under `.context/reviews/cycle6-*.md`.
 
-## Top-priority findings (HIGH severity, cross-agent agreement)
+Prior convergence history: cycles 95–98 reported zero actionable findings; cycle 5 (UI/UX deep-dive) re-opened with 40+ findings; cycle 6 landed 9 HIGH/MEDIUM fixes but deferred D6-01 (upload-to-dashboard timeout) and D6-02 (feature-card strict-mode collision). Cycle 7 targets both plus the 38 failing Playwright tests.
 
-### C6UI-01 — UI/UX e2e spec wrong-port silent failure
-Severity HIGH / High confidence. Unanimous cross-agent (designer, verifier, tracer, code-reviewer, test-engineer, debugger, critic).
-- `e2e/ui-ux-review.spec.js:7` and `e2e/ui-ux-screenshots.spec.js:7` hardcode `:4174`; `playwright.config.ts:3` uses `port = 4173`. Every test in those specs errors with `ERR_CONNECTION_REFUSED`.
-- Fix: use `process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/cherrypicker/'`.
+## HIGH — in-scope for cycle 7 (implement now)
 
-### C6UI-40 — Optimizer regression in core-regressions.spec.js
-Severity HIGH / High confidence. Agreed by verifier, tracer, test-engineer, debugger, critic.
-- `e2e/core-regressions.spec.js:149` expects 2 assignments; current rule logic (reward.ts:63-80) deliberately excludes broad rules from subcategorized transactions, producing 1 assignment.
-- Fix: rewrite the fixture so both transactions legitimately separate (e.g. distinguish merchant conditions), or replace 스타벅스 tx with a non-cafe merchant so broad-dining rule matches.
+| Id | Source agents | File:line | Description |
+|----|---------------|-----------|-------------|
+| C7-E01 | test-engineer T7-02, tracer, debugger, critic CR7-12 | `apps/web/src/components/upload/FileDropzone.svelte:222-234` (root) + `e2e/ui-ux-review.spec.js:11` (amplifier) | **`t.trim is not a function` during upload.** Svelte 5 `bind:value` on `<input type="number">` coerces the bound `$state<string>('')` to a `number` at runtime. `parsePreviousSpending(raw).trim()` then throws. The thrown error is caught inside `analysisStore.analyze()`, sets `error`, sets `result = null`, so `waitForURL('**/dashboard')` never resolves and hits the 30s timeout. This is the REAL root cause of D6-01. Fix: coerce to string in parsePreviousSpending. |
+| C7-E02 | test-engineer T7-02, tracer, debugger, critic CR7-12 | `e2e/ui-ux-review.spec.js:11` | **Parallel describe mode collides with single-process Astro preview.** Even after C7-E01, parallel workers driving concurrent upload pipelines at one preview server can cause residual flakes. Fix: `test.describe.configure({ mode: 'serial' })`. |
+| C7-E03 | test-engineer T7-03, designer D7-01, debugger, e2e-diag-bucket-A | `e2e/ui-ux-review.spec.js:67-72` + `apps/web/src/pages/index.astro:88-122` | **D6-02 strict-mode collision.** `getByText('최적 카드 추천')` resolves to 2 elements. Fix: add `data-testid="feature-card-{analysis,recommend,savings}"`; update spec. |
+| C7-E04 | test-engineer T7-04, e2e-diag-bucket-A | `e2e/ui-ux-review.spec.js:242, :304-307` | `체리피킹` + `카드 한 장` collide inside SavingsComparison (bar label + card header). Fix: `.first()`. |
+| C7-E05 | test-engineer T7-10, e2e-diag-bucket-D | `e2e/ui-ux-review.spec.js:160-169` | `우체국` hidden behind 더보기. Fix: click 더보기 before asserting. |
+| C7-E06 | test-engineer T7-01, e2e-diag-bucket-B | `e2e/ui-ux-review.spec.js:406-420` | `waitForFunction(astro-island:not([ssr]))` times out on empty-state pages because islands live inside a hidden container. Fix: drop the wait. |
+| C7-E07 | critic CR7-02 | `package.json:17` | `test:e2e` build step doesn't include the web app. Fix: widen the turbo build. |
 
-### C6UI-16 — Data-loss on refresh during upload
-Severity HIGH / High confidence. Designer + security + user-injected scope.
-- `FileDropzone.svelte:232-266` has no `beforeunload` guard; F5 or navigation during analysis wipes work.
-- Fix: add beforeunload handler while `uploadStatus === 'uploading'`.
+## MEDIUM — plan-only updates in cycle 7
 
-### C6UI-34 — Unbounded 전월실적 input
-Severity HIGH / High confidence. Security + designer + critic.
-- `FileDropzone.svelte:439-448` has `min="0"` but no `max`; `parsePreviousSpending` has no clamp. A 10-digit typo inflates projected savings.
-- Fix: `max="10000000000"` + `Math.min(n, 10_000_000_000)` in parser.
+| Id | Source | Description |
+|----|--------|-------------|
+| C7-D01 | critic CR7-10 | Refresh `00-deferred-items.md` with resolved D6-01/D6-02 plus new D7-Mxx entries. |
+| C7-D02 | critic CR7-05 | C6UI-04, C6UI-05 remain deferred but keep their WCAG 1.4.11 AA severity — NOT downgraded to LOW. |
 
-### C6UI-38 — Zero `data-testid` attributes in the web app
-Severity HIGH / High confidence. Designer + test-engineer + critic.
-- `grep -r 'data-testid' apps/web/src` → 0 matches. All Playwright selectors depend on Korean copy.
-- Fix: add testids incrementally starting with load-bearing surfaces.
+## MEDIUM / LOW — deferred with severity preserved + exit criteria
 
-### C6UI-08 — TransactionReview amber/red class stacking
-Severity HIGH / High confidence (code-reviewer + designer + critic).
-- `TransactionReview.svelte:290-292` concatenates two conditional class strings; fragile.
-- Fix: short-circuit ternary so `uncategorized` excludes the low-confidence branch.
+| Id | Source | File:line | Severity | Reason to defer | Exit criterion |
+|----|--------|-----------|----------|-----------------|----------------|
+| D7-M1 | code-reviewer C7CR-01 | `apps/web/src/lib/store.svelte.ts:601-602` | LOW / High | dead assignment; no runtime effect | refactor with C7CR-09 |
+| D7-M2 | code-reviewer C7CR-02 | `apps/web/src/lib/store.svelte.ts:452-459` | MEDIUM / Medium | `setResult` footgun; no current callers | first caller added or method deleted |
+| D7-M3 | code-reviewer C7CR-03 | `apps/web/src/components/upload/FileDropzone.svelte:266-277` | MEDIUM / Medium | rapid-re-upload race; no user report | double-click reproducer test |
+| D7-M4 | code-reviewer C7CR-06 | `FileDropzone.svelte:228-234` | LOW / Medium | `-0` accepted; cosmetic | strict-sign test |
+| D7-M5 | code-reviewer C7CR-07 | `apps/web/src/lib/analyzer.ts:322-333` | LOW / Medium | silent drop of malformed-date rows documented as C6-01 | user reports missing transactions |
+| D7-M6 | code-reviewer C7CR-09 | `apps/web/src/lib/store.svelte.ts:216-220, :379` | MEDIUM / High | module-level mutable state; testability | persistence module extraction |
+| D7-M7 | critic CR7-01 | `playwright.config.ts:19` | MEDIUM / Medium | `reuseExistingServer` masks stale builds | revisit when CI pipeline added |
+| D7-M8 | critic CR7-06 | repo-wide | MEDIUM / Medium | no axe-core a11y gate | dedicated a11y cycle |
+| D7-M9 | critic CR7-11 | `e2e/ui-ux-screenshots.spec.js` | LOW / Low | manual-review smoke harness; intentional | toMatchSnapshot migration |
+| D7-M10 | designer D7-05 | `FileDropzone.svelte:490-505` | LOW / Medium | spinner lacks `aria-busy` | a11y gate cycle |
+| D7-M11 | architect A7-01 / A7-02 / A7-03 | multiple | MEDIUM / Medium | architectural refactors | dedicated refactor cycle |
+| D7-M12 | perf-reviewer P7-01 | `apps/web/src/lib/analyzer.ts:186-201` | LOW / High | cardRules refetched per reoptimize | profiling shows bottleneck |
+| D7-M13 | security-reviewer S7-01 | Astro CSP | MEDIUM / High | `unsafe-inline` still in script-src | Astro nonce-based CSP lands |
+| D7-M14 | test-engineer T7-05, T7-06, T7-07, T7-09, T7-11, T7-12, T7-13, T7-14, T7-15 | various | LOW / Medium | test-selector polish | follow-up test-engineer cycle |
 
-## MEDIUM severity cluster (25 items)
-C6UI-02, 03, 06, 07, 09, 10, 12, 13, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29, 31, 35, 37, 39. See `cycle6-ui-ux-deep.md` for full detail.
+No security, correctness, or data-loss finding is deferred this cycle. All previously-deferred HIGH items from cycle 6 (D6-01, D6-02) are resolved in-scope via C7-E01 / C7-E02 / C7-E03.
 
-## LOW severity cluster (9 items)
-C6UI-04, 05, 11, 14, 28, 30, 32, 33, 36.
+C6UI-04, C6UI-05 (WCAG 1.4.11 non-text contrast, AA) remain deferred. Severity preserved as MEDIUM (SC 1.4.11 is an AA item, not LOW as cycle-6 plan implied). Exit criterion: an a11y-focused cycle that lands axe-core in Playwright.
 
-## AGENT FAILURES
-None — all specialist lanes produced reviews in `cycle6-*.md` files.
+C6UI-23 (target size) remains deferred; already meets SC 2.5.8 at 24×24 — exit criterion is the AAA upgrade (44×44) when that becomes prioritised.
 
-## Cross-agent agreement summary
-- C6UI-01 appears in 6/11 lanes — strongest signal.
-- C6UI-40 appears in 5/11 lanes — unanimous HIGH.
-- C6UI-16, -34, -38 each in 3-4 lanes — consistent HIGH.
-- C6UI-08: HIGH in code-reviewer + designer; tracer argues for MEDIUM (cascade makes red win anyway). Aggregate keeps HIGH because reorder is silent.
+## Agent failures
 
-## Divergence vs cycles 4-5
-Cycles 4 & 5 reported 0 new findings. Cycle 6 surfaces 40 UI/UX findings plus 1 optimizer-fixture regression — consistent with the user-injected TODO-U1 scope requiring an actual Playwright-driven deep dive.
+None.
+
+## Cross-agent agreement
+
+- **test-engineer + tracer + debugger + critic** converge on C7-E01 (`t.trim`) being the real D6-01 root cause, with C7-E02 (parallel contention) as a secondary amplifier.
+- **test-engineer + debugger + designer** converge on C7-E03 (feature-card testid).
+- **test-engineer + critic** converge on C7-E07 (widen `test:e2e` build scope).
+
+## Plan hand-off
+
+See `.context/plans/cycle7-orch-plan.md` for the implementation plan.

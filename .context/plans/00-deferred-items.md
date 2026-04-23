@@ -920,3 +920,104 @@ Every finding from the reviews must be either (a) scheduled for implementation i
 - **File+line:** `apps/web/src/lib/cards.ts:214-240`
 - **Reason for deferral:** Same class as D-09/D-51 (performance at scale). With 683 cards across 10 issuers, the linear scan takes < 1ms and is not a bottleneck. The function is called once per CardDetail mount and once per card in the grid. A Map index would be O(1) but adds complexity for minimal benefit at current scale.
 - **Exit criterion:** If the card count exceeds 5000 or `getCardById` is called in tight loops, build a `Map<string, CardRuleSet>` index when `loadCardsData()` is first called.
+
+---
+
+## Cycle 7 resolutions and newly deferred items
+
+### Resolved (previously deferred)
+
+- **D6-01 — upload → dashboard waitForURL timeout** — RESOLVED by C7-E01 (`parsePreviousSpending` now accepts `unknown` and coerces correctly; Svelte 5 `bind:value` on `<input type="number">` no longer crashes the upload flow). Root cause was a runtime type mismatch, NOT parallel contention as cycle-6 suspected. Parallel-contention tail mitigated by C7-E02 (`mode: 'serial'`).
+- **D6-02 — `feature cards render` strict-mode violation** — RESOLVED by C7-E03 (`data-testid="feature-card-{analysis,recommend,savings}"` added + spec updated).
+
+### Newly deferred (cycle 7)
+
+#### D7-M1: dead `_loadPersistWarningKind = null` in reset()
+- **Severity:** LOW / High confidence
+- **File+line:** `apps/web/src/lib/store.svelte.ts:601-602`
+- **Reason:** maintenance-only; no runtime effect (module-level vars are already cleared at store construction).
+- **Exit criterion:** refactor together with D7-M6 when persistence is extracted.
+
+#### D7-M2: `setResult` footgun with no callers
+- **Severity:** MEDIUM / Medium
+- **File+line:** `apps/web/src/lib/store.svelte.ts:452-459`
+- **Reason:** method has no current callers; deleting or guarding during a busy cycle adds churn without value.
+- **Exit criterion:** first caller appears, or the method is deleted in a dedicated store-cleanup cycle.
+
+#### D7-M3: timer leak on rapid re-upload within 1.2s
+- **Severity:** MEDIUM / Medium
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:266-277`
+- **Reason:** requires a specific double-click race; no user report.
+- **Exit criterion:** reproducer test added.
+
+#### D7-M4: `parsePreviousSpending` accepts `-0`
+- **Severity:** LOW / Medium
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:228-234`
+- **Reason:** `-0` is numerically equivalent to `0`.
+- **Exit criterion:** a test asserts strict sign behaviour.
+
+#### D7-M5: silent drop of malformed-date rows from monthlyBreakdown
+- **Severity:** LOW / Medium
+- **File+line:** `apps/web/src/lib/analyzer.ts:322-333`
+- **Reason:** documented as C6-01 convention; all-malformed already throws (C96-01).
+- **Exit criterion:** user reports "some transactions missing" from the breakdown.
+
+#### D7-M6: module-level mutable `_loadPersistWarningKind`
+- **Severity:** MEDIUM / High
+- **File+line:** `apps/web/src/lib/store.svelte.ts:216-220, :379`
+- **Reason:** testability concern; no runtime failure mode in the app singleton path.
+- **Exit criterion:** persistence module extracted to its own file (tied to A7-02).
+
+#### D7-M7: `reuseExistingServer` masks stale builds
+- **Severity:** MEDIUM / Medium
+- **File+line:** `playwright.config.ts:19`
+- **Reason:** paired with C7-E07 (build-scope fix). When CI pipeline lands, re-evaluate.
+- **Exit criterion:** CI pipeline enforces fresh builds.
+
+#### D7-M8: no axe-core WCAG regression gate
+- **Severity:** MEDIUM / Medium
+- **File+line:** repo-wide (no integration).
+- **Reason:** introducing axe is a feature; outside this cycle's scope.
+- **Exit criterion:** dedicated a11y cycle adds `@axe-core/playwright` + one gate test.
+
+#### D7-M9: `ui-ux-screenshots.spec.js` has no assertions
+- **Severity:** LOW / Low
+- **File+line:** `e2e/ui-ux-screenshots.spec.js` (all tests).
+- **Reason:** intentional manual-review smoke harness.
+- **Exit criterion:** migrate to `toMatchSnapshot` with tolerance.
+
+#### D7-M10: submit spinner lacks `aria-busy`
+- **Severity:** LOW / Medium
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:490-505`
+- **Reason:** cosmetic a11y polish.
+- **Exit criterion:** a11y cycle.
+
+#### D7-M11: selector-string coupling / persistence refactor / type-package split
+- **Severity:** MEDIUM / Medium
+- **File+line:** `e2e/ui-ux-review.spec.js`, `apps/web/src/lib/store.svelte.ts`, `apps/web/src/lib/analyzer.ts:10`.
+- **Reason:** architectural; cross-cycle.
+- **Exit criterion:** dedicated refactor cycle.
+
+#### D7-M12: `getAllCardRules` refetched per reoptimize
+- **Severity:** LOW / High
+- **File+line:** `apps/web/src/lib/analyzer.ts:186-201`
+- **Reason:** 10-50ms per reoptimize; negligible for current UX.
+- **Exit criterion:** reoptimize called frequently enough to profile.
+
+#### D7-M13: `unsafe-inline` in script-src CSP
+- **Severity:** MEDIUM / High
+- **File+line:** Astro config (to locate); comments in test files reference this.
+- **Reason:** Astro inline hydration; nonce migration requires Astro upstream support.
+- **Exit criterion:** Astro CSP nonce integration lands.
+
+#### D7-M14: test-selector polish (T7-05, T7-06, T7-07, T7-09, T7-11, T7-12, T7-13, T7-14, T7-15)
+- **Severity:** LOW / Medium
+- **File+line:** various in `e2e/ui-ux-review.spec.js`.
+- **Reason:** current `.first()` + `or()` patterns work; narrowing selectors to testids is a polish cycle.
+- **Exit criterion:** follow-up test-engineer cycle.
+
+### Severity-preserved cycle-6 deferrals re-noted in cycle 7
+
+- **C6UI-04, C6UI-05 (WCAG 1.4.11 non-text contrast, MEDIUM)** — remain deferred. Severity NOT downgraded to LOW (cycle-6 plan implied LOW; cycle 7 re-classifies to match WCAG AA). Exit criterion: axe-core gate cycle (same as D7-M8).
+- **C6UI-23 (target size, LOW)** — remains deferred. Already meets SC 2.5.8 at 24×24; exit criterion is upgrade to 44×44 for WCAG AAA.
+
