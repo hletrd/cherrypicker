@@ -449,15 +449,6 @@ function createAnalysisStore() {
       return result?.transactions ?? [];
     },
 
-    setResult(r: AnalysisResult): void {
-      result = r;
-      generation++;
-      error = null;
-      const persistResult = persistToStorage(r);
-      persistWarningKind = persistResult.kind;
-      truncatedTxCount = persistResult.truncatedTxCount;
-    },
-
     async analyze(files: File | File[], options?: AnalyzeOptions): Promise<void> {
       loading = true;
       error = null;
