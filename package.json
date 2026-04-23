@@ -12,7 +12,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "test:bun": "bun test packages/parser tools/scraper",
-    "test:e2e": "turbo run build --filter=@cherrypicker/core --filter=@cherrypicker/rules && playwright test",
+    "test:e2e": "turbo run build --filter=@cherrypicker/core --filter=@cherrypicker/rules --filter=@cherrypicker/web && playwright test",
     "lint": "npm run --workspaces --if-present --include-workspace-root=false lint",
     "typecheck": "npm run --workspaces --if-present --include-workspace-root=false typecheck",
     "verify": "npm run lint && npm run typecheck && bun run test",
