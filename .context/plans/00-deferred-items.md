@@ -1391,3 +1391,77 @@ No security, correctness, or data-loss finding is deferred this cycle.
 - **Reason for deferral:** The naming is technically incorrect but has no user-facing impact. The `kind` field is only consumed internally to set `persistWarningKind` state, which is only checked for `!== null` in the UI.
 - **Exit criterion:** When the persistence module is refactored (tied to D7-M6/A7-02), rename `corrupted` to `quota_exceeded` for clarity.
 
+---
+
+## Deferred Findings (Cycle 12)
+
+### C12-CR01: globalMonthUsed / ruleMonthUsed rollback inconsistency after global cap clip
+
+- **Original finding:** C12-CR01 (code-reviewer)
+- **Severity:** MEDIUM (latent inconsistency)
+- **Confidence:** Low
+- **File+line:** `packages/core/src/calculator/reward.ts:311-331`
+- **Reason for deferral:** Latent inconsistency in cap tracking that has no visible effect in practice. The global cap check is applied independently per transaction, so the rule-level tracker over-reporting remaining capacity never causes a user-visible incorrect reward. Fixing would require refactoring the cap tracking to use a single source of truth, which is out of scope for a latent issue.
+- **Exit criterion:** If the optimizer ever produces incorrect rewards due to cap tracking, consolidate rule-level and global cap tracking into a single tracking mechanism.
+
+### C12-DB03: PDF fallback dateMatch[1] is undefined (no capture groups in regex)
+
+- **Original finding:** C12-DB03 (debugger)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/pdf.ts:383`
+- **Reason for deferral:** Latent bug in the fallback line scanner — `dateMatch[1]!` is undefined because `fallbackDatePattern` has no capture groups. The resulting "undefined" string is passed to `parseDateToISO`, which returns an invalid date that gets filtered downstream. No user-visible effect because the transaction is excluded from optimization. Fixing requires adding a capture group to the regex or using `dateMatch[0]` instead.
+- **Exit criterion:** When the PDF parser is refactored (tied to D-01), fix the regex to use `dateMatch[0]` or add proper capture groups.
+
+### C12-UX01: CategoryBreakdown no visual affordance for expandable rows on mobile
+
+- **Original finding:** C12-UX01 (designer)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:203-275`
+- **Reason for deferral:** Minor UX polish. The `onclick` handler works on touch devices, but there is no visual indicator (chevron, arrow) that rows are expandable. Adding a subtle chevron would improve discoverability but is low priority.
+- **Exit criterion:** When a UX polish cycle is scheduled, add a subtle expand/collapse chevron to category rows.
+
+### C12-UX02: SpendingSummary warning banner dismiss button lacks focus ring
+
+- **Original finding:** C12-UX02 (designer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/SpendingSummary.svelte:158`
+- **Reason for deferral:** Minor accessibility polish. The dismiss button has no explicit focus ring, making it hard for keyboard-only users to see when the button has focus. Adding `focus:ring-2 focus:ring-[var(--color-primary)]` would fix this.
+- **Exit criterion:** When an accessibility polish cycle is scheduled, add focus ring styles to the dismiss button.
+
+### C12-UX04: TransactionReview table horizontal scroll without visual indicator
+
+- **Original finding:** C12-UX04 (designer)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:272`
+- **Reason for deferral:** Minor UX polish. The table has `overflow-x-auto` for narrow viewports, but no visual indicator (fade gradient, scrollbar hint) that horizontal scrolling is available. Adding a subtle shadow or fade on the right edge would improve discoverability.
+- **Exit criterion:** When a UX polish cycle is scheduled, add a scroll indicator to the transaction table.
+
+### C12-TE03: No test coverage for XLSX isHTMLContent function
+
+- **Original finding:** C12-TE03 (test-engineer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/xlsx.ts:266-275`
+- **Reason for deferral:** Test coverage gap. The `isHTMLContent` function detects HTML disguised as XLS (common in Korean card exports). Edge cases (BOM + HTML, mixed encoding) are untested. The function works correctly in production.
+- **Exit criterion:** When a dedicated test coverage improvement cycle is scheduled (same as C9-08/C9-09).
+
+### C12-TE04: No test coverage for getCategoryLabels caching behavior
+
+- **Original finding:** C12-TE04 (test-engineer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/store.svelte.ts:383-398`
+- **Reason for deferral:** Test coverage gap. The "don't cache empty Map" guard (line 394-397) prevents an AbortError from poisoning all subsequent reoptimize calls. This guard has no test coverage. A regression could cause English keys instead of Korean labels.
+- **Exit criterion:** When a dedicated test coverage improvement cycle is scheduled (same as C9-08/C9-09).
+
+### Cycle 12 re-affirmation of existing deferred items
+
+All previously deferred items remain unchanged. No severity downgrades. The following items saw renewed cross-agent agreement this cycle:
+- C7-01 (CATEGORY_NAMES_KO drift) — confirmed by code-reviewer, architect, critic
+- D-01 (duplicate parsers) — confirmed by architect, code-reviewer (C12-CR04)
+- D-02 (license mismatch) — confirmed by document-specialist
+
