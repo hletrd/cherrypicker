@@ -54,13 +54,13 @@ function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
       ...rule.card,
       source: VALID_SOURCES.has(rule.card.source)
         ? (rule.card.source as 'manual' | 'llm-scrape' | 'web')
-        : 'web', // fallback for unknown source values
+        : (console.warn(`Unknown card source "${rule.card.source}" for ${rule.card.id}, falling back to "web"`), 'web' as const),
     },
     rewards: rule.rewards.map((r) => ({
       ...r,
       type: VALID_REWARD_TYPES.has(r.type)
         ? (r.type as 'discount' | 'points' | 'cashback' | 'mileage')
-        : 'discount', // fallback for unknown reward types
+        : (console.warn(`Unknown reward type "${r.type}" for ${rule.card.id}, falling back to "discount"`), 'discount' as const),
       tiers: r.tiers.map((t) => ({
         ...t,
         // Ensure unit is narrowed from string | undefined to the expected union
