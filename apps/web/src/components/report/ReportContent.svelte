@@ -33,29 +33,29 @@
     <table class="w-full text-sm">
       <tbody>
         <tr class="border-b border-[var(--color-border)]">
-          <td class="px-4 py-3 font-medium text-[var(--color-text-muted)] bg-[var(--color-bg)]">분석 기간</td>
+          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">분석 기간</th>
           <td class="px-4 py-3 text-[var(--color-text)]">{periodLabel}</td>
         </tr>
         <tr class="border-b border-[var(--color-border)]">
-          <td class="px-4 py-3 font-medium text-[var(--color-text-muted)] bg-[var(--color-bg)]">총 지출</td>
+          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">총 지출</th>
           <td class="px-4 py-3 font-mono text-[var(--color-text)]">{formatWon(opt.totalSpending)}</td>
         </tr>
         <tr class="border-b border-[var(--color-border)]">
-          <td class="px-4 py-3 font-medium text-[var(--color-text-muted)] bg-[var(--color-bg)]">체리피킹 혜택</td>
+          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">체리피킹 혜택</th>
           <td class="px-4 py-3 font-mono text-[var(--color-primary)]">{formatWon(opt.totalReward)}</td>
         </tr>
         <tr class="border-b border-[var(--color-border)]">
-          <td class="px-4 py-3 font-medium text-[var(--color-text-muted)] bg-[var(--color-bg)]">{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}</td>
+          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}</th>
           <td class="px-4 py-3 font-mono {opt.savingsVsSingleCard >= 0 ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}">
             {formatSavingsValue(opt.savingsVsSingleCard)}
           </td>
         </tr>
         <tr class="border-b border-[var(--color-border)]">
-          <td class="px-4 py-3 font-medium text-[var(--color-text-muted)] bg-[var(--color-bg)]">실효 혜택률</td>
+          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">실효 혜택률</th>
           <td class="px-4 py-3 font-mono text-[var(--color-text)]">{formatRatePrecise(opt.effectiveRate)}</td>
         </tr>
         <tr>
-          <td class="px-4 py-3 font-medium text-[var(--color-text-muted)] bg-[var(--color-bg)]">사용 카드 수</td>
+          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">사용 카드 수</th>
           <td class="px-4 py-3 text-[var(--color-text)]">{uniqueCardCount}장</td>
         </tr>
       </tbody>
