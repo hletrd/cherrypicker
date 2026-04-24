@@ -1,65 +1,42 @@
-# Cycle 7 — aggregate review
+# Cycle 1 — aggregate review (Fresh Review 2026-04-24)
 
-Deduplicated findings across `cycle7-test-engineer.md`, `cycle7-e2e-failure-diagnosis.md`, `cycle7-code-reviewer.md`, `cycle7-critic.md`, `cycle7-tracer.md`, `cycle7-perf-reviewer.md`, `cycle7-security-reviewer.md`, `cycle7-designer.md`, `cycle7-architect.md`, `cycle7-debugger.md`.
+Deduplicated findings across `code-reviewer`, `perf-reviewer`, `security-reviewer`, `architect`, `test-engineer`, and `designer`.
 
-Provenance files retained at the per-agent `cycle7-*.md` and the cycle-6 set under `.context/reviews/cycle6-*.md`.
+Provenance files retained at `.context/reviews/<agent-name>.md`.
 
-Prior convergence history: cycles 95–98 reported zero actionable findings; cycle 5 (UI/UX deep-dive) re-opened with 40+ findings; cycle 6 landed 9 HIGH/MEDIUM fixes but deferred D6-01 (upload-to-dashboard timeout) and D6-02 (feature-card strict-mode collision). Cycle 7 targets both plus the 38 failing Playwright tests.
+Prior convergence history: Cycles 2-10 (legacy numbering) reported progressively fewer new findings; 111 deferred items tracked in `.context/plans/00-deferred-items.md`. Cycle 1 (fresh review) re-examines the codebase with fresh eyes after a 10-cycle gap.
 
-## HIGH — in-scope for cycle 7 (implement now)
+## MEDIUM — implement in this cycle
 
 | Id | Source agents | File:line | Description |
 |----|---------------|-----------|-------------|
-| C7-E01 | test-engineer T7-02, tracer, debugger, critic CR7-12 | `apps/web/src/components/upload/FileDropzone.svelte:222-234` (root) + `e2e/ui-ux-review.spec.js:11` (amplifier) | **`t.trim is not a function` during upload.** Svelte 5 `bind:value` on `<input type="number">` coerces the bound `$state<string>('')` to a `number` at runtime. `parsePreviousSpending(raw).trim()` then throws. The thrown error is caught inside `analysisStore.analyze()`, sets `error`, sets `result = null`, so `waitForURL('**/dashboard')` never resolves and hits the 30s timeout. This is the REAL root cause of D6-01. Fix: coerce to string in parsePreviousSpending. |
-| C7-E02 | test-engineer T7-02, tracer, debugger, critic CR7-12 | `e2e/ui-ux-review.spec.js:11` | **Parallel describe mode collides with single-process Astro preview.** Even after C7-E01, parallel workers driving concurrent upload pipelines at one preview server can cause residual flakes. Fix: `test.describe.configure({ mode: 'serial' })`. |
-| C7-E03 | test-engineer T7-03, designer D7-01, debugger, e2e-diag-bucket-A | `e2e/ui-ux-review.spec.js:67-72` + `apps/web/src/pages/index.astro:88-122` | **D6-02 strict-mode collision.** `getByText('최적 카드 추천')` resolves to 2 elements. Fix: add `data-testid="feature-card-{analysis,recommend,savings}"`; update spec. |
-| C7-E04 | test-engineer T7-04, e2e-diag-bucket-A | `e2e/ui-ux-review.spec.js:242, :304-307` | `체리피킹` + `카드 한 장` collide inside SavingsComparison (bar label + card header). Fix: `.first()`. |
-| C7-E05 | test-engineer T7-10, e2e-diag-bucket-D | `e2e/ui-ux-review.spec.js:160-169` | `우체국` hidden behind 더보기. Fix: click 더보기 before asserting. |
-| C7-E06 | test-engineer T7-01, e2e-diag-bucket-B | `e2e/ui-ux-review.spec.js:406-420` | `waitForFunction(astro-island:not([ssr]))` times out on empty-state pages because islands live inside a hidden container. Fix: drop the wait. |
-| C7-E07 | critic CR7-02 | `package.json:17` | `test:e2e` build step doesn't include the web app. Fix: widen the turbo build. |
+| C1-01 | code-reviewer C1-01, designer U1-01, test-engineer T1-01 | `apps/web/src/components/cards/CardDetail.svelte:28-38` | **CardDetail shows raw category IDs when `loadCategories` is aborted.** When `loadCategories` returns `[]` (AbortError during View Transition), `categoryLabels` is empty but `categoryLabelsReady = true`, so the rewards table renders raw IDs like "dining.cafe" instead of Korean labels. TransactionReview has a hardcoded fallback; CardDetail should too. |
+| A1-01 | architect A1-01 | `packages/core/src/optimizer/greedy.ts:11-86` | **`CATEGORY_NAMES_KO` is a hardcoded duplicate of taxonomy data.** Duplicates category labels from `packages/rules/data/categories.yaml`. The existing TODO at line 8-10 acknowledges this. Missing newer entries (`travel_agency`, `apartment_mgmt`). Can silently drift from YAML source. `greedyOptimize` already accepts `categoryLabels?: Map<string, string>` in its constraints, making this redundant when labels are provided. |
 
-## MEDIUM — plan-only updates in cycle 7
+## LOW — plan-only or deferred
 
-| Id | Source | Description |
-|----|--------|-------------|
-| C7-D01 | critic CR7-10 | Refresh `00-deferred-items.md` with resolved D6-01/D6-02 plus new D7-Mxx entries. |
-| C7-D02 | critic CR7-05 | C6UI-04, C6UI-05 remain deferred but keep their WCAG 1.4.11 AA severity — NOT downgraded to LOW. |
+| Id | Source agents | File:line | Severity | Description |
+|----|---------------|-----------|----------|-------------|
+| C1-02 | code-reviewer C1-02, architect A1-02, perf-reviewer P1-02 | `packages/parser/src/detect.ts:148-165` | LOW | **Server-side `detectCSVDelimiter` scans all lines.** Web version limits to 30 lines (C83-05); server version does not. Add `.slice(0, 30)`. |
+| C1-03 | code-reviewer C1-03 | `apps/web/src/lib/analyzer.ts:55-58` | LOW | **`toCoreCardRuleSets` silently falls back unknown sources to 'web'.** Misleading for scraped cards. Should log `console.warn` on fallback. |
+| P1-01 | perf-reviewer P1-01 | `apps/web/src/lib/store.svelte.ts:576` | LOW | **`persistToStorage` serializes entire result on every reoptimize.** Previously P8-02 (deferred). No change in status. Debounce recommended. |
+| U1-02 | designer U1-02 | `apps/web/src/components/upload/FileDropzone.svelte:494-503` | LOW | **FileDropzone `<input type="number">` shows stepper arrows on mobile.** Useless for Korean Won amounts. Add `appearance: textfield` CSS or switch to `inputmode="numeric"` with `type="text"`. |
+| T1-01 | test-engineer T1-01 | (superseded by C1-01) | LOW | No unit test for CardDetail abort-then-labels scenario. Subsumed by C1-01 fix — add test alongside the fix. |
+| T1-02 | test-engineer T1-02 | `packages/parser/__tests__/detect.test.ts` | LOW | No test for `detectCSVDelimiter` 30-line limit. Subsumed by C1-02 fix — add test alongside the fix. |
 
-## MEDIUM / LOW — deferred with severity preserved + exit criteria
+## Security — no new findings
 
-| Id | Source | File:line | Severity | Reason to defer | Exit criterion |
-|----|--------|-----------|----------|-----------------|----------------|
-| D7-M1 | code-reviewer C7CR-01 | `apps/web/src/lib/store.svelte.ts:601-602` | LOW / High | dead assignment; no runtime effect | refactor with C7CR-09 |
-| D7-M2 | code-reviewer C7CR-02 | `apps/web/src/lib/store.svelte.ts:452-459` | MEDIUM / Medium | `setResult` footgun; no current callers | first caller added or method deleted |
-| D7-M3 | code-reviewer C7CR-03 | `apps/web/src/components/upload/FileDropzone.svelte:266-277` | MEDIUM / Medium | rapid-re-upload race; no user report | double-click reproducer test |
-| D7-M4 | code-reviewer C7CR-06 | `FileDropzone.svelte:228-234` | LOW / Medium | `-0` accepted; cosmetic | strict-sign test |
-| D7-M5 | code-reviewer C7CR-07 | `apps/web/src/lib/analyzer.ts:322-333` | LOW / Medium | silent drop of malformed-date rows documented as C6-01 | user reports missing transactions |
-| D7-M6 | code-reviewer C7CR-09 | `apps/web/src/lib/store.svelte.ts:216-220, :379` | MEDIUM / High | module-level mutable state; testability | persistence module extraction |
-| D7-M7 | critic CR7-01 | `playwright.config.ts:19` | MEDIUM / Medium | `reuseExistingServer` masks stale builds | revisit when CI pipeline added |
-| D7-M8 | critic CR7-06 | repo-wide | MEDIUM / Medium | no axe-core a11y gate | dedicated a11y cycle |
-| D7-M9 | critic CR7-11 | `e2e/ui-ux-screenshots.spec.js` | LOW / Low | manual-review smoke harness; intentional | toMatchSnapshot migration |
-| D7-M10 | designer D7-05 | `FileDropzone.svelte:490-505` | LOW / Medium | spinner lacks `aria-busy` | a11y gate cycle |
-| D7-M11 | architect A7-01 / A7-02 / A7-03 | multiple | MEDIUM / Medium | architectural refactors | dedicated refactor cycle |
-| D7-M12 | perf-reviewer P7-01 | `apps/web/src/lib/analyzer.ts:186-201` | LOW / High | cardRules refetched per reoptimize | profiling shows bottleneck |
-| D7-M13 | security-reviewer S7-01 | Astro CSP | MEDIUM / High | `unsafe-inline` still in script-src | Astro nonce-based CSP lands |
-| D7-M14 | test-engineer T7-05, T7-06, T7-07, T7-09, T7-11, T7-12, T7-13, T7-14, T7-15 | various | LOW / Medium | test-selector polish | follow-up test-engineer cycle |
+The security reviewer found no new issues. The codebase is a client-side-only static Astro site with minimal attack surface. Previously deferred items (D7-M13, D-32, D7-M8) remain valid.
 
-No security, correctness, or data-loss finding is deferred this cycle. All previously-deferred HIGH items from cycle 6 (D6-01, D6-02) are resolved in-scope via C7-E01 / C7-E02 / C7-E03.
+## Previously Deferred (Acknowledged, Not Re-reported)
 
-C6UI-04, C6UI-05 (WCAG 1.4.11 non-text contrast, AA) remain deferred. Severity preserved as MEDIUM (SC 1.4.11 is an AA item, not LOW as cycle-6 plan implied). Exit criterion: an a11y-focused cycle that lands axe-core in Playwright.
-
-C6UI-23 (target size) remains deferred; already meets SC 2.5.8 at 24×24 — exit criterion is the AAA upgrade (44×44) when that becomes prioritised.
-
-## Agent failures
-
-None.
+All 111 items in `.context/plans/00-deferred-items.md` (D-01 through D-111) remain valid. No regression or new evidence found for any deferred item.
 
 ## Cross-agent agreement
 
-- **test-engineer + tracer + debugger + critic** converge on C7-E01 (`t.trim`) being the real D6-01 root cause, with C7-E02 (parallel contention) as a secondary amplifier.
-- **test-engineer + debugger + designer** converge on C7-E03 (feature-card testid).
-- **test-engineer + critic** converge on C7-E07 (widen `test:e2e` build scope).
+- **code-reviewer + designer + test-engineer** converge on C1-01 (CardDetail abort/labels). Designer flags UX impact for Korean users; test-engineer flags missing test coverage.
+- **code-reviewer + architect + perf-reviewer** converge on C1-02 (server detectCSVDelimiter unbounded scan). Architect flags the concrete divergence in the D-01 duplicate parser class; perf-reviewer flags the O(n) cost.
 
 ## Plan hand-off
 
-See `.context/plans/cycle7-orch-plan.md` for the implementation plan.
+See `.context/plans/` for implementation plans derived from this aggregate.
