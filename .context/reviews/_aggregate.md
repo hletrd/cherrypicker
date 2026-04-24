@@ -1,50 +1,47 @@
-# Cycle 7 — Aggregate Review (2026-04-24)
+# Aggregate Review — Current (Cycle 9, 2026-04-24)
 
-Deduplicated findings across `code-reviewer`, `perf-reviewer`, `security-reviewer`, `architect`, `test-engineer`, `designer`, `debugger`, `critic`, `verifier`, `tracer`, and `document-specialist`.
+Deduplicated findings across cycles 7-9 reviews. This file supersedes per-cycle aggregates.
 
-Provenance files retained at `.context/reviews/c7-<agent-name>.md`.
+## MEDIUM — systemic, awaiting build-time generation fix
 
-## MEDIUM — implement in this cycle
-
-| Id | Source agents | File:line | Description |
+| Id | Source cycles | File:line | Description |
 |----|---------------|-----------|-------------|
-| C7-01 | code-reviewer C7-CR01, architect C7-A01, critic C7-CT01, tracer | `packages/core/src/optimizer/greedy.ts:11-90` | **CATEGORY_NAMES_KO hardcoded map can silently drift from YAML taxonomy.** 4 agents converge. This is the same drift risk noted in TODO C64-03 but not previously tracked as a review finding with severity. 90-line hardcoded Record duplicates the category labels from categories.yaml. When the YAML taxonomy changes, this map must be manually updated in lockstep. The web app solved this via `buildCategoryLabelMap()`, but the core optimizer uses the static map as a CLI fallback. |
-| C7-02 | code-reviewer C7-CR02, architect C7-A01, critic C7-CT01 | `apps/web/src/lib/category-labels.ts:32-110` | **FALLBACK_CATEGORY_LABELS is another hardcoded duplicate of the YAML taxonomy.** 78-entry ReadonlyMap used as fallback when categories.json fetch fails. Same drift risk as C7-01 but lower impact (fallback-only). Contains a known inconsistency: `entertainment.subscription` key kept for backward compatibility. |
+| C7-01 | C7, C8, C9 | `packages/core/src/optimizer/greedy.ts:11-90` | **CATEGORY_NAMES_KO hardcoded map can drift from YAML taxonomy.** 90-line Record duplicates category labels. 4+ agents converge across 3 cycles. |
+| C7-02 | C7, C8, C9 | `apps/web/src/lib/category-labels.ts:32-110` | **FALLBACK_CATEGORY_LABELS is a hardcoded duplicate.** 78-entry ReadonlyMap used as fallback. |
+| C9-01 | C9 | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:8-87` | **CATEGORY_COLORS is a fourth hardcoded duplicate.** 80-entry Record mapping category IDs to hex colors. |
 
-## LOW — plan-only or deferred
+**Exit criterion for all 3:** Build-time generation from `categories.yaml` that produces all fallback data, label maps, and color maps automatically.
 
-| Id | Source agents | File:line | Severity | Description |
-|----|---------------|-----------|----------|-------------|
-| C7-03 | code-reviewer C7-CR03, verifier C7-V02 | `apps/web/src/lib/api.ts:7-18` | LOW | `UploadResult` legacy type exported but never consumed. Dead code that should be removed. |
-| C7-04 | code-reviewer C7-CR04 | `apps/web/src/lib/category-labels.ts:101` | LOW | `entertainment.subscription` key in FALLBACK_CATEGORY_LABELS inconsistent with taxonomy. The comment acknowledges subscription is a top-level category. The duplicate key works but should be cleaned up with a STORAGE_VERSION migration. |
+## LOW — deferred
 
-## Security — no new findings
+| Id | Source | File:line | Description |
+|----|--------|-----------|-------------|
+| C7-03 | C7 | `apps/web/src/lib/api.ts:7-18` | Dead UploadResult type exported but never consumed. |
+| C7-04 | C7 | `apps/web/src/lib/category-labels.ts:101` | entertainment.subscription key inconsistent with taxonomy. |
+| C8-01 | C8 | `apps/web/src/components/dashboard/TransactionReview.svelte:27-42` | FALLBACK_GROUPS third hardcoded duplicate. Same exit criterion as C7-01. |
+| C9-02 | C9 | `apps/web/src/components/upload/FileDropzone.svelte:80-105` | ALL_BANKS duplicates parser bank signatures. |
+| C9-03 | C9 | `apps/web/src/lib/formatters.ts:52-79` | formatIssuerNameKo duplicates issuer name data. |
+| C9-04 | C9 | `apps/web/src/lib/formatters.ts:115-143` | getIssuerColor duplicates issuer color data. |
+| C9-05 | C9 | `apps/web/src/lib/formatters.ts:85-110` | getCategoryIconName duplicates taxonomy icon mapping. |
+| C9-06 | C9 | `packages/core/src/optimizer/constraints.ts:16` | buildConstraints unnecessary shallow copy — **FIXED** |
+| C9-07 | C9 | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:120` | CategoryBreakdown re-sort — **RESOLVED** (comment added, sort kept intentionally) |
+| C9-08 | C9 | `apps/web/src/lib/category-labels.ts:7-26` | No test coverage for buildCategoryLabelMap. |
+| C9-09 | C9 | `apps/web/src/lib/store.svelte.ts:146-330` | No test coverage for sessionStorage persistence. |
+| C9-10 | C9 | `apps/web/src/lib/build-stats.ts:16-18` | Fallback stats values may become stale. |
 
-No new HIGH or MEDIUM security findings. Previously deferred items (D-32, D-31) remain valid.
+## Security — no active findings
 
-## Cross-agent agreement
+No HIGH or MEDIUM security findings. Previously deferred items (D-32, D-31) remain valid.
 
-- **code-reviewer + architect + critic + tracer** converge on C7-01 (CATEGORY_NAMES_KO drift). 4 agents independently identified the same systemic issue.
-- **code-reviewer + architect + critic** converge on C7-02 (FALLBACK_CATEGORY_LABELS drift). 3 agents.
-- **code-reviewer + verifier** converge on C7-03 (dead UploadResult type). 2 agents.
-- **Critic** notes this is the fourth recurrence of the hardcoded-duplicate pattern (C64-03, C6-02, C7-CR01, C7-CR02), suggesting a structural fix is needed.
+## Gate evidence (Cycle 9)
 
-## Verification evidence
+- `npm run lint` — PASS
+- `npm run typecheck` — PASS
+- `bun run test` — PASS (FULL TURBO)
+- `npm run verify` — PASS (FULL TURBO)
 
-- Layout.astro BASE_URL migration from C6-01 confirmed complete (verifier C7-V01)
-- Grep for `import.meta.env.BASE_URL` shows only 3 correct locations remaining
+## Commits this cycle
 
-## Previously Deferred (Acknowledged, Not Re-reported)
-
-All items in `.context/plans/00-deferred-items.md` remain valid. No regression found.
-
-## Gate evidence
-
-- `npm run lint` — PASS (exit 0) [from cycle 6]
-- `npm run typecheck` — PASS (exit 0) [from cycle 6]
-- `bun run test` — PASS (197 tests, 0 fail) [from cycle 6]
-- `npm run verify` — PASS (10/10 turbo tasks cached) [from cycle 6]
-
-## Plan hand-off
-
-See `.context/plans/` for implementation plans derived from this aggregate.
+1. `fa17b6c` refactor(core): remove unnecessary shallow copy in buildConstraints
+2. `8875c52` docs(web): add comment clarifying CategoryBreakdown sort dependency
+3. `a9846b6` docs(reviews): cycle 9 multi-agent reviews, aggregate, plan, and deferred-items refresh
