@@ -79,11 +79,11 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-[var(--color-border)] text-left text-[var(--color-text-muted)]">
-          <th class="pb-3 font-medium">카테고리</th>
-          <th class="pb-3 font-medium">추천 카드</th>
-          <th class="pb-3 text-right font-medium">혜택률</th>
-          <th class="pb-3 text-right font-medium">월 예상 혜택</th>
-          <th class="pb-3 w-6"></th>
+          <th scope="col" class="pb-3 font-medium">카테고리</th>
+          <th scope="col" class="pb-3 font-medium">추천 카드</th>
+          <th scope="col" class="pb-3 text-right font-medium">혜택률</th>
+          <th scope="col" class="pb-3 text-right font-medium">월 예상 혜택</th>
+          <th scope="col" class="pb-3 w-6"></th>
         </tr>
       </thead>
       <tbody>

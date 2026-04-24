@@ -68,11 +68,11 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-[var(--color-border)] bg-[var(--color-bg)] text-left text-xs text-[var(--color-text-muted)]">
-          <th class="px-4 py-2.5 font-medium">카테고리</th>
-          <th class="px-4 py-2.5 font-medium">추천 카드</th>
-          <th class="px-4 py-2.5 text-right font-medium">혜택률</th>
-          <th class="px-4 py-2.5 text-right font-medium">혜택</th>
-          <th class="px-4 py-2.5 text-right font-medium">지출</th>
+          <th scope="col" class="px-4 py-2.5 font-medium">카테고리</th>
+          <th scope="col" class="px-4 py-2.5 font-medium">추천 카드</th>
+          <th scope="col" class="px-4 py-2.5 text-right font-medium">혜택률</th>
+          <th scope="col" class="px-4 py-2.5 text-right font-medium">혜택</th>
+          <th scope="col" class="px-4 py-2.5 text-right font-medium">지출</th>
         </tr>
       </thead>
       <tbody>
@@ -105,10 +105,10 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-[var(--color-border)] bg-[var(--color-bg)] text-left text-xs text-[var(--color-text-muted)]">
-            <th class="px-4 py-2.5 font-medium">카드명</th>
-            <th class="px-4 py-2.5 text-right font-medium">해당 지출</th>
-            <th class="px-4 py-2.5 text-right font-medium">예상 혜택</th>
-            <th class="px-4 py-2.5 text-right font-medium">혜택률</th>
+            <th scope="col" class="px-4 py-2.5 font-medium">카드명</th>
+            <th scope="col" class="px-4 py-2.5 text-right font-medium">해당 지출</th>
+            <th scope="col" class="px-4 py-2.5 text-right font-medium">예상 혜택</th>
+            <th scope="col" class="px-4 py-2.5 text-right font-medium">혜택률</th>
           </tr>
         </thead>
         <tbody>
