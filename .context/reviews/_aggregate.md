@@ -1,41 +1,49 @@
-# Cycle 1 — aggregate review (Fresh Review 2026-04-24)
+# Cycle 2 — Aggregate Review (2026-04-24)
 
-Deduplicated findings across `code-reviewer`, `perf-reviewer`, `security-reviewer`, `architect`, `test-engineer`, and `designer`.
+Deduplicated findings across `code-reviewer`, `perf-reviewer`, `security-reviewer`, `architect`, `test-engineer`, `designer`, `debugger`, `critic`, `verifier`, `tracer`, and `document-specialist`.
 
-Provenance files retained at `.context/reviews/<agent-name>.md`.
+Provenance files retained at `.context/reviews/c2-<agent-name>.md`.
 
-Prior convergence history: Cycles 2-10 (legacy numbering) reported progressively fewer new findings; 111 deferred items tracked in `.context/plans/00-deferred-items.md`. Cycle 1 (fresh review) re-examines the codebase with fresh eyes after a 10-cycle gap.
-
-## MEDIUM — implement in this cycle
+## HIGH/MEDIUM — implement in this cycle
 
 | Id | Source agents | File:line | Description |
 |----|---------------|-----------|-------------|
-| C1-01 | code-reviewer C1-01, designer U1-01, test-engineer T1-01 | `apps/web/src/components/cards/CardDetail.svelte:28-38` | **CardDetail shows raw category IDs when `loadCategories` is aborted.** When `loadCategories` returns `[]` (AbortError during View Transition), `categoryLabels` is empty but `categoryLabelsReady = true`, so the rewards table renders raw IDs like "dining.cafe" instead of Korean labels. TransactionReview has a hardcoded fallback; CardDetail should too. |
-| A1-01 | architect A1-01 | `packages/core/src/optimizer/greedy.ts:11-86` | **`CATEGORY_NAMES_KO` is a hardcoded duplicate of taxonomy data.** Duplicates category labels from `packages/rules/data/categories.yaml`. The existing TODO at line 8-10 acknowledges this. Missing newer entries (`travel_agency`, `apartment_mgmt`). Can silently drift from YAML source. `greedyOptimize` already accepts `categoryLabels?: Map<string, string>` in its constraints, making this redundant when labels are provided. |
+| C2-01 | critic C2-CT01, code-reviewer C2-CR01, architect C2-A01, tracer | `packages/core/src/optimizer/greedy.ts:11-89`, `apps/web/src/lib/category-labels.ts:32-111`, `packages/rules/src/category-names.ts` | **Three independent hardcoded category label maps can silently diverge.** Cycle 1 added `buildCategoryNamesKo()` but did not connect consumers to it. `CATEGORY_NAMES_KO` (core) and `FALLBACK_CATEGORY_LABELS` (web) are two independent hardcoded maps that must be manually synced with `categories.yaml`. The `buildCategoryNamesKo()` function in rules is unused dead code. This is worse than the original A1-01 finding. |
+| C2-02 | code-reviewer C2-CR02/C2-CR03, critic C2-CT02, debugger C2-D01 | `packages/core/src/optimizer/greedy.ts:18`, `apps/web/src/lib/category-labels.ts:36,39,106` | **Concrete divergences between the two hardcoded maps.** (a) `grocery` label: core says `식료품/마트`, web says `식료품`. (b) `subscription.general` exists in web fallback but not in core. (c) Standalone `cafe` in fallback but `buildCategoryLabelMap()` deliberately excludes standalone subcategory IDs — inconsistent behavior. |
 
 ## LOW — plan-only or deferred
 
 | Id | Source agents | File:line | Severity | Description |
 |----|---------------|-----------|----------|-------------|
-| C1-02 | code-reviewer C1-02, architect A1-02, perf-reviewer P1-02 | `packages/parser/src/detect.ts:148-165` | LOW | **Server-side `detectCSVDelimiter` scans all lines.** Web version limits to 30 lines (C83-05); server version does not. Add `.slice(0, 30)`. |
-| C1-03 | code-reviewer C1-03 | `apps/web/src/lib/analyzer.ts:55-58` | LOW | **`toCoreCardRuleSets` silently falls back unknown sources to 'web'.** Misleading for scraped cards. Should log `console.warn` on fallback. |
-| P1-01 | perf-reviewer P1-01 | `apps/web/src/lib/store.svelte.ts:576` | LOW | **`persistToStorage` serializes entire result on every reoptimize.** Previously P8-02 (deferred). No change in status. Debounce recommended. |
-| U1-02 | designer U1-02 | `apps/web/src/components/upload/FileDropzone.svelte:494-503` | LOW | **FileDropzone `<input type="number">` shows stepper arrows on mobile.** Useless for Korean Won amounts. Add `appearance: textfield` CSS or switch to `inputmode="numeric"` with `type="text"`. |
-| T1-01 | test-engineer T1-01 | (superseded by C1-01) | LOW | No unit test for CardDetail abort-then-labels scenario. Subsumed by C1-01 fix — add test alongside the fix. |
-| T1-02 | test-engineer T1-02 | `packages/parser/__tests__/detect.test.ts` | LOW | No test for `detectCSVDelimiter` 30-line limit. Subsumed by C1-02 fix — add test alongside the fix. |
+| C2-03 | code-reviewer C2-CR05 | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:6-84` | LOW | `CATEGORY_COLORS` missing standalone `travel_agency` entry (extends D-42/D-64/D-78). |
+| C2-04 | designer C2-U01 | `apps/web/src/components/cards/CardDetail.svelte:222-228` | LOW | Rewards table `<th>` lacks `scope="col"` for WCAG 1.3.1. |
+| C2-05 | designer C2-U02 | `apps/web/src/components/dashboard/TransactionReview.svelte:241-245` | LOW | Search input has `placeholder` but no `aria-label` — WCAG 1.3.1. |
+| C2-06 | verifier C2-V01 | `apps/web/src/components/upload/FileDropzone.svelte:494-503` | LOW | U1-02 CSS fix (hiding stepper arrows) not applied — only `inputmode="numeric"` was added, not the CSS rules. |
+| C2-07 | test-engineer C2-T01 | `packages/rules/src/category-names.ts` | LOW | No test for `buildCategoryNamesKo()` function added in cycle 1. |
+| C2-08 | test-engineer C2-T02 | `apps/web/src/lib/category-labels.ts:32-111` | LOW | No automated test verifying `FALLBACK_CATEGORY_LABELS` matches taxonomy. |
+| C2-09 | document-specialist C2-DS01 | `packages/rules/src/category-names.ts:1-7` | LOW | JSDoc says "authoritative source" but function is unused — doc-code mismatch. |
+| C2-10 | debugger C2-D02 | `apps/web/src/lib/store.svelte.ts:461-463,545` | LOW | `previousMonthSpendingOption` conditional assignment is subtle — could use a clarifying comment. |
 
 ## Security — no new findings
 
-The security reviewer found no new issues. The codebase is a client-side-only static Astro site with minimal attack surface. Previously deferred items (D7-M13, D-32, D7-M8) remain valid.
-
-## Previously Deferred (Acknowledged, Not Re-reported)
-
-All 111 items in `.context/plans/00-deferred-items.md` (D-01 through D-111) remain valid. No regression or new evidence found for any deferred item.
+No new security issues. Previously deferred items (D-32, D7-M13, D-31) remain valid.
 
 ## Cross-agent agreement
 
-- **code-reviewer + designer + test-engineer** converge on C1-01 (CardDetail abort/labels). Designer flags UX impact for Korean users; test-engineer flags missing test coverage.
-- **code-reviewer + architect + perf-reviewer** converge on C1-02 (server detectCSVDelimiter unbounded scan). Architect flags the concrete divergence in the D-01 duplicate parser class; perf-reviewer flags the O(n) cost.
+- **critic + code-reviewer + architect + tracer** converge on C2-01 (three-way label map divergence). Critic flags it as the highest-priority architectural issue; code-reviewer identifies concrete divergences; architect notes the unused `buildCategoryNamesKo()` function; tracer confirms the divergent code paths.
+- **code-reviewer + debugger** converge on C2-02 (concrete map divergences: grocery label, subscription.general, standalone cafe).
+- **verifier** independently confirms C2-06 (U1-02 CSS fix incomplete) through evidence-based verification.
+
+## Previously Deferred (Acknowledged, Not Re-reported)
+
+All 111 items in `.context/plans/00-deferred-items.md` remain valid. No regression found.
+
+## Gate evidence
+
+- `npm run lint` — PASS (exit 0)
+- `npm run typecheck` — PASS (exit 0)
+- `bun run test` — pending
+- `npm run verify` — pending
 
 ## Plan hand-off
 
