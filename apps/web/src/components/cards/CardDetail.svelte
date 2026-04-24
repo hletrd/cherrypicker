@@ -221,10 +221,10 @@
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-[var(--color-border)] bg-[var(--color-bg)] text-left text-xs text-[var(--color-text-muted)]">
-                <th class="px-4 py-2.5 font-medium">카테고리</th>
-                <th class="px-4 py-2.5 text-right font-medium">혜택률</th>
-                <th class="px-4 py-2.5 text-right font-medium">월 한도</th>
-                <th class="px-4 py-2.5 font-medium">적용 실적</th>
+                <th scope="col" class="px-4 py-2.5 font-medium">카테고리</th>
+                <th scope="col" class="px-4 py-2.5 text-right font-medium">혜택률</th>
+                <th scope="col" class="px-4 py-2.5 text-right font-medium">월 한도</th>
+                <th scope="col" class="px-4 py-2.5 font-medium">적용 실적</th>
               </tr>
             </thead>
             <tbody>

@@ -242,6 +242,7 @@
               type="text"
               bind:value={searchQuery}
               placeholder="가맹점 검색"
+              aria-label="가맹점 검색"
               class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-xs outline-none focus:border-[var(--color-primary)]"
             />
           </div>
