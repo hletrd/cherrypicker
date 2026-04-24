@@ -314,3 +314,22 @@ describe('MerchantMatcher - length guard (C10-02 / C11-13)', () => {
     expect(result.confidence).toBe(0.6); // fuzzy match confidence
   });
 });
+
+describe('Cross-file keyword duplicate detection (C3-02)', () => {
+  test('no key in MERCHANT_KEYWORDS has a conflicting value in ENGLISH_KEYWORDS or NICHE_KEYWORDS', async () => {
+    const { MERCHANT_KEYWORDS } = await import('../src/categorizer/keywords.js');
+    const { ENGLISH_KEYWORDS } = await import('../src/categorizer/keywords-english.js');
+    const { NICHE_KEYWORDS } = await import('../src/categorizer/keywords-niche.js');
+
+    const conflicts: string[] = [];
+    for (const key of Object.keys(MERCHANT_KEYWORDS)) {
+      if (key in ENGLISH_KEYWORDS && ENGLISH_KEYWORDS[key] !== MERCHANT_KEYWORDS[key]) {
+        conflicts.push(`MERCHANT vs ENGLISH: '${key}' -> '${MERCHANT_KEYWORDS[key]}' vs '${ENGLISH_KEYWORDS[key]}'`);
+      }
+      if (key in NICHE_KEYWORDS && NICHE_KEYWORDS[key] !== MERCHANT_KEYWORDS[key]) {
+        conflicts.push(`MERCHANT vs NICHE: '${key}' -> '${MERCHANT_KEYWORDS[key]}' vs '${NICHE_KEYWORDS[key]}'`);
+      }
+    }
+    expect(conflicts).toEqual([]);
+  });
+});

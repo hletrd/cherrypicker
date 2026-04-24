@@ -105,7 +105,6 @@ export const ENGLISH_KEYWORDS: Record<string, string> = {
   'WENDYS': 'dining.fast_food',
   'TACO BELL KOREA': 'dining.fast_food',
   'TACO BELL': 'dining.fast_food',
-  'SHAKE SHACK KOREA': 'dining.fast_food',
   'SHAKE SHACK': 'dining.fast_food',
   'FIVE GUYS KOREA': 'dining.fast_food',
   'FIVE GUYS': 'dining.fast_food',
