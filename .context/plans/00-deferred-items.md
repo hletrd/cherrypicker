@@ -1232,3 +1232,12 @@ No security, correctness, or data-loss finding is deferred this cycle.
 - **Reason for deferral:** The duplicate key works correctly for backward compatibility. The comment acknowledges the inconsistency. Fixing it requires a STORAGE_VERSION migration that rewrites persisted data, which is a breaking change for users with existing sessionStorage data.
 - **Exit criterion:** When STORAGE_VERSION is next incremented (for an unrelated schema change), add a migration that rewrites `entertainment.subscription` to `subscription` in persisted data, then remove the legacy key from the fallback map.
 
+### C8-01: FALLBACK_GROUPS in TransactionReview is a third hardcoded duplicate of the YAML taxonomy
+
+- **Original finding:** C8-CR02 (code-reviewer), C8-A01 (architect), C8-CT01 (critic)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:27-42`
+- **Reason for deferral:** Same class as C7-01/C7-02. The FALLBACK_GROUPS array duplicates the category hierarchy from categories.yaml. When the taxonomy changes, this must be updated in lockstep. The critic notes this is the fifth recurrence of the hardcoded-duplicate pattern (C64-03, C6-02, C7-CR01, C7-CR02, C8-CR02). The recommended systemic fix (build-time generation from categories.yaml) would resolve C7-01, C7-02, and C8-01 together. No user-facing issue has been reported because the fallback is only used when loadCategories() fails (AbortError during View Transition).
+- **Exit criterion:** When a build-time generation step produces fallback data from the YAML source (same as C7-01/C7-02 exit criterion).
+
