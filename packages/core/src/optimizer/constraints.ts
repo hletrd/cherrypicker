@@ -11,9 +11,10 @@ export function buildConstraints(
   cardPreviousSpending: Map<string, number>,
   categoryLabels?: Map<string, string>,
 ): OptimizationConstraints {
-  // Keep the original transactions intact so the optimizer can preserve
-  // merchant/subcategory/online facts when it scores assignments.
-  const preservedTransactions = [...transactions];
+  // The greedy optimizer only reads from the transactions array (never mutates),
+  // so a shallow copy is unnecessary. If a future optimizer needs to mutate,
+  // the copy can be restored at that point (C9-06).
+  const preservedTransactions = transactions;
 
   // Build card entries from the provided previous-month spending map.
   const cards: { cardId: string; previousMonthSpending: number }[] = [];
