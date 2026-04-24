@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRate, getIssuerColor, getIssuerTextColor, formatIssuerNameKo, getIssuerFromCardId } from '../../lib/formatters.js';
+  import { formatWon, formatRate, getIssuerColor, getIssuerTextColor, formatIssuerNameKo, getIssuerFromCardId, buildPageUrl } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   type SortKey = 'spending' | 'rate' | 'reward';
@@ -173,7 +173,7 @@
     <div class="text-sm font-medium text-[var(--color-text-muted)]">아직 추천 결과가 없어요</div>
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 올리면 어떤 카드가 좋은지 알려줘요</div>
     <a
-      href={import.meta.env.BASE_URL ?? '/'}
+      href={buildPageUrl(''})
       class="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
     >
       명세서 올리러 가기

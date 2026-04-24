@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon } from '../../lib/formatters.js';
+  import { formatWon, buildPageUrl } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   const CATEGORY_COLORS: Record<string, string> = {
@@ -276,7 +276,7 @@
     <div class="text-sm font-medium text-[var(--color-text-muted)]">아직 분석한 내역이 없어요</div>
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 올려 보세요</div>
     <a
-      href={import.meta.env.BASE_URL ?? '/'}
+      href={buildPageUrl(''})
       class="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
     >
       명세서 올리러 가기

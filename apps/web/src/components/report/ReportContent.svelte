@@ -1,6 +1,6 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRate, formatRatePrecise, formatYearMonthKo, getIssuerColor, getIssuerTextColor, getIssuerFromCardId, formatIssuerNameKo, formatSavingsValue } from '../../lib/formatters.js';
+  import { formatWon, formatRate, formatRatePrecise, formatYearMonthKo, getIssuerColor, getIssuerTextColor, getIssuerFromCardId, formatIssuerNameKo, formatSavingsValue, buildPageUrl } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
   let opt = $derived(analysisStore.optimization);
@@ -135,7 +135,7 @@
 {:else}
   <div class="flex flex-col items-center gap-4 py-8">
     <p class="text-[var(--color-text-muted)]">아직 분석 결과가 없어요</p>
-    <a href={import.meta.env.BASE_URL ?? '/'}
+    <a href={buildPageUrl(''})
       class="inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
     >명세서 올리러 가기</a>
   </div>
