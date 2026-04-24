@@ -117,6 +117,11 @@
     const totalSpending = assignments.reduce((sum, a) => sum + a.spending, 0);
     if (totalSpending === 0) return [];
 
+    // The optimizer already returns assignments sorted by spending, so this
+    // re-sort is technically redundant. However, the "other" grouping logic
+    // below requires spending-sorted data, so keeping the explicit sort makes
+    // the dependency visible and prevents a hidden coupling to the optimizer's
+    // sort order (C9-07).
     const sorted = [...assignments].sort((a, b) => b.spending - a.spending);
 
     const main: CategoryData[] = [];
