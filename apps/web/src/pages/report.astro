@@ -2,6 +2,10 @@
 import Layout from '../layouts/Layout.astro';
 import ReportContent from '../components/report/ReportContent.svelte';
 import VisibilityToggle from '../components/ui/VisibilityToggle.svelte';
+import { buildPageUrl } from '../lib/formatters.js';
+
+const homeUrl = buildPageUrl('');
+const resultsUrl = buildPageUrl('results');
 ---
 
 <Layout title="리포트">
@@ -10,7 +14,7 @@ import VisibilityToggle from '../components/ui/VisibilityToggle.svelte';
     <div class="mb-6 flex items-center justify-between print:hidden">
       <div>
         <a
-          href={`${import.meta.env.BASE_URL}results`}
+          href={resultsUrl}
           class="mb-2 inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16" aria-hidden="true">
@@ -41,7 +45,7 @@ import VisibilityToggle from '../components/ui/VisibilityToggle.svelte';
       <p class="text-base font-medium text-[var(--color-text-muted)]">아직 분석 결과가 없어요</p>
       <p class="text-sm text-[var(--color-text-muted)]">명세서를 올리면 분석 리포트를 보여줘요</p>
       <a
-        href={`${import.meta.env.BASE_URL}`}
+        href={homeUrl}
         class="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
       >
         명세서 올리러 가기
