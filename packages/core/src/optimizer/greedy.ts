@@ -44,6 +44,7 @@ export const CATEGORY_NAMES_KO: Record<string, string> = {
   movie: '영화',
   streaming: '스트리밍',
   subscription: '구독',
+  'subscription.general': '전체',
   travel: '여행',
   hotel: '호텔/숙박',
   airline: '항공',

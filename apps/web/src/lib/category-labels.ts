@@ -33,10 +33,9 @@ export const FALLBACK_CATEGORY_LABELS: ReadonlyMap<string, string> = new Map([
   // Parent categories
   ['dining', '외식'],
   ['restaurant', '음식점'],
-  ['cafe', '카페'],
   ['fast_food', '패스트푸드'],
   ['delivery', '배달'],
-  ['grocery', '식료품'],
+  ['grocery', '식료품/마트'],
   ['supermarket', '대형마트'],
   ['traditional_market', '전통시장'],
   ['online_grocery', '온라인장보기'],
@@ -99,7 +98,7 @@ export const FALLBACK_CATEGORY_LABELS: ReadonlyMap<string, string> = new Map([
   ['education.books', '도서'],
   ['entertainment.movie', '영화'],
   ['entertainment.streaming', '스트리밍'],
-  ['entertainment.subscription', '구독'],
+  ['entertainment.subscription', '구독'], // NOTE: taxonomy has subscription as a top-level category, not under entertainment. This key is kept for backward compatibility with existing optimization results that used this dot-notation key.
   ['travel.airline', '항공'],
   ['travel.hotel', '호텔/숙박'],
   ['travel.travel_agency', '여행사'],
