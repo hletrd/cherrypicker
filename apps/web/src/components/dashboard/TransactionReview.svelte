@@ -25,8 +25,7 @@
   // the optgroup rendering works even in fallback mode (C74-01).
   const FALLBACK_GROUPS: CategoryGroup[] = [
     { label: '외식', options: [{ id: 'dining', label: '전체' }, { id: 'dining.restaurant', label: '일반음식점' }, { id: 'dining.cafe', label: '카페' }, { id: 'dining.fast_food', label: '패스트푸드' }, { id: 'dining.delivery', label: '배달' }] },
-    { label: '식료품/마트', options: [{ id: 'grocery', label: '전체' }, { id: 'grocery.supermarket', label: '대형마트' }, { id: 'grocery.traditional_market', label: '전통시장' }, { id: 'grocery.online_grocery', label: '온라인식품' }] },
-    { label: '편의점', options: [{ id: 'convenience_store', label: '전체' }] },
+    { label: '식료품/마트', options: [{ id: 'grocery', label: '전체' }, { id: 'grocery.supermarket', label: '대형마트' }, { id: 'grocery.traditional_market', label: '전통시장' }, { id: 'grocery.online_grocery', label: '온라인식품' }, { id: 'grocery.convenience_store', label: '편의점' }] },
     { label: '대중교통', options: [{ id: 'public_transit', label: '전체' }, { id: 'public_transit.bus', label: '버스' }, { id: 'public_transit.subway', label: '지하철' }, { id: 'public_transit.taxi', label: '택시' }] },
     { label: '교통/주유', options: [{ id: 'transportation', label: '전체' }, { id: 'transportation.fuel', label: '주유' }, { id: 'transportation.parking', label: '주차' }, { id: 'transportation.toll', label: '고속도로통행료' }] },
     { label: '통신', options: [{ id: 'telecom', label: '전체' }] },
@@ -45,7 +44,14 @@
   // Flat fallback list for categoryMap construction (all IDs + labels)
   const FALLBACK_CATEGORIES = FALLBACK_GROUPS.flatMap(g => g.options);
 
-  let categoryMap = $state<Map<string, string>>(new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label])));
+  // Include bare subcategory IDs (e.g. 'convenience_store') in the map for
+  // backward compatibility with saved data that used bare IDs before the
+  // hierarchy fix (C3-01). These map to the same label as their dot-notation
+  // counterparts.
+  let categoryMap = $state<Map<string, string>>(new Map([
+    ...FALLBACK_CATEGORIES.map(c => [c.id, c.label] as [string, string]),
+    ['convenience_store', '편의점'],
+  ]));
 
   // Maps subcategory IDs to their parent category IDs for correct
   // category/subcategory assignment when the user selects a subcategory.
