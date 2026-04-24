@@ -35,7 +35,7 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
     throw new Error('LLM fallback is not available in browser environments');
   }
 
-  const apiKey = process.env['ANTHROPIC_API_KEY'];
+  const apiKey = process.env['ANTHROPIC_API_KEY']?.trim();
   if (!apiKey) {
     throw new Error('API 키가 설정되지 않아 LLM 폴백을 사용할 수 없습니다.');
   }
