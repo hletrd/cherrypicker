@@ -4,8 +4,9 @@
   import CardDetail from './CardDetail.svelte';
   import Icon from '../ui/Icon.svelte';
   import { getCardById } from '../../lib/cards.js';
+  import { buildPageUrl } from '../../lib/formatters.js';
 
-  const base = import.meta.env.BASE_URL ?? '/';
+  const homeUrl = buildPageUrl('');
 
   let selectedCardId = $state<string | null>(null);
   let cardName = $state<string>('');
@@ -63,7 +64,7 @@
   <nav aria-label="breadcrumb" class="mb-6">
     <ol class="flex flex-wrap items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
       <li>
-        <a href={`${base}`} class="transition-colors hover:text-[var(--color-primary)]">홈</a>
+        <a href={homeUrl} class="transition-colors hover:text-[var(--color-primary)]">홈</a>
       </li>
       <li class="select-none text-[var(--color-border)]">/</li>
       <li>
