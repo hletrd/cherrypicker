@@ -3,6 +3,8 @@
   import { formatWon, formatRate, formatRatePrecise, formatYearMonthKo, getIssuerColor, getIssuerTextColor, getIssuerFromCardId, formatIssuerNameKo, formatSavingsValue, buildPageUrl } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
 
+  const homeUrl = buildPageUrl('');
+
   let opt = $derived(analysisStore.optimization);
   let assignments = $derived(analysisStore.assignments);
   let cardResults = $derived(analysisStore.cardResults);
@@ -135,7 +137,7 @@
 {:else}
   <div class="flex flex-col items-center gap-4 py-8">
     <p class="text-[var(--color-text-muted)]">아직 분석 결과가 없어요</p>
-    <a href={buildPageUrl(''})
+    <a href={homeUrl}
       class="inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
     >명세서 올리러 가기</a>
   </div>
