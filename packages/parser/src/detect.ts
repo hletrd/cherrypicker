@@ -146,7 +146,9 @@ export function detectBank(content: string): { bank: BankId | null; confidence: 
 }
 
 export function detectCSVDelimiter(content: string): string {
-  const lines = content.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  // Limit to first 30 lines — delimiter patterns are always visible at the top
+  // and scanning the entire file is O(n) for no benefit (C1-02, matches web-side C83-05).
+  const lines = content.split('\n').map((l) => l.trim()).filter((l) => l.length > 0).slice(0, 30);
 
   let totalComma = 0;
   let totalTab = 0;
