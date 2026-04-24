@@ -1241,3 +1241,79 @@ No security, correctness, or data-loss finding is deferred this cycle.
 - **Reason for deferral:** Same class as C7-01/C7-02. The FALLBACK_GROUPS array duplicates the category hierarchy from categories.yaml. When the taxonomy changes, this must be updated in lockstep. The critic notes this is the fifth recurrence of the hardcoded-duplicate pattern (C64-03, C6-02, C7-CR01, C7-CR02, C8-CR02). The recommended systemic fix (build-time generation from categories.yaml) would resolve C7-01, C7-02, and C8-01 together. No user-facing issue has been reported because the fallback is only used when loadCategories() fails (AbortError during View Transition).
 - **Exit criterion:** When a build-time generation step produces fallback data from the YAML source (same as C7-01/C7-02 exit criterion).
 
+---
+
+## Deferred Findings (Cycle 9)
+
+### C9-01: CATEGORY_COLORS in CategoryBreakdown is a fourth hardcoded duplicate of the YAML taxonomy
+
+- **Original finding:** C9-CR01 (code-reviewer), C9-A01 (architect), C9-CT01 (critic), C9-T01 (tracer)
+- **Severity:** MEDIUM
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:8-87`
+- **Reason for deferral:** Same systemic pattern as C7-01/C7-02/C8-01. CATEGORY_COLORS is an 80-entry Record mapping category IDs to hex colors. When the taxonomy adds or renames a category, this map must be manually updated in lockstep or new categories silently render gray. The build-time generation fix would resolve all instances together.
+- **Exit criterion:** When a build-time generation step produces color maps from the YAML source (same as C7-01/C7-02/C8-01 exit criterion).
+
+### C9-02: ALL_BANKS in FileDropzone duplicates parser bank signatures
+
+- **Original finding:** C9-CR02 (code-reviewer), C9-A02 (architect), C9-T02 (tracer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:80-105`
+- **Reason for deferral:** The ALL_BANKS array duplicates the bank IDs in detect.ts. A build-time generation step could produce this list from the parser's bank signature data. Not user-facing unless a new bank is added to the parser but not the UI selector.
+- **Exit criterion:** When a build-time generation step produces the bank list from the parser's data, or when the parser exports its bank list for reuse.
+
+### C9-03: formatIssuerNameKo in formatters.ts duplicates issuer name data
+
+- **Original finding:** C9-CR03 (code-reviewer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/formatters.ts:52-79`
+- **Reason for deferral:** Same systemic pattern as C9-01. 23-entry Record mapping issuer IDs to Korean names. Must be updated in lockstep when issuers change. Build-time generation from cards.json issuer data would resolve this.
+- **Exit criterion:** When a build-time generation step produces issuer name maps from the JSON source (same as C9-01 exit criterion).
+
+### C9-04: getIssuerColor in formatters.ts duplicates issuer color data
+
+- **Original finding:** C9-CR04 (code-reviewer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/formatters.ts:115-143`
+- **Reason for deferral:** Same systemic pattern as C9-01. 23-entry Record mapping issuer IDs to hex colors. Must be updated in lockstep when issuers change.
+- **Exit criterion:** When a build-time generation step produces issuer color maps from the JSON source (same as C9-01 exit criterion).
+
+### C9-05: getCategoryIconName in formatters.ts duplicates taxonomy icon mapping
+
+- **Original finding:** C9-CR06 (code-reviewer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/formatters.ts:85-110`
+- **Reason for deferral:** Same systemic pattern as C9-01. Maps category IDs to icon names. New categories fall through to 'credit-card'. Build-time generation would resolve this.
+- **Exit criterion:** When a build-time generation step produces icon maps from the YAML source (same as C9-01 exit criterion).
+
+### C9-08: No test coverage for buildCategoryLabelMap edge cases
+
+- **Original finding:** C9-TE01 (test-engineer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/category-labels.ts:7-26`
+- **Reason for deferral:** Test coverage gap. The function works correctly in production. Adding tests is valuable but not blocking.
+- **Exit criterion:** When a dedicated test coverage improvement cycle is scheduled.
+
+### C9-09: No test coverage for sessionStorage persistence/recovery
+
+- **Original finding:** C9-TE02 (test-engineer)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/store.svelte.ts:146-330`
+- **Reason for deferral:** Test coverage gap. The complex persistence logic works correctly in production. Adding tests requires mocking sessionStorage.
+- **Exit criterion:** When a dedicated test coverage improvement cycle is scheduled.
+
+### C9-10: build-stats.ts fallback values may become stale
+
+- **Original finding:** C9-DS02 (document-specialist)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/build-stats.ts:16-18`
+- **Reason for deferral:** The fallback values (683 cards, 24 issuers, 45 categories) are only used when cards.json is unavailable at build time. The values are read from the actual JSON when available.
+- **Exit criterion:** When the build pipeline is updated to auto-generate fallback values, or when the fallback is removed in favor of a build-time error.
+
