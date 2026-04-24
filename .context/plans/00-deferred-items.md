@@ -1156,3 +1156,51 @@ No security, correctness, or data-loss finding is deferred this cycle.
 
 No security, correctness, or data-loss finding is deferred this cycle.
 
+## Cycle 5 (RPF) — 2026-04-24
+
+### New deferred findings
+
+#### C5-02: Results page stat elements populated by DOM manipulation instead of reactive binding
+- **Original finding:** C5-02 (code-reviewer C5-CR02, designer C5-D02)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/pages/results.astro:52-60`, `apps/web/src/components/ui/VisibilityToggle.svelte:89-103`
+- **Reason for deferral:** Refactoring VisibilityToggle to extract stat population into a dedicated component is a UX architecture change. Current DOM manipulation works correctly. Moving to reactive binding is a quality improvement, not a bug fix.
+- **Exit criterion:** When VisibilityToggle is refactored, move stat population into a dedicated ResultsStats component.
+
+#### C5-03: VisibilityToggle has dual responsibilities (visibility + stat population)
+- **Original finding:** C5-03 (code-reviewer C5-CR03, architect C5-A02)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/ui/VisibilityToggle.svelte:18-22,76-87`
+- **Reason for deferral:** Same as C5-02. The dual responsibility is a code quality concern, not a bug.
+- **Exit criterion:** When the results page is refactored, extract stat population into a dedicated component.
+
+#### C5-04: No test for Astro page buildPageUrl migration
+- **Original finding:** C5-04 (test-engineer C5-T01)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/__tests__/formatters.test.ts` (new or existing)
+- **Reason for deferral:** The migration itself is simple and verifiable by grep. A unit test for `buildPageUrl()` would add regression protection but is LOW priority.
+- **Exit criterion:** If new raw BASE_URL usage appears in future commits, add a grep-based CI check or ESLint rule.
+
+#### C5-05: No test for VisibilityToggle stat population
+- **Original finding:** C5-05 (test-engineer C5-T02)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/ui/VisibilityToggle.svelte:89-103`
+- **Reason for deferral:** Depends on C5-02/C5-03 being resolved first.
+- **Exit criterion:** When C5-02/C5-03 are resolved, add Playwright test for results page stats.
+
+### Resolved findings (not deferred)
+
+- C5-01 (Astro pages raw BASE_URL): Fixed in commit 9a642d1 (dashboard.astro, results.astro, report.astro migrated to `buildPageUrl()`). 6-agent convergence; 9 raw BASE_URL references eliminated across 3 Astro page templates.
+
+### Gate evidence
+- `npm run lint` — PASS (0 errors, 0 warnings, 0 hints)
+- `npm run typecheck` — PASS (0 errors)
+- `bun run test` — PASS (197 tests, 0 fail, FULL TURBO)
+- `npm run verify` — PASS (10/10 turbo tasks cached)
+
+No security, correctness, or data-loss finding is deferred this cycle.
+

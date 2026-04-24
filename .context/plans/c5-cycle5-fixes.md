@@ -35,7 +35,7 @@
   2. `results.astro`: Add same import, create `const homeUrl = buildPageUrl('');`, `const dashboardUrl = buildPageUrl('dashboard');`, `const reportUrl = buildPageUrl('report');`, replace 5 raw BASE_URL hrefs.
   3. `report.astro`: Add same import, create `const homeUrl = buildPageUrl('');`, `const resultsUrl = buildPageUrl('results');`, replace 2 raw BASE_URL hrefs.
 - **Verification:** Grep for `import.meta.env.BASE_URL` in `.astro` page files (not Layout.astro) should return 0 matches. Run `npm run typecheck` and `npm run lint`.
-- **Status:** PENDING
+- **Status:** DONE (fixed in this cycle — Astro pages migrated to buildPageUrl())
 
 ---
 
