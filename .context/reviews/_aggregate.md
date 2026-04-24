@@ -1,38 +1,40 @@
-# Cycle 2 — Aggregate Review (2026-04-24)
+# Cycle 3 — Aggregate Review (2026-04-24)
 
 Deduplicated findings across `code-reviewer`, `perf-reviewer`, `security-reviewer`, `architect`, `test-engineer`, `designer`, `debugger`, `critic`, `verifier`, `tracer`, and `document-specialist`.
 
-Provenance files retained at `.context/reviews/c2-<agent-name>.md`.
+Provenance files retained at `.context/reviews/c3-<agent-name>.md`.
 
-## HIGH/MEDIUM — implement in this cycle
+## MEDIUM — implement in this cycle
 
 | Id | Source agents | File:line | Description |
 |----|---------------|-----------|-------------|
-| C2-01 | critic C2-CT01, code-reviewer C2-CR01, architect C2-A01, tracer | `packages/core/src/optimizer/greedy.ts:11-89`, `apps/web/src/lib/category-labels.ts:32-111`, `packages/rules/src/category-names.ts` | **Three independent hardcoded category label maps can silently diverge.** Cycle 1 added `buildCategoryNamesKo()` but did not connect consumers to it. `CATEGORY_NAMES_KO` (core) and `FALLBACK_CATEGORY_LABELS` (web) are two independent hardcoded maps that must be manually synced with `categories.yaml`. The `buildCategoryNamesKo()` function in rules is unused dead code. This is worse than the original A1-01 finding. |
-| C2-02 | code-reviewer C2-CR02/C2-CR03, critic C2-CT02, debugger C2-D01 | `packages/core/src/optimizer/greedy.ts:18`, `apps/web/src/lib/category-labels.ts:36,39,106` | **Concrete divergences between the two hardcoded maps.** (a) `grocery` label: core says `식료품/마트`, web says `식료품`. (b) `subscription.general` exists in web fallback but not in core. (c) Standalone `cafe` in fallback but `buildCategoryLabelMap()` deliberately excludes standalone subcategory IDs — inconsistent behavior. |
+| C3-01 | architect C3-A01, code-reviewer C3-CR03, test-engineer C3-T02, critic C3-CT01, verifier C3-V01 | `packages/core/src/optimizer/greedy.ts:11-90`, `apps/web/src/lib/category-labels.ts:32-110`, `apps/web/src/components/dashboard/TransactionReview.svelte:27-46`, `packages/rules/src/category-names.ts:12-23` | **Four independent hardcoded category maps can silently diverge.** Extends C2-01 which addressed two of the maps. FALLBACK_GROUPS in TransactionReview is a fourth independent map. Verified concrete divergence: `convenience_store` is a standalone group in FALLBACK_GROUPS but a subcategory of `grocery` in FALLBACK_CATEGORY_LABELS. The `buildCategoryNamesKo()` function in rules remains unused dead code that could replace the hardcoded maps. |
 
 ## LOW — plan-only or deferred
 
 | Id | Source agents | File:line | Severity | Description |
 |----|---------------|-----------|----------|-------------|
-| C2-03 | code-reviewer C2-CR05 | `apps/web/src/components/dashboard/CategoryBreakdown.svelte:6-84` | LOW | `CATEGORY_COLORS` missing standalone `travel_agency` entry (extends D-42/D-64/D-78). |
-| C2-04 | designer C2-U01 | `apps/web/src/components/cards/CardDetail.svelte:222-228` | LOW | Rewards table `<th>` lacks `scope="col"` for WCAG 1.3.1. |
-| C2-05 | designer C2-U02 | `apps/web/src/components/dashboard/TransactionReview.svelte:241-245` | LOW | Search input has `placeholder` but no `aria-label` — WCAG 1.3.1. |
-| C2-06 | verifier C2-V01 | `apps/web/src/components/upload/FileDropzone.svelte:494-503` | LOW | U1-02 CSS fix (hiding stepper arrows) not applied — only `inputmode="numeric"` was added, not the CSS rules. |
-| C2-07 | test-engineer C2-T01 | `packages/rules/src/category-names.ts` | LOW | No test for `buildCategoryNamesKo()` function added in cycle 1. |
-| C2-08 | test-engineer C2-T02 | `apps/web/src/lib/category-labels.ts:32-111` | LOW | No automated test verifying `FALLBACK_CATEGORY_LABELS` matches taxonomy. |
-| C2-09 | document-specialist C2-DS01 | `packages/rules/src/category-names.ts:1-7` | LOW | JSDoc says "authoritative source" but function is unused — doc-code mismatch. |
-| C2-10 | debugger C2-D02 | `apps/web/src/lib/store.svelte.ts:461-463,545` | LOW | `previousMonthSpendingOption` conditional assignment is subtle — could use a clarifying comment. |
+| C3-02 | code-reviewer C3-CR01, tracer C3-TR01, test-engineer C3-T01 | `packages/core/src/categorizer/keywords.ts:9187`, `packages/core/src/categorizer/keywords-english.ts:108` | LOW | Duplicate keyword `SHAKE SHACK KOREA` across MERCHANT_KEYWORDS and ENGLISH_KEYWORDS. Later spread silently overwrites. No test for cross-file duplicate detection. |
+| C3-03 | code-reviewer C3-CR02, debugger C3-D01 | `packages/core/src/calculator/reward.ts:232-248` | LOW | `calculateRewards` bucket mutation before Map.set — fragile pattern for future maintenance. |
+| C3-04 | code-reviewer C3-CR04, designer C3-U01 | `apps/web/src/components/dashboard/OptimalCardMap.svelte:81-86`, `apps/web/src/components/dashboard/SavingsComparison.svelte:279-283`, `apps/web/src/components/report/ReportContent.svelte:70-76,108-113` | LOW | Missing `scope="col"` on table headers in OptimalCardMap, SavingsComparison, and ReportContent tables. WCAG 1.3.1. |
+| C3-05 | code-reviewer C3-CR05, designer C3-U02 | `apps/web/src/components/report/ReportContent.svelte:138`, `apps/web/src/components/dashboard/CategoryBreakdown.svelte:279`, `apps/web/src/components/dashboard/OptimalCardMap.svelte:176` | LOW | Navigation links use raw `import.meta.env.BASE_URL` instead of `buildPageUrl()` — inconsistent with FileDropzone and CardDetail. |
+| C3-06 | architect C3-A02 | `packages/rules/src/index.ts` | LOW | `buildCategoryNamesKo` not re-exported from `@cherrypicker/rules`, making the authoritative function inaccessible to consumers. |
+| C3-07 | security-reviewer C3-S01 | `packages/parser/src/pdf/llm-fallback.ts:59-63` | LOW | LLM fallback sends raw PDF text to API without input sanitization. Risk mitigated by system prompt scoping and JSON validation. |
+| C3-08 | security-reviewer C3-S02 | `packages/parser/src/pdf/llm-fallback.ts:38-39` | LOW | `ANTHROPIC_API_KEY` read from env without `.trim()` — whitespace-only key would pass truthiness check but fail authentication. |
+| C3-09 | document-specialist C3-DS01 | `packages/rules/src/category-names.ts:1-8` | LOW | JSDoc says "authoritative source" but function is unused — doc-code mismatch (same as C2-09, re-reported because not fixed). |
+| C3-10 | document-specialist C3-DS02 | `packages/parser/src/pdf/llm-fallback.ts:45` | LOW | `ANTHROPIC_MODEL` default is `claude-opus-4-5` — may become outdated. |
+| C3-11 | debugger C3-D02 | `packages/parser/src/pdf/llm-fallback.ts:51-52,126-128` | LOW | Timeout controller may abort during response processing. Theoretical — JSON parsing is near-instantaneous. |
 
-## Security — no new findings
+## Security — no new HIGH findings
 
-No new security issues. Previously deferred items (D-32, D7-M13, D-31) remain valid.
+Two LOW security findings (C3-07, C3-08) are documented above. Previously deferred items (D-32, D7-M13) remain valid.
 
 ## Cross-agent agreement
 
-- **critic + code-reviewer + architect + tracer** converge on C2-01 (three-way label map divergence). Critic flags it as the highest-priority architectural issue; code-reviewer identifies concrete divergences; architect notes the unused `buildCategoryNamesKo()` function; tracer confirms the divergent code paths.
-- **code-reviewer + debugger** converge on C2-02 (concrete map divergences: grocery label, subscription.general, standalone cafe).
-- **verifier** independently confirms C2-06 (U1-02 CSS fix incomplete) through evidence-based verification.
+- **architect + code-reviewer + test-engineer + critic + verifier** converge on C3-01 (four independent category maps). Verifier confirms the `convenience_store` hierarchy divergence. Critic identifies this as the highest-signal finding. Architect proposes the structural fix.
+- **code-reviewer + tracer + test-engineer** converge on C3-02 (duplicate keyword). Tracer traces the data flow through the spread merge and confirms the shadow behavior.
+- **code-reviewer + debugger** converge on C3-03 (bucket mutation before set). Both identify the fragile ordering from different angles.
+- **code-reviewer + designer** converge on C3-04 (missing scope="col") and C3-05 (raw BASE_URL usage).
 
 ## Previously Deferred (Acknowledged, Not Re-reported)
 
@@ -42,8 +44,8 @@ All 111 items in `.context/plans/00-deferred-items.md` remain valid. No regressi
 
 - `npm run lint` — PASS (exit 0)
 - `npm run typecheck` — PASS (exit 0)
-- `bun run test` — PASS (197 tests, 0 fail across 7 packages)
-- `npm run verify` — PASS (lint + typecheck + test all green, 10/10 turbo tasks cached)
+- `bun run test` — PASS (197 tests, 0 fail, FULL TURBO cache hit)
+- `npm run verify` — PASS (10/10 turbo tasks cached)
 
 ## Plan hand-off
 
