@@ -15,7 +15,7 @@
   1. Remove lines 7-18 (the `UploadResult` interface and its comment)
   2. Verify no imports of `UploadResult` exist anywhere
 - **Verification:** `npm run typecheck` passes. `grep -r UploadResult apps/web/src/` returns only the deleted definition.
-- **Status:** TODO
+- **Status:** DONE
 
 ---
 
@@ -29,7 +29,7 @@
   1. Remove the `getOrRefreshStatElement` function definition (lines 36-42)
   2. Replace all 4 calls to `getOrRefreshStatElement` with `getOrRefreshElement` (lines 77, 79, 82, 85)
 - **Verification:** `npm run typecheck` passes. App loads and works correctly.
-- **Status:** TODO
+- **Status:** DONE
 
 ---
 
