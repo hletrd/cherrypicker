@@ -38,7 +38,7 @@ The cycle 1 fix (A1-01) added `buildCategoryNamesKo()` but did not integrate it.
 
 **Risk:** Removing the standalone `cafe` from `FALLBACK_CATEGORY_LABELS` could cause "cafe" to show as a raw ID if a transaction is categorized as `cafe` without the `dining.` prefix. However, the categorizer always produces dot-notation keys (`dining.cafe`) for subcategories, so this should not happen in practice. If it does, the `categoryLabels.get(row.category) ?? row.category` fallback in CardDetail (line 243) will show the raw ID, which is the same behavior as `buildCategoryLabelMap()`.
 
-**Status:** Not yet implemented.
+**Status:** PARTIALLY DONE. Concrete divergences fixed (C2-02): grocery label corrected, standalone cafe removed, subscription.general added. Build-time validation script not yet created — deferred to a future cycle as it requires cross-package imports and build pipeline integration.
 
 ## Task 2: Verify and fix remaining divergences (C2-02)
 
@@ -51,4 +51,4 @@ The cycle 1 fix (A1-01) added `buildCategoryNamesKo()` but did not integrate it.
 
 This task is part of Task 1's validation script — the script will identify all divergences, and we fix them as they're found.
 
-**Status:** Not yet implemented.
+**Status:** DONE. All concrete divergences fixed: grocery label unified to 식료품/마트 (matching taxonomy), standalone cafe removed from FALLBACK_CATEGORY_LABELS, subscription.general added to CATEGORY_NAMES_KO, backward-compat note added for entertainment.subscription.

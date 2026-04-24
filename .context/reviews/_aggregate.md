@@ -42,8 +42,8 @@ All 111 items in `.context/plans/00-deferred-items.md` remain valid. No regressi
 
 - `npm run lint` — PASS (exit 0)
 - `npm run typecheck` — PASS (exit 0)
-- `bun run test` — pending
-- `npm run verify` — pending
+- `bun run test` — PASS (197 tests, 0 fail across 7 packages)
+- `npm run verify` — PASS (lint + typecheck + test all green, 10/10 turbo tasks cached)
 
 ## Plan hand-off
 
