@@ -1,10 +1,11 @@
 /** Build a Record mapping category IDs (including dot-notation subcategory keys)
- *  to their Korean labels, from the taxonomy CategoryNode tree. Used by
- *  CLI/standalone consumers that don't have a web-side categoryLabels Map
- *  but still need Korean category names in their output (A1-01).
+ *  to their Korean labels, from the taxonomy CategoryNode tree.
  *
- *  This is the authoritative source — the hardcoded CATEGORY_NAMES_KO in
- *  greedy.ts is a fallback that must be kept in sync with this function. */
+ *  This function CAN generate the authoritative category label mapping from the
+ *  taxonomy, but is not yet integrated into consumers (core optimizer and web
+ *  fallback still use hardcoded maps). The hardcoded CATEGORY_NAMES_KO in
+ *  greedy.ts and FALLBACK_CATEGORY_LABELS in category-labels.ts must be kept
+ *  in sync with the taxonomy until integration is complete (C2-01). */
 
 import type { CategoryNode } from './types.js';
 

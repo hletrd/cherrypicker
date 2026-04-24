@@ -543,7 +543,11 @@ function createAnalysisStore() {
           // Caller explicitly provided a value — use it
           previousMonthSpending = options.previousMonthSpending;
         } else if (snapshot.previousMonthSpendingOption !== undefined) {
-          // User provided a value during the initial analysis — preserve it
+          // User explicitly provided previousMonthSpending during the initial
+          // analyze() call (only set when options.previousMonthSpending !== undefined,
+          // per analyze() line 461-463). Preserve the user's explicit input across
+          // reoptimize calls so that category edits don't silently change the
+          // performance tier baseline (C44-01).
           previousMonthSpending = snapshot.previousMonthSpendingOption;
         } else if (latestMonth) {
           // No explicit value — compute from the fresh monthly breakdown
