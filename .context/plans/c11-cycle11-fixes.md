@@ -20,20 +20,20 @@ Cycle 11 is a **convergence cycle**. All 11 review agents agree: zero net-new HI
   - C11-CR05: build-stats fallback staleness — new instance, LOW, same as C9-10
   - C11-CR06: formatSavingsValue sign-strip footgun — new, LOW, Low confidence
   - C11-CR07: persistToStorage misleading "corrupted" label — new, LOW, Low confidence
-- **Status:** PENDING
+- **Status:** DONE
 
 ## Task 2: Refresh deferred-items ledger with cycle 11 section [DOCUMENTATION]
 
 - **File:** `.context/plans/00-deferred-items.md`
 - **Change:** Append "Cycle 11 resolutions and status re-affirmation" section.
 - **Commit:** `docs(plans): cycle 11 multi-agent reviews, aggregate, plan, and deferred-items refresh`
-- **Status:** PENDING
+- **Status:** DONE
 
 ## Task 3: Commit reviews and plan [DOCUMENTATION]
 
 - **Files:** `.context/reviews/c11-*.md`, `.context/plans/c11-cycle11-fixes.md`
 - **Commit:** `docs(reviews): cycle 11 multi-agent reviews, aggregate, plan, and deferred-items refresh`
-- **Status:** PENDING
+- **Status:** DONE
 
 ## Prior deferred items (carried forward, no changes)
 
