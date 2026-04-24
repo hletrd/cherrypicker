@@ -1095,7 +1095,7 @@ No security, correctness, or data-loss finding is deferred this cycle.
 
 ### Resolved (previously deferred)
 
-None this cycle. Cycle 9 closed D7-M2 and C8CR-01; cycle 10 is a pure re-affirmation cycle.
+None this cycle. Cycle 9 closed D7-M2 and C8CR-01. Cycle 10 fresh deep review found 1 new LOW item (C10-01: formatSavingsValue test gap), deferred below.
 
 ### Remaining deferrals (severity preserved, exit criteria unchanged)
 
@@ -1112,14 +1112,21 @@ None this cycle. Cycle 9 closed D7-M2 and C8CR-01; cycle 10 is a pure re-affirma
 - **C6UI-04, C6UI-05** — MEDIUM — tied to D7-M8.
 - **C6UI-23** — LOW — AAA upgrade.
 
-### New findings during cycle 10
+### New findings during cycle 10 (fresh deep review)
 
-None. All 11 review angles (code-reviewer, critic, security-reviewer, perf-reviewer, verifier, test-engineer, architect, debugger, tracer, document-specialist, designer) report zero net-new actionable findings. The cycle is a pure re-affirmation pass.
+#### C10-01: No unit test for `formatSavingsValue` helper
+- **Original finding:** C10-TE01 (test-engineer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/formatters.ts:224-227`
+- **Reason for deferral:** The `formatSavingsValue` helper centralizes sign-prefix logic across 3 components (SavingsComparison, VisibilityToggle, ReportContent). It lacks dedicated unit tests for edge cases (negative values, zero, 99/100 boundary, `prefixValue` override). The function works correctly in production and is covered by E2E tests. Adding unit tests is a quality improvement, not a bug fix.
+- **Exit criterion:** When a dedicated test coverage improvement cycle is scheduled (same as C9-08/C9-09).
 
 ### Gate evidence
-- `bun run verify` — PASS (FULL TURBO, 10/10 cached).
-- `bun run build` — PASS (exit 0).
-- `bun run test:e2e` — PASS (74/74 green).
+- `npm run lint` — PASS (exit 0).
+- `npm run typecheck` — PASS (exit 0).
+- `bun run test` — PASS (FULL TURBO, 10/10 cached).
+- `npm run verify` — PASS (10/10 turbo tasks cached).
 
 No security, correctness, or data-loss finding is deferred this cycle.
 
