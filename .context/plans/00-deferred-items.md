@@ -1123,3 +1123,36 @@ None. All 11 review angles (code-reviewer, critic, security-reviewer, perf-revie
 
 No security, correctness, or data-loss finding is deferred this cycle.
 
+## Cycle 4 (RPF) — 2026-04-24
+
+### New deferred findings
+
+#### C4-03: No test coverage for scope="col" accessibility attributes
+- **Original finding:** C4-T01 (test-engineer)
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte` and other tables
+- **Reason for deferral:** Would require Playwright + axe-core accessibility audit infrastructure, which is a significant investment. All scope="col" attributes are now in place; the gap is in regression prevention, not in the code itself.
+- **Exit criterion:** If accessibility audit infrastructure (Playwright + axe-core) is added to the e2e test suite, add scope="col" assertions for all table headers.
+
+#### C4-04: No lint rule to enforce buildPageUrl() over raw BASE_URL in Svelte components
+- **Original finding:** C4-T02 (test-engineer)
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `apps/web/src/lib/formatters.ts` (buildPageUrl), Svelte components
+- **Reason for deferral:** All current raw BASE_URL instances in Svelte files have been fixed. A lint rule would prevent future regressions but is lower priority given zero current violations.
+- **Exit criterion:** If new raw BASE_URL usage appears in Svelte components after this fix, add a grep-based CI check or ESLint rule.
+
+### Resolved findings (not deferred)
+
+- C4-01 (incomplete C3 fixes — buildPageUrl): Fixed in commits 58b1273 (SavingsComparison, SpendingSummary, CardPage) and b1e7699 (TransactionReview scope="col").
+- C4-02 (ReportContent summary table row headers): Fixed in commit 2d1c227 (th scope="row").
+
+### Gate evidence
+- `npm run lint` — PASS (0 errors, 0 warnings, 0 hints)
+- `npm run typecheck` — PASS (0 errors)
+- `bun run test` — PASS (197 tests, 0 fail, FULL TURBO)
+- `npm run verify` — PASS (10/10 turbo tasks cached)
+
+No security, correctness, or data-loss finding is deferred this cycle.
+
