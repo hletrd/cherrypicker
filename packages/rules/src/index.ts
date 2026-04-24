@@ -35,3 +35,7 @@ export {
   loadCategories,
   loadIssuers,
 } from './loader.js';
+
+export {
+  buildCategoryNamesKo,
+} from './category-names.js';
