@@ -273,11 +273,11 @@
           <table class="w-full min-w-max text-xs">
             <thead class="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
               <tr class="text-left text-[var(--color-text-muted)]">
-                <th class="px-3 py-2 font-medium">날짜</th>
-                <th class="px-3 py-2 font-medium">가맹점</th>
-                <th class="px-3 py-2 text-right font-medium">금액</th>
-                <th class="px-3 py-2 font-medium">분류</th>
-                <th class="px-3 py-2 text-center font-medium">확신도</th>
+                <th scope="col" class="px-3 py-2 font-medium">날짜</th>
+                <th scope="col" class="px-3 py-2 font-medium">가맹점</th>
+                <th scope="col" class="px-3 py-2 text-right font-medium">금액</th>
+                <th scope="col" class="px-3 py-2 font-medium">분류</th>
+                <th scope="col" class="px-3 py-2 text-center font-medium">확신도</th>
               </tr>
             </thead>
             <tbody>
