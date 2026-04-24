@@ -105,3 +105,13 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Hide number input stepper arrows — Korean Won amounts don't use ±1 (U1-02) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}

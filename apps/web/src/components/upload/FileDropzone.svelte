@@ -492,7 +492,7 @@
         <p class="mb-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">전월 카드 이용액</p>
         <div class="relative">
           <input
-            type="number" aria-label="전월 카드 이용액"
+            type="number" inputmode="numeric" aria-label="전월 카드 이용액"
             bind:value={previousSpending}
             placeholder="500,000"
             min="0"
