@@ -33,13 +33,6 @@
     return el;
   }
 
-  function getOrRefreshStatElement(
-    cached: HTMLElement | null,
-    id: string,
-  ): HTMLElement | null {
-    if (cached && cached.isConnected) return cached;
-    return document.getElementById(id);
-  }
 
   // When the store has optimization results, show the data content and hide
   // the empty state. This replaces the inline <script is:inline> pattern
@@ -74,15 +67,15 @@
     // (i.e., we're on the results page). On the dashboard page these elements
     // don't exist, so we skip the DOM queries entirely (C18-02).
     if (hasData && cachedDataEl) {
-      cachedStatTotalSpending = getOrRefreshStatElement(cachedStatTotalSpending, 'stat-total-spending');
+      cachedStatTotalSpending = getOrRefreshElement(cachedStatTotalSpending, 'stat-total-spending');
       cachedStatTotalSavings = cachedStatTotalSpending
-        ? getOrRefreshStatElement(cachedStatTotalSavings, 'stat-total-savings')
+        ? getOrRefreshElement(cachedStatTotalSavings, 'stat-total-savings')
         : null;
       cachedStatCardsNeeded = cachedStatTotalSpending
-        ? getOrRefreshStatElement(cachedStatCardsNeeded, 'stat-cards-needed')
+        ? getOrRefreshElement(cachedStatCardsNeeded, 'stat-cards-needed')
         : null;
       cachedStatSavingsLabel = cachedStatTotalSpending
-        ? getOrRefreshStatElement(cachedStatSavingsLabel, 'stat-savings-label')
+        ? getOrRefreshElement(cachedStatSavingsLabel, 'stat-savings-label')
         : null;
     }
 
