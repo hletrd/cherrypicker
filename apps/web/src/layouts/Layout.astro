@@ -1,5 +1,6 @@
 ---
 import { readCardStats } from '../lib/build-stats.js';
+import { buildPageUrl } from '../lib/formatters.js';
 
 interface Props {
   title: string;
@@ -10,11 +11,18 @@ const { title, description = '내 소비에 맞는 카드 조합 찾기' } = Ast
 const pathname = Astro.url.pathname;
 const base = import.meta.env.BASE_URL;
 
+// Navigation URLs using buildPageUrl for trailing-slash safety (C6-01)
+const homeUrl = buildPageUrl('');
+const dashboardUrl = buildPageUrl('dashboard');
+const cardsUrl = buildPageUrl('cards');
+const resultsUrl = buildPageUrl('results');
+const reportUrl = buildPageUrl('report');
+
 // Read card stats from built JSON at build time (shared module)
 const { totalCards, totalIssuers, totalCategories } = await readCardStats();
 
 function isActive(href: string) {
-  if (href === base) return pathname === base || pathname === base.replace(/\/$/, '');
+  if (href === homeUrl) return pathname === homeUrl || pathname === homeUrl.replace(/\/$/, '');
   return pathname.startsWith(href);
 }
 ---
@@ -51,7 +59,7 @@ function isActive(href: string) {
     </a>
     <nav class="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-sm">
       <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href={`${base}`} class="flex items-center gap-2 text-xl font-bold text-[var(--color-primary)] hover:opacity-80 transition-opacity">
+        <a href={homeUrl} class="flex items-center gap-2 text-xl font-bold text-[var(--color-primary)] hover:opacity-80 transition-opacity">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="22" height="22" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/>
           </svg>
@@ -61,20 +69,20 @@ function isActive(href: string) {
         <!-- Desktop nav -->
         <div class="hidden md:flex items-center gap-6 text-sm">
           <a
-            href={`${base}`}
-            class={`transition-colors hover:text-[var(--color-primary)] ${isActive(base) ? 'font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+            href={homeUrl}
+            class={`transition-colors hover:text-[var(--color-primary)] ${isActive(homeUrl) ? 'font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >홈</a>
           <a
-            href={`${base}dashboard`}
-            class={`transition-colors hover:text-[var(--color-primary)] ${isActive(`${base}dashboard`) ? 'font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+            href={dashboardUrl}
+            class={`transition-colors hover:text-[var(--color-primary)] ${isActive(dashboardUrl) ? 'font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >대시보드</a>
           <a
-            href={`${base}cards`}
-            class={`transition-colors hover:text-[var(--color-primary)] ${isActive(`${base}cards`) ? 'font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+            href={cardsUrl}
+            class={`transition-colors hover:text-[var(--color-primary)] ${isActive(cardsUrl) ? 'font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >카드 목록</a>
           <a
-            href={`${base}results`}
-            class={`transition-colors hover:text-[var(--color-primary)] ${isActive(`${base}results`) ? 'font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+            href={resultsUrl}
+            class={`transition-colors hover:text-[var(--color-primary)] ${isActive(resultsUrl) ? 'font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >추천 결과</a>
 
           <!-- Dark mode toggle -->
@@ -125,24 +133,24 @@ function isActive(href: string) {
       >
         <div class="flex flex-col px-6 py-4 gap-1">
           <a
-            href={`${base}`}
+            href={homeUrl}
             data-mobile-nav-link
-            class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(base) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+            class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(homeUrl) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >홈</a>
           <a
-            href={`${base}dashboard`}
+            href={dashboardUrl}
             data-mobile-nav-link
-            class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(`${base}dashboard`) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+            class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(dashboardUrl) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >대시보드</a>
           <a
-            href={`${base}cards`}
+            href={cardsUrl}
             data-mobile-nav-link
-            class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(`${base}cards`) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+            class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(cardsUrl) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >카드 목록</a>
           <a
-            href={`${base}results`}
+            href={resultsUrl}
             data-mobile-nav-link
-            class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(`${base}results`) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+            class={`rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] ${isActive(resultsUrl) ? 'bg-[var(--color-primary-light)] font-semibold text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >추천 결과</a>
         </div>
       </div>
@@ -170,11 +178,11 @@ function isActive(href: string) {
             <span class="font-semibold text-[var(--color-text)]">{totalCategories}</span>개 항목
           </div>
           <div class="flex gap-4 text-sm text-[var(--color-text-muted)]">
-            <a href={`${base}`} class="hover:text-[var(--color-primary)] transition-colors">홈</a>
-            <a href={`${base}cards`} class="hover:text-[var(--color-primary)] transition-colors">카드 목록</a>
-            <a href={`${base}dashboard`} class="hover:text-[var(--color-primary)] transition-colors">대시보드</a>
-            <a href={`${base}results`} class="hover:text-[var(--color-primary)] transition-colors">추천 결과</a>
-            <a href={`${base}report`} class="hover:text-[var(--color-primary)] transition-colors">리포트</a>
+            <a href={homeUrl} class="hover:text-[var(--color-primary)] transition-colors">홈</a>
+            <a href={cardsUrl} class="hover:text-[var(--color-primary)] transition-colors">카드 목록</a>
+            <a href={dashboardUrl} class="hover:text-[var(--color-primary)] transition-colors">대시보드</a>
+            <a href={resultsUrl} class="hover:text-[var(--color-primary)] transition-colors">추천 결과</a>
+            <a href={reportUrl} class="hover:text-[var(--color-primary)] transition-colors">리포트</a>
           </div>
         </div>
         <div class="mt-6 border-t border-[var(--color-border)] pt-6 text-center text-xs text-[var(--color-text-muted)]">
