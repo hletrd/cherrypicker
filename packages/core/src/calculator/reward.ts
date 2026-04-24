@@ -229,9 +229,14 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     const categoryKey = buildCategoryKey(tx.category, tx.subcategory);
     const rule = tierId === 'none' ? undefined : findRule(rewardRules, tx);
     const rewardKey = rule ? buildRuleKey(rule) : categoryKey;
-    const bucket =
-      categoryRewards.get(categoryKey) ??
-      {
+    // Register the bucket in the Map immediately after creation so that it is
+    // always present before any mutations. Prior code deferred .set() until
+    // later, which worked in JS's single-threaded execution but was fragile
+    // during maintenance — a future early return between creation and .set()
+    // would leave the bucket unregistered (C8-02).
+    let bucket = categoryRewards.get(categoryKey);
+    if (!bucket) {
+      bucket = {
         category: categoryKey,
         categoryNameKo: categoryKey,
         spending: 0,
@@ -240,18 +245,18 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         rewardType: rule?.type ?? 'none',
         capReached: false,
       };
+      categoryRewards.set(categoryKey, bucket);
+    }
 
     bucket.spending += tx.amount;
 
     if (!rule) {
-      categoryRewards.set(categoryKey, bucket);
       continue;
     }
 
     const tierRate = findTierRate(rule, tierId);
     if (!tierRate) {
       bucket.rewardType = rule.type;
-      categoryRewards.set(categoryKey, bucket);
       continue;
     }
 
@@ -344,8 +349,8 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         appliedReward: rewardAfterMonthlyCap,
       });
     }
-
-    categoryRewards.set(categoryKey, bucket);
+    // No need for categoryRewards.set() here — the bucket was registered
+    // immediately after creation and mutations are reflected by reference (C8-02).
   }
 
   const categoryRewardList = [...categoryRewards.values()].map((bucket) => {
