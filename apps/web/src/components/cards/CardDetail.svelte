@@ -4,7 +4,7 @@
   import type { CardDetail, RewardTier } from '../../lib/api.js';
   import { formatWon, formatPercent, getCategoryIconName, getIssuerColor, formatIssuerNameKo, buildPageUrl } from '../../lib/formatters.js';
   import { loadCategories } from '../../lib/cards.js';
-  import { buildCategoryLabelMap } from '../../lib/category-labels.js';
+  import { buildCategoryLabelMap, FALLBACK_CATEGORY_LABELS } from '../../lib/category-labels.js';
   import Icon from '../ui/Icon.svelte';
 
   interface Props {
@@ -27,10 +27,15 @@
       try {
         const nodes = await loadCategories(controller.signal);
         if (!controller.signal.aborted) {
-          categoryLabels = buildCategoryLabelMap(nodes);
+          categoryLabels = nodes.length > 0
+            ? buildCategoryLabelMap(nodes)
+            : FALLBACK_CATEGORY_LABELS;
         }
       } catch {
-        // Fall back to showing raw IDs — non-critical
+        // Use fallback labels when categories fetch fails (C1-01)
+        if (!controller.signal.aborted) {
+          categoryLabels = FALLBACK_CATEGORY_LABELS;
+        }
       }
       if (!controller.signal.aborted) {
         categoryLabelsReady = true;
