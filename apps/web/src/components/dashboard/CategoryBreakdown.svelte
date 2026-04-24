@@ -36,6 +36,7 @@
     travel: '#0ea5e9',
     hotel: '#0284c7',
     airline: '#0369a1',
+    travel_agency: '#0ea5e9',
     utilities: '#6b7280',
     electricity: '#facc15',
     gas: '#fb923c',
