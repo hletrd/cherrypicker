@@ -1324,3 +1324,70 @@ No security, correctness, or data-loss finding is deferred this cycle.
 - **Reason for deferral:** The fallback values (683 cards, 24 issuers, 45 categories) are only used when cards.json is unavailable at build time. The values are read from the actual JSON when available.
 - **Exit criterion:** When the build pipeline is updated to auto-generate fallback values, or when the fallback is removed in favor of a build-time error.
 
+---
+
+## Deferred Findings (Cycle 11)
+
+### C11-CR01: getCategoryColor does 3-way fallback with `.split('.').pop()` per call
+
+- **Original finding:** C11-CR01 (code-reviewer)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:94-98`
+- **Reason for deferral:** Minor GC pressure from temporary string arrays. Not a correctness issue. Same exit criterion as C7-01 (build-time generation would produce a pre-computed reverse lookup Map).
+- **Exit criterion:** When build-time generation from categories.yaml is implemented (same as C7-01).
+
+### C11-CR02: formatIssuerNameKo is 7th hardcoded taxonomy duplicate
+
+- **Original finding:** C11-CR02 (code-reviewer, architect)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/formatters.ts:52-78`
+- **Reason for deferral:** Same class as C9-03. Issuer name data should derive from cards.json at build time.
+- **Exit criterion:** When build-time generation from cards.json is implemented (same as C7-01).
+
+### C11-CR03: FALLBACK_GROUPS is 3rd category hierarchy duplicate
+
+- **Original finding:** C11-CR03 (code-reviewer, architect)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:26-42`
+- **Reason for deferral:** Same class as C8-01. Fallback category data should derive from categories.yaml at build time.
+- **Exit criterion:** When build-time generation from categories.yaml is implemented (same as C7-01).
+
+### C11-CR04: ALL_BANKS is 2nd bank list duplicate
+
+- **Original finding:** C11-CR04 (code-reviewer, architect)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte:80-105`
+- **Reason for deferral:** Same class as C9-02. Bank list should derive from cards.json data.
+- **Exit criterion:** When build-time generation from cards.json is implemented (same as C7-01).
+
+### C11-CR05: build-stats.ts fallback values may become stale (duplicate of C9-10)
+
+- **Original finding:** C11-CR05 (code-reviewer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/build-stats.ts:16-18`
+- **Reason for deferral:** Duplicate of C9-10. Hardcoded fallback values will silently become wrong.
+- **Exit criterion:** Same as C9-10.
+
+### C11-CR06: formatSavingsValue strips sign unconditionally — API footgun
+
+- **Original finding:** C11-CR06 (critic)
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `apps/web/src/lib/formatters.ts:226`
+- **Reason for deferral:** The current API works correctly for all existing callers. The risk of future misuse is theoretical. Adding a direction parameter would be a minor improvement but not worth the churn across 3 consuming components.
+- **Exit criterion:** If a new caller misuses the API and produces a user-visible bug, refactor to return a structured object.
+
+### C11-CR07: persistToStorage uses misleading "corrupted" label for quota errors
+
+- **Original finding:** C11-CR07 (critic)
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `apps/web/src/lib/store.svelte.ts:176-190`
+- **Reason for deferral:** The naming is technically incorrect but has no user-facing impact. The `kind` field is only consumed internally to set `persistWarningKind` state, which is only checked for `!== null` in the UI.
+- **Exit criterion:** When the persistence module is refactored (tied to D7-M6/A7-02), rename `corrupted` to `quota_exceeded` for clarity.
+
