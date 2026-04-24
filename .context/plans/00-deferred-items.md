@@ -1465,3 +1465,50 @@ All previously deferred items remain unchanged. No severity downgrades. The foll
 - D-01 (duplicate parsers) — confirmed by architect, code-reviewer (C12-CR04)
 - D-02 (license mismatch) — confirmed by document-specialist
 
+---
+
+## Deferred Findings (Cycle 13)
+
+### C13-CR01: Wildcard rule exemption from subcategory blocking is undocumented
+
+- **Original finding:** C13-CR01 (code-reviewer)
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `packages/core/src/calculator/reward.ts:81`
+- **Reason for deferral:** Minor documentation gap. The guard `if (tx.subcategory && !rule.subcategory && rule.category !== '*') return false;` correctly skips broad-category rules for subcategorized transactions, while wildcard rules (`category: '*'`) bypass the guard. The behavior is correct for Korean card terms but the wildcard exemption's intent is not documented. The existing TODO at line 79-80 covers the `includeSubcategories` schema extension.
+- **Exit criterion:** When the `includeSubcategories` schema field is added, update the comment at line 81 to reference it. A standalone documentation comment can be added sooner if a comment-focused cycle is scheduled.
+
+### C13-CR02: formatSavingsValue '+' prefix can appear/disappear during count-up animation
+
+- **Original finding:** C13-CR02 (code-reviewer)
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `apps/web/src/lib/formatters.ts:224-227`
+- **Reason for deferral:** Known intentional behavior. The `prefixValue >= 100` threshold for showing '+' prefix is stable once animation completes. The brief appearance/disappearance during count-up when crossing 100 won is a minor visual artifact that has been noted before (C82-03). The current behavior is acceptable.
+- **Exit criterion:** If users report confusion about the '+' prefix flickering during animation, consider deferring the prefix decision until after animation completes.
+
+### C13-A01: buildCategoryLabelMap bare sub-ID exclusion should be documented in module JSDoc
+
+- **Original finding:** C13-A01 (architect)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/category-labels.ts:16-20`
+- **Reason for deferral:** Correct architectural decision documented only in inline comments. The module's JSDoc should explain why bare subcategory IDs are intentionally excluded from the label map. Currently all code paths use `buildCategoryKey()` which produces dot-notation keys, so this is not a runtime issue. The comment at lines 16-20 is sufficient for inline reference but the module-level JSDoc should mention this design choice.
+- **Exit criterion:** When the category-labels module is refactored (tied to C7-01/C7-02 build-time generation), add a JSDoc explaining the bare sub-ID exclusion policy.
+
+### C13-TE01: No unit test for getCategoryColor 3-way fallback logic
+
+- **Original finding:** C13-TE01 (test-engineer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:94-98`
+- **Reason for deferral:** Test coverage gap. `getCategoryColor` tries full key, then `split('.').pop()` leaf ID, then `uncategorized`, then `OTHER_COLOR`. This 4-level fallback has no unit test. The component works correctly in E2E tests but the fallback chain could regress silently.
+- **Exit criterion:** When a dedicated test coverage improvement cycle is scheduled (same as C9-08/C9-09/C12-TE03/C12-TE04).
+
+### Cycle 13 re-affirmation of existing deferred items
+
+All previously deferred items remain unchanged. No severity downgrades. The following items saw renewed cross-agent agreement this cycle:
+- C7-01/C7-02/C9-01 (hardcoded taxonomy duplicates) — confirmed by code-reviewer, architect, critic across 7 cycles
+- D-01 (duplicate parsers) — confirmed by architect, code-reviewer
+- D-02 (license mismatch) — confirmed by document-specialist
+
