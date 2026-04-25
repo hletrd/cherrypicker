@@ -1512,3 +1512,52 @@ All previously deferred items remain unchanged. No severity downgrades. The foll
 - D-01 (duplicate parsers) — confirmed by architect, code-reviewer
 - D-02 (license mismatch) — confirmed by document-specialist
 
+---
+
+## Deferred Findings (Cycle 14)
+
+### C14-CR01: findRule sort uses O(n) `rules.indexOf` tiebreak
+
+- **Original finding:** C14-CR01 (code-reviewer)
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `packages/core/src/calculator/reward.ts:65-90`
+- **Reason for deferral:** Informational only. Sort comparator chains by specificity then by `rules.indexOf(a)` for deterministic ordering (rationale documented inline at C1-12). Theoretical worst case is O(n^2 log n), but typical cards define <30 rules — well below any realistic perf cliff. Not a real problem at current scale.
+- **Exit criterion:** If a card definition ever exceeds ~200 rules, precompute an index map keyed by rule reference to make tiebreak O(1).
+
+### C14-CR02: FALLBACK_CATEGORY_LABELS re-confirmation
+
+- **Original finding:** C14-CR02 (code-reviewer)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/category-labels.ts:32-110`
+- **Reason for deferral:** Re-confirmation of existing deferred item C7-02 (hardcoded fallback duplicates `categories.yaml`). No new manifestation. Already covered by the build-time codegen exit criterion.
+- **Exit criterion:** Same as C7-02 — build-time generation from `categories.yaml` that produces all fallback data automatically.
+
+### C14-CRT01: Source-comment cycle citations lack a central glossary
+
+- **Original finding:** C14-CRT01 (critic)
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** repo-wide source comments referencing `Cn-mm` cycle tags (70+ files)
+- **Reason for deferral:** Optional documentation polish. Cycle tags (e.g. `C82-03`, `C92-01`) anchor archaeology but a future contributor without context cannot decode them without grepping `.context/`. A one-line README/AGENTS pointer to `.context/reviews/_aggregate.md` would resolve this. Not blocking; not a correctness or security issue.
+- **Exit criterion:** When a documentation polish cycle is scheduled, add a one-line note in `README.md` or `AGENTS.md` pointing to `.context/reviews/_aggregate.md` as the cycle-citation index.
+
+### C14-TE01: getCategoryColor 3-way fallback still has no direct unit test
+
+- **Original finding:** C14-TE01 (test-engineer)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:94-98`
+- **Reason for deferral:** Test coverage gap. Same as C13-TE01 / C9-08. The function lives inside a Svelte component and would require an export refactor (move `getCategoryColor` + `CATEGORY_COLORS` to `apps/web/src/lib/category-colors.ts`) to enable isolated unit testing. The function works correctly in E2E.
+- **Exit criterion:** When a dedicated test coverage improvement cycle is scheduled (same as C9-08/C9-09/C12-TE03/C12-TE04/C13-TE01).
+
+### Cycle 14 re-affirmation of existing deferred items
+
+All previously deferred items remain unchanged. No severity downgrades. The following items saw renewed cross-agent agreement this cycle:
+- C7-01/C7-02/C9-01 (hardcoded taxonomy duplicates) — confirmed by code-reviewer, architect, critic across 8 cycles
+- D-01 (duplicate parsers) — confirmed by architect across 14 cycles
+- D-02 (license mismatch) — confirmed by document-specialist
+- D-09 (scoreCardsForTransaction O(n*m)) — re-affirmed by perf-reviewer
+- D-31, D-32 (security carry-forward) — re-affirmed by security-reviewer
+
