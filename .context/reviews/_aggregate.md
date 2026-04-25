@@ -45,6 +45,8 @@ No HIGH or MEDIUM security findings. Previously deferred items (D-32, D-31) rema
 - `npm run typecheck` — PASS (cached)
 - `bun run test` — PASS (cached)
 - `npm run verify` — PASS (FULL TURBO; 10/10 tasks cached; 96 core tests, 4 CLI, 1 viz, parser/rules/web/scraper all green)
+- `npm run test:bun` — PASS (58 pass / 0 fail across 4 files, 185 expect calls)
+- `npm run test:e2e` (Playwright) — PASS (74/74 passed in 1.5m; covers home/dashboard/results/report/cards pages, accessibility, responsive layout, CSP/runtime errors, session persistence, data integrity, and UI screenshots)
 
 ## Cross-agent agreement
 
