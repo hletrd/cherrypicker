@@ -1561,3 +1561,7 @@ All previously deferred items remain unchanged. No severity downgrades. The foll
 - D-09 (scoreCardsForTransaction O(n*m)) — re-affirmed by perf-reviewer
 - D-31, D-32 (security carry-forward) — re-affirmed by security-reviewer
 
+### Cycle 15 re-affirmation (no net-new findings)
+
+Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings** across all 11 reviewer perspectives. Source tree was bit-identical to cycle 14 (`git diff 455eb9b HEAD` empty for `*.ts/*.svelte/*.astro/*.yaml`). All previously deferred items remain unchanged with original severity, confidence, file+line citation, reason, and exit criterion. No items added or removed. No severity downgrades. The cycle's only output is documentation re-confirmation under `.context/reviews/c15-*.md` and the cycle-15 aggregate roll-forward.
+
