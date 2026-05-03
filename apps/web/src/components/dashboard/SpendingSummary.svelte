@@ -37,6 +37,7 @@
         dismissed = true;
       }
     } catch {
+      if (typeof console !== 'undefined') console.debug('[cherrypicker] sessionStorage access failed in SpendingSummary (expected in restricted environments)');
       // SecurityError in restricted environments (strict private browsing,
       // cross-origin iframes). Dismissal state won't persist, but the
       // component still renders without crashing.

@@ -32,6 +32,7 @@
             : FALLBACK_CATEGORY_LABELS;
         }
       } catch {
+        if (typeof console !== 'undefined') console.debug('[cherrypicker] Category labels fetch failed in CardDetail, using fallback');
         // Use fallback labels when categories fetch fails (C1-01)
         if (!controller.signal.aborted) {
           categoryLabels = FALLBACK_CATEGORY_LABELS;
@@ -289,6 +290,7 @@
             const { navigate } = await import('astro:transitions/client');
             navigate(buildPageUrl('cards'));
           } catch {
+            if (typeof console !== 'undefined') console.debug('[cherrypicker] Astro View Transitions not available in CardDetail, falling back to full page reload');
             window.location.href = buildPageUrl('cards');
           }
         }}

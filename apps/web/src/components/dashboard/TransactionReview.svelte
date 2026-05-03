@@ -108,6 +108,7 @@
         categoryGroups = groups;
         categoryMap = new Map(options.map(c => [c.id, c.label]));
       } catch {
+        if (typeof console !== 'undefined') console.debug('[cherrypicker] Category options fetch failed, using fallback list');
         // Fall back to hardcoded list
         categoryOptions = FALLBACK_CATEGORIES;
         categoryGroups = FALLBACK_GROUPS;

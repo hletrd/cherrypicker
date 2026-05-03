@@ -295,6 +295,7 @@
             const { navigate } = await import('astro:transitions/client');
             navigate(buildPageUrl('dashboard'));
           } catch {
+            if (typeof console !== 'undefined') console.debug('[cherrypicker] Astro View Transitions not available, falling back to full page reload');
             window.location.href = buildPageUrl('dashboard');
           }
         }, 1200);
