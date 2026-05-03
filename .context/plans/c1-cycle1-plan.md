@@ -10,7 +10,7 @@
 - **Severity:** MEDIUM
 - **File:** `apps/web/__tests__/analyzer-adapter.test.ts`
 - **Action:** Add a test that verifies `fullStatementPeriod` filters out non-ISO dates (e.g., Korean footer rows like "소계") before computing period bounds. This prevents regression of the C96-01 crash and C97-01 period pollution.
-- **Status:** TODO
+- **Status:** DONE (regression test already existed in codebase; verified passing)
 
 ### Task 2: Run Playwright e2e tests with realistic data (USER-INJECTED TODO)
 
@@ -21,7 +21,7 @@
   2. File upload works for CSV and XLSX
   3. Analysis runs without errors
   4. Dashboard displays results correctly
-- **Status:** TODO
+- **Status:** DONE (74 e2e tests pass; web-regressions.spec.js covers realistic CSV upload)
 
 ### Task 3: Remove/deprecate ILP optimizer stub
 
@@ -29,7 +29,7 @@
 - **Severity:** LOW
 - **Files:** `packages/core/src/optimizer/ilp.ts`, `packages/core/src/optimizer/index.ts`
 - **Action:** Add `@deprecated` JSDoc tag and remove the `console.debug` call. Update the JSDoc to clarify it's a stub delegating to greedy optimizer. Do not remove the export (may be used externally).
-- **Status:** TODO
+- **Status:** DONE (08bdd82 refactor(core): deprecate ILP optimizer stub and remove console.debug)
 
 ### Task 4: Add diagnostic logging to empty catch blocks
 
@@ -37,7 +37,7 @@
 - **Severity:** LOW
 - **Files:** `FileDropzone.svelte:297`, `TransactionReview.svelte:110`, `CardDetail.svelte:34,291`, `SpendingSummary.svelte:39`
 - **Action:** Add `console.debug` or `console.warn` in each empty catch block with a brief diagnostic message explaining the expected fallback behavior.
-- **Status:** TODO
+- **Status:** DONE (1f8fc63 fix(web): add diagnostic logging to empty catch blocks in Svelte components)
 
 ### Task 5: XLSX parser memory optimization — avoid TextEncoder re-encoding
 
@@ -45,7 +45,7 @@
 - **Severity:** LOW
 - **File:** `apps/web/src/lib/parser/xlsx.ts:299`
 - **Action:** Replace `new TextEncoder().encode(html)` + `XLSX.read(uint8array, { type: 'array' })` with `XLSX.read(html, { type: 'string' })`. Verify that XLSX's string input path handles Korean characters correctly.
-- **Status:** TODO
+- **Status:** DONE (5fb939e perf(parser): avoid double-encoding HTML-as-XLS content)
 
 ### Task 6: Store cardIds in AnalysisResult and forward in reoptimize
 
@@ -53,7 +53,7 @@
 - **Severity:** LOW
 - **Files:** `apps/web/src/lib/store.svelte.ts`, `apps/web/src/lib/analyzer.ts`
 - **Action:** Add `cardIdsOption?: string[]` to `AnalysisResult` (similar to `previousMonthSpendingOption`). Set it during `analyze()` when `options.cardIds` is provided. Forward it in `reoptimize()`.
-- **Status:** TODO
+- **Status:** DONE (bbb6078 feat(store): persist and forward cardIds in reoptimize)
 
 ### Task 7: Show auto-detected bank in FileDropzone
 
@@ -61,7 +61,7 @@
 - **Severity:** LOW
 - **File:** `apps/web/src/components/upload/FileDropzone.svelte`
 - **Action:** After file upload, run `detectBankFromText` on the file content and display the detected bank name as a hint next to the "자동 인식" button. This requires reading file content for bank detection before the full parse.
-- **Status:** TODO
+- **Status:** DONE (570eac1 feat(upload): show auto-detected bank name in FileDropzone)
 
 ---
 
