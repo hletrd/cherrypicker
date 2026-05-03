@@ -296,8 +296,9 @@ export function parseXLSX(buffer: ArrayBuffer, bank?: BankId): ParseResult {
     const fullDecoded = new TextDecoder('utf-8').decode(buffer);
     const html = normalizeHTML(fullDecoded.replace(/^\uFEFF/, ''));
     htmlBankHint = detectBank(html).bank;
-    const normalized = new TextEncoder().encode(html);
-    workbook = XLSX.read(normalized, { type: 'array', cellDates: false });
+    // Pass HTML string directly to XLSX instead of re-encoding via TextEncoder.
+    // Avoids creating a second full copy of the file content in memory (C1-P01).
+    workbook = XLSX.read(html, { type: 'string', cellDates: false });
   } else {
     workbook = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false });
   }
