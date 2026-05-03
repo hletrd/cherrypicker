@@ -36,15 +36,15 @@ import type { OptimizationConstraints } from './constraints.js';
 import { greedyOptimize } from './greedy.js';
 
 /**
- * Optimal ILP optimizer.
- * Currently delegates to the greedy optimizer as a fallback until
- * glpk.js is integrated.
+ * ILP optimizer — **stub** that delegates to the greedy optimizer.
+ *
+ * @deprecated Not yet implemented. Currently delegates to `greedyOptimize`.
+ * Will be replaced with a proper ILP solver (glpk.js) when implemented.
+ * Using this function produces identical results to `greedyOptimize`.
  */
 export function ilpOptimize(
   constraints: OptimizationConstraints,
   cardRules: CardRuleSet[],
 ): OptimizationResult {
-  // TODO: Replace with actual ILP solver once glpk.js is integrated.
-  console.debug('[cherrypicker] ILP optimizer is not yet implemented — falling back to greedy optimizer');
   return greedyOptimize(constraints, cardRules);
 }
