@@ -83,6 +83,10 @@ export interface AnalysisResult {
    *  the user's original performance tier baseline instead of silently
    *  recomputing it from exclusion-filtered spending (C44-01). */
   previousMonthSpendingOption?: number;
+  /** The user's explicit cardIds filter (if provided during analysis).
+   *  Forwarded to reoptimize() so that category edits preserve the user's
+   *  card selection instead of silently optimizing against all cards. */
+  cardIdsOption?: string[];
 }
 
 export interface AnalyzeOptions {
@@ -113,7 +117,7 @@ const MIGRATIONS: Record<number, (data: any) => any> = {
 
 type PersistedAnalysisResult = Pick<
   AnalysisResult,
-  'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown' | 'transactions' | 'previousMonthSpendingOption'
+  'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown' | 'transactions' | 'previousMonthSpendingOption' | 'cardIdsOption'
 > & {
   /** When transactions are omitted due to size limits, records how many
    *  were lost so the warning can inform the user (C22-03). */
@@ -158,6 +162,7 @@ function persistToStorage(data: AnalysisResult): PersistResult {
         monthlyBreakdown: data.monthlyBreakdown,
         transactions: data.transactions,
         previousMonthSpendingOption: data.previousMonthSpendingOption,
+        cardIdsOption: data.cardIdsOption,
         _v: STORAGE_VERSION,
       };
       const serialized = JSON.stringify(persisted);
@@ -311,6 +316,7 @@ function loadFromStorage(): AnalysisResult | null {
               }))
             : undefined,
           previousMonthSpendingOption: typeof parsed.previousMonthSpendingOption === 'number' ? parsed.previousMonthSpendingOption : undefined,
+          cardIdsOption: Array.isArray(parsed.cardIdsOption) ? parsed.cardIdsOption : undefined,
         } as AnalysisResult;
       }
       sessionStorage.removeItem(STORAGE_KEY);
@@ -461,6 +467,11 @@ function createAnalysisStore() {
         if (options?.previousMonthSpending !== undefined) {
           analysisResult.previousMonthSpendingOption = options.previousMonthSpending;
         }
+        // Preserve the user's explicit cardIds filter so reoptimize()
+        // can forward it instead of silently optimizing against all cards.
+        if (options?.cardIds && options.cardIds.length > 0) {
+          analysisResult.cardIdsOption = options.cardIds;
+        }
         result = analysisResult;
         generation++;
         const persistResult = persistToStorage(analysisResult);
@@ -563,6 +574,9 @@ function createAnalysisStore() {
         const optimization = await optimizeFromTransactions(latestTransactions, {
           ...options,
           previousMonthSpending,
+          // Forward the user's cardIds selection from the initial analysis
+          // so reoptimize doesn't silently switch to optimizing against all cards.
+          cardIds: options?.cardIds ?? snapshot.cardIdsOption,
         }, categoryLabels);
         // result is guaranteed non-null here (early null guard at top of try block).
         // Keep all months in the transactions field for display/editing,
