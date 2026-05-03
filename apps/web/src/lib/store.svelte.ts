@@ -321,14 +321,21 @@ function loadFromStorage(): AnalysisResult | null {
       }
       sessionStorage.removeItem(STORAGE_KEY);
     }
-  } catch {
-    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch (err) {
+  } catch (err) {
+    // Log the initial load failure for diagnostics — this catch handles
+    // JSON.parse errors, validation failures, and unexpected exceptions
+    // from sessionStorage.getItem. Without logging, these failures are
+    // invisible to developers debugging persistence issues (C2-R02/D03).
+    if (typeof console !== 'undefined') {
+      console.warn('[cherrypicker] Failed to load persisted data from sessionStorage:', err);
+    }
+    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch (err2) {
       // Best-effort cleanup: corrupted data removal.
       // SecurityError in sandboxed iframes is expected and safe to ignore.
       // Log when sessionStorage is available but the remove failed for another
       // reason, matching the pattern in clearStorage() (C24-02/C27-01/C30-03).
       if (typeof sessionStorage !== 'undefined') {
-        console.warn('[cherrypicker] Failed to remove corrupted data from sessionStorage:', err);
+        console.warn('[cherrypicker] Failed to remove corrupted data from sessionStorage:', err2);
       }
     }
   }
