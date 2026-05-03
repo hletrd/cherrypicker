@@ -1,13 +1,26 @@
-# Security Reviewer — Cycle 2 Deep Review (2026-04-24)
+# Cycle 2 — security-reviewer pass
 
-Reviewed all source files for OWASP top 10, secrets, unsafe patterns, auth/authz concerns.
+**Date:** 2026-05-03
 
-## No New Findings
+## Scope
 
-The codebase is a client-side-only static Astro site with minimal attack surface. All previously identified security concerns remain tracked in the deferred items:
+OWASP top 10, secrets, unsafe patterns, auth/authz.
 
-- D-32: No Subresource Integrity on external script (LOW)
-- D7-M13: `unsafe-inline` in script-src CSP (MEDIUM)
-- D-31: sessionStorage parse errors silently swallowed (LOW)
+## Findings
 
-No new secrets, unsafe patterns, or authentication/authorization issues found. The `console.warn` additions from cycle 1 (C1-03) were verified as correctly implemented in `apps/web/src/lib/analyzer.ts:57,63`.
+None net-new.
+
+## Security posture (re-confirmed)
+
+- **XSS** — No `innerHTML`, `{@html}`, `dangerouslySetInnerHTML`, or `eval()` patterns found.
+- **Secrets** — `ANTHROPIC_API_KEY` used server-side only (scraper tool). No client-side secret exposure.
+- **CSP** — `script-src 'self' 'unsafe-inline'` unchanged. Accepted deferred item.
+- **sessionStorage** — Transaction data stored, same-origin only. Acceptable.
+- **CSRF** — Purely static site. N/A.
+- **Input validation** — Parsers do not `eval()` or execute content. Amount parsing uses `parseFloat` with `Math.round` — safe.
+- **Abort handling** — Properly managed throughout the store.
+- **No prototype pollution, no unsafe deserialization, no injection vectors.**
+
+## Summary
+
+0 net-new security findings. Security posture unchanged.

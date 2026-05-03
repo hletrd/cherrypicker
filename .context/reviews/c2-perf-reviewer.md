@@ -1,18 +1,36 @@
-# Performance Reviewer — Cycle 2 Deep Review (2026-04-24)
+# Cycle 2 — perf-reviewer pass
 
-Reviewed all source files for CPU, memory, and responsiveness concerns.
+**Date:** 2026-05-03
 
-## New Findings
+## Scope
 
-### C2-P01: `scoreCardsForTransaction` creates `new Map()` in `buildConstraints` for every card on every transaction
+Performance, concurrency, CPU/memory/UI responsiveness.
+
+## Findings
+
+### C2-P01: C1-P01 fix verified — XLSX parser no longer creates TextEncoder copy
+
+- **Severity:** N/A (verification)
+- **File+line:** `apps/web/src/lib/parser/xlsx.ts:299-301`
+- **Description:** The XLSX parser now uses `XLSX.read(html, { type: 'string' })` instead of `new TextEncoder().encode(html)`. Eliminates second full copy in memory. Verified in place.
+- **Status:** FIXED.
+
+### C2-P02: Build still produces chunk > 500 KB warning (re-confirmed from C1-P02)
+
 - **Severity:** LOW
-- **Confidence:** Medium
-- **File:** `packages/core/src/optimizer/greedy.ts:275-277` and `packages/core/src/optimizer/constraints.ts`
-- **Description:** `greedyOptimize` creates a `cardPreviousSpending` Map from `constraints.cards.map()` on every call. This is a shallow Map creation from an array — O(n) where n is the number of cards. Then `scoreCardsForTransaction` calls `calculateCardOutput` twice per card per transaction, each of which constructs a new `CalculationInput` object. For typical usage (< 1000 transactions, < 10 cards selected for optimization), this is negligible. Previously tracked as D-09/D-51/D-86. No change in status.
-- **Fix:** Defer. Only optimize if transaction count exceeds 10,000.
+- **Confidence:** High
+- **File+line:** Vite build output
+- **Description:** The Astro build produces a warning about large chunks. The xlsx library is likely the primary contributor.
+- **Fix:** Consider code-splitting the XLSX parser via dynamic import.
 
-## No New Findings
+### C2-P03: `scoreCardsForTransaction` double-computes `calculateCardOutput` per card per transaction (re-confirmed from C2-R04)
 
-After thorough review of all source files, no new performance findings beyond what is already tracked in the deferred items (D-09, D-51, D-86, P1-01, P8-02). The codebase's performance profile is adequate for its use case (personal finance tool, < 1000 transactions typical).
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/greedy.ts:136-142`
+- **Description:** Each call computes `calculateCardOutput` twice per card. Practical impact limited (typical inputs: 3-5 cards, <500 transactions).
+- **Fix:** Consider incremental delta computation.
 
-The cycle 1 fixes (C1-02 — limiting `detectCSVDelimiter` to 30 lines) were verified as correctly implemented in both `packages/parser/src/detect.ts:151` and `apps/web/src/lib/parser/detect.ts:175`.
+## Summary
+
+1 fix verified (C1-P01). 2 re-confirmed LOW findings. 0 net-new actionable findings.

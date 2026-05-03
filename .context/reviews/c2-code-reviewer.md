@@ -1,48 +1,62 @@
-# Code Reviewer — Cycle 2 Deep Review (2026-04-24)
+# Cycle 2 — code-reviewer pass
 
-Reviewed all source files across `packages/core/`, `packages/parser/`, `packages/rules/`, `apps/web/`, and `tools/`.
+**Date:** 2026-05-03
 
-## New Findings
+## Scope
 
-### C2-CR01: `FALLBACK_CATEGORY_LABELS` and `CATEGORY_NAMES_KO` can silently diverge from each other
-- **Severity:** MEDIUM
-- **Confidence:** High
-- **File:** `apps/web/src/lib/category-labels.ts:32-111` vs `packages/core/src/optimizer/greedy.ts:11-89`
-- **Description:** Both `FALLBACK_CATEGORY_LABELS` (web) and `CATEGORY_NAMES_KO` (core) are hardcoded maps that must be kept in sync with `categories.yaml`. Cycle 1 added `FALLBACK_CATEGORY_LABELS` but did NOT remove the existing `CATEGORY_NAMES_KO` — they now have TWO independent hardcoded copies that can silently diverge from each other AND from the YAML source. The cycle 1 plan (A1-01) partially addressed this by adding `buildCategoryNamesKo()` in the rules package, but `CATEGORY_NAMES_KO` in greedy.ts was NOT replaced and `FALLBACK_CATEGORY_LABELS` in category-labels.ts was NOT sourced from it.
-- **Failure scenario:** If a new category is added to `categories.yaml`, both hardcoded maps must be manually updated. Missing one produces either raw IDs in the UI or wrong Korean labels in the optimizer output.
-- **Fix:** Replace `FALLBACK_CATEGORY_LABELS` with a call to `buildCategoryNamesKo()` at build time or app init. For `CATEGORY_NAMES_KO`, either import from `@cherrypicker/rules` or add a build-time validation that compares keys.
+Net-new code-quality issues across the full repo. Deep sweep of core, parser, rules, viz, web, CLI, and scraper.
 
-### C2-CR02: `FALLBACK_CATEGORY_LABELS` includes `subscription.general` but `CATEGORY_NAMES_KO` does not
+## Findings
+
+### C2-R01: `MIGRATIONS` dict uses `(data: any) => any` — type safety gap (re-confirmed from C1-R04)
+
 - **Severity:** LOW
 - **Confidence:** High
-- **File:** `apps/web/src/lib/category-labels.ts:106` vs `packages/core/src/optimizer/greedy.ts:11-89`
-- **Description:** The web fallback map has `['subscription.general', '전체']` (line 106) and `['entertainment.subscription', '구독']` (line 101), but `CATEGORY_NAMES_KO` in greedy.ts only has `subscription: '구독'` (line 46) and no `subscription.general` entry. This is an existing divergence between the two hardcoded maps — the core optimizer would show the raw key `subscription.general` instead of `전체`.
-- **Fix:** Add `subscription.general` and `entertainment.subscription` to `CATEGORY_NAMES_KO` in greedy.ts, or better yet, merge the maps via the shared `buildCategoryNamesKo()` function per C2-CR01.
+- **File+line:** `apps/web/src/lib/store.svelte.ts:114`
+- **Description:** The `MIGRATIONS` record types its values as `(data: any) => any`. While there are currently no migrations (v1 is the first schema), when migrations are eventually added, the `any` types will bypass TypeScript's structural checking. A malformed migration could silently corrupt the persisted data shape.
+- **Status:** Unchanged from C1-R04.
 
-### C2-CR03: `grocery` label mismatch — `식료품/마트` in core vs `식료품` in web fallback
+### C2-R02: `loadFromStorage` catch block at line 324 has bare `catch {}` — missing diagnostic
+
 - **Severity:** LOW
 - **Confidence:** High
-- **File:** `packages/core/src/optimizer/greedy.ts:18` says `'식료품/마트'` while `apps/web/src/lib/category-labels.ts:39` says `'식료품'`
-- **Description:** The same category `grocery` has different Korean labels in the two hardcoded maps. When the optimizer runs standalone (CLI), it shows `식료품/마트`; when it runs via the web with fallback labels, it shows `식료품`. The `categories.yaml` taxonomy likely has one canonical label.
-- **Fix:** Unify to the canonical label from `categories.yaml`.
+- **File+line:** `apps/web/src/lib/store.svelte.ts:324`
+- **Description:** The outer catch block in `loadFromStorage` is `catch {}` with no diagnostic message. The inner nested catch at line 325 correctly logs the error, but the outer catch itself swallows the initial `JSON.parse` or validation failure silently. This makes debugging persistence issues harder when the inner catch doesn't apply (e.g., `sessionStorage.getItem` throws SecurityError).
+- **Fix:** Add `console.warn('[cherrypicker] Failed to load persisted data:', err)` in the outer catch, or at minimum move the diagnostic to the outer catch and remove the redundant inner catch.
 
-### C2-CR04: `loadFromStorage` migration loop runs off-by-one — skips the last migration
+### C2-R03: `inferYear` in both `packages/parser/src/date-utils.ts` and `apps/web/src/lib/parser/date-utils.ts` uses `new Date()` — timezone-dependent (re-confirmed from C1-D01)
+
 - **Severity:** LOW
 - **Confidence:** Medium
-- **File:** `apps/web/src/lib/store.svelte.ts:248`
-- **Description:** The migration loop `for (let v = storedVersion; v < STORAGE_VERSION; v++)` starts at `storedVersion` and runs while `v < STORAGE_VERSION`. When `storedVersion === 0` and `STORAGE_VERSION === 1`, the loop runs for `v=0` and checks `MIGRATIONS[0]`, which is undefined. This is correct behavior (no migrations defined yet). However, when `STORAGE_VERSION` becomes 2 and `storedVersion` is 1, the loop runs for `v=1` only, which correctly runs `MIGRATIONS[1]`. The loop is actually correct — it runs migrations from `storedVersion` to `STORAGE_VERSION - 1` inclusive, which is the right range. Retracting this finding.
+- **File+line:** `packages/parser/src/date-utils.ts:25-31`, `apps/web/src/lib/parser/date-utils.ts:35-43`
+- **Description:** Both copies of `inferYear` use `new Date()` which is timezone-dependent. Near midnight on Dec 31 in UTC-X timezones, `now.getFullYear()` may already be the next year. Known limitation (C8-08). The two copies are also a DRY violation — the web version is a near-identical copy of the packages version.
+- **Status:** Known limitation, re-confirmed.
 
-### C2-CR05: `CategoryBreakdown.svelte` `CATEGORY_COLORS` missing `travel_agency` standalone entry
+### C2-R04: `scoreCardsForTransaction` computes full `calculateCardOutput` twice per card per transaction — O(C*T*N)
+
 - **Severity:** LOW
 - **Confidence:** High
-- **File:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:6-84`
-- **Description:** The `CATEGORY_COLORS` map has `travel.travel_agency` (dot-notation, line 80) but no standalone `travel_agency` entry. If the optimizer assigns a transaction to category `travel_agency` without the `travel.` prefix (which shouldn't happen given `buildCategoryKey`, but is a defensive gap), the fallback to gray would be triggered. This extends D-42/D-46/D-64/D-78 but is specifically about the standalone key.
-- **Fix:** Add `travel_agency: '#0ea5e9'` to `CATEGORY_COLORS` alongside the existing `travel: '#0ea5e9'` entry.
+- **File+line:** `packages/core/src/optimizer/greedy.ts:136-142`
+- **Description:** For each transaction, `scoreCardsForTransaction` calls `calculateCardOutput` twice for each card — once "before" and once "after" pushing the transaction. With M cards, T transactions, and N transactions per card, this is O(2*M*T*N) where N grows linearly with assignments. For typical usage (3-5 cards, <500 transactions) this is fast enough, but large datasets could be slow.
+- **Fix:** Consider an incremental delta computation that avoids recomputing the full reward from scratch. Known optimization opportunity, not a bug.
 
-## Previously Known (Acknowledged, Not Re-reported)
+### C2-R05: `detectBank` in both `packages/parser/src/detect.ts` and `apps/web/src/lib/parser/detect.ts` are duplicated
 
-All 111 deferred items in `.context/plans/00-deferred-items.md` remain valid. No regression found.
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `packages/parser/src/detect.ts:109-146`, `apps/web/src/lib/parser/detect.ts:127-164`
+- **Description:** The `detectBank` function and `BANK_SIGNATURES` array are duplicated between the packages/parser and apps/web copies. Both are functionally identical. This is a DRY violation that can lead to drift. Part of the broader D-01 deferred item.
+- **Status:** Known deferred item (D-01).
 
-## Final Sweep
+## Verified prior fixes still in place
 
-Examined all source files in `apps/web/src/`, `packages/core/src/`, `packages/parser/src/`, `packages/rules/src/`. No additional new findings beyond those listed above. The codebase is in good shape — most issues are maintenance concerns around hardcoded data maps that can silently drift.
+| ID | File/Line | Verification |
+|---|---|---|
+| C97-01 | `analyzer.ts:376-390` | Filter `length >= 10` on `allDates` and `optimizedDates` confirmed. |
+| C96-01 | `analyzer.ts:344-346` | Empty-months `throw` confirmed. |
+| C1-P01 | `xlsx.ts:299-301` | XLSX parser now uses `XLSX.read(html, { type: 'string' })`. |
+| ILP stub | `ilp.ts:45-49` | Console.debug removed, `@deprecated` JSDoc added. |
+
+## Summary
+
+1 net-new actionable finding (C2-R02, LOW — silent catch block). 4 re-confirmations of known items.

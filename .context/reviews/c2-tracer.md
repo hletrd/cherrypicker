@@ -1,31 +1,27 @@
-# Tracer — Cycle 2 Causal Trace (2026-04-24)
+# Cycle 2 — tracer pass
 
-Traced suspicious flows and tested competing hypotheses about correctness.
+**Date:** 2026-05-03
 
-## Flow Trace 1: Category Label Resolution Path
+## Scope
 
-**Hypothesis:** The three category label maps could cause inconsistent Korean labels depending on which code path is taken.
+Causal tracing of suspicious flows, competing hypotheses.
 
-**Trace:**
-1. User uploads file -> `analyzeMultipleFiles()` -> `optimizeFromTransactions()` -> `buildCategoryLabelMap(categoryNodes)` (live data from `categories.json`)
-2. If categories.json loads successfully: `buildCategoryLabelMap()` produces labels from live taxonomy. Subcategory keys use dot-notation ONLY (e.g., `dining.cafe` but NOT `cafe`). This is the primary path.
-3. If categories.json fails to load (AbortError): `FALLBACK_CATEGORY_LABELS` is used in CardDetail. This map HAS standalone `cafe` key (line 36) which `buildCategoryLabelMap()` would NOT produce.
-4. If optimizer runs in CLI mode without `categoryLabels` constraint: `CATEGORY_NAMES_KO` is used as fallback in greedy.ts. This map has `grocery: '식료품/마트'` while the other two have `grocery: '식료품'`.
+## Findings
 
-**Conclusion:** Confirmed — the three maps can produce different labels for the same category depending on the code path. The divergence is most visible for `grocery` (label mismatch) and standalone subcategory keys like `cafe` (presence/absence mismatch).
+### C2-TR01: reoptimize cardIds forwarding — now correctly implemented (re-confirmed from C1-TR01, now FIXED)
 
-## Flow Trace 2: sessionStorage Persistence and Recovery
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/store.svelte.ts:579`
+- **Description:** When `reoptimize` is called after a category edit, it now forwards the original `cardIdsOption` from the snapshot (line 579: `cardIds: options?.cardIds ?? snapshot.cardIdsOption`). This means if the user selected specific cards during the initial analysis, those are properly preserved across reoptimize calls. The C1-TR01 finding about dropped cardIds is now addressed.
+- **Status:** FIXED (cardIds forwarding implemented).
 
-**Hypothesis:** The `_loadPersistWarningKind` module variable could leak across store re-creation.
+## Traces performed
 
-**Trace:**
-1. `loadFromStorage()` sets `_loadPersistWarningKind` at module level (line 216/286/291).
-2. `createAnalysisStore()` reads `_loadPersistWarningKind` at line 368-370 and then resets it to null at line 379.
-3. Since the store is a singleton (line 603), re-creation only happens during HMR. The module variable is consumed and cleared on each construction.
-4. If HMR triggers while `loadFromStorage()` is in-flight (extremely unlikely but possible), the module variable could be overwritten. However, this is a development-only scenario.
+1. **Upload → parse → categorize → optimize flow**: Files are parsed, categorized with MerchantMatcher, filtered to latest month, optimized with greedyOptimize. All guards in place.
+2. **Reoptimize after category edit**: cardIds correctly forwarded from snapshot at line 579. previousMonthSpending preserved per C44-01. Monthly breakdown recomputed from edited transactions.
+3. **sessionStorage persistence → load → restore**: Version check, migration, validation, and warning tracking all working correctly.
 
-**Conclusion:** No production bug. The pattern is safe for the singleton store. Previously tracked as D7-M6.
+## Summary
 
-## No New Findings Beyond Code Reviewer/Architect
-
-The causal traces confirm the findings reported by code-reviewer (C2-CR01/CR02/CR03) and architect (C2-A01/A02). No additional issues found through tracing.
+0 net-new trace findings. C1-TR01 now verified as fixed (cardIds forwarding implemented).

@@ -1,16 +1,27 @@
-# Document Specialist — Cycle 2 Review (2026-04-24)
+# Cycle 2 — document-specialist pass
 
-Reviewed documentation-code alignment and API documentation accuracy.
+**Date:** 2026-05-03
 
-## New Findings
+## Scope
 
-### C2-DS01: `buildCategoryNamesKo` JSDoc says "authoritative source" but it's never used as such
-- **Severity:** LOW
+Doc/code mismatches against authoritative sources.
+
+## Findings
+
+### C2-DOC01: README still says MIT while LICENSE is Apache 2.0 (re-confirmed from C1-DOC01/D-02)
+
+- **Severity:** MEDIUM (legal metadata)
 - **Confidence:** High
-- **File:** `packages/rules/src/category-names.ts:1-7`
-- **Description:** The JSDoc comment says "This is the authoritative source — the hardcoded CATEGORY_NAMES_KO in greedy.ts is a fallback that must be kept in sync with this function." However, neither `CATEGORY_NAMES_KO` nor `FALLBACK_CATEGORY_LABELS` imports or calls this function. The documentation claims authority that the code doesn't enforce.
-- **Fix:** Either (a) integrate `buildCategoryNamesKo` into the consumers, or (b) update the JSDoc to reflect the current state: "This function CAN generate the authoritative mapping but is not yet integrated into consumers. The hardcoded maps remain the de facto source until integration is complete."
+- **File+line:** `README.md:169-171` vs `LICENSE:1-15`
+- **Status:** Deferred (D-02), unchanged.
 
-## Previously Known
+### C2-DOC02: `ilpOptimize` JSDoc — `@deprecated` tag now present (FIXED from C1-DOC02)
 
-D-02 (README says MIT, LICENSE is Apache 2.0) — unchanged.
+- **Severity:** N/A (fixed)
+- **File+line:** `packages/core/src/optimizer/ilp.ts:41-44`
+- **Description:** The `@deprecated` tag was added to `ilpOptimize` since cycle 1. JSDoc now correctly states "Not yet implemented. Currently delegates to `greedyOptimize`." Verified.
+- **Status:** FIXED.
+
+## Summary
+
+0 net-new doc findings. 1 fix verified (C2-DOC02). 1 re-confirmed deferred item (D-02).

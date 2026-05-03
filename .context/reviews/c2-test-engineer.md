@@ -1,23 +1,37 @@
-# Test Engineer — Cycle 2 Deep Review (2026-04-24)
+# Cycle 2 — test-engineer pass
 
-Reviewed test coverage, test quality, flaky tests, and TDD opportunities.
+**Date:** 2026-05-03
 
-## New Findings
+## Scope
 
-### C2-T01: No test for `buildCategoryNamesKo` function added in cycle 1
+Test coverage gaps, flaky tests, TDD opportunities, e2e test quality.
+
+## Findings
+
+### C2-T01: No regression test for C97-01 (fullStatementPeriod ISO date filter) (re-confirmed from C1-T01)
+
+- **Severity:** MEDIUM
+- **Confidence:** High
+- **File+line:** `apps/web/__tests__/analyzer-adapter.test.ts` (missing test)
+- **Description:** The C97-01 fix added a `length >= 10` filter on `allDates` and `optimizedDates` before sorting, but no dedicated regression test was added. Without a test, a future refactor could remove the filter and the C96-01 crash would resurface.
+- **Fix:** Add the regression test to `analyzer-adapter.test.ts`.
+
+### C2-T02: E2E tests exist but are not run in the current gate (re-confirmed from C1-T02)
+
 - **Severity:** LOW
 - **Confidence:** High
-- **File:** `packages/rules/src/category-names.ts` (no corresponding test file)
-- **Description:** The `buildCategoryNamesKo()` function was added in cycle 1 as part of A1-01, but no unit test was created for it. The function converts a `CategoryNode[]` tree into a flat `Record<string, string>`. It should be tested to ensure: (1) parent categories are included, (2) subcategories use dot-notation keys, (3) empty input returns `{}`, (4) deeply nested structures are handled.
-- **Fix:** Add `packages/rules/__tests__/category-names.test.ts` with the above test cases.
+- **File+line:** `e2e/core-regressions.spec.js`, `e2e/web-regressions.spec.js`
+- **Description:** The repo has e2e test files using Playwright, but `npm run test` only runs `bun test` and `vitest`.
+- **Status:** Unchanged.
 
-### C2-T02: `FALLBACK_CATEGORY_LABELS` has no coverage — no test verifying it matches taxonomy
+### C2-T03: Parser test coverage is sparse for web-specific parsers (re-confirmed from C1-T03)
+
 - **Severity:** LOW
 - **Confidence:** High
-- **File:** `apps/web/src/lib/category-labels.ts:32-111`
-- **Description:** The 77-entry fallback map has no automated test ensuring it stays in sync with `categories.yaml`. A test should verify that every category ID in the taxonomy has a corresponding entry in the fallback map.
-- **Fix:** Add a test in `apps/web/__tests__/` that loads `categories.json` and verifies all IDs are present in `FALLBACK_CATEGORY_LABELS`.
+- **File+line:** `apps/web/src/lib/parser/csv.ts`, `xlsx.ts`, `pdf.ts` — no dedicated unit tests
+- **Description:** The web-specific parsers have no dedicated unit tests.
+- **Status:** Unchanged.
 
-## Previously Known
+## Summary
 
-D-36 (no unit tests for web-side XLSX parser), D-37 (E2E uses waitForTimeout), T1-01/T1-02 (cycle 1 test tasks) — all acknowledged and deferred.
+0 net-new test findings. 3 re-confirmations of known items.

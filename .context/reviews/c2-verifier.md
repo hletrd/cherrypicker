@@ -1,38 +1,27 @@
-# Verifier — Cycle 2 Evidence-Based Verification (2026-04-24)
+# Cycle 2 — verifier pass
 
-Verified correctness of cycle 1 fixes and current codebase behavior against stated behavior.
+**Date:** 2026-05-03
 
-## Verification Results
+## Scope
 
-### C1-01 Fix: CardDetail abort-then-labels fallback — VERIFIED
-- **File:** `apps/web/src/components/cards/CardDetail.svelte:28-43`
-- **Evidence:** The component now imports `FALLBACK_CATEGORY_LABELS` (line 7), uses it when `nodes.length === 0` (line 31-32) and in the catch block (line 37). The `categoryLabelsReady` flag is set after the fallback is applied (line 41). This matches the stated fix from the cycle 1 plan.
+Evidence-based correctness check against stated behavior.
 
-### C1-02 Fix: Server-side detectCSVDelimiter 30-line limit — VERIFIED
-- **File:** `packages/parser/src/detect.ts:151`
-- **Evidence:** `.slice(0, 30)` is present after the filter, matching the web-side implementation at `apps/web/src/lib/parser/detect.ts:175`.
+## Verified fixes from Cycle 1
 
-### C1-03 Fix: console.warn on fallback — VERIFIED
-- **File:** `apps/web/src/lib/analyzer.ts:57,63`
-- **Evidence:** Both `source` and `type` fallbacks now log `console.warn` with the unknown value and card ID.
+| Fix | File/Line | Verification |
+|---|---|---|
+| C1-P01 (XLSX TextEncoder) | `xlsx.ts:299-301` | Now uses `XLSX.read(html, { type: 'string' })`. Verified. |
+| C1-R02/DOC02 (ILP stub) | `ilp.ts:45-49` | Console.debug removed, `@deprecated` JSDoc added, delegates to greedyOptimize. Verified. |
 
-### A1-01 Fix: buildCategoryNamesKo function — PARTIALLY VERIFIED
-- **File:** `packages/rules/src/category-names.ts:1-22`
-- **Evidence:** The function exists and correctly iterates the CategoryNode tree, building both parent and dot-notation subcategory keys. However, the function is NOT called by any consumer — `CATEGORY_NAMES_KO` in greedy.ts is still hardcoded. The fix is incomplete per the original A1-01 plan.
+## Verified prior fixes still in place
 
-### U1-02 Fix: FileDropzone number input stepper arrows — VERIFIED
-- **File:** `apps/web/src/components/upload/FileDropzone.svelte:495`
-- **Evidence:** `inputmode="numeric"` is present on the input element. The CSS for hiding stepper arrows needs verification in the app.css or component styles.
+| ID | File/Line | Verification |
+|---|---|---|
+| C97-01 | `analyzer.ts:376-390` | Filter `length >= 10` on `allDates` and `optimizedDates` confirmed. |
+| C96-01 | `analyzer.ts:344-346` | Empty-months `throw` confirmed. |
+| C81-01 | `store.svelte.ts:508` | Snapshot pattern confirmed. |
+| C44-01 | `store.svelte.ts:556` | `previousMonthSpendingOption` preservation confirmed. |
 
-## New Findings
+## Summary
 
-### C2-V01: U1-02 CSS fix may not be applied — no `appearance: textfield` found in styles
-- **Severity:** LOW
-- **Confidence:** Medium
-- **File:** `apps/web/src/components/upload/FileDropzone.svelte:494-503` and app.css
-- **Description:** The cycle 1 plan (U1-02) specified adding CSS to hide number input stepper arrows (`-webkit-appearance: none`, `-moz-appearance: textfield`). The `inputmode="numeric"` attribute was added, but the CSS rules were not found in either the component's scoped styles or the global `app.css`. Without the CSS, Firefox and Safari still show stepper arrows.
-- **Fix:** Add the CSS rules from the cycle 1 plan to either the component's `<style>` block or `app.css`.
-
-## Previously Known
-
-All 111 deferred items remain valid.
+0 net-new verification findings. All verified fixes remain in place. C1-P01 and C1-R02 fixes confirmed.

@@ -1,23 +1,37 @@
-# Debugger — Cycle 2 Deep Review (2026-04-24)
+# Cycle 2 — debugger pass
 
-Reviewed for latent bugs, failure modes, edge cases, and regression risks.
+**Date:** 2026-05-03
 
-## New Findings
+## Scope
 
-### C2-D01: `FALLBACK_CATEGORY_LABELS` includes `cafe` as both parent and subcategory key
-- **Severity:** LOW
-- **Confidence:** High
-- **File:** `apps/web/src/lib/category-labels.ts:36,80`
-- **Description:** Line 36 has `['cafe', '카페']` (standalone) and line 80 has `['dining.cafe', '카페']` (dot-notation). The standalone `cafe` entry means that if a transaction is categorized as just `cafe` (without the `dining.` prefix), it gets the label `카페` from the fallback. But in `buildCategoryLabelMap()` (line 21), only dot-notation keys are set for subcategories, and the bare sub ID is deliberately NOT set (per comment at line 19). So `FALLBACK_CATEGORY_LABELS` and `buildCategoryLabelMap()` handle the bare `cafe` differently — the fallback returns `카페` while the built map would not have a `cafe` key at all (only `dining.cafe`). This inconsistency means the UI could show different labels depending on whether the fallback or the live data was used.
-- **Fix:** Remove the standalone `cafe` entry from `FALLBACK_CATEGORY_LABELS` (line 36) to match `buildCategoryLabelMap()` behavior, or document the intentional difference. The `cafe` standalone entry is a subcategory that should not appear as a top-level key.
+Latent bug surface, failure modes, regressions.
 
-### C2-D02: `reoptimize` reads `snapshot.previousMonthSpendingOption` but `analyze` only sets it conditionally
+## Findings
+
+### C2-D01: `inferYear` timezone edge case near midnight on Dec 31 (re-confirmed from C1-D01)
+
 - **Severity:** LOW
 - **Confidence:** Medium
-- **File:** `apps/web/src/lib/store.svelte.ts:461-463,545`
-- **Description:** In `analyze()` (line 461-463), `previousMonthSpendingOption` is only set when `options?.previousMonthSpending !== undefined`. In `reoptimize()` (line 545), it reads `snapshot.previousMonthSpendingOption`. This is correct — when the user doesn't provide a value, the option stays undefined and reoptimize falls back to computing from monthly breakdown. No bug here, but the conditional assignment is subtle and could confuse future maintainers.
-- **Fix:** Add a comment in `reoptimize()` explaining the conditional assignment pattern.
+- **File+line:** `apps/web/src/lib/parser/date-utils.ts:35-43`, `packages/parser/src/date-utils.ts:25-31`
+- **Description:** Known limitation (C8-08). `new Date()` is timezone-dependent. Narrow edge case.
+- **Status:** Known limitation, documented. Not actionable.
 
-## Previously Known
+### C2-D02: `detectBank` can misidentify bank (re-confirmed from C1-D02)
 
-D-29 (marginal reward 0 when cap hit), D-30 (reoptimize stale state), D-67 (parseInt vs parseFloat) — all unchanged.
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/parser/detect.ts:127-164`, `packages/parser/src/detect.ts:109-146`
+- **Description:** Bank detection scans entire file content. Tie-breaking favors first in BANK_SIGNATURES. User can override via bank selector.
+- **Status:** Known limitation, partially mitigated, user override available.
+
+### C2-D03: `loadFromStorage` outer catch block swallows initial error silently
+
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/store.svelte.ts:324`
+- **Description:** The outer `catch {}` in `loadFromStorage` at line 324 has no diagnostic logging. When `sessionStorage.getItem` or `JSON.parse` throws (e.g., SecurityError in sandboxed iframes), the error is silently swallowed. The inner nested catch at line 325 only handles the `removeItem` failure case — it doesn't log what the original error was.
+- **Fix:** Add a `console.warn` in the outer catch to log the original error before attempting cleanup.
+
+## Summary
+
+1 net-new finding (C2-D03, LOW). 2 re-confirmations of known limitations.
