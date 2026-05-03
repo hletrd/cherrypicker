@@ -2,6 +2,8 @@
   import { onMount, onDestroy } from 'svelte';
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatFileSize, buildPageUrl } from '../../lib/formatters.js';
+  import { detectBankFromText } from '../../lib/parser/detect.js';
+  import type { BankId } from '../../lib/parser/types.js';
   import Icon from '../ui/Icon.svelte';
 
   let navigateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -58,6 +60,12 @@
   let bank = $state('');
   let previousSpending = $state<string>('');
   let showAllBanks = $state(false);
+  let detectedBankId = $state<BankId | null>(null);
+  let detectedBankLabel = $derived(() => {
+    if (!detectedBankId) return '';
+    const entry = ALL_BANKS.find(b => b.value === detectedBankId);
+    return entry ? entry.label : '';
+  });
 
   // Step 1=파일선택, 2=카드사선택, 3=분석중, 4=완료
   let currentStep = $derived.by(() => {
@@ -123,6 +131,31 @@
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per file
   const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50 MB total
 
+  /** Read the first uploaded file's text and run bank detection.
+   *  Only reads enough for detection (first ~4KB) to avoid loading
+   *  large files entirely into memory. */
+  async function detectBankFromFile(): Promise<void> {
+    if (uploadedFiles.length === 0) {
+      detectedBankId = null;
+      return;
+    }
+    try {
+      const file = uploadedFiles[0]!;
+      // For PDF files, text extraction requires the full parser — skip
+      // quick detection since the parser will detect the bank anyway.
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        detectedBankId = null;
+        return;
+      }
+      const blob = file.slice(0, 4096);
+      const text = await blob.text();
+      detectedBankId = detectBankFromText(text);
+    } catch {
+      // Detection failure is non-critical — just don't show a hint
+      detectedBankId = null;
+    }
+  }
+
   function addFiles(newFiles: File[]) {
     const invalid: string[] = [];
     const oversized: string[] = [];
@@ -152,6 +185,8 @@
       uploadedFiles = [...uploadedFiles, ...valid];
       uploadStatus = 'idle';
       errorMessage = '';
+      // Auto-detect bank from first file content (non-blocking)
+      detectBankFromFile();
     }
     // Then check total size and show warning (but keep files)
     const totalSize = uploadedFiles.reduce((sum, f) => sum + f.size, 0);
@@ -185,8 +220,11 @@
       errorMessage = '';
       bank = '';
       previousSpending = '';
+      detectedBankId = null;
       if (primaryFileInputEl) primaryFileInputEl.value = '';
       if (addFileInputEl) addFileInputEl.value = '';
+    } else {
+      detectBankFromFile();
     }
   }
 
@@ -196,6 +234,7 @@
     errorMessage = '';
     bank = '';
     previousSpending = '';
+    detectedBankId = null;
     if (primaryFileInputEl) primaryFileInputEl.value = '';
     if (addFileInputEl) addFileInputEl.value = '';
   }
@@ -464,6 +503,12 @@
           >
             자동 인식
           </button>
+          {#if detectedBankId && bank === ''}
+            <span class="inline-flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-900/20 px-2.5 py-1 text-xs font-medium text-green-700 dark:text-green-400" data-testid="detected-bank-hint">
+              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+              {detectedBankLabel()} 인식됨
+            </span>
+          {/if}
           {#each displayedBanks as b}
             <button
               class="rounded-full border px-3 py-1.5 text-xs font-medium transition-all
