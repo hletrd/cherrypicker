@@ -934,3 +934,81 @@ describe('Cycle 50: PDF getHeaderColumns combined header splitting (C50-02)', ()
     expect(layout).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// C58-01: Fullwidth minus `－` amounts in PDF patterns
+// ---------------------------------------------------------------------------
+
+describe('C58-01: Fullwidth minus amounts in PDF AMOUNT_PATTERN', () => {
+  test('filterTransactionRows matches fullwidth-minus amount `－50,000`', () => {
+    const rows = [
+      ['2024-01-15', '환불', '－50,000'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('filterTransactionRows matches fullwidth-minus with 원 suffix `－3,000원`', () => {
+    const rows = [
+      ['2024-01-15', '환불', '－3,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('parseTable detects fullwidth-minus amounts in text', () => {
+    const text = [
+      '2024-01-15 환불 건    －50,000원',
+      '2024-01-16 이마트     45,000원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('filterTransactionRows matches fullwidth-minus Won-sign combo `￦－5,000`', () => {
+    const rows = [
+      ['2024-01-15', '환불', '￦－5,000'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C58-01: Fullwidth minus in fallback amount pattern
+// ---------------------------------------------------------------------------
+
+describe('C58-01: Fullwidth minus in fallback amount pattern', () => {
+  // Updated fallback pattern with 5 capture groups:
+  // 1. Parenthesized: (1,234)
+  // 2. Won-sign: ₩500 or ￦1,234
+  // 3. 마이너스: 마이너스1,000
+  // 4. Fullwidth-minus: －50,000
+  // 5. Plain comma/5+digit: 10,000
+  const fallbackPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+
+  test('captures fullwidth-minus amount as group 4', () => {
+    const matches = [...'2024-01-15 환불 －50,000원'.matchAll(fallbackPattern)];
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    const last = matches[matches.length - 1]!;
+    expect(last[4]).toBe('－50,000');
+    expect(last[1]).toBeUndefined();
+    expect(last[2]).toBeUndefined();
+    expect(last[3]).toBeUndefined();
+    expect(last[5]).toBeUndefined();
+  });
+
+  test('group extraction fallback chain works for fullwidth-minus amount', () => {
+    const matches = [...'2024-01-15 환불 －50,000원'.matchAll(fallbackPattern)];
+    const last = matches[matches.length - 1]!;
+    const amountRaw = (last[1] ?? last[2] ?? last[3] ?? last[4] ?? last[5])!;
+    expect(amountRaw).toBe('－50,000');
+  });
+
+  test('plain amount still works as group 5 with updated pattern', () => {
+    const matches = [...'2024-01-15 스타벅스 10,000원'.matchAll(fallbackPattern)];
+    const last = matches[matches.length - 1]!;
+    expect(last[5]).toBe('10,000');
+    expect(last[4]).toBeUndefined();
+  });
+});

@@ -20,7 +20,7 @@ const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 // C27-01: Require either a comma (thousand separator) or minimum 5 digits
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
-const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^[₩￦]?-?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/;
+const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/;
 
 /** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
  *  values using month-aware day limits. This prevents decimal amounts
@@ -29,6 +29,19 @@ const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^[₩￦
  *  Uses daysInMonth() from date-utils.ts with current year for correct
  *  leap year handling (C44-01), matching the CSV parser's
  *  isDateLikeShort() approach which also uses daysInMonth(). */
+/** Validate YYMMDD format (6-digit compact date) with month/day range
+ *  checks. Prevents false-positive date detection in fallback scanner
+ *  when lines contain 6-digit transaction IDs (C58-02). */
+function isYYMMDDLike(value: string): boolean {
+  if (!/^\d{6}$/.test(value)) return false;
+  const yy = parseInt(value.slice(0, 2), 10);
+  const fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
+  const month = parseInt(value.slice(2, 4), 10);
+  const day = parseInt(value.slice(4, 6), 10);
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= daysInMonth(fullYear, month);
+}
+
 function isValidShortDate(cell: string): boolean {
   // Strip trailing delimiters before matching — Korean bank exports may
   // append a period or slash to dates (e.g., "1.15." or "1/15/") (C57-01).
@@ -337,17 +350,18 @@ export async function parsePDF(
   // fallback since initial implementation.
   const fallbackTransactions: RawTransaction[] = [];
   const lines = text.split('\n');
-  const fallbackDatePattern = /(\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。]))/;
+  const fallbackDatePattern = /(\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。])|(?<!\d)\d{6}(?!\d))/;
   // The 'g' flag is required for matchAll() below. Do NOT hoist this regex
   // to module scope — the global flag's lastIndex mutation would break
   // .test()/.exec() calls if the regex were shared across invocations.
-  // Match normal amounts and parenthesized negatives like (1,234).
+  // Match normal amounts, parenthesized negatives like (1,234), and
+  // fullwidth-minus negatives like －50,000 (C58-01).
   // Parenthesized negatives are common in Korean bank statements for refunds
   // and should be treated as negative amounts by parseAmount() (C17-02).
   // C27-01: Exclude 4-digit years by requiring either a comma or 5+ digits
   // for bare integers. "2024" alone won't match; "1,234" and "10000" will.
   // Also matches "마이너스" prefixed amounts used by some Korean banks.
-  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
@@ -356,6 +370,11 @@ export async function parsePDF(
     // Full-format dates (YYYY.MM.DD, Korean) don't need this check since
     // they have explicit year context and are validated by parseDateStringToISO.
     if (dateMatch && SHORT_MD_DATE_PATTERN.test(dateMatch[0]) && !isValidShortDate(dateMatch[0])) {
+      continue;
+    }
+    // Validate YYMMDD (6-digit compact dates) to prevent false positives
+    // from transaction IDs matching the new fallback date pattern (C58-02).
+    if (dateMatch && /^\d{6}$/.test(dateMatch[0]) && !isYYMMDDLike(dateMatch[0])) {
       continue;
     }
     // Use the last amount match — Korean statements typically list the
@@ -369,7 +388,7 @@ export async function parsePDF(
       if (amountStart > dateEnd) {
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
-          const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4])!;
+          const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5])!;
           const amount = parseAmount(amountRaw);
           // parseAmount returns null for unparseable inputs — skip the row
           // rather than silently treating it as 0 (C34-01).

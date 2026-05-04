@@ -11,7 +11,7 @@ const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-
 // commas (e.g., "1,234") or Won signs (e.g., "₩500") always match.
 // C32-01: Won-sign-prefixed amounts (₩/￦) match regardless of digit count,
 // so small amounts like "₩500" are correctly detected as transaction amounts.
-const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])₩\d[\d,]*원?(?![a-zA-Z\d-])|(?<![a-zA-Z\d-])￦\d[\d,]*원?(?![a-zA-Z\d-])|마이너스[\d,]+원?|(?<![a-zA-Z\d-])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d-])|\([\d,]+\)/;
+const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+원?|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+원?(?![a-zA-Z\d])|\([\d,]+\)/;
 
 // Import shared column patterns from the column-matcher module for
 // header-aware column detection in PDF tables (C15-03).
