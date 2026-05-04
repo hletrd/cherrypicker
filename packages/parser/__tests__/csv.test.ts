@@ -338,4 +338,32 @@ describe('parseCSV - edge cases', () => {
     expect(result.transactions).toHaveLength(0);
     expect(result.errors.some((error) => error.message.includes('Cannot parse amount'))).toBe(true);
   });
+
+  test('handles header columns with extra whitespace (C5-05)', () => {
+    const content = [
+      '  이용일 , 이용처 , 이용금액  , 할부  ',
+      '2026-02-01,스타벅스,6500,0',
+      '2026-02-02,이마트,30000,0',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2026-02-01');
+    expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    expect(result.transactions[0]?.amount).toBe(6500);
+  });
+
+  test('generic parser prefers Korean-text column for merchant (C5-04)', () => {
+    // Columns: card_number(date-like), merchant(Korean), amount, id(number)
+    // The heuristic should pick the Korean-text column as merchant, not the
+    // first non-date/non-amount column (which would be a numeric id).
+    const content = [
+      '카드번호,이용처,이용금액,고객번호',
+      '1234,스타벅스,6500,999',
+      '5678,이마트,30000,888',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    expect(result.transactions[1]?.merchant).toBe('이마트');
+  });
 });

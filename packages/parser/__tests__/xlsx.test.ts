@@ -255,4 +255,118 @@ describe('XLSX merged cell forward-fill', () => {
       cleanup(filePath);
     }
   });
+
+  test('forward-fills merchant for merged cells (C5-03)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액', '업종'],
+      ['2026-02-01', '이마트', 10000, '마트'],
+      ['2026-02-01', '', 20000, ''],
+      ['2026-02-02', '스타벅스', 5500, '카페'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(3);
+      expect(result.transactions[0]?.merchant).toBe('이마트');
+      expect(result.transactions[1]?.merchant).toBe('이마트');
+      expect(result.transactions[2]?.merchant).toBe('스타벅스');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('forward-fills category for merged cells (C5-03)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액', '업종'],
+      ['2026-02-01', '이마트', 10000, '마트'],
+      ['2026-02-01', '이마트 분점', 20000, ''],
+      ['2026-02-02', '스타벅스', 5500, '카페'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(3);
+      expect(result.transactions[0]?.category).toBe('마트');
+      expect(result.transactions[1]?.category).toBe('마트');
+      expect(result.transactions[2]?.category).toBe('카페');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('forward-fills all merged columns together (C5-03)', async () => {
+    // Simulates installment groups: date, merchant, and category all merged
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액', '할부', '업종'],
+      ['2026-02-01', '롯데백화점', 30000, 3, '쇼핑'],
+      ['', '', 30000, '', ''],
+      ['', '', 30000, '', ''],
+      ['2026-02-02', '이마트', 50000, 0, '마트'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(4);
+      expect(result.transactions[0]?.merchant).toBe('롯데백화점');
+      expect(result.transactions[1]?.merchant).toBe('롯데백화점');
+      expect(result.transactions[2]?.merchant).toBe('롯데백화점');
+      expect(result.transactions[0]?.category).toBe('쇼핑');
+      expect(result.transactions[1]?.category).toBe('쇼핑');
+      expect(result.transactions[2]?.category).toBe('쇼핑');
+      expect(result.transactions[3]?.merchant).toBe('이마트');
+      expect(result.transactions[3]?.category).toBe('마트');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Invalid serial date error reporting (C5-01)
+// ---------------------------------------------------------------------------
+
+describe('XLSX invalid serial date error reporting', () => {
+  test('reports error for out-of-range serial number', async () => {
+    // Serial 200000 is > 100000 (the max guard), so it should be reported
+    // as an error since it's clearly not a valid date.
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [200000, '테스트', 10000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      // Should have an error about the date
+      expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('reports error for unparseable date string', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['날짜아님', '테스트', 10000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('no error for valid serial dates', async () => {
+    // 45323 = 2024-02-01
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [45323, '테스트', 10000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.date).toBe('2024-02-01');
+      expect(result.errors).toHaveLength(0);
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });
