@@ -125,11 +125,19 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
         if (!dateRaw && !merchantRaw) continue;
 
+        const rowText = line;
         const amount = parseCSVAmount(amountRaw);
         // Use shared isValidCSVAmount for unified validation — handles null
         // (unparseable), zero (balance inquiries), and negative (refunds)
         // amounts in one call, matching the web-side isValidAmount pattern.
-        if (!isValidCSVAmount(amount, amountRaw, i, errors)) continue;
+        // Include raw row text for easier debugging, matching XLSX parser error format.
+        if (!isValidCSVAmount(amount, amountRaw, i, errors)) {
+          // isValidCSVAmount already pushes the error; enrich the last error with raw text
+          if (errors.length > 0 && errors[errors.length - 1]!.line === i + 1) {
+            errors[errors.length - 1]!.raw = rowText;
+          }
+          continue;
+        }
 
         const parsedDate = parseDateStringToISO(dateRaw);
         // Report unparseable dates as parse errors so users can see which

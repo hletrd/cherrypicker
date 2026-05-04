@@ -862,4 +862,30 @@ describe('parseCSV - Cycle 49 format diversity', () => {
     expect(result.transactions[1]?.merchant).toBe('이마트');
     expect(result.transactions[1]?.amount).toBe(45000);
   });
+
+  test('amount error includes raw row text for debugging (C55)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,테스트,금액오류',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.errors.length).toBeGreaterThan(0);
+    const amountError = result.errors.find((e) => e.message.includes('금액을 해석할 수 없습니다'));
+    expect(amountError).toBeDefined();
+    expect(amountError!.raw).toBeDefined();
+    expect(amountError!.raw).toContain('금액오류');
+  });
+
+  test('generic parser amount error includes raw row text (C55)', () => {
+    const content = [
+      'date,merchant,amount',
+      '2026-02-01,테스트,not_a_number',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.errors.length).toBeGreaterThan(0);
+    const amountError = result.errors.find((e) => e.message.includes('금액을 해석할 수 없습니다'));
+    expect(amountError).toBeDefined();
+    expect(amountError!.raw).toBeDefined();
+    expect(amountError!.raw).toContain('not_a_number');
+  });
 });

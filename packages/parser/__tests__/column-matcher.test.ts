@@ -1262,3 +1262,81 @@ describe('Cycle 52: HEADER_KEYWORDS includes new terms', () => {
     expect((HEADER_KEYWORDS as string[]).includes('상세')).toBe(true);
   });
 });
+
+describe('Cycle 55: SUMMARY_ROW_PATTERN boundary guard consistency', () => {
+  // Verify that multi-word compound patterns now have consistent boundary guards
+  // preventing false positives on merchant names containing summary keywords.
+
+  it('does NOT match "승인합계마트" (boundary guard on 승인 합계)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('승인합계마트')).toBe(false);
+  });
+
+  it('does NOT match "결제합계부" (boundary guard on 결제 합계)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('결제합계부')).toBe(false);
+  });
+
+  it('does NOT match "사용합계마트" (boundary guard on 사용 합계)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('사용합계마트')).toBe(false);
+  });
+
+  it('does NOT match "이용합계부" (boundary guard on 이용 합계)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('이용합계부')).toBe(false);
+  });
+
+  it('does NOT match "총사용마트" (boundary guard on 총 사용)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총사용마트')).toBe(false);
+  });
+
+  it('does NOT match "총이용마트" (boundary guard on 총 이용)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총이용마트')).toBe(false);
+  });
+
+  it('does NOT match "총결제금액마트" (boundary guard on 총 결제 금액)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총결제금액마트')).toBe(false);
+  });
+
+  it('does NOT match "총이용금액마트" (boundary guard on 총 이용 금액)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총이용금액마트')).toBe(false);
+  });
+
+  it('does NOT match "합계금액마트" (boundary guard on 합 계 금액)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합계금액마트')).toBe(false);
+  });
+
+  // Positive cases still work — these compound summary phrases match correctly
+  it('still matches "승인 합계" with space', () => {
+    expect(SUMMARY_ROW_PATTERN.test('승인 합계')).toBe(true);
+  });
+
+  it('still matches "결제 합계" with space', () => {
+    expect(SUMMARY_ROW_PATTERN.test('결제 합계')).toBe(true);
+  });
+
+  it('still matches "사용 합계" with space', () => {
+    expect(SUMMARY_ROW_PATTERN.test('사용 합계')).toBe(true);
+  });
+
+  it('still matches "이용 합계" with space', () => {
+    expect(SUMMARY_ROW_PATTERN.test('이용 합계')).toBe(true);
+  });
+
+  it('still matches "총 사용" with space', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총 사용')).toBe(true);
+  });
+
+  it('still matches "총 이용" with space', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총 이용')).toBe(true);
+  });
+
+  it('still matches "합계금액" as standalone', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합계금액')).toBe(true);
+  });
+
+  it('still matches "총결제금액" as standalone', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총결제금액')).toBe(true);
+  });
+
+  it('still matches "총이용금액" as standalone', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총이용금액')).toBe(true);
+  });
+});

@@ -1,36 +1,27 @@
-# Aggregate Review -- Cycle 54
+# Cycle 55 Aggregate Review
 
-## Actionable Findings (2)
+## Findings (2 actionable, 2 deferred)
 
-| ID | Severity | Description | Status |
-|----|----------|-------------|--------|
-| C54-01 | Low | CSV generic AMOUNT_PATTERNS missing fullwidth-minus variant | FIX |
-| C54-02 | Low | CSV generic data-inference scans only 4 sample rows | FIX |
-| C54-03 | Low | No XLSX data-inference fallback when header detection fails | DEFER |
+### F1: SUMMARY_ROW_PATTERN missing boundary guards on compound patterns (FIXED)
+**File**: `packages/parser/src/csv/column-matcher.ts` + `apps/web/src/lib/parser/column-matcher.ts`
+**Impact**: Potential false-positive summary row skipping on merchant names
+**Fix**: Added `(?<![가-힣])` and `(?![가-힣])` boundary guards to: 승인 합계, 결제 합계, 합 계 금액, 총 사용/이용, 사용 합계, 이용 합계, 총 결제 금액, 총 이용 금액
 
-## Test Status
-- 826 bun + 265 vitest = 1091 total tests passing
-- All gates green
+### F2: CSV/PDF parsers omit `raw` field in amount error messages (FIXED)
+**Files**: `packages/parser/src/csv/adapter-factory.ts`, `packages/parser/src/csv/generic.ts`
+**Impact**: Harder to debug amount parse failures in CSV
+**Fix**: Added `raw` field enrichment to amount errors, matching XLSX parser error format
 
-## Findings Detail
+### F3: Web-side hand-written adapters use hardcoded detect() (DEFERRED)
+**File**: `apps/web/src/lib/parser/csv.ts`
+**Impact**: No functional bug today; architectural debt
+**Status**: Deferred — patterns match central detect.ts currently
 
-### C54-01: Fullwidth-minus in AMOUNT_PATTERNS
-The AMOUNT_PATTERNS arrays in both server and web generic CSV parsers lack fullwidth-minus (U+FF0D) in their negative amount regex. While parseCSVAmount correctly normalizes it, the column detection heuristic isAmountLike() would miss columns containing "－1,234원".
+### F4: PDF multi-line header support (DEFERRED)
+**Impact**: PDFs with headers split across 2+ rows won't be detected
+**Status**: Deferred — complex, requires structural PDF parser changes
 
-### C54-02: Data-inference sample rows too small
-Both generic CSV parsers scan only 4 rows for data-inference when headers fail. Increasing to 8 rows provides better coverage for files with sparse or mixed early data.
-
-### C54-03: XLSX data-inference fallback (DEFERRED)
-When XLSX header detection fails, no recovery path exists. Complex to implement correctly.
-
-## Cycle 53 Verification
-- C53-01 (fullwidth normalization): VERIFIED FIXED in all 6 parseAmount implementations
-- C53-02 (PDF daysInMonth): VERIFIED FIXED in both table-parser.ts files
-- C53-03 (HEADER_KEYWORDS memo terms): VERIFIED FIXED in column-matcher.ts
-
-## Parity Check
-- Server/web column-matcher: PARITY
-- Server/web date-utils: PARITY
-- Server/web bank signatures: PARITY (24 banks each)
-- Server/web CSV adapter structure: PARITY (10 manual + 14 factory each)
-- No regressions detected
+## Tests Added
+- 18 new boundary guard tests in column-matcher.test.ts
+- 2 new `raw` field tests in csv.test.ts
+- Total: 847 bun tests + 127 vitest tests passing
