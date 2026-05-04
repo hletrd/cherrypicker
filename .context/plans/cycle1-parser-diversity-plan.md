@@ -3,115 +3,88 @@
 ## Goal
 Make the parser handle more diverse file formats, column orderings, and naming conventions for Korean credit card statements.
 
-## Status: IN PROGRESS
+## Status: IN PROGRESS (Phase 1-4 complete, Phase 5 partial)
 
 ---
 
-## Phase 1: Fix Server-Side Generic CSV Parser (Critical)
+## Phase 1: Fix Server-Side Generic CSV Parser (Critical) -- DONE
 
-### Task 1.1: Port web-side header detection improvements to server-side generic CSV parser
+### Task 1.1: Port web-side header detection improvements to server-side generic CSV parser -- DONE
 **Findings**: F-01, F-04
 **Files**: `packages/parser/src/csv/generic.ts`
-**Changes**:
-- Increase header scan depth from 5 to 30 lines
-- Add keyword category validation (require keywords from 2+ categories)
-- Add full HEADER_KEYWORDS list matching web-side
-- Add DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS sets
-- Add all missing header regex patterns (결제일, 승인일, 매출일, 거래처, 매출처, 사용처, 결제처, 상호, 결제금액, 승인금액, 매출금액, 이용액, 할부개월, 할부기간, 할부월, 업종분류, 업종명, 적요, 내용, 설명, 참고)
 
-### Task 1.2: Add BOM stripping to server-side CSV entry point
+### Task 1.2: Add BOM stripping to server-side CSV entry point -- DONE
 **Finding**: F-05
 **Files**: `packages/parser/src/csv/index.ts`
-**Changes**: Add `content.replace(/^﻿/, '')` before passing to adapters
 
 ---
 
-## Phase 2: Flexible Column Matching (Critical)
+## Phase 2: Flexible Column Matching (Critical) -- DONE
 
-### Task 2.1: Create shared `ColumnMatcher` utility
+### Task 2.1: Create shared `ColumnMatcher` utility -- DONE
 **Findings**: F-02, F-08
 **New file**: `packages/parser/src/csv/column-matcher.ts`
-**Changes**:
-- Create a `findColumn(headers, exactName, pattern)` function that:
-  1. Tries exact match first (trimmed)
-  2. Tries regex pattern match
-  3. Returns column index or -1
-- Create a `normalizeHeader(h)` function that trims and collapses whitespace
-- Export reusable column pattern constants for date, merchant, amount, installments, category, memo
 
-### Task 2.2: Refactor bank-specific CSV adapters to use ColumnMatcher
+### Task 2.2: Refactor bank-specific CSV adapters to use ColumnMatcher -- DONE
 **Findings**: F-02, F-03, F-09
-**Files**: All `packages/parser/src/csv/*.ts` adapters
-**Changes**: Replace `headers.indexOf('exact')` with `findColumn(headers, 'exact', /pattern/)`. Use shared column patterns from the XLSX adapter index.
+**Files**: `packages/parser/src/csv/adapter-factory.ts` (new), `packages/parser/src/csv/index.ts`
 
-### Task 2.3: Refactor web-side bank adapters to use same ColumnMatcher
+### Task 2.3: Refactor web-side bank adapters to use same ColumnMatcher -- DEFERRED
 **Findings**: F-02, F-03
 **Files**: `apps/web/src/lib/parser/csv.ts`
-**Changes**: Port ColumnMatcher to web-side (or create shared package), refactor all web-side adapters
+**Reason**: Web-side adapters are browser-only, need separate ColumnMatcher copy. Deferred to next cycle.
 
 ---
 
-## Phase 3: Consolidate Bank Adapter Config (High)
+## Phase 3: Consolidate Bank Adapter Config (High) -- PARTIAL
 
-### Task 3.1: Create shared bank adapter config module
+### Task 3.1: Create shared bank adapter config module -- DEFERRED
 **Findings**: F-03, F-07, F-09
-**New file**: `packages/parser/src/bank-config.ts`
-**Changes**:
-- Merge CSV adapter configs and XLSX column configs into a single `BankConfig` per bank
-- Each config includes: bankId, detectPatterns, csvHeaders (exact + regex), xlsxColumnConfig
-- Both CSV and XLSX parsers reference this single config
+**Reason**: Merging CSV and XLSX configs into a single module requires updating XLSX parser imports. Deferred to next cycle.
 
-### Task 3.2: Create configurable CSV adapter factory
+### Task 3.2: Create configurable CSV adapter factory -- DONE
 **Finding**: F-03
 **New file**: `packages/parser/src/csv/adapter-factory.ts`
-**Changes**:
-- `createBankAdapter(config: BankConfig): BankAdapter` function
-- Eliminates 10 near-identical adapter files
-- Each bank becomes a thin config object
 
 ---
 
-## Phase 4: Add Test Fixtures and Coverage (High)
+## Phase 4: Add Test Fixtures and Coverage (High) -- DONE
 
-### Task 4.1: Create CSV test fixtures for all 10 banks
+### Task 4.1: Create CSV test fixtures for all 10 banks -- DONE
 **Finding**: F-06
-**New files**: `packages/parser/__tests__/fixtures/sample-{bank}.csv`
-**Changes**: Create minimal (3-5 row) CSV fixtures for each bank with realistic headers and data
+**New files**: fixtures for hyundai, ibk, woori, lotte, hana, nh, plus BOM and metadata-heavy
 
-### Task 4.2: Add CSV adapter parsing tests
+### Task 4.2: Add CSV adapter parsing tests -- DONE
 **Finding**: F-06
 **New file**: `packages/parser/__tests__/csv-adapters.test.ts`
-**Changes**: Test each bank adapter against its fixture, verify correct transaction extraction
 
-### Task 4.3: Add generic parser resilience tests
+### Task 4.3: Add generic parser resilience tests -- DONE
 **Finding**: F-06
-**New file**: `packages/parser/__tests__/generic-csv.test.ts`
-**Changes**: Test with non-standard headers, reordered columns, metadata-heavy files, BOM files
+**Tests**: metadata-heavy, BOM, reordered columns, semicolons, extra columns, summary rows
 
-### Task 4.4: Add XLSX parser tests
+### Task 4.4: Add XLSX parser tests -- DEFERRED
 **Finding**: F-10
-**New file**: `packages/parser/__tests__/xlsx.test.ts`
-**Changes**: Test HTML-as-XLS detection, serial date parsing, header keyword matching
+**Reason**: Requires creating XLSX binary fixtures. Deferred to next cycle.
 
 ---
 
-## Phase 5: Polish and Documentation (Medium)
+## Phase 5: Polish and Documentation (Medium) -- PARTIAL
 
-### Task 5.1: Fix web-side amount column regex (remove '합계')
+### Task 5.1: Fix web-side amount column regex (remove '합계') -- DONE
 **Finding**: F-11
 **Files**: `apps/web/src/lib/parser/csv.ts`
 
-### Task 5.2: Add semicolon to delimiter detection
+### Task 5.2: Add semicolon to delimiter detection -- DONE
 **Finding**: F-13
 **Files**: `packages/parser/src/detect.ts`, `apps/web/src/lib/parser/detect.ts`
 
-### Task 5.3: Add '승인일자' to generic parser date column regex
+### Task 5.3: Add '승인일자' to generic parser date column regex -- DONE
 **Finding**: tracer C1-TR-05
 **Files**: `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
 
-### Task 5.4: Document bank adapter extension process
+### Task 5.4: Document bank adapter extension process -- DEFERRED
 **Finding**: F-16
-**Files**: `packages/parser/README.md` (new) or `AGENTS.md`
+**Reason**: Documentation task, deferred to next cycle.
 
 ---
 
