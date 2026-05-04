@@ -1,30 +1,35 @@
-# Cycle 29 Aggregate Review
+# Cycle 30 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 29
-**Tests:** 547 bun, 243 vitest
+**Cycles completed:** 30
+**Tests:** 551 bun, 243 vitest
 
 ## Summary
-3 findings from comprehensive deep code review of all parser source files (14 server-side, 8 web-side) with focus on format diversity, parity, and dead code.
+2 actionable findings from deep code review of all parser source files with focus on false-positive summary row matching and test coverage gaps.
 
 ## Findings
 
-### F1: parseDateStringToISO missing test coverage for full-width dot date variants (Medium)
-**Files:** `packages/parser/__tests__/date-utils.test.ts`, `packages/parser/src/date-utils.ts`
-The `parseDateStringToISO` function supports full-width dot (U+FF0E `．`) and ideographic full stop (U+3002 `.`) as date delimiters (added C22-01), but the test suite has no explicit test cases for these variants. Similarly, datetime strings (e.g., "2024-01-15 10:30:00") are handled by the non-anchored fullMatch regex but lack dedicated test cases. Untested code paths risk regressions during future maintenance.
+### F1: SUMMARY_ROW_PATTERN false-positive on merchant names (HIGH)
 
-### F2: extractPages dead code in PDF extractor (Low)
-**File:** `packages/parser/src/pdf/extractor.ts`
-`extractPages()` is exported but never imported or called by any consumer in the codebase. Only `extractText()` is used (by `pdf/index.ts`). The function is dead code that adds maintenance burden and creates a false impression of the public API surface.
+**Impact:** All 6 parsers test SUMMARY_ROW_PATTERN against full-line or joined-row text. Merchant names containing summary keywords (e.g., "합계마트", "소비마트") are silently dropped.
 
-### F3: isValidCSVAmount exported but unused by server-side parsers (Low)
-**Files:** `packages/parser/src/csv/shared.ts`, `packages/parser/src/csv/generic.ts`, `packages/parser/src/csv/adapter-factory.ts`
-`isValidCSVAmount` is exported from shared.ts and tested in csv-shared.test.ts, but the adapter-factory and generic parsers perform inline amount validation instead (separate null check + amount <= 0 skip). This creates two code paths for the same logic. The web-side `isValidAmount` IS used by all web adapters, establishing the preferred pattern.
+**Files:**
+- `packages/parser/src/csv/column-matcher.ts` (server-side source of truth)
+- `apps/web/src/lib/parser/column-matcher.ts` (web-side copy, must stay in sync)
 
-## Deferred Items (carried forward)
-- Server/web `parseDateStringToISO` duplication (shared module refactor D-01)
-- PDF multi-line header support
-- Historical amount display format
-- Card name suffixes
-- Global config integration
-- CSS dark mode migration
+**Root cause:** The regex matches keywords as substrings without boundary constraints. "합계" matches inside "합계마트". Also includes overly broad terms "소비" and "이월" that can match merchant names.
+
+### F2: Test gap for summary-row false-positive (MEDIUM)
+
+No tests verify that merchant names containing summary keywords are preserved rather than incorrectly filtered.
+
+## Deferred Items
+
+| ID | Item | Reason |
+|----|------|--------|
+| D-01 | Server/web CSV parser duplication | Requires shared module architecture refactor |
+| D-02 | Full-width digit date parsing | Extremely rare in Korean bank exports |
+| D-03 | Date regex end-anchoring | Correct for actual use case (clean cells from splitLine/sheet_to_json) |
+
+## Regressions
+None. All 794 tests passing.
