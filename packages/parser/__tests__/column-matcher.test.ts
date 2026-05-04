@@ -1085,3 +1085,17 @@ describe('Cycle 49: SUMMARY_ROW_PATTERN pipe-delimited edge cases', () => {
     expect(SUMMARY_ROW_PATTERN.test('합산마트')).toBe(false);
   });
 });
+
+describe('Cycle 50: SUMMARY_ROW_PATTERN "합계금액" variant (C50-03)', () => {
+  it('matches "합계금액" as summary row', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합계금액')).toBe(true);
+  });
+
+  it('matches "합 계 금액" with spaces', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합 계 금액')).toBe(true);
+  });
+
+  it('does not false-positive on "합계마트" merchant name', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합계마트')).toBe(false);
+  });
+});

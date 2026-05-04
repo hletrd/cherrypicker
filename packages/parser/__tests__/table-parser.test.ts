@@ -840,3 +840,97 @@ describe('Cycle 36: PDF AMOUNT_PATTERN explicit 마이너스 matching', () => {
     expect(rows.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('Cycle 50: PDF YYMMDD date validation in filterTransactionRows (C50-01)', () => {
+  test('accepts valid YYMMDD date "240115" (2024-01-15)', () => {
+    const rows = [
+      ['240115', '스타벅스', '4,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('rejects invalid 6-digit "123456" (month 34 is invalid)', () => {
+    const rows = [
+      ['123456', '스타벅스', '4,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('rejects invalid 6-digit "999999" (month 99 is invalid)', () => {
+    const rows = [
+      ['999999', '이마트', '45,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('rejects 6-digit "000000" (month 00 is invalid)', () => {
+    const rows = [
+      ['000000', '카페', '3,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('accepts valid YYMMDD "250228" (2025-02-28)', () => {
+    const rows = [
+      ['250228', '편의점', '2,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('still accepts standard YYYY.MM.DD dates', () => {
+    const rows = [
+      ['2024.01.15', '스타벅스', '4,500원'],
+      ['2024-02-20', '이마트', '30,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+  });
+
+  test('mixed valid YYMMDD and invalid 6-digit IDs', () => {
+    const rows = [
+      ['240115', '스타벅스', '4,500원'],   // valid YYMMDD
+      ['123456', '이마트', '45,000원'],     // invalid (month 34)
+      ['250301', '카페', '3,000원'],        // valid YYMMDD
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+    expect(result[0]?.[0]).toBe('240115');
+    expect(result[1]?.[0]).toBe('250301');
+  });
+});
+
+describe('Cycle 50: PDF getHeaderColumns combined header splitting (C50-02)', () => {
+  test('detects date column from combined header "이용일/승인일"', () => {
+    const layout = getHeaderColumns(['이용일/승인일', '가맹점', '금액']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(0);
+  });
+
+  test('detects amount column from combined header "이용금액/취소금액"', () => {
+    const layout = getHeaderColumns(['날짜', '가맹점', '이용금액/취소금액']);
+    expect(layout).not.toBeNull();
+    expect(layout!.amountCol).toBe(2);
+  });
+
+  test('detects memo column from combined header "비고/적요"', () => {
+    const layout = getHeaderColumns(['이용일', '가맹점', '금액', '비고/적요']);
+    expect(layout).not.toBeNull();
+    expect(layout!.memoCol).toBe(3);
+  });
+
+  test('detects columns from pipe-delimited header "이용일|승인일"', () => {
+    const layout = getHeaderColumns(['이용일|승인일', '가맹점', '금액']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(0);
+  });
+
+  test('returns null when date column missing even with combined headers', () => {
+    const layout = getHeaderColumns(['번호', '가맹점', '금액']);
+    expect(layout).toBeNull();
+  });
+});

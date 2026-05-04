@@ -2,6 +2,7 @@ import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js
 import { detectBank } from './detect.js';
 import {
   normalizeHeader,
+  findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
   AMOUNT_COLUMN_PATTERN,
@@ -171,9 +172,30 @@ function parseTable(text: string): string[][] {
   return result;
 }
 
+/** Validate that a 6-digit string is a plausible YYMMDD date. Rejects
+ *  transaction IDs and phone suffixes. Parity with server-side
+ *  packages/parser/src/pdf/table-parser.ts (C50-01). */
+function isValidYYMMDD(value: string): boolean {
+  if (!/^\d{6}$/.test(value)) return false;
+  const yy = parseInt(value.slice(0, 2), 10);
+  const fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
+  const month = parseInt(value.slice(2, 4), 10);
+  const day = parseInt(value.slice(4, 6), 10);
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= new Date(fullYear, month, 0).getDate();
+}
+
+/** Validate that a cell contains a plausible date. 6-digit strings
+ *  must pass YYMMDD validation (C50-01). */
+function isValidDateCell(cell: string): boolean {
+  const trimmed = cell.trim();
+  if (/^\d{6}$/.test(trimmed)) return isValidYYMMDD(trimmed);
+  return DATE_PATTERN.test(trimmed);
+}
+
 function filterTransactionRows(rows: string[][]): string[][] {
   return rows.filter((row) => {
-    const hasDate = row.some((cell) => DATE_PATTERN.test(cell));
+    const hasDate = row.some((cell) => isValidDateCell(cell));
     const hasAmount = row.some((cell) => AMOUNT_PATTERN.test(cell));
     return hasDate && hasAmount;
   });
@@ -207,28 +229,18 @@ function detectHeaderRow(rows: string[][], maxScan: number = 15): number {
 }
 
 /**
- * Extract column layout from a detected header row. Uses shared column
- * patterns from column-matcher.ts to identify date/merchant/amount columns.
- * Returns null if date and amount columns are not found (C15-03).
+ * Extract column layout from a detected header row. Uses shared
+ * findColumn() from column-matcher.ts which handles combined-header
+ * splitting on "/" and "|" (C50-02). Returns null if date and amount
+ * columns are not found (C15-03).
  */
 function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
-  const normalized = headerRow.map((c) => normalizeHeader(c));
-  let dateCol = -1;
-  let merchantCol = -1;
-  let amountCol = -1;
-  let installmentsCol = -1;
-  let categoryCol = -1;
-  let memoCol = -1;
-
-  for (let i = 0; i < normalized.length; i++) {
-    const h = normalized[i]!;
-    if (dateCol === -1 && DATE_COLUMN_PATTERN.test(h)) dateCol = i;
-    else if (merchantCol === -1 && MERCHANT_COLUMN_PATTERN.test(h)) merchantCol = i;
-    else if (amountCol === -1 && AMOUNT_COLUMN_PATTERN.test(h)) amountCol = i;
-    else if (installmentsCol === -1 && INSTALLMENTS_COLUMN_PATTERN.test(h)) installmentsCol = i;
-    else if (categoryCol === -1 && CATEGORY_COLUMN_PATTERN.test(h)) categoryCol = i;
-    else if (memoCol === -1 && MEMO_COLUMN_PATTERN.test(h)) memoCol = i;
-  }
+  const dateCol = findColumn(headerRow, undefined, DATE_COLUMN_PATTERN);
+  const merchantCol = findColumn(headerRow, undefined, MERCHANT_COLUMN_PATTERN);
+  const amountCol = findColumn(headerRow, undefined, AMOUNT_COLUMN_PATTERN);
+  const installmentsCol = findColumn(headerRow, undefined, INSTALLMENTS_COLUMN_PATTERN);
+  const categoryCol = findColumn(headerRow, undefined, CATEGORY_COLUMN_PATTERN);
+  const memoCol = findColumn(headerRow, undefined, MEMO_COLUMN_PATTERN);
 
   if (dateCol === -1 || amountCol === -1) return null;
   return { dateCol, merchantCol, amountCol, installmentsCol, categoryCol, memoCol };

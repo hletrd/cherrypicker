@@ -17,6 +17,7 @@ const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])₩\d[\d,]*원?(?![a-zA-Z\d-])|(?<![a-zA
 // header-aware column detection in PDF tables (C15-03).
 import {
   normalizeHeader,
+  findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
   AMOUNT_COLUMN_PATTERN,
@@ -150,12 +151,40 @@ export function parseTable(text: string): string[][] {
   return result;
 }
 
+/** Validate that a 6-digit string is a plausible YYMMDD date with valid
+ *  month/day ranges. Prevents false-positive date detection when a PDF
+ *  table contains 6-digit transaction IDs (e.g., "123456", "999999")
+ *  alongside amounts. Matches the CSV parser's isYYMMDDLike() approach
+ *  in packages/parser/src/csv/generic.ts (C50-01). */
+function isValidYYMMDD(value: string): boolean {
+  if (!/^\d{6}$/.test(value)) return false;
+  const yy = parseInt(value.slice(0, 2), 10);
+  const fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
+  const month = parseInt(value.slice(2, 4), 10);
+  const day = parseInt(value.slice(4, 6), 10);
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= new Date(fullYear, month, 0).getDate();
+}
+
+/** Validate that a cell contains a plausible date value. Rejects
+ *  6-digit strings that fail YYMMDD validation (transaction IDs,
+ *  phone suffixes) while accepting valid compact dates like "240115".
+ *  Non-6-digit cells that match DATE_PATTERN are accepted as-is
+ *  (C50-01). */
+function isValidDateCell(cell: string): boolean {
+  const trimmed = cell.trim();
+  if (/^\d{6}$/.test(trimmed)) return isValidYYMMDD(trimmed);
+  return DATE_PATTERN.test(trimmed);
+}
+
 /**
  * Find rows in parsed table that look like transaction rows.
+ * Validates 6-digit date cells through YYMMDD validation to reject
+ * false positives from transaction IDs (C50-01).
  */
 export function filterTransactionRows(rows: string[][]): string[][] {
   return rows.filter((row) => {
-    const hasDate = row.some((cell) => DATE_PATTERN.test(cell));
+    const hasDate = row.some((cell) => isValidDateCell(cell));
     const hasAmount = row.some((cell) => AMOUNT_PATTERN.test(cell));
     return hasDate && hasAmount;
   });
@@ -197,28 +226,18 @@ export function detectHeaderRow(rows: string[][], maxScan: number = 15): number 
 
 /**
  * Extract column layout from a detected header row in a PDF table.
- * Uses the shared column patterns from column-matcher.ts to identify
- * which columns contain dates, merchants, amounts, and installments.
- * Returns null if the header row doesn't contain enough columns.
+ * Uses shared findColumn() from column-matcher.ts which handles
+ * combined-header splitting on "/" and "|" (C50-02), automatic
+ * normalization, and regex pattern fallback. Returns null if the
+ * header row doesn't contain date and amount columns.
  */
 export function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
-  const normalized = headerRow.map((c) => normalizeHeader(c));
-  let dateCol = -1;
-  let merchantCol = -1;
-  let amountCol = -1;
-  let installmentsCol = -1;
-  let categoryCol = -1;
-  let memoCol = -1;
-
-  for (let i = 0; i < normalized.length; i++) {
-    const h = normalized[i]!;
-    if (dateCol === -1 && DATE_COLUMN_PATTERN.test(h)) dateCol = i;
-    else if (merchantCol === -1 && MERCHANT_COLUMN_PATTERN.test(h)) merchantCol = i;
-    else if (amountCol === -1 && AMOUNT_COLUMN_PATTERN.test(h)) amountCol = i;
-    else if (installmentsCol === -1 && INSTALLMENTS_COLUMN_PATTERN.test(h)) installmentsCol = i;
-    else if (categoryCol === -1 && CATEGORY_COLUMN_PATTERN.test(h)) categoryCol = i;
-    else if (memoCol === -1 && MEMO_COLUMN_PATTERN.test(h)) memoCol = i;
-  }
+  const dateCol = findColumn(headerRow, undefined, DATE_COLUMN_PATTERN);
+  const merchantCol = findColumn(headerRow, undefined, MERCHANT_COLUMN_PATTERN);
+  const amountCol = findColumn(headerRow, undefined, AMOUNT_COLUMN_PATTERN);
+  const installmentsCol = findColumn(headerRow, undefined, INSTALLMENTS_COLUMN_PATTERN);
+  const categoryCol = findColumn(headerRow, undefined, CATEGORY_COLUMN_PATTERN);
+  const memoCol = findColumn(headerRow, undefined, MEMO_COLUMN_PATTERN);
 
   // Need at least date and amount columns for meaningful extraction
   if (dateCol === -1 || amountCol === -1) return null;
