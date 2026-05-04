@@ -1,13 +1,11 @@
-# Verifier -- Cycle 27
+# Verifier -- Cycle 33
 
 **Date:** 2026-05-05
 
-## Previous cycle verification
+## Status
+All 1094 tests passing (851 bun + 243 vitest). No regressions detected.
 
-- Cycle 26 F1 (PDF reversed column order merchant extraction): **CONFIRMED FIXED** -- Math.min/Math.max scanning
-- Cycle 26 F2 (reversed column order tests): **CONFIRMED FIXED** -- tests in table-parser.test.ts
-
-## Current cycle findings
-
-- F1 (PDF AMOUNT_PATTERN year false-positive): **CONFIRMED** -- regex `[\d,]+` matches "2024"
-- F2 (missing year-value rejection tests): **CONFIRMED** -- no year-value amount tests exist
+## Confirmed Findings
+- F-01 through F-06 confirmed by code inspection
+- Server/web parity gaps are real: "마이너스" handling only server-side, Won-sign PDF pattern only web-side
+- Combined header column matching is a genuine gap in findColumn

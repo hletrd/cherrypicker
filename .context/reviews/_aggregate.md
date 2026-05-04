@@ -1,33 +1,36 @@
-# Cycle 32 Aggregate Review
+# Cycle 33 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 32
-**Tests:** 574 bun, 243 vitest (817 total)
+**Cycles completed:** 33
+**Tests:** 851 bun, 243 vitest (1094 total)
 
 ## Summary
-5 actionable findings: PDF AMOUNT_PATTERN missing Won sign prefix, YYMMDD date format not supported, normalizeHeader missing directional Unicode chars, "마이너스" amount prefix not handled, and test coverage gaps. 1 deferred architecture item.
+6 actionable findings: Server-side PDF AMOUNT_PATTERN rejects Won-sign-prefixed small amounts, server PDF fallback regex missing Won-sign support, web-side parseAmount missing "마이너스" prefix, findColumn fails on combined column headers, web PDF local patterns duplicate column-matcher, and test coverage gaps.
 
 ## Findings
 
-### F-01: PDF AMOUNT_PATTERN missing Won sign prefix (MEDIUM)
-PDF table row detection regex does not match small Won-sign-prefixed amounts like "₩500" without commas. Server and web PDF parsers both affected.
+### F-01: Server-side PDF AMOUNT_PATTERN rejects Won-sign-prefixed small amounts (HIGH)
+`packages/parser/src/pdf/index.ts` and `table-parser.ts`: The STRICT pattern requires comma or 5+ digits. "₩500" (3 digits, no comma) fails to match. Web-side pattern handles this correctly with separate Won-sign alternations.
 
-### F-02: YYMMDD date format not supported (LOW)
-6-digit compact date format (e.g., "240115" for 2024-01-15) not handled by parseDateStringToISO in server or web date-utils.
+### F-02: Server-side PDF fallback regex missing Won-sign amount support (MEDIUM)
+`packages/parser/src/pdf/index.ts` fallbackAmountPattern: Missing Won-sign alternations that the web-side version has.
 
-### F-04: normalizeHeader missing directional Unicode (LOW)
-Directional formatting characters (U+200E, U+200F, U+202A-202E, U+FEFF) not stripped, could break header matching.
+### F-03: Web-side parseAmount missing "마이너스" prefix handling (MEDIUM)
+Web-side `parseAmount` in csv.ts, xlsx.ts, and pdf.ts does not handle "마이너스" prefix. Server-side `parseCSVAmount` in shared.ts handles it correctly.
 
-### F-05: "마이너스" amount prefix not handled (LOW)
-Korean bank exports may prefix amounts with "마이너스" instead of minus sign. parseCSVAmount would return null.
+### F-04: findColumn fails on combined/delimited column headers (MEDIUM)
+`column-matcher.ts` findColumn: Combined headers like "이용일/승인일" or "이용금액-원" don't match because normalizeHeader preserves "/" and "-".
 
-### F-06: Test coverage gaps for new format support (MEDIUM)
-Missing tests for YYMMDD, Won sign PDF amounts, 마이너스 prefix, directional Unicode normalization.
+### F-05: Web-side PDF local amount patterns duplicate column-matcher (LOW)
+`apps/web/src/lib/parser/pdf.ts` defines local AMOUNT_PATTERN and STRICT_AMOUNT_PATTERN instead of importing from column-matcher.
+
+### F-06: Test coverage gaps for Won-sign PDF amounts, 마이너스 web-side, combined headers (MEDIUM)
+Missing tests for all three newly-found format diversity issues.
 
 ## Deferred Items
 | ID | Item | Reason |
 |----|------|--------|
-| F-03 | Web CSV factory refactor | Requires shared module architecture (D-01) |
+| D-01 | Web CSV factory refactor | Requires shared module architecture |
 
 ## Regressions
-None. All 817 tests passing.
+None. All 1094 tests passing.

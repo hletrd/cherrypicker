@@ -1,67 +1,72 @@
-# Cycle 32 Implementation Plan
+# Cycle 33 Implementation Plan
 
-**Source:** `2026-05-05-cycle32-comprehensive.md` (5 findings, 1 deferred)
+**Source:** Cycle 33 aggregate review (6 findings, 1 deferred)
 
 ## Fixes
 
-### F-01: PDF AMOUNT_PATTERN missing Won sign prefix (MEDIUM)
+### F-01: Server-side PDF AMOUNT_PATTERN Won-sign support (HIGH)
 
 **Files:**
-- `packages/parser/src/pdf/table-parser.ts` line 12
-- `apps/web/src/lib/parser/pdf.ts` line 40
+- `packages/parser/src/pdf/index.ts` line 23
+- `packages/parser/src/pdf/table-parser.ts` line 75
 
 **Changes:**
-1. Add `₩\d[\d,]*원?` and `￦\d[\d,]*원?` alternatives to AMOUNT_PATTERN regex in both server and web PDF table parsers
-2. This ensures PDF lines with small Won-sign-prefixed amounts (e.g., "₩500") are correctly detected as transaction rows
+1. Fix AMOUNT_PATTERN in index.ts to match web-side pattern with separate Won-sign alternations
+2. Fix STRICT_AMOUNT_PATTERN in table-parser.ts similarly
+3. Both patterns should accept "₩500", "₩1,234", "￦123" etc.
 
-### F-02: YYMMDD date format support (LOW)
+### F-02: Server-side PDF fallback regex Won-sign support (MEDIUM)
 
 **Files:**
-- `packages/parser/src/date-utils.ts`
-- `apps/web/src/lib/parser/date-utils.ts`
+- `packages/parser/src/pdf/index.ts` line 293
 
 **Changes:**
-1. Add 6-digit YYMMDD pattern after YYYYMMDD (8-digit) check
-2. Parse YY (>=50 → 1900s, <50 → 2000s), MM, DD
-3. Validate month/day ranges with isValidDayForMonth
+1. Add Won-sign alternations to fallbackAmountPattern to match web-side behavior
 
-### F-04: normalizeHeader directional characters (LOW)
+### F-03: Web-side parseAmount "마이너스" prefix (MEDIUM)
 
 **Files:**
-- `packages/parser/src/csv/column-matcher.ts` line 12
-- `apps/web/src/lib/parser/column-matcher.ts` line 16
+- `apps/web/src/lib/parser/csv.ts` parseAmount function
+- `apps/web/src/lib/parser/xlsx.ts` parseAmount function
+- `apps/web/src/lib/parser/pdf.ts` parseAmount function
 
 **Changes:**
-1. Add U+200E (LRM), U+200F (RLM), U+202A-202E (directional), U+FEFF (BOM) to the strip regex
+1. Add "마이너스" prefix handling to all three web-side parseAmount functions, matching server-side parseCSVAmount behavior
 
-### F-05: "마이너스" amount prefix support (LOW)
+### F-04: findColumn combined header support (MEDIUM)
 
 **Files:**
-- `packages/parser/src/csv/shared.ts`
+- `packages/parser/src/csv/column-matcher.ts` findColumn function
+- `apps/web/src/lib/parser/column-matcher.ts` findColumn function
 
 **Changes:**
-1. Strip "마이너스" prefix from amount string in parseCSVAmount before other cleaning
+1. In findColumn, after normalization, split headers on "/" and "-" delimiters
+2. Test each part against the pattern before testing the full header
+3. Also update isValidHeaderRow to split on delimiters before keyword matching
+
+### F-05: Web-side PDF cleanup (LOW) — DEFERRED
+
+Deferred to avoid scope creep. Web-side PDF patterns work correctly for their use case.
 
 ### F-06: Test coverage (MEDIUM)
 
 **Files:**
-- `packages/parser/__tests__/date-utils.test.ts`
 - `packages/parser/__tests__/table-parser.test.ts`
-- `packages/parser/__tests__/csv-shared.test.ts`
 - `packages/parser/__tests__/column-matcher.test.ts`
+- `packages/parser/__tests__/xlsx.test.ts`
 
 **Test cases:**
-- YYMMDD date format parsing
-- Won sign amounts in PDF context
-- "마이너스" amount prefix
-- normalizeHeader with directional Unicode
-- PDF AMOUNT_PATTERN with ₩ prefix for small amounts
+- Server-side PDF Won-sign amounts in findAmountCell
+- Combined header matching in findColumn
+- isValidHeaderRow with combined headers
+- "마이너스" prefix in parseCSVAmount (verify existing coverage)
 
 ## Deferred
 
 | ID | Item | Reason |
 |----|------|--------|
-| F-03 | Web CSV factory refactor | Requires shared module architecture (D-01) |
+| F-05 | Web PDF pattern cleanup | Low priority, patterns work for their use case |
+| D-01 | Web CSV factory refactor | Requires shared module architecture |
 
 ## Quality Gates
 - `bun test packages/parser/__tests__/`

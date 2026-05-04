@@ -1,3 +1,3 @@
-# Security Review -- Cycle 24
+# Security Review -- Cycle 33
 
-No new security concerns. Changes are limited to expanding keyword Sets and regex patterns for broader format coverage. No new external inputs, auth changes, or data exposure paths.
+No new security concerns. Changes are limited to regex pattern fixes and string splitting for better format coverage. No new external inputs, auth changes, or data exposure paths.

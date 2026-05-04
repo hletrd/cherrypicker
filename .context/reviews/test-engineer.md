@@ -1,22 +1,26 @@
-# Test Engineer -- Cycle 27
+# Test Engineer -- Cycle 33
 
 **Date:** 2026-05-05
 
-## New Test Cases Needed (F2)
+## New Test Cases Needed
 
-### 1. PDF amount pattern rejects year values
+### 1. Server-side PDF Won-sign amount parsing (F-01)
+- `findAmountCell(["₩500"])` should match (currently rejected by STRICT_AMOUNT_PATTERN)
+- `findAmountCell(["₩1,234"])` should match
+- `findAmountCell(["₩123"])` should match
 
-Add tests in `table-parser.test.ts`:
-- `findAmountCell(["2024", "1,234"])` should return index 1 (the amount), not 0 (the year)
-- The table-parser AMOUNT_PATTERN should NOT match "2024" when preceded by space
-- The table-parser AMOUNT_PATTERN should match "1,234", "100", "₩6,500"
+### 2. Server-side PDF fallback Won-sign amounts (F-02)
+- Fallback line scanner should pick up "₩500" amounts from lines like "2024-01-15 스타벅스 ₩500"
 
-### 2. Server PDF findAmountCell rejects year values
+### 3. Web-side "마이너스" prefix (F-03)
+- `parseAmount("마이너스 1,234")` should return -1234
+- `parseAmount("마이너스1234")` should return -1234
 
-Tests for the strict `AMOUNT_PATTERN` in `pdf/index.ts`:
-- `findAmountCell(["2024"])` should return null
-- `findAmountCell(["1,234"])` should return the cell
+### 4. Combined column header matching (F-04)
+- `findColumn(["이용일/승인일"], undefined, DATE_COLUMN_PATTERN)` should return 0
+- `findColumn(["이용금액-원"], undefined, AMOUNT_COLUMN_PATTERN)` should return 0
+- `isValidHeaderRow(["이용일/승인일", "가맹점명", "이용금액"])` should return true
 
 ## Current Test Counts
-- Bun: 526 pass, 0 fail
-- Vitest: 242 pass, 0 fail
+- Bun: 851 pass, 0 fail
+- Vitest: 243 pass, 0 fail
