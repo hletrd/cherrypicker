@@ -1,8 +1,8 @@
-# Cycle 71 Architect Review
+# Cycle 77 Architect Review
 
-## A71-01: Leading-plus amount pattern gap (FORMAT DIVERSITY)
+## A77-01: DATE_KEYWORDS / DATE_COLUMN_PATTERN / HEADER_KEYWORDS Inconsistency [TO FIX]
 
-The leading-plus amount format (`+1,234`) was added to parse functions in C66-02 but the column-detection patterns were not updated. This is a consistency gap between the two stages of parsing (detection vs extraction). Fix is straightforward: add the pattern to all 4 relevant regex arrays.
+The three structures that define "recognized date column headers" are out of sync. `DATE_COLUMN_PATTERN` (regex) and `HEADER_KEYWORDS` (array) include 5 terms (`취소일`, `정산일`, `환불일`, `반품일`, `교환일`) that are NOT in `DATE_KEYWORDS` (Set). This breaks the 2-category requirement in `isValidHeaderRow` for edge-case header rows.
 
 ## Deferred Items (unchanged)
 
@@ -11,5 +11,6 @@ The leading-plus amount format (`+1,234`) was added to parse functions in C66-02
 - Card name suffixes: not a parser concern
 - Global config integration: not blocking
 - CSS dark mode: not a parser concern
+- D-01 shared module refactor: requires build system changes
 
-## Architecture is mature and stable after 70 cycles.
+## Architecture is mature and stable after 77 cycles.

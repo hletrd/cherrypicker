@@ -1,9 +1,7 @@
-# Cycle 71 Test Engineer Review
+# Cycle 77 Test Engineer Review
 
-## T71-01: Missing test for leading-plus amount column detection
+## T77-01: Test coverage for DATE_KEYWORDS sync [TO FIX]
 
-The `isAmountLike()` function is the gatekeeper for data-inference column detection. No test verifies that leading-plus amounts like `+1,234` are recognized. Need tests for:
-1. Server CSV generic parser with `+1,234` amounts in data-inference path
-2. Web CSV generic parser with same
+The 5 missing terms in DATE_KEYWORDS should have test coverage to prevent future regressions. Tests should verify that isValidHeaderRow recognizes header rows containing these terms paired with amount keywords.
 
-## No regressions in existing tests. 1270+ bun + 283+ vitest tests cover all major paths.
+## No regressions in existing tests. 1354 bun + 287 vitest tests pass.

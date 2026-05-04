@@ -1674,8 +1674,8 @@ describe('Cycle 73: New column header patterns (C73-03)', () => {
   it('DATE_KEYWORDS contains 이용시간', () => {
     expect(DATE_KEYWORDS.has('이용시간')).toBe(true);
   });
-  it('DATE_KEYWORDS contains book_date', () => {
-    expect(DATE_KEYWORDS.has('book_date')).toBe(true);
+  it('DATE_KEYWORDS contains bookdate', () => {
+    expect(DATE_KEYWORDS.has('bookdate')).toBe(true);
   });
   it('AMOUNT_KEYWORDS contains 환급금액', () => {
     expect(AMOUNT_KEYWORDS.has('환급금액')).toBe(true);
@@ -1759,13 +1759,13 @@ describe('Cycle 73: New column header patterns (C73-03)', () => {
     expect(DATE_KEYWORDS.has('환불일')).toBe(true);
   });
   it('DATE_KEYWORDS contains cancel_date (English)', () => {
-    expect(DATE_KEYWORDS.has('cancel_date')).toBe(true);
+    expect(DATE_KEYWORDS.has('canceldate')).toBe(true);
   });
   it('DATE_KEYWORDS contains refund_date (English)', () => {
-    expect(DATE_KEYWORDS.has('refund_date')).toBe(true);
+    expect(DATE_KEYWORDS.has('refunddate')).toBe(true);
   });
   it('DATE_KEYWORDS contains settlement_date (English)', () => {
-    expect(DATE_KEYWORDS.has('settlement_date')).toBe(true);
+    expect(DATE_KEYWORDS.has('settlementdate')).toBe(true);
   });
 
   // C76-01: findColumn detects new date columns

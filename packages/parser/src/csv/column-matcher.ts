@@ -7,9 +7,12 @@
 /** Normalize a header string for matching: strip invisible Unicode characters
  *  (zero-width spaces U+200B, zero-width non-joiners U+200C, zero-width
  *  joiners U+200D, soft hyphens U+00AD), trim whitespace, collapse internal
- *  whitespace, and remove parenthetical suffixes like "이용금액(원)" (C11-03). */
+ *  whitespace, underscores, and hyphens, and remove parenthetical suffixes
+ *  like "이용금액(원)" (C11-03). This ensures that English header variants
+ *  like "Transaction Date", "transaction_date", and "transaction-date" all
+ *  normalize to "transactiondate" for consistent keyword matching (C77-01). */
 export function normalizeHeader(h: string): string {
-  return h.replace(/[​‌‍­ 　\t\n\r‎‏‪‫‬‭‮﻿︀︁︂︃︄︅︆︇︈︉︊︋︌︍︎️⁠]/g, '').trim().replace(/\s+/g, '').replace(/\([^)]*\)/g, '');
+  return h.replace(/[​‌‍­ 　\t\n\r‎‏‪‫‬‭‮﻿︀︁︂︃︄︅︆︇︈︉︊︋︌︍︎️⁠]/g, '').trim().replace(/[\s_\-]+/g, '').replace(/\([^)]*\)/g, '');
 }
 
 /** Find a column index by exact name (normalized) first, then by regex pattern.
@@ -91,15 +94,15 @@ export const HEADER_KEYWORDS: readonly string[] = [
   '이용처', '가맹점', '가맹점명', '이용가맹점', '승인가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처', '이용내용', '거래내용', '이용업소', '승인점', '매장명', '이용매장', '상호명', '업체명', '판매자', '가맹점상호', '거래내역', '이용가맹점명',
   '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액', '청구금액', '출금액', '결제대금', '승인취소금액', '매입금액', '실청구금액', '실결제금액', '결제예정금액', '사용금액', '환급금액', '입금금액', '실입금액',
   '비고', '적요', '메모', '내용', '설명', '참고', '참고사항', '상세내역', '비고란', '메모란', '비고내용', '메모내용', '상세', '승인번호', '카드번호', '승인내역', '비고사항', '카드명', '이용카드',
-  'date', 'merchant', 'amount', 'total', 'store', 'shop', 'price', 'won', 'description', 'vendor', 'item', 'name', 'charge', 'payment', 'posted', 'billing', 'payee', 'memo', 'note', 'remarks', 'seller', 'company', 'business', 'purchase_date', 'order_date', 'total_amount', 'paid', 'spent', 'cost', 'value', 'approval_no', 'debit', 'credit', 'net', 'recipient', 'outlet', 'book_date', 'cancel_date', 'refund_date', 'settlement_date',
+  'date', 'merchant', 'amount', 'total', 'store', 'shop', 'price', 'won', 'description', 'vendor', 'item', 'name', 'charge', 'payment', 'posted', 'billing', 'payee', 'memo', 'note', 'remarks', 'seller', 'company', 'business', 'purchasedate', 'orderdate', 'totalamount', 'paid', 'spent', 'cost', 'value', 'approvalno', 'debit', 'credit', 'net', 'recipient', 'outlet', 'bookdate', 'canceldate', 'refunddate', 'settlementdate', 'transactiondate',
 ];
 
 // Keyword category Sets for multi-category header detection. A valid header
 // row must contain keywords from at least 2 distinct categories to avoid
 // matching summary rows that only have amount keywords.
-export const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '승인일시', '매출일', '작성일', '접수일', '발행일', '사용일', '사용일자', '조회일', '처리일', '승인완료일', '입금일', '주문일', '결제예정일', '작성일시', '승인시간', '매입일', '전표일', '이용시간', '취소일', '정산일', '환불일', '반품일', '교환일', 'date', 'posted', 'billing', 'purchase_date', 'order_date', 'book_date', 'cancel_date', 'refund_date', 'settlement_date']);
+export const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '승인일시', '매출일', '작성일', '접수일', '발행일', '사용일', '사용일자', '조회일', '처리일', '승인완료일', '입금일', '주문일', '결제예정일', '작성일시', '승인시간', '매입일', '전표일', '이용시간', '취소일', '정산일', '환불일', '반품일', '교환일', 'date', 'posted', 'billing', 'purchasedate', 'orderdate', 'bookdate', 'canceldate', 'refunddate', 'settlementdate', 'transactiondate']);
 export const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '승인가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처', '이용내용', '거래내용', '이용업소', '승인점', '매장명', '이용매장', '상호명', '업체명', '판매자', '가맹점상호', '거래내역', '이용가맹점명', 'merchant', 'store', 'shop', 'description', 'vendor', 'item', 'name', 'payee', 'seller', 'company', 'business', 'recipient', 'outlet']);
-export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액', '청구금액', '출금액', '결제대금', '승인취소금액', '매입금액', '실청구금액', '실결제금액', '결제예정금액', '사용금액', '환급금액', '입금금액', '실입금액', 'amount', 'total', 'price', 'won', 'charge', 'payment', 'paid', 'spent', 'cost', 'value', 'total_amount', 'debit', 'credit', 'net']);
+export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액', '청구금액', '출금액', '결제대금', '승인취소금액', '매입금액', '실청구금액', '실결제금액', '결제예정금액', '사용금액', '환급금액', '입금금액', '실입금액', 'amount', 'total', 'price', 'won', 'charge', 'payment', 'paid', 'spent', 'cost', 'value', 'totalamount', 'debit', 'credit', 'net']);
 
 /** Check whether a row of trimmed cell values looks like a valid header row
  *  by requiring keywords from at least 2 distinct categories. Normalizes

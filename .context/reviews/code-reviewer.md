@@ -1,32 +1,28 @@
-# Cycle 74 Code Review
+# Cycle 77 Code Review
 
-## F1: Server-side PDF table parser `isValidDateCell` missing short-date validation [MEDIUM - PARITY]
+## F1: DATE_KEYWORDS Set Missing 5 Date Terms (Server + Web) [TO FIX]
 
-**File**: `packages/parser/src/pdf/table-parser.ts`
+**Severity**: Medium (format diversity, header detection)
+**Location**: `packages/parser/src/csv/column-matcher.ts` line 100, `apps/web/src/lib/parser/column-matcher.ts` line 84
 
-The `isValidDateCell` function validates date cells by testing against the module-level `DATE_PATTERN` regex. This regex has a short-date alternative `(?<![.\d．。])\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．.])` that uses lookahead but no end-anchor `$`. While the lookahead prevents matching when followed by digits, it does NOT prevent matching when followed by non-digit, non-delimiter characters (e.g., trailing spaces, letters).
+The `DATE_KEYWORDS` ReadonlySet is missing 5 date-related terms that ARE present in `DATE_COLUMN_PATTERN` regex and `HEADER_KEYWORDS` array: `취소일`, `정산일`, `환불일`, `반품일`, `교환일`. These were added to the regex and HEADER_KEYWORDS in earlier cycles but the keyword Set was never updated.
 
-More importantly, `isValidDateCell` does NOT validate the month/day values of short dates. A cell like "13.01" would pass `DATE_PATTERN.test()` even though month 13 is invalid. The function should use `isValidShortDate` (already defined in the same file) which validates month 1-12 and day 1-daysInMonth.
+**Impact**: `isValidHeaderRow()` requires keywords from 2+ categories. A header row where the date column exclusively uses one of these 5 terms (e.g., "환불일" + "금액") would be rejected because "환불일" is not in `DATE_KEYWORDS`, causing the row to only match 1 category (amount). The header detection would then fail, returning no transactions.
 
-**Comparison with web-side**: The web-side `apps/web/src/lib/parser/pdf.ts` `isValidDateCell` already uses `SHORT_MD_DATE_PATTERN` (`/^\d{1,2}[.\-\/．。]\d{1,2}$/` -- end-anchored) which correctly validates short dates. The server-side should use the same approach via `isValidShortDate`.
+**Fix**: Add the 5 missing terms to `DATE_KEYWORDS` in both server and web column-matcher files.
 
-**Fix**: Modify `isValidDateCell` to use `isValidShortDate` for short date cells instead of raw `DATE_PATTERN.test`.
+## F2: PDF Multi-Line Header Support [DEFERRED]
 
-## F2: Server/web parity check [PASSIVE - NO ISSUES]
+Architecturally complex, marginal benefit. Not actionable this cycle.
 
-Verified full parity:
-- Server and web `column-matcher.ts`: identical patterns, keywords, category sets
-- XLSX adapter configs: identical for all 24 banks
-- All 24 bank CSV adapters: present on both sides
-- Amount parsing: all formats (full-width, KRW, Won signs, 마이너스, trailing minus, parenthesized) handled consistently
-- Summary row pattern: identical
-- Header detection: identical
+## F3: Server/Web D-01 Shared Module Refactor [DEFERRED]
 
-## F3: PDF multi-line headers [DEFERRED - unchanged]
-Architecturally complex, not actionable this cycle.
+Different build systems (Bun vs Vite/Astro) prevent direct imports. Not actionable this cycle.
 
-## Summary
-- **Actionable**: F1 (fix isValidDateCell in server-side PDF table parser)
-- **Deferred**: F3 (multi-line PDF headers)
-- **Test baseline**: 1064 tests passing (bun), 0 failures
-- **Server/web parity**: Excellent
+## Server/Web Parity Status
+
+After thorough comparison, all patterns, keywords, and category sets are IN SYNC across all 6 column-matcher files (3 server, 3 web). The only discrepancy is Finding 1 — both sides have the same missing terms.
+
+## No Regressions
+
+All 1641 tests pass (287 vitest + 1354 bun).
