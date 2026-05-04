@@ -1,5 +1,14 @@
 import type { BankAdapter, BankId, ParseError, ParseResult, RawTransaction } from './types.js';
 import { detectBank, detectCSVDelimiter } from './detect.js';
+import {
+  normalizeHeader,
+  DATE_COLUMN_PATTERN,
+  MERCHANT_COLUMN_PATTERN,
+  AMOUNT_COLUMN_PATTERN,
+  INSTALLMENTS_COLUMN_PATTERN,
+  CATEGORY_COLUMN_PATTERN,
+  MEMO_COLUMN_PATTERN,
+} from './column-matcher.js';
 
 // ---------------------------------------------------------------------------
 // Shared helpers (used by all adapters)
@@ -200,20 +209,23 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   let categoryCol = -1;
   let memoCol = -1;
 
+  // Use shared ColumnMatcher patterns for consistent column detection
+  // across all parsers. Uses normalizeHeader() to tolerate whitespace and
+  // parenthetical suffixes in column names.
   for (let i = 0; i < headers.length; i++) {
-    const h = headers[i] ?? '';
+    const h = normalizeHeader(headers[i] ?? '');
     // Date columns
-    if (/이용일|거래일|날짜|일시|이용일자|거래일시|결제일|승인일|승인일자|매출일/.test(h) && dateCol === -1) dateCol = i;
+    if (DATE_COLUMN_PATTERN.test(h) && dateCol === -1) dateCol = i;
     // Merchant columns
-    else if (/이용처|가맹점|상호|이용가맹점|가맹점명|거래처|매출처|사용처|결제처/.test(h) && merchantCol === -1) merchantCol = i;
+    else if (MERCHANT_COLUMN_PATTERN.test(h) && merchantCol === -1) merchantCol = i;
     // Amount columns
-    else if (/이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액/.test(h) && amountCol === -1) amountCol = i;
+    else if (AMOUNT_COLUMN_PATTERN.test(h) && amountCol === -1) amountCol = i;
     // Installments
-    else if (/할부|할부개월|할부기간|할부월/.test(h) && installmentsCol === -1) installmentsCol = i;
+    else if (INSTALLMENTS_COLUMN_PATTERN.test(h) && installmentsCol === -1) installmentsCol = i;
     // Category
-    else if (/업종|카테고리|분류|업종분류|업종명/.test(h) && categoryCol === -1) categoryCol = i;
+    else if (CATEGORY_COLUMN_PATTERN.test(h) && categoryCol === -1) categoryCol = i;
     // Memo
-    else if (/비고|적요|메모|내용|설명|참고/.test(h) && memoCol === -1) memoCol = i;
+    else if (MEMO_COLUMN_PATTERN.test(h) && memoCol === -1) memoCol = i;
   }
 
   if (dateCol === -1 || merchantCol === -1 || amountCol === -1) {
