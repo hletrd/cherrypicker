@@ -456,3 +456,37 @@ describe('normalizeHeader', () => {
     expect(isValidHeaderRow(cells)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// C56-01: KRW currency prefix support
+// ---------------------------------------------------------------------------
+
+describe('parseCSVAmount - KRW prefix (C56-01)', () => {
+  test('parses KRW 10,000 with space', () => {
+    expect(parseCSVAmount('KRW 10,000')).toBe(10000);
+  });
+
+  test('parses KRW10,000 without space', () => {
+    expect(parseCSVAmount('KRW10,000')).toBe(10000);
+  });
+
+  test('parses lowercase krw 5,000', () => {
+    expect(parseCSVAmount('krw 5,000')).toBe(5000);
+  });
+
+  test('parses KRW 100,000원', () => {
+    expect(parseCSVAmount('KRW 100,000원')).toBe(100000);
+  });
+
+  test('parses KRW 1,234,567', () => {
+    expect(parseCSVAmount('KRW 1,234,567')).toBe(1234567);
+  });
+
+  test('returns null for empty string (C56-04 early return)', () => {
+    expect(parseCSVAmount('')).toBeNull();
+  });
+
+  test('returns null for whitespace-only string (C56-04 early return)', () => {
+    expect(parseCSVAmount('   ')).toBeNull();
+  });
+});

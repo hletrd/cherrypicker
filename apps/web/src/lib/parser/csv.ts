@@ -69,6 +69,7 @@ function parseAmount(raw: string): number | null {
     .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
     .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
     .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
+    .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
     .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Handle "마이너스" prefix — some Korean bank exports use this instead of
   // a negative sign or parentheses (parity with server-side parseCSVAmount
@@ -197,6 +198,7 @@ const AMOUNT_PATTERNS = [
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
   /^\d{5,}원?$/,         // Bare 5+ digit integers: 50000 or 50000원 (C49-01)
+  /^KRW[\d,]+원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
 ];
 
 function isDateLike(value: string): boolean {

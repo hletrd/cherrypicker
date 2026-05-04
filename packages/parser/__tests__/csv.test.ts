@@ -888,4 +888,29 @@ describe('parseCSV - Cycle 49 format diversity', () => {
     expect(amountError!.raw).toBeDefined();
     expect(amountError!.raw).toContain('not_a_number');
   });
+
+  test('rejects CSV with purely numeric column headers (C56-03)', () => {
+    const content = [
+      '1,2,3,4,5',
+      '2026-01-15,스타벅스,6500,1,테스트',
+      '2026-01-16,이마트,45000,1,쇼핑',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(0);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors[0]?.message).toContain('헤더');
+  });
+
+  test('parses CSV with KRW-prefixed amounts (C56-01)', () => {
+    // KRW amounts with comma separators must be quoted to avoid CSV delimiter splitting
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-01-15,스타벅스,"KRW 6,500"',
+      '2026-01-16,이마트,"KRW 45,000원"',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(6500);
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
 });

@@ -83,6 +83,7 @@ const AMOUNT_PATTERNS = [
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
   /^\d{5,}원?$/,         // Bare 5+ digit integers: 50000 or 50000원 (C49-01)
+  /^KRW[\d,]+원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
 ];
 
 function isDateLike(value: string): boolean {
