@@ -1,6 +1,7 @@
 import type { BankAdapter, BankId, ParseError, ParseResult, RawTransaction } from './types.js';
 import { detectBank, detectCSVDelimiter } from './detect.js';
 import {
+  findColumn,
   normalizeHeader,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
@@ -137,6 +138,12 @@ function isAmountLike(value: string): boolean {
   return AMOUNT_PATTERNS.some((p) => p.test(value.trim()));
 }
 
+// Keyword categories for header detection — hoisted to module scope to avoid
+// recreating Sets on every parse call. Matches server-side generic CSV parser.
+const DATE_KW: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
+const MERCHANT_KW: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
+const AMOUNT_KW: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+
 function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   // BOM stripping is the responsibility of parseCSV() (the public entry
   // point). It is NOT repeated here to avoid redundant work — parseCSV()
@@ -163,9 +170,10 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   // Keyword categories for header detection — a valid header row should contain
   // keywords from at least 2 distinct categories (date, merchant, amount) to
   // avoid matching summary table rows that only have amount keywords (C86-03).
-  const DATE_KEYWORDS = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
-  const MERCHANT_KEYWORDS = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
-  const AMOUNT_KEYWORDS = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+  // Hoisted to module scope to avoid recreating on every parse call.
+  const DATE_KEYWORDS = DATE_KW;
+  const MERCHANT_KEYWORDS = MERCHANT_KW;
+  const AMOUNT_KEYWORDS = AMOUNT_KW;
   // Default to -1 so we can detect when no valid header row was found.
   // Previously defaulted to 0, which would treat the first line as the
   // header even when it's a metadata row with no known header keywords (C78-03).
@@ -327,11 +335,11 @@ const samsungAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('이용일');
-    const merchantIdx = headers.indexOf('가맹점명');
-    const amountIdx = headers.indexOf('이용금액');
-    const installIdx = headers.indexOf('할부');
-    const categoryIdx = headers.indexOf('업종');
+    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '가맹점명', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
+    const categoryIdx = findColumn(headers, '업종', CATEGORY_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -392,11 +400,11 @@ const shinhanAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('이용일');
-    const merchantIdx = headers.indexOf('이용처');
-    const amountIdx = headers.indexOf('이용금액');
-    const installIdx = headers.indexOf('할부개월수');
-    const categoryIdx = headers.indexOf('업종분류');
+    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '이용처', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부개월수', INSTALLMENTS_COLUMN_PATTERN);
+    const categoryIdx = findColumn(headers, '업종분류', CATEGORY_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -458,11 +466,11 @@ const kbAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('거래일시');
-    const merchantIdx = headers.indexOf('가맹점명');
-    const amountIdx = headers.indexOf('이용금액');
-    const installIdx = headers.indexOf('할부개월');
-    const categoryIdx = headers.indexOf('업종');
+    const dateIdx = findColumn(headers, '거래일시', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '가맹점명', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부개월', INSTALLMENTS_COLUMN_PATTERN);
+    const categoryIdx = findColumn(headers, '업종', CATEGORY_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -524,11 +532,11 @@ const hyundaiAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('이용일');
-    const merchantIdx = headers.indexOf('이용처');
-    const amountIdx = headers.indexOf('이용금액');
-    const installIdx = headers.indexOf('할부');
-    const memoIdx = headers.indexOf('비고');
+    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '이용처', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
+    const memoIdx = findColumn(headers, '비고', MEMO_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -589,11 +597,11 @@ const lotteAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('거래일');
-    const merchantIdx = headers.indexOf('이용가맹점');
-    const amountIdx = headers.indexOf('이용금액');
-    const installIdx = headers.indexOf('할부');
-    const categoryIdx = headers.indexOf('업종');
+    const dateIdx = findColumn(headers, '거래일', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '이용가맹점', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
+    const categoryIdx = findColumn(headers, '업종', CATEGORY_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -654,11 +662,11 @@ const hanaAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('이용일자');
-    const merchantIdx = headers.indexOf('가맹점명');
-    const amountIdx = headers.indexOf('이용금액');
-    const installIdx = headers.indexOf('할부개월');
-    const memoIdx = headers.indexOf('적요');
+    const dateIdx = findColumn(headers, '이용일자', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '가맹점명', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부개월', INSTALLMENTS_COLUMN_PATTERN);
+    const memoIdx = findColumn(headers, '적요', MEMO_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -720,11 +728,11 @@ const wooriAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('이용일자');
-    const merchantIdx = headers.indexOf('이용가맹점');
-    const amountIdx = headers.indexOf('이용금액');
-    const installIdx = headers.indexOf('할부기간');
-    const memoIdx = headers.indexOf('비고');
+    const dateIdx = findColumn(headers, '이용일자', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '이용가맹점', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부기간', INSTALLMENTS_COLUMN_PATTERN);
+    const memoIdx = findColumn(headers, '비고', MEMO_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -785,11 +793,11 @@ const nhAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('거래일');
-    const merchantIdx = headers.indexOf('이용처');
-    const amountIdx = headers.indexOf('거래금액');
-    const installIdx = headers.indexOf('할부');
-    const memoIdx = headers.indexOf('비고');
+    const dateIdx = findColumn(headers, '거래일', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '이용처', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '거래금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
+    const memoIdx = findColumn(headers, '비고', MEMO_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -851,11 +859,11 @@ const ibkAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('거래일');
-    const merchantIdx = headers.indexOf('가맹점');
-    const amountIdx = headers.indexOf('거래금액');
-    const installIdx = headers.indexOf('할부');
-    const memoIdx = headers.indexOf('적요');
+    const dateIdx = findColumn(headers, '거래일', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '가맹점', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '거래금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
+    const memoIdx = findColumn(headers, '적요', MEMO_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
@@ -916,11 +924,11 @@ const bcAdapter: BankAdapter = {
     }
 
     const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = headers.indexOf('이용일');
-    const merchantIdx = headers.indexOf('가맹점');
-    const amountIdx = headers.indexOf('이용금액');
-    const installIdx = headers.indexOf('할부');
-    const categoryIdx = headers.indexOf('업종');
+    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
+    const merchantIdx = findColumn(headers, '가맹점', MERCHANT_COLUMN_PATTERN);
+    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
+    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
+    const categoryIdx = findColumn(headers, '업종', CATEGORY_COLUMN_PATTERN);
 
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
