@@ -1,6 +1,6 @@
 import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
-import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
+import { parseDateStringToISO, isValidISODate, daysInMonth } from '../date-utils.js';
 import { extractText } from './extractor.js';
 import { parseTable, filterTransactionRows, detectHeaderRow, getHeaderColumns } from './table-parser.js';
 import { SUMMARY_ROW_PATTERN } from '../csv/column-matcher.js';
@@ -22,29 +22,21 @@ const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 // as amounts in findAmountCell and the fallback line scanner.
 const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^[₩￦]?-?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/;
 
-/** Maximum days per month for a non-leap year, indexed 1-12.
- *  Used by isValidShortDate for month-aware day validation when no
- *  year context is available (C68-01). Parity with web-side
- *  apps/web/src/lib/parser/pdf.ts MAX_DAYS_PER_MONTH (C65-01). */
-const MAX_DAYS_PER_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
 /** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
- *  values using month-aware day limits (non-leap year). This prevents
- *  decimal amounts like "3.5" from being misidentified as MM.DD dates
- *  (C8-11/C34-03), and also rejects impossible dates like "2/31" or
- *  "4/31" that would pass a raw `day <= 31` check but be rejected by
- *  the production parseDateStringToISO() which uses isValidDayForMonth
- *  (C68-01). Note: Feb 29 is rejected here (non-leap year table) but
- *  Feb 29 dates in credit card statements always appear in full-year
- *  format (e.g., "2024-02-29") which matches STRICT_DATE_PATTERN or
- *  KOREAN_FULL_DATE_PATTERN before this function is called. */
+ *  values using month-aware day limits. This prevents decimal amounts
+ *  like "3.5" from being misidentified as MM.DD dates (C8-11/C34-03),
+ *  and also rejects impossible dates like "2/31" or "4/31".
+ *  Uses daysInMonth() from date-utils.ts with current year for correct
+ *  leap year handling (C44-01), matching the CSV parser's
+ *  isDateLikeShort() approach which also uses daysInMonth(). */
 function isValidShortDate(cell: string): boolean {
   const match = cell.match(SHORT_MD_DATE_PATTERN);
   if (!match) return false;
   const parts = cell.split(/[.\-\/．。]/);
   const month = parseInt(parts[0] ?? '', 10);
   const day = parseInt(parts[1] ?? '', 10);
-  return month >= 1 && month <= 12 && day >= 1 && day <= (MAX_DAYS_PER_MONTH[month] ?? 0);
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
 }
 
 // Date string parsing delegated to shared parseDateStringToISO from

@@ -1,50 +1,41 @@
-# Implementation Plan -- Cycle 43
+# Implementation Plan -- Cycle 44
 
-## P1. Fix findColumn exact-match path for combined headers [MEDIUM]
+## P1. Fix PDF isValidShortDate leap year handling (F2)
 **Files:**
-- `packages/parser/src/csv/column-matcher.ts` (lines 29-34)
-- `apps/web/src/lib/parser/column-matcher.ts` (lines 26-30)
+- `packages/parser/src/pdf/index.ts` (line 29, MAX_DAYS_PER_MONTH constant + isValidShortDate function)
 
-**Change:** In the exact-match pass, after the full-header comparison, split on "/" and test each part against the normalized exactName. This makes the exact-match path consistent with the regex path.
+**Change:** Replace hardcoded `MAX_DAYS_PER_MONTH` table with `daysInMonth()` import from date-utils.ts, using current year. This matches the CSV parser's `isDateLikeShort()` approach.
 
 **Before:**
 ```ts
-if (exactName) {
-  const normalizedExact = normalizeHeader(exactName);
-  for (let i = 0; i < headers.length; i++) {
-    if (normalizeHeader(headers[i] ?? '') === normalizedExact) return i;
-  }
+const MAX_DAYS_PER_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+function isValidShortDate(cell: string): boolean {
+  // ... uses MAX_DAYS_PER_MONTH[month] ?? 0
 }
 ```
 
 **After:**
 ```ts
-if (exactName) {
-  const normalizedExact = normalizeHeader(exactName);
-  for (let i = 0; i < headers.length; i++) {
-    const normalized = normalizeHeader(headers[i] ?? '');
-    if (normalized === normalizedExact) return i;
-    // Split combined headers on "/" for exact matching (C43-01)
-    if (normalized.includes('/')) {
-      if (normalized.split('/').some((part) => part === normalizedExact)) return i;
-    }
-  }
+import { daysInMonth } from '../date-utils.js';  // already partially imported
+function isValidShortDate(cell: string): boolean {
+  // ... uses daysInMonth(new Date().getFullYear(), month)
 }
 ```
 
-## P2. Add tests for findColumn with combined headers [MEDIUM]
-**File:** `packages/parser/__tests__/column-matcher.test.ts`
+## P2. Add non-numeric header guard to XLSX parsers (F1, F3)
+**Files:**
+- `packages/parser/src/xlsx/index.ts` (line 239-247)
+- `apps/web/src/lib/parser/xlsx.ts` (line 419-427)
 
-Add test cases:
-- findColumn with exactName "이용일" and header "이용일/승인일" returns correct index
-- findColumn with exactName "이용금액" and header "이용금액/취소금액" returns correct index
+**Change:** Add `hasNonNumeric` guard matching CSV generic parser pattern:
+```ts
+const hasNonNumeric = rowStrings.some((c) => /[가-힣a-zA-Z]/.test(c));
+if (hasNonNumeric && isValidHeaderRow(rowStrings)) { ... }
+```
 
-## P3. Add test for tab-separated CSV with quoted fields [LOW]
-**File:** `packages/parser/__tests__/csv-shared.test.ts`
+## P3. Tests
+- Add XLSX non-numeric header guard test to `packages/parser/__tests__/table-parser.test.ts` or xlsx test
 
-Add test for splitCSVLine with tab delimiter and quoted fields containing tabs.
-
-## Deferred (not this cycle)
-- F2: Web CSV factory refactor (~700 lines, too large)
-- A2: Column-matcher shared module refactor
-- A3: ColumnMatcher file relocation
+## Deferred
+- A1: Web CSV 10 hand-rolled adapters -> factory pattern (~700 lines)
+- A2: Column-matcher module dedup

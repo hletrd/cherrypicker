@@ -419,7 +419,12 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   for (let i = 0; i < Math.min(30, rows.length); i++) {
     const row = rows[i] ?? [];
     const rowStrings = row.map((c) => String(c ?? '').trim());
-    if (isValidHeaderRow(rowStrings)) {
+    // Require at least one non-numeric cell to prevent purely-numeric rows
+    // from being misidentified as headers. Matches the CSV generic parser's
+    // hasNonNumeric guard pattern (C44-02). isValidHeaderRow already requires
+    // keywords from 2+ categories, but this guard adds defense-in-depth.
+    const hasNonNumeric = rowStrings.some((c) => /[가-힣a-zA-Z]/.test(c));
+    if (hasNonNumeric && isValidHeaderRow(rowStrings)) {
       headerRowIdx = i;
       headers = rowStrings;
       break;

@@ -1,40 +1,45 @@
-# Code Review -- Cycle 43
+# Code Review -- Cycle 44
 
-## Scope
-Full parser package deep review after 42 cycles of improvements.
-703 bun tests + 252 vitest tests — all passing.
+## Findings: 3 actionable, 2 deferred, 2 low/info
 
-## Findings
+### Actionable
 
-### F1. findColumn exact-match path skips combined-header splitting [MEDIUM]
-**File:** `packages/parser/src/csv/column-matcher.ts:29-34`
-**File:** `apps/web/src/lib/parser/column-matcher.ts:26-30`
+**F1. Server XLSX: missing non-numeric header row guard [LOW]**
+- `packages/parser/src/xlsx/index.ts` line 239-247
+- Both server and web CSV generic parsers require `hasNonNumeric` (cells must contain `[가-힣a-zA-Z]`) before calling `isValidHeaderRow()`
+- XLSX parser calls `isValidHeaderRow()` directly without the non-numeric guard
+- Risk: a purely numeric row with amount keywords could be misidentified as header
+- Practical risk is very low because `isValidHeaderRow` requires keywords from 2+ distinct categories
+- Fix: add non-numeric guard for consistency with CSV parsers
 
-When `exactName` is provided (e.g., `'이용일'`), the first pass does exact normalized match only. If the header is `"이용일/승인일"` (combined), `normalizeHeader("이용일/승인일")` = `"이용일/승인일"` which does NOT equal `"이용일"`. The regex fallback (second pass) catches this via the `/` split, but the exact-name path is wasted work and inconsistent with the regex path.
+**F2. PDF isValidShortDate rejects Feb 29 in leap years [LOW]**
+- `packages/parser/src/pdf/index.ts` line 29, `MAX_DAYS_PER_MONTH` hardcodes Feb as 28 days
+- `isValidShortDate()` uses this table, so "2.29" would be rejected even in leap years
+- `parseDateStringToISO()` in date-utils.ts uses `isValidDayForMonth()` which handles leap years correctly via `Date(year, month, 0).getDate()`
+- CSV `isDateLikeShort()` uses `daysInMonth(new Date().getFullYear(), month)` which is leap-year-aware
+- Impact: very low — Korean PDFs rarely use short date format for Feb 29; full format "2024.02.29" bypasses this check
+- Fix: use `daysInMonth()` from date-utils.ts with current year instead of hardcoded table
 
-**Fix:** Also split on `/` in the exact-match path to test each part individually.
+**F3. XLSX header detection: inconsistent non-numeric guard with CSV [LOW]**
+- Same as F1 but for web-side XLSX parser at `apps/web/src/lib/parser/xlsx.ts` line 419-427
+- Fix: add matching guard for consistency
 
-### F2. Web CSV: 10 hand-rolled adapters duplicate factory pattern [HIGH — technical debt]
-**File:** `apps/web/src/lib/parser/csv.ts:322-1019`
+### Deferred
 
-The web CSV file has 10 hand-rolled bank adapters (samsung, shinhan, kb, hyundai, lotte, hana, woori, nh, ibk, bc) that are essentially identical except for column names. Lines 1022-1243 already use a `createBankAdapter` factory for the remaining 14 banks. Refactoring the 10 adapters to use the factory would eliminate ~700 lines of duplication and bring parity with the server-side adapter-factory.ts pattern.
+**A1. Web CSV: 10 hand-rolled adapters duplicate factory pattern [HIGH]**
+- apps/web/src/lib/parser/csv.ts lines 322-1019 (~700 lines)
+- Factory pattern exists at line 1037 for 14 other adapters
+- Highest-priority deferred item across all cycles
 
-### F3. Server XLSX header detection lacks non-numeric guard [LOW]
-**File:** `packages/parser/src/xlsx/index.ts:239-247`
+**A2. Column-matcher module duplication (server vs web) [MEDIUM]**
+- Requires shared-module refactor for Bun/browser environment compatibility
 
-The server XLSX parser calls `isValidHeaderRow(rowStrings)` directly. The CSV generic parser has an additional `hasNonNumeric` guard to prevent purely-numeric rows from passing. The XLSX parser lacks this guard. Low risk since `isValidHeaderRow` requires Korean/English keywords.
+### Low/Info
 
-### F4. PDF: AMOUNT_PATTERN inconsistency between table-parser and index.ts [LOW]
-**File:** `packages/parser/src/pdf/table-parser.ts:14`
-**File:** `packages/parser/src/pdf/index.ts:23`
+**F4. All existing tests continue to pass (709 bun + 252 vitest)**
+- No regressions detected
 
-Two different regexes with slightly different behaviors. Table detection is permissive (allows bare amounts of any digit count after comma), while cell extraction is strict (requires Won sign or 5+ digits). Intentional but undocumented.
-
-### F5. CSV: No test for tab-separated files with quoted fields containing tabs [LOW]
-`splitCSVLine` handles this per RFC 4180 but no test exercises it.
-
-## Regressions
-None detected. All 703 + 252 tests pass.
-
-## Summary
-The parser is in excellent shape. Most impactful remaining improvement is F2 (web CSV factory refactor, ~700 lines of elimination) and F1 (exact-match combined-header handling).
+**F5. Server/web parity confirmed**
+- Column patterns, normalizeHeader, findColumn, isValidHeaderRow, SUMMARY_ROW_PATTERN all match
+- Bank adapter configs (24 banks) are identical across all parsers
+- Date utils, amount parsing, installment handling all in sync

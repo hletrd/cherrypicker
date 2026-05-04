@@ -887,4 +887,23 @@ describe('XLSX parenthesized negative amounts', () => {
       cleanup(filePath);
     }
   });
+
+  // C44-02: Non-numeric header guard — purely numeric rows should not be
+  // misidentified as headers even if they happen to contain amount-like values.
+  test('rejects purely numeric row as header (C44-02 non-numeric guard)', async () => {
+    const filePath = createTempXLSX([
+      [1234, 5678, 9012],
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '스타벅스', 6000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // The first row is purely numeric — should be skipped as header.
+      // The second row is the actual header. Third row is data.
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });
