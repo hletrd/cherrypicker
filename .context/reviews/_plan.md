@@ -1,29 +1,26 @@
-# Cycle 24 Implementation Plan
+# Cycle 25 Implementation Plan
 
-**Source:** `_aggregate.md` (3 findings)
+**Source:** `_aggregate.md` (2 findings)
 
 ## Fixes
 
-### Fix 1: Keyword Set alignment with column regex patterns [HIGH]
-- **File:** `packages/parser/src/csv/column-matcher.ts`
-- **Action:** Add missing entries to keyword Sets:
-  - `AMOUNT_KEYWORDS`: add `'price'`, `'won'` (matched by AMOUNT_COLUMN_PATTERN `^price$`, `^won$`)
-  - `MERCHANT_KEYWORDS`: add `'shop'` (matched by MERCHANT_COLUMN_PATTERN `^shop$`)
-- **Verification:** Add tests in `column-matcher.test.ts` verifying English-only header rows pass isValidHeaderRow
+### Fix 1: Sync web-side column-matcher.ts with server-side [HIGH]
+- **File:** `apps/web/src/lib/parser/column-matcher.ts`
+- **Action:** Update to match server-side `packages/parser/src/csv/column-matcher.ts`:
+  - `SUMMARY_ROW_PATTERN`: add `승인\s*합계|결제\s*합계|총\s*(?:사용|이용)`
+  - `HEADER_KEYWORDS`: add `'shop'`, `'price'`, `'won'`
+  - `AMOUNT_KEYWORDS`: add `'price'`, `'won'`
+  - `MERCHANT_KEYWORDS`: add `'shop'`
+- **Verification:** Add vitest tests in `apps/web/` verifying the synced patterns
 
-### Fix 2: Expand SUMMARY_ROW_PATTERN [MEDIUM]
-- **File:** `packages/parser/src/csv/column-matcher.ts`
-- **Action:** Add `승인\s*합계`, `결제\s*합계`, `총\s*(?:사용|이용)` to the pattern
-- **Verification:** Add tests for new summary variants in `column-matcher.test.ts`
-
-### Fix 3: Keyword Set completeness test [LOW]
+### Fix 2: Add isValidHeaderRow rejection test for summary variants [MEDIUM]
 - **File:** `packages/parser/__tests__/column-matcher.test.ts`
-- **Action:** Add test that exercises English-only headers through isValidHeaderRow to catch future Set/regex drift
-- **Verification:** Run full test suite
+- **Action:** Add test that `isValidHeaderRow(['승인합계', '100,000'])` returns false (only amount keyword, 1 category)
+- **Verification:** Run bun tests
 
-## Deferred Items (unchanged from cycle 23)
+## Deferred Items (updated)
 - Server-side ColumnMatcher module path consistency
-- Web-side CSV parser vs server-side duplication
+- Web-side CSV parser vs server-side duplication (acknowledged debt -- kept separate for build system reasons)
 - PDF multi-line header support
 - Historical amount display format
 - Card name suffixes

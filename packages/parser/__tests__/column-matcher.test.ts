@@ -142,6 +142,16 @@ describe('isValidHeaderRow', () => {
     expect(isValidHeaderRow(['이용금액', '거래금액', '합계'])).toBe(false);
   });
 
+  it('rejects approval total summary row as header (C25)', () => {
+    expect(isValidHeaderRow(['승인합계', '100,000'])).toBe(false);
+    expect(isValidHeaderRow(['결제합계', '50,000'])).toBe(false);
+  });
+
+  it('rejects total usage summary row as header (C25)', () => {
+    expect(isValidHeaderRow(['총사용', '200,000'])).toBe(false);
+    expect(isValidHeaderRow(['총이용', '200,000'])).toBe(false);
+  });
+
   it('rejects a row with only date keywords', () => {
     expect(isValidHeaderRow(['이용일', '거래일', '날짜'])).toBe(false);
   });

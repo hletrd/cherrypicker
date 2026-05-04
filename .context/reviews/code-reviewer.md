@@ -1,38 +1,36 @@
-# Code Review -- Cycle 24
+# Code Review -- Cycle 25
 
-## Finding 1: AMOUNT_KEYWORDS / MERCHANT_KEYWORDS missing entries that column regexes match [HIGH]
+## Finding 1: Web-side column-matcher.ts missing cycle 24 keyword and pattern updates [HIGH]
 
-**Location:** `packages/parser/src/csv/column-matcher.ts` lines 71-73
+**Location:** `apps/web/src/lib/parser/column-matcher.ts`
 
-**Problem:** `isValidHeaderRow()` uses `AMOUNT_KEYWORDS`, `MERCHANT_KEYWORDS`, and `DATE_KEYWORDS` Sets to count how many distinct categories a header row covers. But these Sets are incomplete compared to the column regex patterns:
+**Problem:** Cycle 24 updated the server-side `packages/parser/src/csv/column-matcher.ts` with new keyword Set entries and expanded SUMMARY_ROW_PATTERN, but the corresponding web-side file was NOT updated. This creates a server/web parity regression.
 
-- `AMOUNT_COLUMN_PATTERN` matches `^price$`, `^won$` (case-insensitive) but `AMOUNT_KEYWORDS` only has `['amount', 'total']` -- missing `'price'` and `'won'`
-- `MERCHANT_COLUMN_PATTERN` matches `^store$`, `^shop$` but `MERCHANT_KEYWORDS` only has `['merchant', 'store', 'description']` -- `'shop'` is missing
+**Missing from web-side:**
 
-This means a CSV with `['Date', 'Shop', 'Price']` headers would fail `isValidHeaderRow()` (only 1 category matched: date) and the parser would return a "header row not found" error. The column patterns would correctly match these headers, but the validation gate rejects them.
+| Item | Server-side (current) | Web-side (stale) |
+|------|----------------------|------------------|
+| `SUMMARY_ROW_PATTERN` | includes `승인\s*합계\|결제\s*합계\|총\s*(?:사용\|이용)` | missing these 3 variants |
+| `HEADER_KEYWORDS` | includes `'shop'`, `'price'`, `'won'` | missing these 3 |
+| `AMOUNT_KEYWORDS` Set | includes `'price'`, `'won'` | missing these 2 |
+| `MERCHANT_KEYWORDS` Set | includes `'shop'` | missing this 1 |
 
-**Fix:** Add `'price'`, `'won'` to `AMOUNT_KEYWORDS` and `'shop'` to `MERCHANT_KEYWORDS`.
+**Impact:**
+- Web-side CSV/XLSX parsers accept summary rows like "승인합계 100,000원" as data (false-positive transactions)
+- Web-side generic CSV rejects English-only headers like `['Date', 'Shop', 'Price']` (isValidHeaderRow fails)
 
-## Finding 2: SUMMARY_ROW_PATTERN missing common Korean variants [MEDIUM]
+**Fix:** Sync web-side column-matcher.ts with server-side.
 
-**Location:** `packages/parser/src/csv/column-matcher.ts` line 55
-
-**Problem:** The pattern `/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i` misses several real-world Korean bank statement footer variants:
-
-- `승인합계`, `승인 합계` (approval total) -- common in Shinhan, KB exports
-- `결제합계`, `결제 합계` (payment total) -- common in Woori exports
-- `총사용`, `총 사용`, `총이용`, `총 이용` (total usage) -- common in BC, Lotte exports
-
-**Fix:** Add these variants to the pattern.
-
-## Finding 3: No test coverage for keyword Set completeness against regex patterns [LOW]
+## Finding 2: Missing test coverage for cycle 24 summary and keyword additions [MEDIUM]
 
 **Location:** `packages/parser/__tests__/column-matcher.test.ts`
 
-**Problem:** Tests verify that `isValidHeaderRow` works with standard headers, but there's no test that ensures every entry matched by the column regex patterns is also present in the keyword Sets. This means Set/regex drift (like Finding 1) is not caught by tests.
+**Problem:** Cycle 24 added tests for `승인합계`/`결제합계`/`총사용`/`총이용` summary variants (lines 361-374) and English keyword Set completeness (lines 380-409). However, the server-side tests pass while the web-side column-matcher has the drift. No test validates that isValidHeaderRow rejects the new summary variants as headers (only as summary row content).
+
+**Fix:** Add test verifying `isValidHeaderRow(['승인합계', '100,000'])` returns false.
 
 ## Previous Cycle Status
 
-Cycle 23 F1 (web CSV summary row skip): CONFIRMED FIXED -- all 10 web adapters now include `SUMMARY_ROW_PATTERN.test(line)` checks.
-Cycle 23 F2 (PDF DATE_PATTERN full-width dot): CONFIRMED FIXED -- server-side `table-parser.ts` line 5 now includes full-width dot variants.
-Cycle 23 F3 (full-width dot integration tests): Still open, low priority.
+Cycle 24 F1 (keyword Set alignment): CONFIRMED FIXED on server-side, but web-side was missed.
+Cycle 24 F2 (SUMMARY_ROW_PATTERN expansion): CONFIRMED FIXED on server-side, but web-side was missed.
+Cycle 24 F3 (Set completeness tests): CONFIRMED FIXED on server-side.

@@ -1,23 +1,22 @@
-# Cycle 24 Aggregate Review
+# Cycle 25 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 24
-**Tests:** 512 bun
+**Cycles completed:** 25
+**Tests:** 734+ bun, 231+ vitest
 
-## Actionable Findings (3)
+## Actionable Findings (2)
 
 | ID | Severity | Category | Finding | File |
 |---|----------|----------|---------|------|
-| F1 | HIGH | Format Diversity | AMOUNT_KEYWORDS missing `'price'`, `'won'`; MERCHANT_KEYWORDS missing `'shop'` -- causes isValidHeaderRow() to reject English-only header rows that column regexes would match | `packages/parser/src/csv/column-matcher.ts` |
-| F2 | MEDIUM | Format Diversity | SUMMARY_ROW_PATTERN missing `승인합계`, `결제합계`, `총사용`, `총이용` variants common in Korean bank exports | `packages/parser/src/csv/column-matcher.ts` |
-| F3 | LOW | Test Coverage | No tests ensuring keyword Sets include all entries matched by column regex patterns (Set/regex drift detection) | `packages/parser/__tests__/column-matcher.test.ts` |
+| F1 | HIGH | Server/Web Parity | Web-side column-matcher.ts missing cycle 24 updates: SUMMARY_ROW_PATTERN lacks `승인합계`/`결제합계`/`총사용`/`총이용`; HEADER_KEYWORDS lacks `'shop'`/`'price'`/`'won'`; AMOUNT_KEYWORDS lacks `'price'`/`'won'`; MERCHANT_KEYWORDS lacks `'shop'` | `apps/web/src/lib/parser/column-matcher.ts` |
+| F2 | MEDIUM | Test Coverage | No test that `isValidHeaderRow` rejects new summary variants like `['승인합계', '100,000']` as headers | `packages/parser/__tests__/column-matcher.test.ts` |
 
 ## Previous Cycle Status
 
-- Cycle 23 F1 (web CSV summary row skip): **CONFIRMED FIXED**
-- Cycle 23 F2 (PDF full-width dot DATE_PATTERN): **CONFIRMED FIXED**
-- Cycle 23 F3 (full-width dot integration tests): Still open, deferred (LOW)
+- Cycle 24 F1 (keyword Set alignment on server): **CONFIRMED FIXED**, but web-side was missed
+- Cycle 24 F2 (SUMMARY_ROW_PATTERN on server): **CONFIRMED FIXED**, but web-side was missed
+- Cycle 24 F3 (Set completeness tests): **CONFIRMED FIXED**
 
 ## Assessment
 
-After 24 cycles, findings have converged to 3 (from 734+ tests and 23 prior cycles of fixes). F1 is the only high-severity finding -- a Set/regex drift bug that causes English-only CSV headers to be rejected by the header validation gate. F2 is a robustness improvement for Korean summary row detection. F3 is test hardening.
+After 25 cycles, the main finding is a server/web parity regression from cycle 24. The server-side fixes for keyword Sets and summary patterns were not ported to the web-side column-matcher. This causes the web parser to accept Korean summary rows as data and reject English-only headers.
