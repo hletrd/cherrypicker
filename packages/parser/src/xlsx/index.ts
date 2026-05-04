@@ -37,9 +37,18 @@ function normalizeHTML(html: string): string {
 // Field parsers
 // ---------------------------------------------------------------------------
 
-function parseDateToISO(raw: unknown): string {
+function parseDateToISO(
+  raw: unknown,
+  errors?: import('../types.js').ParseError[],
+  lineIdx?: number,
+): string {
   if (typeof raw === 'number') {
-    if (raw < 1 || raw > 100000) return String(raw);
+    if (!Number.isFinite(raw) || raw < 1 || raw > 100000) {
+      if (errors && lineIdx !== undefined && raw !== 0) {
+        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });
+      }
+      return String(raw);
+    }
     // Excel serial date number
     const date = xlsx.SSF.parse_date_code(raw);
     if (date) {
@@ -52,15 +61,32 @@ function parseDateToISO(raw: unknown): string {
         const d = date.d.toString().padStart(2, '0');
         return `${y}-${m}-${d}`;
       }
-      // Invalid date from serial number — return as-is so the caller can detect
-      // the malformed value, matching the string-path fallback behavior.
+      // Invalid date from serial number — report error and return as-is so
+      // the caller can detect the malformed value, matching the web-side
+      // parser behavior in apps/web/src/lib/parser/xlsx.ts (C5-01).
+      if (errors && lineIdx !== undefined) {
+        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });
+      }
       return String(raw);
     }
   }
   if (typeof raw === 'string') {
-    return parseDateStringToISO(raw);
+    const result = parseDateStringToISO(raw);
+    // Report unparseable dates as parse errors so users can see which
+    // transactions have malformed dates, matching the web-side behavior
+    // (C5-01).
+    if (result === raw.trim() && raw.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(result)) {
+      if (errors && lineIdx !== undefined) {
+        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
+      }
+    }
+    return result;
   }
-  return String(raw ?? '');
+  const str = String(raw ?? '');
+  if (str && errors && lineIdx !== undefined) {
+    errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${str}` });
+  }
+  return str;
 }
 
 function parseAmount(raw: unknown): number | null {
@@ -214,10 +240,13 @@ function parseXLSXSheet(
   const transactions: import('../types.js').RawTransaction[] = [];
   const errors: import('../types.js').ParseError[] = [];
 
-  // Track last non-empty date value for merged cell forward-fill.
-  // Korean bank XLSX exports commonly merge date cells across installment
+  // Track last non-empty values for merged cell forward-fill.
+  // Korean bank XLSX exports commonly merge cells across installment
   // rows — SheetJS fills merged cells with empty strings (C4-04).
+  // Forward-fill extends to date, merchant, and category columns (C5-03).
   let lastDate: unknown = '';
+  let lastMerchant: unknown = '';
+  let lastCategory: unknown = '';
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -233,7 +262,25 @@ function parseXLSXSheet(
       lastDate = rawDateValue;
     }
     const dateRaw = dateCol !== -1 ? (rawDateValue !== '' && rawDateValue != null ? rawDateValue : lastDate) : '';
-    const merchantRaw = merchantCol !== -1 ? row[merchantCol] : '';
+
+    // Forward-fill merchant column for merged cells (C5-03)
+    const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
+    if (merchantCol !== -1 && rawMerchantValue !== '' && rawMerchantValue != null) {
+      lastMerchant = rawMerchantValue;
+    }
+    const merchantRaw = merchantCol !== -1
+      ? (rawMerchantValue !== '' && rawMerchantValue != null ? rawMerchantValue : lastMerchant)
+      : '';
+
+    // Forward-fill category column for merged cells (C5-03)
+    const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
+    if (categoryCol !== -1 && rawCategoryValue !== '' && rawCategoryValue != null) {
+      lastCategory = rawCategoryValue;
+    }
+    const categoryRaw = categoryCol !== -1
+      ? (rawCategoryValue !== '' && rawCategoryValue != null ? rawCategoryValue : lastCategory)
+      : '';
+
     const amountRaw = amountCol !== -1 ? row[amountCol] : '';
 
     if (!dateRaw && !merchantRaw) continue;
@@ -243,7 +290,7 @@ function parseXLSXSheet(
       if (String(amountRaw ?? '').trim()) {
         errors.push({
           line: i + 1,
-          message: `Cannot parse amount: ${String(amountRaw)}`,
+          message: `금액을 해석할 수 없습니다: ${String(amountRaw)}`,
           raw: rowText,
         });
       }
@@ -256,14 +303,14 @@ function parseXLSXSheet(
     if (amount <= 0) continue;
 
     const tx = {
-      date: parseDateToISO(dateRaw),
+      date: parseDateToISO(dateRaw, errors, i),
       merchant: String(merchantRaw ?? '').replace(/^"(.*)"$/, '$1').trim(),
       amount,
       ...(installCol !== -1 && row[installCol]
         ? { installments: parseInstallments(row[installCol]) }
         : {}),
-      ...(categoryCol !== -1 && row[categoryCol]
-        ? { category: String(row[categoryCol]).trim() }
+      ...(categoryCol !== -1 && categoryRaw
+        ? { category: String(categoryRaw).trim() }
         : {}),
       ...(memoCol !== -1 && row[memoCol]
         ? { memo: String(row[memoCol]).trim() }
