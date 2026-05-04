@@ -174,6 +174,8 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
 
   // Determine format from extension
   let format: FileFormat;
+  let sniffBuffer: Buffer | null = null;
+
   if (ext === '.csv' || ext === '.tsv') {
     format = 'csv';
   } else if (ext === '.xlsx' || ext === '.xls') {
@@ -182,8 +184,8 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
     format = 'pdf';
   } else {
     // Try to sniff from first bytes
-    const buffer = await readFile(filePath);
-    const header = buffer.slice(0, 8);
+    sniffBuffer = await readFile(filePath);
+    const header = sniffBuffer.slice(0, 8);
 
     // PDF magic bytes: %PDF
     if (header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46) {
@@ -203,10 +205,12 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
     }
   }
 
-  // For CSV/XLSX, also try to detect bank from content
+  // For CSV, detect bank from content. Reuse the already-read buffer when
+  // available (from the unknown-extension sniff path) to avoid reading the
+  // file a second time (C5-02).
   if (format === 'csv') {
-    const buffer = await readFile(filePath);
-    const content = buffer.toString('utf-8');
+    const csvBuffer = sniffBuffer ?? await readFile(filePath);
+    const content = csvBuffer.toString('utf-8');
     const { bank, confidence } = detectBank(content);
     return { format, bank, confidence, encoding: 'utf-8' };
   }
