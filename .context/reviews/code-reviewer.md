@@ -1,34 +1,32 @@
-# Cycle 72 Code Review
+# Cycle 74 Code Review
 
-## C72-01: "1,234 원" fails to parse (BUG - HIGH)
+## F1: Server-side PDF table parser `isValidDateCell` missing short-date validation [MEDIUM - PARITY]
 
-All 6 parseAmount/parseCSVAmount functions use `원$` which fails when there is a space before the Won sign character. Korean bank exports sometimes use "1,234 원" with a space.
+**File**: `packages/parser/src/pdf/table-parser.ts`
 
-**Root cause:** The replacement chain `.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '')` strips whitespace AFTER checking for 원 at end-of-string. For "1,234 원", the 원 is not at end (preceding space), so the replacement fails. After whitespace removal, "1234원" remains, which parseFloat returns NaN for.
+The `isValidDateCell` function validates date cells by testing against the module-level `DATE_PATTERN` regex. This regex has a short-date alternative `(?<![.\d．。])\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．.])` that uses lookahead but no end-anchor `$`. While the lookahead prevents matching when followed by digits, it does NOT prevent matching when followed by non-digit, non-delimiter characters (e.g., trailing spaces, letters).
 
-**Fix:** Change `원$` to `\s*원$` in all 6 locations. Also change `원?` to `\s*원?` in AMOUNT_PATTERNS column detection arrays.
+More importantly, `isValidDateCell` does NOT validate the month/day values of short dates. A cell like "13.01" would pass `DATE_PATTERN.test()` even though month 13 is invalid. The function should use `isValidShortDate` (already defined in the same file) which validates month 1-12 and day 1-daysInMonth.
 
-**Files:**
-1. `packages/parser/src/csv/shared.ts` line 108
-2. `packages/parser/src/csv/generic.ts` lines 68-76 (AMOUNT_PATTERNS)
-3. `packages/parser/src/xlsx/index.ts` line 132
-4. `packages/parser/src/pdf/index.ts` line 63
-5. `apps/web/src/lib/parser/csv.ts` line 130, lines 240-251
-6. `apps/web/src/lib/parser/xlsx.ts` line 287
-7. `apps/web/src/lib/parser/pdf.ts` line 269
+**Comparison with web-side**: The web-side `apps/web/src/lib/parser/pdf.ts` `isValidDateCell` already uses `SHORT_MD_DATE_PATTERN` (`/^\d{1,2}[.\-\/．。]\d{1,2}$/` -- end-anchored) which correctly validates short dates. The server-side should use the same approach via `isValidShortDate`.
 
-## C72-02: Server-side XLSX isHTMLContent missing BOM strip (BUG - MEDIUM)
+**Fix**: Modify `isValidDateCell` to use `isValidShortDate` for short date cells instead of raw `DATE_PATTERN.test`.
 
-Server-side does not strip BOM before checking HTML signatures. Web-side does (added C75-01).
+## F2: Server/web parity check [PASSIVE - NO ISSUES]
 
-**File:** `packages/parser/src/xlsx/index.ts` line 28
+Verified full parity:
+- Server and web `column-matcher.ts`: identical patterns, keywords, category sets
+- XLSX adapter configs: identical for all 24 banks
+- All 24 bank CSV adapters: present on both sides
+- Amount parsing: all formats (full-width, KRW, Won signs, 마이너스, trailing minus, parenthesized) handled consistently
+- Summary row pattern: identical
+- Header detection: identical
 
-## C72-03: Missing column header patterns (ENHANCEMENT - LOW)
+## F3: PDF multi-line headers [DEFERRED - unchanged]
+Architecturally complex, not actionable this cycle.
 
-AMOUNT_COLUMN_PATTERN missing "사용금액". DATE_COLUMN_PATTERN missing "매입일", "전표일". MERCHANT_COLUMN_PATTERN missing "거래내역", "이용가맹점명".
-
-**File:** `packages/parser/src/csv/column-matcher.ts`
-
-## No Regressions
-
-All 1018 bun tests pass. Server/web parity is excellent except C72-02.
+## Summary
+- **Actionable**: F1 (fix isValidDateCell in server-side PDF table parser)
+- **Deferred**: F3 (multi-line PDF headers)
+- **Test baseline**: 1064 tests passing (bun), 0 failures
+- **Server/web parity**: Excellent

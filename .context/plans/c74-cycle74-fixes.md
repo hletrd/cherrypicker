@@ -125,9 +125,21 @@ The following findings from this cycle's review are deferred per the repo's rule
 
 ---
 
+## Task 5: Fix server-side PDF isValidDateCell short-date validation [MEDIUM]
+
+**Finding:** F1 from cycle 74 parser review
+**File:** `packages/parser/src/pdf/table-parser.ts`
+
+**Problem:** `isValidDateCell` uses `DATE_PATTERN.test()` for all date types including short dates (MM.DD). The DATE_PATTERN regex's short-date alternative uses lookahead but no end-anchor, and critically does NOT validate month/day ranges. A cell like "13.01" would pass as a valid date (month 13 is invalid). The function should use `isValidShortDate()` (already defined in the same file) which validates month 1-12 and day ranges via `daysInMonth()`. The web-side PDF parser already uses the anchored `SHORT_MD_DATE_PATTERN`.
+
+**Fix:** Modify `isValidDateCell` to add a SHORT_MD_DATE_PATTERN check that delegates to `isValidShortDate` before falling through to `DATE_PATTERN`.
+
+---
+
 ## Progress
 
 - [x] Task 1: Add subcategory fallback keys to TransactionReview
 - [x] Task 2: Add sessionStorage schema version check
 - [x] Task 3: Refactor isHTMLContent to avoid double-decode
-- [x] Task 4: Quality gates — all pass (tsc: 6/6 workspaces OK, astro check: 0 errors, vitest: 189/189 pass, bun test: 58/58 pass)
+- [x] Task 4: Quality gates — all pass
+- [ ] Task 5: Fix server-side PDF isValidDateCell short-date validation

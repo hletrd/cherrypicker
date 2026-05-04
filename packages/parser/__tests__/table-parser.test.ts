@@ -189,17 +189,15 @@ describe('filterTransactionRows', () => {
     expect(result).toHaveLength(2);
   });
 
-  test('short date 2.31 is rejected as impossible (C11-01)', () => {
-    // filterTransactionRows checks DATE_PATTERN which now includes short dates
-    // but the DATE_PATTERN match itself doesn't validate day ranges.
-    // The validation happens in findDateCell/isValidShortDate downstream.
-    // However, filterTransactionRows should still match the pattern.
+  test('short date 2.31 is rejected as impossible (C11-01/C74-01)', () => {
+    // isValidDateCell validates short dates via isValidShortDate which checks
+    // month 1-12 and day 1-daysInMonth. "2.31" has month=2 (Feb), day=31
+    // which is impossible → rejected (C74-01 fix).
     const rows = [
       ['2.31', '가맹점', '6,500원'],
     ];
     const result = filterTransactionRows(rows);
-    // 2.31 matches the short date pattern (validation is downstream)
-    expect(result).toHaveLength(1);
+    expect(result).toHaveLength(0);
   });
 
   test('does NOT match decimal numbers as short dates (C11-01)', () => {
@@ -1198,5 +1196,86 @@ describe('Cycle 68: Trailing minus sign amount patterns (C68-01)', () => {
     ];
     const result = filterTransactionRows(rows);
     expect(result).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C74-01: isValidDateCell validates short dates via isValidShortDate
+// ---------------------------------------------------------------------------
+
+describe('C74-01: isValidDateCell short-date validation via isValidShortDate', () => {
+  test('rejects impossible short date "2.31" (Feb 31) via isValidShortDate', () => {
+    const rows = [
+      ['2.31', '가맹점', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('rejects impossible short date "4.31" (Apr 31) via isValidShortDate', () => {
+    const rows = [
+      ['4.31', '카페', '3,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('rejects invalid month "13.01" (month 13) via isValidShortDate', () => {
+    const rows = [
+      ['13.01', '테스트', '5,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('rejects invalid month "0.15" (month 0) via isValidShortDate', () => {
+    const rows = [
+      ['0.15', '테스트', '5,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('rejects invalid day "1.0" (day 0) via isValidShortDate', () => {
+    const rows = [
+      ['1.0', '테스트', '5,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('accepts valid short date "1.15" via isValidShortDate', () => {
+    const rows = [
+      ['1.15', '스타벅스', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('accepts valid short date "2.28" (Feb 28) via isValidShortDate', () => {
+    const rows = [
+      ['2.28', '이마트', '30,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('accepts valid short date "12/31" via isValidShortDate', () => {
+    const rows = [
+      ['12/31', '편의점', '2,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('rejects trailing-space "1.15 " short date with end-anchored pattern', () => {
+    // SHORT_MD_DATE_PATTERN is end-anchored ($), so "1.15 " (with trailing
+    // space) should NOT match. After trim() in isValidDateCell, the space
+    // is removed, so "1.15" does match — this is correct behavior.
+    const rows = [
+      ['1.15 ', '스타벅스', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
   });
 });

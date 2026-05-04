@@ -152,16 +152,50 @@ export function parseTable(text: string): string[][] {
   return result;
 }
 
+/** Short MM.DD date pattern with end-anchor for strict cell validation.
+ *  Used by isValidDateCell to validate short dates before checking
+ *  month/day ranges via isValidShortDate. The DATE_PATTERN's short-date
+ *  alternative lacks an end-anchor and month/day validation, so this
+ *  anchored pattern is used as a gate before isValidShortDate (C74-01).
+ *  Parity with web-side PDF parser's SHORT_MD_DATE_PATTERN. */
+const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
+
+/** Validate short MM.DD date format with month-aware day range checks.
+ *  Prevents decimal amounts like "3.5" from being misidentified as dates
+ *  and rejects impossible dates like "2/31" (Feb 31), "4/31" (Apr 31).
+ *  Uses daysInMonth() from date-utils.ts for correct leap year handling.
+ *  Parity with web-side PDF parser's isValidShortDate. */
+function isValidShortDate(cell: string): boolean {
+  // Strip trailing delimiters before matching
+  const stripped = cell.replace(/[.\-\/．。]\s*$/, '');
+  const match = stripped.match(SHORT_MD_DATE_PATTERN);
+  if (!match) return false;
+  const parts = stripped.split(/[.\-\/．。]/);
+  const month = parseInt(parts[0] ?? '', 10);
+  const day = parseInt(parts[1] ?? '', 10);
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
+}
+
 /** Validate that a cell contains a plausible date value. Rejects
  *  6-digit strings that fail YYMMDD validation (transaction IDs,
  *  phone suffixes) while accepting valid compact dates like "240115".
- *  Non-6-digit cells that match DATE_PATTERN are accepted as-is
- *  (C50-01). */
+ *  Non-6-digit cells that match DATE_PATTERN are accepted as-is.
+ *  Short dates (MM.DD) are validated via isValidShortDate which checks
+ *  month 1-12 and day 1-daysInMonth to reject impossible dates and
+ *  false positives from non-date text. Parity with web-side PDF parser
+ *  which uses the anchored SHORT_MD_DATE_PATTERN (C74-01). */
 function isValidDateCell(cell: string): boolean {
   // Strip trailing delimiters before matching — Korean bank exports may
   // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
   const trimmed = cell.trim().replace(/[.\-\/．。]\s*$/, '');
   if (/^\d{6}$/.test(trimmed)) return isValidYYMMDD(trimmed);
+  // Short dates (MM.DD/MM/DD) must be validated with month/day range
+  // checks via isValidShortDate, matching the web-side PDF parser behavior.
+  // The DATE_PATTERN's short-date alternative uses a lookahead but no
+  // end-anchor and no month/day validation, so it can false-positive on
+  // cells like "13.01" (invalid month) or trailing-space variants (C74-01).
+  if (SHORT_MD_DATE_PATTERN.test(trimmed)) return isValidShortDate(trimmed);
   return DATE_PATTERN.test(trimmed);
 }
 
