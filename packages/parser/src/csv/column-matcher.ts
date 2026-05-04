@@ -52,7 +52,15 @@ export const MEMO_COLUMN_PATTERN = /비고|적요|메모|내용|설명|참고|^m
 // server PDF, web CSV, web XLSX, web PDF). Matches Korean bank statement footer
 // rows like "총 합계", "누계", "잔액" that should be skipped during parsing.
 // Includes English equivalents for international exports.
-export const SUMMARY_ROW_PATTERN = /총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|승인\s*합계|결제\s*합계|총\s*(?:사용|이용)|total|sum/i;
+//
+// Boundary constraints prevent false positives on merchant names containing
+// summary keywords (e.g., "합계마트"). Korean keywords use (?<![가-힣]) lookbehind
+// to require start-of-string or non-Korean prefix, and (?:[\s,;]|$) lookahead
+// to require whitespace/delimiter/end after the keyword — so "합계" at a line
+// start or after a space matches, but "합계" inside "합계마트" does not.
+// "소비" and "이월" removed — overly broad terms that match plausible merchant
+// names like "소비마트". English keywords use \b word boundaries (C30-01).
+export const SUMMARY_ROW_PATTERN = /총\s*합\s*계(?![가-힣])(?=[\s,;]|$)|(?<![가-힣])합\s*계(?![가-힣])(?=[\s,;]|$)|(?<![가-힣])소\s*계(?![가-힣])|(?<![가-힣])총\s*계(?![가-힣])|(?<![가-힣])누\s*계(?![가-힣])|(?<![가-힣])잔액(?![가-힣])|(?<![가-힣])당월(?![가-힣])|(?<![가-힣])명세(?![가-힣])|승인\s*합계|결제\s*합계|총\s*(?:사용|이용)|\btotal\b|\bsum\b/i;
 
 // Header keyword vocabulary — shared across all parsers (server CSV, server XLSX,
 // web CSV, web XLSX). Used to validate that a candidate header row actually

@@ -351,7 +351,7 @@ describe('Keyword category Sets', () => {
 // ---------------------------------------------------------------------------
 describe('SUMMARY_ROW_PATTERN', () => {
   it('matches Korean summary variants', () => {
-    const variants = ['총 합계', '합 계', '총 계', '소 계', '합계', '총계', '소계', '누계', '잔액', '이월', '소비', '당월', '명세'];
+    const variants = ['총 합계', '합 계', '총 계', '소 계', '합계', '총계', '소계', '누계', '잔액', '당월', '명세'];
     for (const v of variants) {
       expect(SUMMARY_ROW_PATTERN.test(v)).toBe(true);
     }
@@ -388,6 +388,31 @@ describe('SUMMARY_ROW_PATTERN', () => {
     expect(SUMMARY_ROW_PATTERN.test('총 이용')).toBe(true);
     expect(SUMMARY_ROW_PATTERN.test('총이용')).toBe(true);
     expect(SUMMARY_ROW_PATTERN.test('총 사용 100,000원')).toBe(true);
+  });
+
+  it('matches summary keywords followed by CSV delimiters (C30-01)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합계,,,,123456')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('총 합계,,,,123456')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('합계;123456')).toBe(true);
+  });
+
+  it('does not match merchant names containing summary keywords (C30-01)', () => {
+    // "합계마트" — "합계" is followed by Korean text, not a boundary
+    expect(SUMMARY_ROW_PATTERN.test('합계마트')).toBe(false);
+    // "소비마트" — "소비" removed from pattern entirely
+    expect(SUMMARY_ROW_PATTERN.test('소비마트')).toBe(false);
+    // "합계부" — "합계" followed by Korean character
+    expect(SUMMARY_ROW_PATTERN.test('합계부')).toBe(false);
+    // Embedded in a CSV line with merchant name
+    expect(SUMMARY_ROW_PATTERN.test('2024-01-15,합계마트,5000')).toBe(false);
+    expect(SUMMARY_ROW_PATTERN.test('2024-01-15,소비마트,5000')).toBe(false);
+  });
+
+  it('still matches summary keywords at line start followed by delimiters (C30-01)', () => {
+    // "합계" at line start followed by commas (typical CSV summary row)
+    expect(SUMMARY_ROW_PATTERN.test('합계,,,,123456')).toBe(true);
+    // "합계" preceded by non-Korean text and followed by delimiter
+    expect(SUMMARY_ROW_PATTERN.test('2024-01-15,합계,,123456')).toBe(true);
   });
 });
 

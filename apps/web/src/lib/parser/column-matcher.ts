@@ -47,7 +47,9 @@ export const MEMO_COLUMN_PATTERN = /비고|적요|메모|내용|설명|참고|^m
 // Summary/total row pattern — shared across all parsers. Matches Korean bank
 // statement footer rows like "총 합계", "누계", "잔액" that should be skipped.
 // Must stay in sync with packages/parser/src/csv/column-matcher.ts.
-export const SUMMARY_ROW_PATTERN = /총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|승인\s*합계|결제\s*합계|총\s*(?:사용|이용)|total|sum/i;
+// Boundary constraints prevent false positives on merchant names containing
+// summary keywords (e.g., "합계마트"). See C30-01 for details.
+export const SUMMARY_ROW_PATTERN = /총\s*합\s*계(?![가-힣])(?=[\s,;]|$)|(?<![가-힣])합\s*계(?![가-힣])(?=[\s,;]|$)|(?<![가-힣])소\s*계(?![가-힣])|(?<![가-힣])총\s*계(?![가-힣])|(?<![가-힣])누\s*계(?![가-힣])|(?<![가-힣])잔액(?![가-힣])|(?<![가-힣])당월(?![가-힣])|(?<![가-힣])명세(?![가-힣])|승인\s*합계|결제\s*합계|총\s*(?:사용|이용)|\btotal\b|\bsum\b/i;
 
 // Header keyword vocabulary — must stay in sync with
 // packages/parser/src/csv/column-matcher.ts (C4-07/C7-07).

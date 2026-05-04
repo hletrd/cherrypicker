@@ -381,17 +381,16 @@ describe('parseCSV - edge cases', () => {
   });
 
   test('skips summary rows with expanded Korean variants (C17-01)', () => {
-    // Summary rows like 누계 (cumulative), 잔액 (balance), 이월 (carryover),
-    // 소비 (spending total), 당월 (current month), 명세 (statement) should
-    // be skipped by the CSV parser.
+    // Summary rows like 누계 (cumulative), 잔액 (balance), 당월 (current month),
+    // 명세 (statement) should be skipped by the CSV parser.
+    // Note: "이월" and "소비" were removed from SUMMARY_ROW_PATTERN (C30-01)
+    // because they are overly broad and can match merchant names like "소비마트".
     const content = [
       '이용일,이용처,이용금액',
       '2026-02-01,스타벅스,6000',
       '2026-02-02,이마트,45000',
       '누계,,51000',
       '잔액,,100000',
-      '이월,,50000',
-      '소비,,51000',
       '당월,,51000',
       '명세,,51000',
     ].join('\n');
