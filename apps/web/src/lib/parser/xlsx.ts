@@ -278,7 +278,11 @@ function parseAmount(raw: unknown): number | null {
     return Number.isFinite(raw) ? Math.round(raw) : null;
   }
   if (typeof raw === 'string') {
-    let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+    let cleaned = raw.trim()
+      .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
+      .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
+      .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
+      .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
     // Handle "마이너스" prefix — some Korean bank exports use this instead of
     // a negative sign or parentheses (parity with server-side parseCSVAmount
     // in packages/parser/src/csv/shared.ts C33-03).

@@ -254,6 +254,35 @@ describe('parseCSVAmount', () => {
   test('handles "( 5,000 )" with spaces inside parens', () => {
     expect(parseCSVAmount('( 5,000 )')).toBe(-5000);
   });
+
+  // C53-01: Full-width digit and comma normalization
+  test('parses full-width digits "１２３４" as 1234', () => {
+    expect(parseCSVAmount('１２３４')).toBe(1234);
+  });
+
+  test('parses full-width digits with full-width comma "１，２３４"', () => {
+    expect(parseCSVAmount('１，２３４')).toBe(1234);
+  });
+
+  test('parses full-width amount with Won suffix "１，２３４원"', () => {
+    expect(parseCSVAmount('１，２３４원')).toBe(1234);
+  });
+
+  test('parses full-width amount with Won sign "₩１，２３４"', () => {
+    expect(parseCSVAmount('₩１，２３４')).toBe(1234);
+  });
+
+  test('parses full-width negative with minus "－１，２３４"', () => {
+    expect(parseCSVAmount('－１，２３４')).toBe(-1234);
+  });
+
+  test('parses mixed full-width and ASCII digits "１234"', () => {
+    expect(parseCSVAmount('１234')).toBe(1234);
+  });
+
+  test('parses parenthesized full-width negative "（１，２３４）"', () => {
+    expect(parseCSVAmount('（１，２３４）')).toBe(-1234);
+  });
 });
 
 // ---------------------------------------------------------------------------

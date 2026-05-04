@@ -65,7 +65,11 @@ function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): s
  *  (C37-01) hid the risk of NaN propagation — the `number` return type could
  *  not enforce null checks at the call site. */
 function parseAmount(raw: string): number | null {
-  let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+  let cleaned = raw.trim()
+    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
+    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
+    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
+    .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Handle "마이너스" prefix — some Korean bank exports use this instead of
   // a negative sign or parentheses (parity with server-side parseCSVAmount
   // in packages/parser/src/csv/shared.ts C33-03). Must be checked after

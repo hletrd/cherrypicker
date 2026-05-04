@@ -182,7 +182,7 @@ function isValidYYMMDD(value: string): boolean {
   const month = parseInt(value.slice(2, 4), 10);
   const day = parseInt(value.slice(4, 6), 10);
   if (month < 1 || month > 12) return false;
-  return day >= 1 && day <= new Date(fullYear, month, 0).getDate();
+  return day >= 1 && day <= daysInMonth(fullYear, month);
 }
 
 /** Validate that a cell contains a plausible date. 6-digit strings
@@ -268,7 +268,11 @@ function parseDateToISO(raw: string, errors?: ParseError[]): string {
  *  so callers can distinguish between genuinely zero amounts and parse failures,
  *  matching the CSV parser's isValidAmount() pattern (C33-03). */
 function parseAmount(raw: string): number | null {
-  let cleaned = raw.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+  let cleaned = raw
+    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
+    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
+    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
+    .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Handle "마이너스" prefix — some Korean bank exports use this instead of
   // a negative sign or parentheses (parity with server-side parseCSVAmount
   // in packages/parser/src/csv/shared.ts C33-03).

@@ -46,7 +46,11 @@ function isValidShortDate(cell: string): boolean {
  *  so callers can distinguish between genuinely zero amounts and parse failures,
  *  matching the CSV parser's isValidAmount() pattern (C33-03/C34-01). */
 function parseAmount(raw: string): number | null {
-  let cleaned = raw.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+  let cleaned = raw
+    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
+    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
+    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
+    .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Handle "마이너스" prefix — some Korean bank exports use this instead of
   // a negative sign or parentheses. Parity with web-side parseAmount
   // (apps/web/src/lib/parser/pdf.ts) and CSV shared parseCSVAmount.

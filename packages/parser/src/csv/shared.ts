@@ -34,7 +34,11 @@ export function splitCSVLine(line: string, delimiter: string): string[] {
  *  strips Korean Won suffix, comma separators, and internal whitespace
  *  (C70-04 — matches the web CSV parser's behavior). */
 export function parseCSVAmount(raw: string): number | null {
-  let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+  let cleaned = raw.trim()
+    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits ０-９ -> 0-9
+    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
+    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
+    .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Handle "마이너스" prefix — some Korean bank exports use this instead of
   // a negative sign or parentheses (C32-05). Must be checked before stripping.
   const isManeuners = /^마이너스/.test(cleaned);
