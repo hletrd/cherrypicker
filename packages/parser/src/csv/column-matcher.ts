@@ -52,7 +52,7 @@ export const MEMO_COLUMN_PATTERN = /비고|적요|메모|내용|설명|참고|^m
 // server PDF, web CSV, web XLSX, web PDF). Matches Korean bank statement footer
 // rows like "총 합계", "누계", "잔액" that should be skipped during parsing.
 // Includes English equivalents for international exports.
-export const SUMMARY_ROW_PATTERN = /총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i;
+export const SUMMARY_ROW_PATTERN = /총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|승인\s*합계|결제\s*합계|총\s*(?:사용|이용)|total|sum/i;
 
 // Header keyword vocabulary — shared across all parsers (server CSV, server XLSX,
 // web CSV, web XLSX). Used to validate that a candidate header row actually
@@ -62,15 +62,15 @@ export const HEADER_KEYWORDS: readonly string[] = [
   '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일',
   '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
   '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
-  'date', 'merchant', 'amount', 'total', 'store', 'description',
+  'date', 'merchant', 'amount', 'total', 'store', 'shop', 'price', 'won', 'description',
 ];
 
 // Keyword category Sets for multi-category header detection. A valid header
 // row must contain keywords from at least 2 distinct categories to avoid
 // matching summary rows that only have amount keywords.
 export const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일', 'date']);
-export const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호', 'merchant', 'store', 'description']);
-export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', 'amount', 'total']);
+export const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호', 'merchant', 'store', 'shop', 'description']);
+export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', 'amount', 'total', 'price', 'won']);
 
 /** Check whether a row of trimmed cell values looks like a valid header row
  *  by requiring keywords from at least 2 distinct categories. Normalizes

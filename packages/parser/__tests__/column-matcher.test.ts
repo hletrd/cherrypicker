@@ -357,4 +357,54 @@ describe('SUMMARY_ROW_PATTERN', () => {
     expect(SUMMARY_ROW_PATTERN.test('이마트 서초점')).toBe(false);
     expect(SUMMARY_ROW_PATTERN.test('2026-02-01')).toBe(false);
   });
+
+  it('matches approval/payment total variants (C24)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('승인 합계')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('승인합계')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('결제 합계')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('결제합계')).toBe(true);
+  });
+
+  it('matches total usage variants (C24)', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총 사용')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('총사용')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('총 이용')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('총이용')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('총 사용 100,000원')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Keyword Set completeness — catch drift between Sets and regex patterns
+// ---------------------------------------------------------------------------
+describe('Keyword Set completeness (C24)', () => {
+  it('isValidHeaderRow accepts English-only headers via regex-matched keywords', () => {
+    // Date + Shop + Price: Date matches DATE_KEYWORDS, Shop matches
+    // MERCHANT_KEYWORDS, Price matches AMOUNT_KEYWORDS (all must be in Sets)
+    expect(isValidHeaderRow(['Date', 'Shop', 'Price'])).toBe(true);
+    expect(isValidHeaderRow(['Date', 'Store', 'Amount'])).toBe(true);
+    expect(isValidHeaderRow(['Date', 'Merchant', 'Total'])).toBe(true);
+    expect(isValidHeaderRow(['date', 'shop', 'won'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts headers with all regex-matched English terms', () => {
+    // These terms are only matched by column regex patterns, not by exact
+    // HEADER_KEYWORDS list. They MUST be in the category Sets.
+    expect(isValidHeaderRow(['Date', 'Description', 'Price'])).toBe(true);
+    expect(isValidHeaderRow(['date', 'store', 'total'])).toBe(true);
+  });
+
+  it('AMOUNT_KEYWORDS contains all regex-matched English alternatives', () => {
+    expect(AMOUNT_KEYWORDS.has('price')).toBe(true);
+    expect(AMOUNT_KEYWORDS.has('won')).toBe(true);
+    expect(AMOUNT_KEYWORDS.has('amount')).toBe(true);
+    expect(AMOUNT_KEYWORDS.has('total')).toBe(true);
+  });
+
+  it('MERCHANT_KEYWORDS contains all regex-matched English alternatives', () => {
+    expect(MERCHANT_KEYWORDS.has('shop')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('store')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('merchant')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('description')).toBe(true);
+  });
 });
