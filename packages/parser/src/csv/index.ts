@@ -12,6 +12,20 @@ import {
   hanaAdapter,
   nhAdapter,
   bcAdapter,
+  kakaoAdapter,
+  tossAdapter,
+  kbankAdapter,
+  bnkAdapter,
+  dgbAdapter,
+  suhyupAdapter,
+  jbAdapter,
+  kwangjuAdapter,
+  jejuAdapter,
+  scAdapter,
+  mgAdapter,
+  cuAdapter,
+  kdbAdapter,
+  epostAdapter,
 } from './adapter-factory.js';
 
 const ADAPTERS: BankAdapter[] = [
@@ -25,6 +39,20 @@ const ADAPTERS: BankAdapter[] = [
   hanaAdapter,
   nhAdapter,
   bcAdapter,
+  kakaoAdapter,
+  tossAdapter,
+  kbankAdapter,
+  bnkAdapter,
+  dgbAdapter,
+  suhyupAdapter,
+  jbAdapter,
+  kwangjuAdapter,
+  jejuAdapter,
+  scAdapter,
+  mgAdapter,
+  cuAdapter,
+  kdbAdapter,
+  epostAdapter,
 ];
 
 export function parseCSV(content: string, bank?: BankId): ParseResult {

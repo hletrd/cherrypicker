@@ -263,3 +263,132 @@ export const bcAdapter = createBankAdapter({
   installmentsHeader: '할부',
   categoryHeader: '업종',
 });
+
+// ---------------------------------------------------------------------------
+// Additional bank adapters (14 banks with XLSX configs but previously missing
+// from CSV adapter-factory). These use the same column names as the XLSX
+// adapter configs in packages/parser/src/xlsx/adapters/index.ts (C37-02).
+// ---------------------------------------------------------------------------
+
+export const kakaoAdapter = createBankAdapter({
+  bankId: 'kakao',
+  headerKeywords: ['거래일시', '이용처', '이용금액'],
+  dateHeader: '거래일시',
+  merchantHeader: '이용처',
+  amountHeader: '이용금액',
+});
+
+export const tossAdapter = createBankAdapter({
+  bankId: 'toss',
+  headerKeywords: ['거래일', '이용처', '이용금액'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '이용금액',
+});
+
+export const kbankAdapter = createBankAdapter({
+  bankId: 'kbank',
+  headerKeywords: ['거래일', '이용처', '거래금액'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '거래금액',
+});
+
+export const bnkAdapter = createBankAdapter({
+  bankId: 'bnk',
+  headerKeywords: ['거래일', '가맹점', '이용금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부',
+});
+
+export const dgbAdapter = createBankAdapter({
+  bankId: 'dgb',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+export const suhyupAdapter = createBankAdapter({
+  bankId: 'suhyup',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+export const jbAdapter = createBankAdapter({
+  bankId: 'jb',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+export const kwangjuAdapter = createBankAdapter({
+  bankId: 'kwangju',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+export const jejuAdapter = createBankAdapter({
+  bankId: 'jeju',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+export const scAdapter = createBankAdapter({
+  bankId: 'sc',
+  headerKeywords: ['거래일', '이용처', '이용금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부',
+});
+
+export const mgAdapter = createBankAdapter({
+  bankId: 'mg',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+export const cuAdapter = createBankAdapter({
+  bankId: 'cu',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+export const kdbAdapter = createBankAdapter({
+  bankId: 'kdb',
+  headerKeywords: ['거래일', '이용처', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+export const epostAdapter = createBankAdapter({
+  bankId: 'epost',
+  headerKeywords: ['거래일', '이용처', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});

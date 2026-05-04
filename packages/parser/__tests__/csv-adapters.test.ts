@@ -605,3 +605,132 @@ describe('spaced date format detection (C12-04)', () => {
     expect(result.transactions[0]?.date).toBe('2024-01-15');
   });
 });
+
+// ---------------------------------------------------------------------------
+// C37-02: Additional bank adapters (14 new banks added to CSV adapter-factory)
+// ---------------------------------------------------------------------------
+
+describe('C37-02: additional bank adapters', () => {
+  test('kakao adapter parses kakao-style CSV', () => {
+    const content = [
+      '카카오뱅크 카드 이용내역',
+      '거래일시,이용처,이용금액',
+      '2024-01-15,스타벅스 강남점,5500',
+      '2024-01-20,이마트 서초점,125000',
+    ].join('\n');
+    const result = parseCSV(content, 'kakao');
+    expect(result.bank).toBe('kakao');
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toContain('스타벅스');
+    expect(result.transactions[0]?.amount).toBe(5500);
+  });
+
+  test('toss adapter parses toss-style CSV', () => {
+    const content = [
+      '토스뱅크 카드 이용내역',
+      '거래일,이용처,이용금액',
+      '2024-01-15,카페,3500',
+      '2024-01-20,편의점,1200',
+    ].join('\n');
+    const result = parseCSV(content, 'toss');
+    expect(result.bank).toBe('toss');
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(3500);
+  });
+
+  test('kbank adapter parses kbank-style CSV', () => {
+    const content = [
+      '케이뱅크 카드',
+      '거래일,이용처,거래금액',
+      '2024-01-15,배달의민족,18000',
+    ].join('\n');
+    const result = parseCSV(content, 'kbank');
+    expect(result.bank).toBe('kbank');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(18000);
+  });
+
+  test('bnk adapter parses bnk-style CSV with installments', () => {
+    const content = [
+      'BNK부산은행 카드',
+      '거래일,가맹점,이용금액,할부',
+      '2024-01-15,마트,50000,3',
+      '2024-01-20,카페,4500,0',
+    ].join('\n');
+    const result = parseCSV(content, 'bnk');
+    expect(result.bank).toBe('bnk');
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.installments).toBe(3);
+    expect(result.transactions[1]?.installments).toBeUndefined();
+  });
+
+  test('dgb adapter parses dgb-style CSV', () => {
+    const content = [
+      'DGB대구은행 카드',
+      '거래일,가맹점,거래금액,할부',
+      '2024-01-15,편의점,3500,0',
+    ].join('\n');
+    const result = parseCSV(content, 'dgb');
+    expect(result.bank).toBe('dgb');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(3500);
+  });
+
+  test('sc adapter parses sc-style CSV', () => {
+    const content = [
+      'SC제일은행 카드',
+      '거래일,이용처,이용금액,할부',
+      '2024-01-15,스타벅스,5500,0',
+    ].join('\n');
+    const result = parseCSV(content, 'sc');
+    expect(result.bank).toBe('sc');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.merchant).toContain('스타벅스');
+  });
+
+  test('epost adapter parses epost-style CSV', () => {
+    const content = [
+      '우체국 카드',
+      '거래일,이용처,거래금액,할부',
+      '2024-01-15,마트,35000,0',
+    ].join('\n');
+    const result = parseCSV(content, 'epost');
+    expect(result.bank).toBe('epost');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(35000);
+  });
+
+  test('new adapters use flexible column matching (regex fallback)', () => {
+    // Kakao adapter keywords: ['거래일시', '이용처', '이용금액'].
+    // Use '이용처' to trigger header detection, but swap date column name
+    // to a regex-matched alternative ('승인일') instead of exact '거래일시'.
+    const content = [
+      '카카오뱅크',
+      '승인일,이용처,결제금액',
+      '2024-01-15,카페,5500',
+    ].join('\n');
+    const result = parseCSV(content, 'kakao');
+    // Should parse via regex fallback: '승인일' matches DATE_COLUMN_PATTERN,
+    // '이용처' matches exact + MERCHANT_COLUMN_PATTERN,
+    // '결제금액' matches AMOUNT_COLUMN_PATTERN.
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(5500);
+  });
+
+  test('new adapters handle BOM-prefixed content', () => {
+    const content = '﻿카카오뱅크 카드\n거래일시,이용처,이용금액\n2024-01-15,카페,5500';
+    const result = parseCSV(content, 'kakao');
+    expect(result.transactions).toHaveLength(1);
+  });
+
+  test('new adapters skip summary rows', () => {
+    const content = [
+      '토스뱅크 카드',
+      '거래일,이용처,이용금액',
+      '2024-01-15,카페,3500',
+      '합계,,3500',
+    ].join('\n');
+    const result = parseCSV(content, 'toss');
+    expect(result.transactions).toHaveLength(1);
+  });
+});

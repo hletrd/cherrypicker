@@ -12,7 +12,7 @@ export { parseXLSX } from './xlsx/index.js';
 export { parsePDF } from './pdf/index.js';
 export { parseGenericCSV } from './csv/generic.js';
 export { findColumn, normalizeHeader, DATE_COLUMN_PATTERN, MERCHANT_COLUMN_PATTERN, AMOUNT_COLUMN_PATTERN, INSTALLMENTS_COLUMN_PATTERN, CATEGORY_COLUMN_PATTERN, MEMO_COLUMN_PATTERN, HEADER_KEYWORDS, DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS, isValidHeaderRow } from './csv/column-matcher.js';
-export { createBankAdapter } from './csv/adapter-factory.js';
+export { createBankAdapter, kakaoAdapter, tossAdapter, kbankAdapter, bnkAdapter, dgbAdapter, suhyupAdapter, jbAdapter, kwangjuAdapter, jejuAdapter, scAdapter, mgAdapter, cuAdapter, kdbAdapter, epostAdapter } from './csv/adapter-factory.js';
 export { isValidISODate } from './date-utils.js';
 
 export interface ParseOptions {
