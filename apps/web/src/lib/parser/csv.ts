@@ -122,14 +122,30 @@ function parseInstallments(raw: string | undefined): number | undefined {
 // heuristic in the generic CSV parser. They must be kept in sync with the
 // date formats handled by parseDateStringToISO() in date-utils.ts. If a new
 // date format is added there, add a corresponding pattern here.
+// Note: the short-date pattern (MM/DD) is NOT included here because it
+// matches decimal amounts like "3.5" or "12.34". Short dates are validated
+// separately by isDateLikeShort() with month/day range checks (F20-02).
 const DATE_PATTERNS = [
   /^\d{4}[\s]*[.\-\/][\s]*\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/,  // 2024-01-15, "2024 - 01 - 15"
   /^\d{2}[\s]*[.\-\/][\s]*\d{2}[\s]*[.\-\/][\s]*\d{2}$/,       // 24-01-15 (YY-MM-DD)
-  /^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/,                          // 01/15, "1 / 5" (MM/DD)
   /^\d{4}\d{2}\d{2}$/,                                           // 20240115
   /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,                          // 2024년 1월 15일
   /^\d{1,2}월\s*\d{1,2}일$/,                                    // 1월 15일
 ];
+
+/** Validate short-date format (MM/DD or MM.DD) with month/day range checks.
+ *  This rejects decimal amounts like "12.34" (month 12, day 34 fails) while
+ *  accepting valid short dates like "1/15" (month 1, day 15). Matches the
+ *  PDF parser's isValidShortDate approach and the server-side generic CSV
+ *  parser's isDateLikeShort() (F20-02). */
+function isDateLikeShort(value: string): boolean {
+  const match = value.match(/^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/);
+  if (!match) return false;
+  const parts = value.trim().split(/[.\-\/]/);
+  const month = parseInt(parts[0] ?? '', 10);
+  const day = parseInt(parts[1] ?? '', 10);
+  return month >= 1 && month <= 12 && day >= 1 && day <= 31;
+}
 
 // Korean amount patterns — must recognize all formats that parseAmount
 // handles, including Won sign prefixes (C7-06).
@@ -142,7 +158,8 @@ const AMOUNT_PATTERNS = [
 ];
 
 function isDateLike(value: string): boolean {
-  return DATE_PATTERNS.some((p) => p.test(value.trim()));
+  const trimmed = value.trim();
+  return DATE_PATTERNS.some((p) => p.test(trimmed)) || isDateLikeShort(trimmed);
 }
 
 function isAmountLike(value: string): boolean {

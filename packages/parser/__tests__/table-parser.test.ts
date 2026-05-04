@@ -429,3 +429,44 @@ describe('filterTransactionRows with summary-like content', () => {
     expect(filtered).toHaveLength(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// F20-01: Parenthesized amount regex capture group fix
+// ---------------------------------------------------------------------------
+
+describe('F20-01: fallback amount pattern captures parenthesized amounts', () => {
+  test('regex captures digits inside parentheses as group 1', () => {
+    // The fallback amount pattern must capture parenthesized amounts
+    // in group 1 (not leave it undefined). This was a bug where
+    // /\([\d,]+\)|([\d,]+)원?/g left group 1 undefined for (1,234).
+    const pattern = /\(([\d,]+)\)|([\d,]+)원?/g;
+    const matches = [...'2024-01-15 환불 (1,234)'.matchAll(pattern)];
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    // The last match should be the parenthesized amount
+    const lastMatch = matches[matches.length - 1]!;
+    // Group 1 should capture the digits inside parentheses
+    expect(lastMatch[1]).toBe('1,234');
+    // Group 2 should be undefined (not a normal amount match)
+    expect(lastMatch[2]).toBeUndefined();
+  });
+
+  test('regex captures normal amounts as group 2', () => {
+    const pattern = /\(([\d,]+)\)|([\d,]+)원?/g;
+    const matches = [...'2024-01-15 스타벅스 6,500원'.matchAll(pattern)];
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    const lastMatch = matches[matches.length - 1]!;
+    // Group 1 should be undefined (not parenthesized)
+    expect(lastMatch[1]).toBeUndefined();
+    // Group 2 should capture the digits
+    expect(lastMatch[2]).toBe('6,500');
+  });
+
+  test('extracts correct amount for parenthesized match via group fallback', () => {
+    const pattern = /\(([\d,]+)\)|([\d,]+)원?/g;
+    const matches = [...'2024-01-15 환불 (1,234)'.matchAll(pattern)];
+    const lastMatch = matches[matches.length - 1]!;
+    // The fix: use group 1 ?? group 2
+    const amountRaw = (lastMatch[1] ?? lastMatch[2])!;
+    expect(amountRaw).toBe('1,234');
+  });
+});

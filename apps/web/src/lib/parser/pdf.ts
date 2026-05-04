@@ -513,7 +513,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   // Match normal amounts and parenthesized negatives like (1,234).
   // Parenthesized negatives are common in Korean bank statements for refunds
   // and should be treated as negative amounts by parseAmount() (C17-02).
-  const fallbackAmountPattern = /\([\d,]+\)|([\d,]+)원?/g;
+  const fallbackAmountPattern = /\(([\d,]+)\)|([\d,]+)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
@@ -533,7 +533,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
       if (amountStart > dateEnd) {
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
-          const amountRaw = amountMatch[1]!;
+          const amountRaw = (amountMatch[1] ?? amountMatch[2])!;
           const amount = parseAmount(amountRaw);
           // parseAmount returns null for unparseable inputs (C33-03).
           if (amount === null) {
