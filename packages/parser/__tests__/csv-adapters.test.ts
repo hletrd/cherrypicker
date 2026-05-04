@@ -733,4 +733,121 @@ describe('C37-02: additional bank adapters', () => {
     const result = parseCSV(content, 'toss');
     expect(result.transactions).toHaveLength(1);
   });
+
+  // C39-01: Smoke tests for remaining 7 untested bank adapters
+
+  test('suhyup adapter parses suhyup-style CSV', () => {
+    const content = [
+      '수협 카드 이용내역',
+      '거래일,가맹점,거래금액,할부',
+      '2024-01-15,마트,35000,0',
+      '2024-01-20,카페,4500,0',
+    ].join('\n');
+    const result = parseCSV(content, 'suhyup');
+    expect(result.bank).toBe('suhyup');
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(35000);
+    expect(result.transactions[1]?.amount).toBe(4500);
+  });
+
+  test('jb adapter parses jb-style CSV', () => {
+    const content = [
+      '전북은행 카드',
+      '거래일,가맹점,거래금액,할부',
+      '2024-01-15,편의점,3500,0',
+    ].join('\n');
+    const result = parseCSV(content, 'jb');
+    expect(result.bank).toBe('jb');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(3500);
+  });
+
+  test('kwangju adapter parses kwangju-style CSV', () => {
+    const content = [
+      '광주은행 카드',
+      '거래일,가맹점,거래금액,할부',
+      '2024-01-15,식당,12000,0',
+      '2024-01-20,서점,8500,0',
+    ].join('\n');
+    const result = parseCSV(content, 'kwangju');
+    expect(result.bank).toBe('kwangju');
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(12000);
+  });
+
+  test('jeju adapter parses jeju-style CSV', () => {
+    const content = [
+      '제주은행 카드',
+      '거래일,가맹점,거래금액,할부',
+      '2024-01-15,해산물,45000,0',
+    ].join('\n');
+    const result = parseCSV(content, 'jeju');
+    expect(result.bank).toBe('jeju');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(45000);
+  });
+
+  test('mg adapter parses mg-style CSV', () => {
+    const content = [
+      '새마을금고 카드',
+      '거래일,가맹점,거래금액,할부',
+      '2024-01-15,마트,25000,0',
+    ].join('\n');
+    const result = parseCSV(content, 'mg');
+    expect(result.bank).toBe('mg');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(25000);
+  });
+
+  test('cu adapter parses cu-style CSV', () => {
+    const content = [
+      '신협 카드',
+      '거래일,가맹점,거래금액,할부',
+      '2024-01-15,편의점,2500,0',
+    ].join('\n');
+    const result = parseCSV(content, 'cu');
+    expect(result.bank).toBe('cu');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(2500);
+  });
+
+  test('kdb adapter parses kdb-style CSV', () => {
+    const content = [
+      'KDB산업은행 카드',
+      '거래일,이용처,거래금액,할부',
+      '2024-01-15,카페,5500,0',
+      '2024-01-20,식당,18000,0',
+    ].join('\n');
+    const result = parseCSV(content, 'kdb');
+    expect(result.bank).toBe('kdb');
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toContain('카페');
+    expect(result.transactions[0]?.amount).toBe(5500);
+    expect(result.transactions[1]?.amount).toBe(18000);
+  });
+
+  test('remaining adapters use flexible column matching', () => {
+    // suhyup adapter keywords: ['거래일', '가맹점', '거래금액', '할부'].
+    // Include '가맹점' to trigger header detection, but use regex-matched
+    // alternatives for date and amount columns ('승인일' and '결제금액').
+    const content = [
+      '수협 카드',
+      '승인일,가맹점,결제금액',
+      '2024-01-15,카페,5500',
+    ].join('\n');
+    const result = parseCSV(content, 'suhyup');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(5500);
+  });
+
+  test('remaining adapters handle summary rows', () => {
+    const content = [
+      '전북은행 카드',
+      '거래일,가맹점,거래금액,할부',
+      '2024-01-15,편의점,3500,0',
+      '합계,,3500,',
+    ].join('\n');
+    const result = parseCSV(content, 'jb');
+    expect(result.transactions).toHaveLength(1);
+  });
 });

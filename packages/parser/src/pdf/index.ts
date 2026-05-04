@@ -1,6 +1,6 @@
 import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
-import { parseDateStringToISO } from '../date-utils.js';
+import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
 import { extractText } from './extractor.js';
 import { parseTable, filterTransactionRows, detectHeaderRow, getHeaderColumns } from './table-parser.js';
 import { SUMMARY_ROW_PATTERN } from '../csv/column-matcher.js';
@@ -94,7 +94,7 @@ function findAmountCell(row: string[]): { idx: number; value: string } | null {
   return null;
 }
 
-function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[] | null {
+function tryStructuredParse(text: string, bank: BankId | null): { transactions: RawTransaction[]; errors: ParseError[] } | null {
   try {
     const rows = parseTable(text);
     const txRows = filterTransactionRows(rows);
@@ -109,6 +109,7 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
     let headerLayout = headerIdx !== -1 ? getHeaderColumns(rows[headerIdx]!) : null;
 
     const transactions: RawTransaction[] = [];
+    const parseErrors: ParseError[] = [];
 
     for (const row of txRows) {
       // Skip summary/total rows that happen to have date+amount patterns
@@ -189,13 +190,26 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
 
       const amount = parseAmount(amountValue);
 
-      // parseAmount returns null for unparseable inputs — skip the row
-      // rather than silently treating it as 0 (C34-01).
-      if (amount === null) continue;
+      // parseAmount returns null for unparseable inputs — report error
+      // and skip, matching web-side tryStructuredParse behavior (C39-01).
+      if (amount === null) {
+        const cleaned = amountValue.replace(/원$/, '').replace(/,/g, '').trim();
+        if (cleaned && !/^0+$/.test(cleaned)) {
+          parseErrors.push({ message: `금액을 해석할 수 없습니다: ${amountValue.trim()}` });
+        }
+        continue;
+      }
       if (amount <= 0) continue;
 
+      const dateStr = parseDateStringToISO((row[dateIdx] ?? '').trim());
+      // Report unparseable dates as parse errors, matching web-side behavior
+      // (C39-01). All other parsers report malformed dates.
+      if (!isValidISODate(dateStr) && (row[dateIdx] ?? '').trim()) {
+        parseErrors.push({ message: `날짜를 해석할 수 없습니다: ${(row[dateIdx] ?? '').trim()}` });
+      }
+
       const tx: RawTransaction = {
-        date: parseDateStringToISO((row[dateIdx] ?? '').trim()),
+        date: dateStr,
         merchant,
         amount,
       };
@@ -235,7 +249,7 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
       transactions.push(tx);
     }
 
-    return transactions.length > 0 ? transactions : null;
+    return transactions.length > 0 ? { transactions, errors: parseErrors } : null;
   } catch (err) {
     // Log structured parse failure for diagnostics — the fallback line scanner
     // will still attempt recovery, but the structured parse failure should be
@@ -272,12 +286,12 @@ export async function parsePDF(
 
   // Tier 2: Try structured table parsing
   const structured = tryStructuredParse(text, resolvedBank);
-  if (structured && structured.length > 0) {
+  if (structured && structured.transactions.length > 0) {
     return {
       bank: resolvedBank,
       format: 'pdf',
-      transactions: structured,
-      errors,
+      transactions: structured.transactions,
+      errors: [...structured.errors, ...errors],
     };
   }
 
@@ -332,8 +346,14 @@ export async function parsePDF(
             // Only include positive-amount transactions (C42-01).
             // Negative amounts (refunds) and zero amounts (balance inquiries)
             // don't contribute to spending optimization.
+            const fallbackDate = parseDateStringToISO(dateMatch[1]!);
+            // Report unparseable dates as parse errors, matching web-side
+            // fallback scanner behavior (C39-01).
+            if (!isValidISODate(fallbackDate) && dateMatch[1]!.trim()) {
+              errors.push({ message: `날짜를 해석할 수 없습니다: ${dateMatch[1]!.trim()}` });
+            }
             fallbackTransactions.push({
-              date: parseDateStringToISO(dateMatch[1]!),
+              date: fallbackDate,
               merchant: between.replace(/\s+/g, ' ').trim(),
               amount,
             });
