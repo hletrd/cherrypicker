@@ -1,25 +1,23 @@
-# Cycle 62 Aggregate Review
+# Cycle 63 Aggregate Review
 
 ## Findings (2 actionable, 1 deferred)
 
-### F1: PDF STRICT_AMOUNT_PATTERN missing KRW prefix (BUG - Medium)
-Files: `packages/parser/src/pdf/index.ts` (line 23), `apps/web/src/lib/parser/pdf.ts` (line 72)
-The `STRICT_AMOUNT_PATTERN` used by `findAmountCell()` for structured PDF parsing does NOT
-include KRW prefix matching. The `AMOUNT_PATTERN` (used for table row detection) DOES have
-KRW support via `(?<![a-zA-Z\d])KRW[\d,]+원?(?![a-zA-Z\d])`.
+### F1: Server-side STRICT_AMOUNT_PATTERN missing KRW and 마이너스 prefixes (BUG - Medium)
+Files: `packages/parser/src/pdf/index.ts` (line 23)
+The server-side `STRICT_AMOUNT_PATTERN` used by `findAmountCell()` for structured PDF parsing
+does NOT include KRW or 마이너스 prefix matching. The web-side `pdf.ts` already has both.
 
-This means: table row detection finds rows with "KRW10,000" amounts, but `findAmountCell()`
-cannot extract the KRW amount from the row, causing the structured parser to skip those rows.
-The fallback line scanner handles KRW correctly, so the inconsistency only affects the
-structured parse path.
+The `AMOUNT_PATTERN` (table row detection) DOES have KRW support. This creates a mismatch:
+rows with "KRW10,000" or "마이너스1,234" amounts are detected by `filterTransactionRows`
+but `findAmountCell()` cannot extract them. The fallback line scanner handles these correctly,
+so this only affects the structured parse path.
 
-Fix: Add KRW prefix alternative to STRICT_AMOUNT_PATTERN on both server and web sides.
+Fix: Add KRW and 마이너스 alternatives to STRICT_AMOUNT_PATTERN on server side for parity.
 
-### F2: Test gap for KRW amounts in PDF STRICT_AMOUNT_PATTERN (TEST COVERAGE - Low)
+### F2: No tests for KRW/마이너스 amounts in PDF structured parsing (TEST COVERAGE - Low)
 Files: `packages/parser/__tests__/table-parser.test.ts`
-No tests verify that `getHeaderColumns` or the structured parse path handles KRW-prefixed
-amounts in PDF table cells. Existing KRW tests (C59-01/C59-02) only cover the AMOUNT_PATTERN
-(detection) and fallback pattern, not the STRICT_AMOUNT_PATTERN (structured extraction).
+No tests verify that `getHeaderColumns()` or the structured parse path handles KRW-prefixed
+or 마이너스-prefixed amounts in PDF table cells.
 
 ## Deferred
 ### D1: PDF multi-line header support
@@ -27,6 +25,6 @@ PDFs where header text wraps across 2+ lines remain unsupported. Low frequency, 
 complexity. Deferred to future cycle.
 
 ## Plan
-1. Fix F1: Add KRW prefix to STRICT_AMOUNT_PATTERN in server+web PDF parsers
-2. Fix F2: Add test for KRW amounts in PDF structured parsing
+1. Fix F1: Add KRW and 마이너스 to STRICT_AMOUNT_PATTERN in server PDF parser
+2. Fix F2: Add test for KRW/마이너스 amounts in PDF structured parsing
 3. Run all gates

@@ -21,6 +21,11 @@ const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
 const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/i;
+// STRICT_AMOUNT_PATTERN — used by findAmountCell() for structured PDF parsing.
+// Stricter than AMOUNT_PATTERN: requires digits after Won sign prefix so bare
+// "₩" doesn't match, and includes KRW/마이너스 alternatives for parity with
+// the web-side pdf.ts STRICT_AMOUNT_PATTERN (C63-01).
+const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/i;
 
 /** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
  *  values using month-aware day limits. This prevents decimal amounts
@@ -91,7 +96,9 @@ function findDateCell(row: string[]): { idx: number; value: string } | null {
 
 function findAmountCell(row: string[]): { idx: number; value: string } | null {
   for (let i = row.length - 1; i >= 0; i--) {
-    if (AMOUNT_PATTERN.test((row[i] ?? '').trim())) return { idx: i, value: row[i] ?? '' };
+    // Use STRICT_AMOUNT_PATTERN (not AMOUNT_PATTERN) for structured extraction
+    // to avoid matching bare "₩" without digits (C63-01, parity with web-side).
+    if (STRICT_AMOUNT_PATTERN.test((row[i] ?? '').trim())) return { idx: i, value: row[i] ?? '' };
   }
   return null;
 }

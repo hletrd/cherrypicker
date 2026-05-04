@@ -1113,4 +1113,27 @@ describe('Cycle 62: KRW prefix in PDF STRICT_AMOUNT_PATTERN', () => {
     const rows = parseTable(text);
     expect(rows.length).toBeGreaterThanOrEqual(2);
   });
+
+  // C63-01: Server-side STRICT_AMOUNT_PATTERN must match KRW and 마이너스
+  // for parity with the web-side pdf.ts. These tests verify the pattern used
+  // by findAmountCell() in the server-side structured PDF parser.
+  test('matches 마이너스3,000 as structured amount', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('마이너스3,000')).toBe(true);
+  });
+
+  test('matches 마이너스500 as structured amount (no comma)', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('마이너스500')).toBe(true);
+  });
+
+  test('matches 마이너스1,000원 with Won suffix', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('마이너스1,000원')).toBe(true);
+  });
+
+  test('does NOT match bare ₩ without digits as structured amount (C63-01)', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('₩')).toBe(false);
+  });
+
+  test('does NOT match bare KRW without digits as structured amount', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('KRW')).toBe(false);
+  });
 });
