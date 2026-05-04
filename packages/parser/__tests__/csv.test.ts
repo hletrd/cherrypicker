@@ -350,7 +350,7 @@ describe('parseCSV - edge cases', () => {
     ].join('\n');
     const result = parseCSV(content);
     expect(result.transactions).toHaveLength(0);
-    expect(result.errors.some((error) => error.message.includes('Cannot parse amount'))).toBe(true);
+    expect(result.errors.some((error) => error.message.includes('금액을 해석할 수 없습니다'))).toBe(true);
   });
 
   test('handles header columns with extra whitespace (C5-05)', () => {

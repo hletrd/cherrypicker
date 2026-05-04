@@ -161,7 +161,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   const transactions: RawTransaction[] = [];
 
   if (lines.length === 0) {
-    return { bank, format: 'csv', transactions: [], errors: [{ message: 'Empty file' }] };
+    return { bank, format: 'csv', transactions: [], errors: [{ message: '빈 파일입니다.' }] };
   }
 
   // Find header row — uses shared isValidHeaderRow from column-matcher

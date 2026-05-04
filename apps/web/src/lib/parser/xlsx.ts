@@ -199,7 +199,21 @@ function getBankColumnConfig(bankId: BankId): ColumnConfig {
  *  string parser. */
 import { parseDateStringToISO, isValidDayForMonth, isValidISODate } from './date-utils.js';
 
+// Excel formula error strings — when `raw: true` is used in sheet_to_json,
+// formula cells that produce errors are returned as these strings. Detecting
+// them early produces a clearer error message. Parity with server-side
+// XLSX parser in packages/parser/src/xlsx/index.ts (C14-01).
+const EXCEL_ERROR_PATTERN = /^#(VALUE!|REF!|DIV\/0!|NAME\?|NULL!|NUM!|CALC!|N\/A)$/i;
+
 function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): string {
+  // Detect Excel formula error strings early — produce a specific error
+  // message rather than trying to parse them as dates (C14-01).
+  if (typeof raw === 'string' && EXCEL_ERROR_PATTERN.test(raw.trim())) {
+    if (errors && lineIdx !== undefined) {
+      errors.push({ line: lineIdx + 1, message: `셀 수식 오류: ${raw.trim()}` });
+    }
+    return raw.trim();
+  }
   // Handle Date objects — SheetJS may return these when cellDates is enabled
   // or in certain edge cases. Matches server-side XLSX parser behavior (C10-01).
   if (raw instanceof Date) {

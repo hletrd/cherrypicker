@@ -1,6 +1,35 @@
 import { readFile } from 'fs/promises';
 import pdfParse from 'pdf-parse';
 
+/** Shared page text renderer — uses Y-coordinate changes to insert line
+ *  breaks and X-position gaps to insert spaces between items on the same
+ *  line. Used by both extractText and extractPages to ensure consistent
+ *  text extraction (C14-02). */
+function renderPageText(items: Array<{ str: string; transform: number[] }>): string {
+  let lastY = -1;
+  let lastEndX = -1;
+  let text = '';
+  for (const item of items) {
+    const y = item.transform[5] ?? 0;
+    if (lastY !== -1 && Math.abs(y - lastY) > 5) {
+      text += '\n';
+      lastEndX = -1;
+    } else if (lastEndX !== -1 && item.str.length > 0) {
+      // Add a space between items on the same line to prevent words
+      // from merging. The column-boundary detection in table-parser.ts
+      // relies on whitespace gaps between columns (C13-02/C14-02).
+      text += ' ';
+    }
+    text += item.str;
+    lastY = y;
+    // Track approximate end X position for space insertion heuristic
+    if (item.transform) {
+      lastEndX = (item.transform[4] ?? 0) + item.str.length * 6;
+    }
+  }
+  return text;
+}
+
 export async function extractText(filePath: string): Promise<string> {
   const buffer = await readFile(filePath);
   const pages = await extractPagesFromBuffer(buffer);
@@ -17,29 +46,7 @@ async function extractPagesFromBuffer(buffer: Buffer): Promise<string[]> {
   await pdfParse(buffer, {
     pagerender(pageData: { getTextContent: () => Promise<{ items: Array<{ str: string; transform: number[] }> }> }) {
       return pageData.getTextContent().then((textContent) => {
-        let lastY = -1;
-        let lastEndX = -1;
-        let text = '';
-        for (const item of textContent.items) {
-          const y = item.transform[5];
-          if (lastY !== -1 && Math.abs(y - lastY) > 5) {
-            text += '\n';
-            lastEndX = -1;
-          } else if (lastEndX !== -1 && item.str.length > 0) {
-            // Add a space between items on the same line to prevent words
-            // from merging (e.g., "2024-01-15카드결제" → "2024-01-15 카드결제").
-            // The column-boundary detection in table-parser.ts relies on
-            // whitespace gaps between columns, so preserving spaces is
-            // important for correct table parsing (C13-02).
-            text += ' ';
-          }
-          text += item.str;
-          lastY = y;
-          // Track approximate end X position for space insertion heuristic
-          if (item.transform) {
-            lastEndX = (item.transform[4] ?? 0) + item.str.length * 6;
-          }
-        }
+        const text = renderPageText(textContent.items);
         pages.push(text);
         return text;
       });
@@ -56,16 +63,7 @@ export async function extractPages(filePath: string): Promise<string[]> {
   await pdfParse(buffer, {
     pagerender(pageData: { getTextContent: () => Promise<{ items: Array<{ str: string; transform: number[] }> }> }) {
       return pageData.getTextContent().then((textContent) => {
-        let lastY = -1;
-        let text = '';
-        for (const item of textContent.items) {
-          const y = item.transform[5];
-          if (lastY !== -1 && Math.abs(y - lastY) > 5) {
-            text += '\n';
-          }
-          text += item.str;
-          lastY = y;
-        }
+        const text = renderPageText(textContent.items);
         pages.push(text);
         return text;
       });

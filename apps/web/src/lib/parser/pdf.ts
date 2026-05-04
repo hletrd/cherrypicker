@@ -318,9 +318,29 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
       const content = await page.getTextContent();
-      const pageText = content.items
-        .map((item: PdfTextItem | PdfTextMarkedContent) => ('str' in item ? item.str : ''))
-        .join(' ');
+      // Use Y-coordinate-based line break detection and X-position spacing
+      // to preserve column alignment, matching the server-side extractor.ts
+      // behavior (C14-03). This enables the structured table parser to work
+      // in the browser instead of relying solely on the fallback line scanner.
+      let lastY = -1;
+      let lastEndX = -1;
+      let pageText = '';
+      for (const item of content.items) {
+        if (!('str' in item)) continue;
+        const transform = item.transform as number[];
+        const y = transform[5] ?? 0;
+        if (lastY !== -1 && Math.abs(y - lastY) > 5) {
+          pageText += '\n';
+          lastEndX = -1;
+        } else if (lastEndX !== -1 && item.str.length > 0) {
+          pageText += ' ';
+        }
+        pageText += item.str;
+        lastY = y;
+        if (transform) {
+          lastEndX = (transform[4] ?? 0) + item.str.length * 6;
+        }
+      }
       fullText += pageText + '\n';
     }
     text = fullText;

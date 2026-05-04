@@ -644,4 +644,75 @@ describe('XLSX invalid serial date error reporting', () => {
       cleanup(filePath);
     }
   });
+
+  test('handles Excel formula error cells gracefully (C14-01)', async () => {
+    // When raw: true is used, formula errors are returned as strings like "#VALUE!"
+    // This test verifies that such cells produce specific "셀 수식 오류" error
+    // messages rather than generic "날짜를 해석할 수 없습니다" errors.
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['#VALUE!', '스타벅스', 6000],
+      ['2026-02-02', '이마트', '#REF!'],
+      ['2026-02-03', '마트', 45000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Row 1: #VALUE! date (error) + valid amount => parsed with invalid date + error
+      // Row 2: valid date + #REF! amount => skipped (amount is null)
+      // Row 3: fully valid => parsed
+      expect(result.transactions.length).toBeGreaterThanOrEqual(1);
+      // The last transaction should be fully valid
+      const lastTx = result.transactions.find((t) => t.date === '2026-02-03');
+      expect(lastTx).toBeDefined();
+      expect(lastTx?.amount).toBe(45000);
+      // Should have specific formula error messages (not generic date parse errors)
+      const formulaErrors = result.errors.filter((e) => e.message.includes('셀 수식 오류'));
+      expect(formulaErrors.length).toBeGreaterThanOrEqual(1);
+      expect(formulaErrors.some((e) => e.message.includes('#VALUE!'))).toBe(true);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('handles multiple Excel error types in date cells (C14-01)', async () => {
+    const errorTypes = ['#REF!', '#DIV/0!', '#N/A', '#NAME?', '#NULL!', '#NUM!'];
+    for (const errorStr of errorTypes) {
+      const filePath = createTempXLSX([
+        ['거래일시', '가맹점명', '이용금액'],
+        ['2026-02-01', '테스트', 10000],
+        [errorStr, '에러 테스트', 5000],
+      ]);
+      try {
+        const result = await parseXLSX(filePath);
+        // First row is valid, second row has formula error in date
+        expect(result.transactions.length).toBeGreaterThanOrEqual(1);
+        expect(result.transactions[0]?.date).toBe('2026-02-01');
+        const formulaError = result.errors.find((e) => e.message.includes('셀 수식 오류'));
+        expect(formulaError).toBeDefined();
+        expect(formulaError?.message).toContain(errorStr);
+      } finally {
+        cleanup(filePath);
+      }
+    }
+  });
+
+  test('reports formula error for amount column (C14-01)', async () => {
+    // Formula errors in the amount column produce null from parseAmount,
+    // which triggers a "금액을 해석할 수 없습니다" error (not the formula-specific
+    // error, since parseAmount doesn't have Excel error detection).
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '스타벅스', '#VALUE!'],
+      ['2026-02-02', '이마트', 45000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.amount).toBe(45000);
+      // Amount error is reported as generic parse error
+      expect(result.errors.some((e) => e.message.includes('금액을 해석할 수 없습니다'))).toBe(true);
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });

@@ -54,7 +54,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   const transactions: RawTransaction[] = [];
 
   if (lines.length === 0) {
-    return { bank, format: 'csv', transactions: [], errors: [{ message: 'Empty file' }] };
+    return { bank, format: 'csv', transactions: [], errors: [{ message: '빈 파일입니다.' }] };
   }
 
   // Find header row — scan up to 30 rows for Korean bank exports that have
@@ -163,7 +163,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     const amount = parseCSVAmount(amountRaw);
     if (amount === null) {
       if (amountRaw.trim()) {
-        errors.push({ line: i + 1, message: `Cannot parse amount: ${amountRaw}`, raw: line });
+        errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}`, raw: line });
       }
       continue;
     }

@@ -37,11 +37,25 @@ function normalizeHTML(html: string): string {
 // Field parsers
 // ---------------------------------------------------------------------------
 
+// Excel formula error strings — when `raw: true` is used in sheet_to_json,
+// formula cells that produce errors are returned as these strings rather
+// than as numeric values. Detecting them early produces a clearer error
+// message than the generic "날짜를 해석할 수 없습니다" (C14-01).
+const EXCEL_ERROR_PATTERN = /^#(VALUE!|REF!|DIV\/0!|NAME\?|NULL!|NUM!|CALC!|N\/A)$/i;
+
 function parseDateToISO(
   raw: unknown,
   errors?: import('../types.js').ParseError[],
   lineIdx?: number,
 ): string {
+  // Detect Excel formula error strings early — produce a specific error
+  // message rather than trying to parse them as dates (C14-01).
+  if (typeof raw === 'string' && EXCEL_ERROR_PATTERN.test(raw.trim())) {
+    if (errors && lineIdx !== undefined) {
+      errors.push({ line: lineIdx + 1, message: `셀 수식 오류: ${raw.trim()}` });
+    }
+    return raw.trim();
+  }
   // Handle Date objects — SheetJS may return these when cellDates is enabled
   // or in certain edge cases. Defensive hardening (C6-04).
   if (raw instanceof Date) {
