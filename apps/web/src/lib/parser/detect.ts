@@ -108,7 +108,10 @@ export function detectFormatFromFile(file: File): 'csv' | 'xlsx' | 'pdf' {
   const ext = file.name.split('.').pop()?.toLowerCase();
   if (ext === 'xlsx' || ext === 'xls') return 'xlsx';
   if (ext === 'pdf') return 'pdf';
-  return 'csv'; // default
+  // Both .csv and .tsv are handled by the CSV parser — delimiter detection
+  // in detectCSVDelimiter() auto-detects tabs vs commas (parity with server-side
+  // packages/parser/src/detect.ts which handles .tsv explicitly).
+  return 'csv';
 }
 
 /**

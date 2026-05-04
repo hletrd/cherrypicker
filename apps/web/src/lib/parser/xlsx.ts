@@ -475,17 +475,27 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
 
-    // Forward-fill date column for merged cells
+    // Forward-fill date column for merged cells.
+    // Skip forward-fill for summary row values to prevent summary text
+    // from contaminating subsequent data rows. Parity with server-side
+    // XLSX parser in packages/parser/src/xlsx/index.ts (C47-01).
     const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
     if (dateCol !== -1 && rawDateValue !== '' && rawDateValue != null) {
-      lastDate = rawDateValue;
+      const dateStr = String(rawDateValue);
+      if (!SUMMARY_ROW_PATTERN.test(dateStr)) {
+        lastDate = rawDateValue;
+      }
     }
     const dateRaw = dateCol !== -1 ? (rawDateValue !== '' && rawDateValue != null ? rawDateValue : lastDate) : '';
 
-    // Forward-fill merchant column for merged cells
+    // Forward-fill merchant column for merged cells.
+    // Skip forward-fill for summary row values (parity with server-side C47-01).
     const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
     if (merchantCol !== -1 && rawMerchantValue !== '' && rawMerchantValue != null) {
-      lastMerchant = rawMerchantValue;
+      const merchantStr = String(rawMerchantValue);
+      if (!SUMMARY_ROW_PATTERN.test(merchantStr)) {
+        lastMerchant = rawMerchantValue;
+      }
     }
     const merchantRaw = merchantCol !== -1
       ? (rawMerchantValue !== '' && rawMerchantValue != null ? rawMerchantValue : lastMerchant)

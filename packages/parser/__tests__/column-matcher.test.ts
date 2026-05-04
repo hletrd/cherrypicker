@@ -414,6 +414,17 @@ describe('SUMMARY_ROW_PATTERN', () => {
     // "합계" preceded by non-Korean text and followed by delimiter
     expect(SUMMARY_ROW_PATTERN.test('2024-01-15,합계,,123456')).toBe(true);
   });
+
+  it('matches 합산 (subtotal/aggregate) variant', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합산')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('합산 1,000,000원')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('합산,,,,123456')).toBe(true);
+  });
+
+  it('does not false-positive on merchant names containing 합산', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합산마트')).toBe(false);
+    expect(SUMMARY_ROW_PATTERN.test('합산부')).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

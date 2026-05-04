@@ -1,34 +1,22 @@
-# Implementation Plan -- Cycle 47
+# Implementation Plan -- Cycle 48
 
-## P1. Add "합산" to SUMMARY_ROW_PATTERN [MEDIUM]
-**File**: `packages/parser/src/csv/column-matcher.ts`
-**What**: Add `(?<![가-힣])합\s*산(?![가-힣])` to SUMMARY_ROW_PATTERN for bank exports that use 합산 instead of 합계.
+## P1. Sync web-side SUMMARY_ROW_PATTERN with server-side [MEDIUM]
+**File**: `apps/web/src/lib/parser/column-matcher.ts`
+**What**: Add `(?<![가-힣])합\s*산(?![가-힣])` to web-side SUMMARY_ROW_PATTERN. Server-side already has this term (added in cycle 47), but web-side was missed.
 
-## P2. Remove stale .omc state file [LOW]
-**File**: `packages/parser/src/csv/.omc/state/last-tool-error.json`
-**What**: Delete the OMC state file from the source tree.
+## P2. Add SUMMARY_ROW_PATTERN guard to web-side XLSX forward-fill [MEDIUM]
+**File**: `apps/web/src/lib/parser/xlsx.ts`
+**What**: Add `SUMMARY_ROW_PATTERN.test()` check before updating `lastDate` and `lastMerchant` in the forward-fill logic, matching server-side behavior in `packages/parser/src/xlsx/index.ts` lines 300-304. Without this guard, summary row values contaminate forward-filled data.
 
-## P3. Add amount parsing edge case tests [MEDIUM]
-**File**: `packages/parser/__tests__/csv-shared.test.ts`
-**What**: Add tests for `-`, `0원`, `-0`, spaces-only, Won-sign with spaces.
+## P3. Add `.tsv` to web-side detectFormatFromFile [LOW]
+**File**: `apps/web/src/lib/parser/detect.ts`
+**What**: Add explicit `.tsv` extension check. Currently `.tsv` falls through to the default 'csv' return, which works but doesn't match server-side explicit handling.
 
-## P4. XLSX forward-fill summary row guard [LOW]
-**File**: `packages/parser/src/xlsx/index.ts`
-**What**: Skip forward-fill of date/merchant values that match SUMMARY_ROW_PATTERN.
-
-## Deferred
-- PDF table parser code duplication (D-01)
-- CSV/web adapter duplication (D-01)
-
-## P3. Summary Row Pattern [MEDIUM]
-**File**: `packages/parser/src/csv/column-matcher.ts`
-**What**: Add 이월잔액|전월이월|이월금액 with boundary guards
-
-## P4. Tests
-**File**: `packages/parser/__tests__/table-parser.test.ts`
-**What**: Tests for new patterns and summary row edge cases
+## P4. Add `합산` test to column-matcher tests [LOW]
+**File**: `packages/parser/__tests__/column-matcher.test.ts`
+**What**: Add test case verifying "합산" summary row is correctly matched.
 
 ## Deferred
-- D-01: Server/web shared module (architectural)
-- D-02: PDF multi-line headers (edge case, deferred)
-- D-03: Web CSV 10 hand-rolled adapters -> factory pattern
+- D-01: Server/web shared module (architectural refactor)
+- D-02: PDF multi-line headers (edge case)
+- D-03: Web CSV hand-rolled adapters -> factory pattern
