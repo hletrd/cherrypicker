@@ -1,31 +1,34 @@
-# Cycle 3 — Test Engineer
+# Test Engineer — Cycle 3
 
-**Date:** 2026-04-24
-**Reviewer:** test-engineer
-**Scope:** Full repository
+## F-TEST-01: No XLSX parser tests for actual parsing behavior
+**Severity: High | Confidence: High**
+**File**: packages/parser/__tests__/xlsx-parity.test.ts
 
----
+The only XLSX test checks config parity between server and web. Zero tests verify actual XLSX parsing (HTML-as-XLS, serial dates, multi-sheet, column matching, amount parsing). This was deferred from cycle 2.
 
-## C3-T01: No test for duplicate keyword detection across keyword files
+## F-TEST-02: No PDF parser tests
+**Severity: High | Confidence: High**
+**File**: packages/parser/__tests__/
 
-- **Severity:** LOW
-- **Confidence:** High
-- **File+line:** `packages/core/src/categorizer/keywords.ts`, `packages/core/src/categorizer/keywords-english.ts`
-- **Description:** The duplicate `SHAKE SHACK KOREA` entry across MERCHANT_KEYWORDS and ENGLISH_KEYWORDS (C3-CR01) was not caught by any automated test. Adding a test that verifies no duplicate keys exist across the merged `ALL_KEYWORDS` map would prevent future duplicates from being silently introduced.
-- **Failure scenario:** Another duplicate keyword is added across files with different category values, silently changing categorization behavior.
-- **Fix:** Add a test in `packages/core/__tests__/categorizer.test.ts` that checks `ALL_KEYWORDS` construction produces no key collisions (i.e., that no key appears in more than one source file with a different value).
+The PDF parser has a 3-tier approach (structured, fallback line scanning, LLM) — none tested. table-parser.ts column boundary detection, extractor.ts page extraction, and llm-fallback.ts JSON extraction are all untested. Deferred from cycle 2.
 
-## C3-T02: No test verifying FALLBACK_GROUPS and FALLBACK_CATEGORY_LABELS consistency
+## F-TEST-03: No encoding detection tests (EUC-KR / CP949 / UTF-8)
+**Severity: Medium | Confidence: High**
 
-- **Severity:** LOW
-- **Confidence:** High
-- **File+line:** `apps/web/src/components/dashboard/TransactionReview.svelte:27-46`, `apps/web/src/lib/category-labels.ts:32-110`
-- **Description:** Similar to C2-T02/C2-T08 which addressed CATEGORY_NAMES_KO and FALLBACK_CATEGORY_LABELS consistency, there's no test verifying that FALLBACK_GROUPS in TransactionReview matches the taxonomy. This is the fourth independent hardcoded map (C3-A01).
-- **Failure scenario:** FALLBACK_GROUPS is updated but FALLBACK_CATEGORY_LABELS is not (or vice versa), causing inconsistent UI when the taxonomy fetch fails.
-- **Fix:** Add a test that verifies every category ID in FALLBACK_GROUPS has a corresponding entry in FALLBACK_CATEGORY_LABELS with the same Korean label.
+The detectFormat function always reads as UTF-8. No test verifies behavior with EUC-KR encoded files.
 
----
+## F-TEST-04: CSV adapter tests only cover KB and Samsung
+**Severity: Medium | Confidence: High**
+**File**: packages/parser/__tests__/csv.test.ts
 
-## Final Sweep
+Only sample-kb.csv and sample-samsung.csv fixtures have parsing tests. 8 other bank adapters (hyundai, ibk, woori, shinhan, lotte, hana, nh, bc) have fixtures but no tests.
 
-Test coverage is solid for the core packages (197 tests across 7 packages). The main gaps are in cross-map consistency (C3-T01, C3-T02). E2E tests (74 green) cover the critical upload-analyze-reoptimize flow. No flaky test patterns detected.
+## F-TEST-05: No test for generic CSV parser with unknown bank
+**Severity: Medium | Confidence: High**
+
+The generic CSV parser is the fallback for unrecognized banks. No test verifies it works with non-bank CSV files that have valid Korean credit card headers.
+
+## F-TEST-06: No test for semicolon/tab delimiter parsing end-to-end
+**Severity: Low | Confidence: Medium**
+
+detectCSVDelimiter is tested, but no test verifies that actual parsing works with non-comma delimiters.

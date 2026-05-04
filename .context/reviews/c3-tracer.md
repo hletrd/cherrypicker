@@ -1,30 +1,27 @@
-# Cycle 3 — Tracer
+# Tracer — Cycle 3
 
-**Date:** 2026-04-24
-**Reviewer:** tracer
-**Scope:** Full repository — causal tracing of suspicious flows
+## F-TRC-01: ColumnMatcher adoption gap — web-side CSV adapters untouched
+**Severity: High | Confidence: High**
+**File**: apps/web/src/lib/parser/csv.ts
 
----
+Adoption matrix after cycles 1-2:
+- Server CSV adapter-factory: ColumnMatcher YES
+- Server CSV generic: ColumnMatcher YES
+- Server XLSX: ColumnMatcher YES
+- Web CSV generic: ColumnMatcher YES
+- Web XLSX: ColumnMatcher YES
+- **Web CSV bank adapters (10 files): ColumnMatcher NO — still uses indexOf()**
 
-## C3-TR01: Duplicate keyword shadow flow — `SHAKE SHACK KOREA` in merged ALL_KEYWORDS
+The web-side bank adapters are the last remaining parsers using exact string matching.
 
-- **Severity:** LOW
-- **Confidence:** High
-- **File+line:** `packages/core/src/categorizer/matcher.ts:8-13`, `packages/core/src/categorizer/keywords.ts:9187`, `packages/core/src/categorizer/keywords-english.ts:108`
-- **Description:** Traced the data flow for a transaction with merchant "SHAKE SHACK KOREA":
-  1. `MerchantMatcher.match()` is called
-  2. Line 47: `ALL_KEYWORDS[lower]` — exact match lookup against the merged map
-  3. The merged map is built by `{...MERCHANT_KEYWORDS, ...ENGLISH_KEYWORDS, ...}` (line 9-12)
-  4. Since `SHAKE SHACK KOREA` exists in both MERCHANT_KEYWORDS and ENGLISH_KEYWORDS, the ENGLISH_KEYWORDS value overwrites the MERCHANT_KEYWORDS value during spread
-  5. Both values are `'dining.fast_food'`, so the behavior is correct today
-  6. But if either entry is changed independently, the other becomes a silent shadow — the developer sees their entry in the source file and assumes it's active, but it's actually being overwritten
-- **Competing hypotheses:**
-  - H1: The duplicate is intentional (belt-and-suspenders approach) — LOW probability, because no comment documents this intent
-  - H2: The duplicate is an oversight from adding English keywords without checking for existing entries — HIGH probability
-- **Fix:** Remove duplicate from keywords-english.ts. Add a build-time or test-time check for duplicate keys across keyword files.
+## F-TRC-02: HEADER_KEYWORDS vocabulary split across 4 independent copies
+**Severity: Medium | Confidence: High**
+**Files**: generic.ts:47-51, xlsx/index.ts:133-137, web/csv.ts:158-162, web/xlsx.ts:369-373
 
----
+All 4 copies must be updated in lockstep when a new keyword is added. The keyword category Sets (DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS) are also duplicated 4 times.
 
-## Final Sweep
+## F-TRC-03: Server-side XLSX multi-sheet selection inconsistency
+**Severity: Medium | Confidence: High**
+**Files**: packages/parser/src/xlsx/index.ts:117-124 vs apps/web/src/lib/parser/xlsx.ts:319-337
 
-Traced the critical data flows: statement upload -> parse -> categorize -> optimize -> display. The categorization flow through the merged keyword map (C3-TR01) is the most interesting trace result. The optimization flow through greedy.ts is well-understood from prior cycles. The sessionStorage persistence flow has been hardened through multiple prior fixes (C22-03, C74-02, C75-03, C76-01).
+Server returns first sheet with transactions. Web selects sheet with most transactions. Different behavior for the same data.
