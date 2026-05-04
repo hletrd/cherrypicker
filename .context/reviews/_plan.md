@@ -1,71 +1,71 @@
-# Cycle 21 Implementation Plan
+# Cycle 22 Implementation Plan
 
 ## Fixes (ordered by priority)
 
-### 1. F21-01: CSV generic isDateLikeShort month-aware validation (MEDIUM)
+### 1. C22-01: Full-width dot in date patterns (MEDIUM — FORMAT DIVERSITY)
 
-**Files:** `packages/parser/src/csv/generic.ts:37-44`, `apps/web/src/lib/parser/csv.ts:141-148`
+**Files:**
+- `packages/parser/src/csv/generic.ts` — DATE_PATTERNS (lines 24-30)
+- `packages/parser/src/date-utils.ts` — parseDateStringToISO full match + short match
+- `apps/web/src/lib/parser/csv.ts` — DATE_PATTERNS (lines 128-134)
+- `apps/web/src/lib/parser/date-utils.ts` — parseDateStringToISO full match + short match
+- `packages/parser/src/pdf/index.ts` — fallbackDatePattern (line 277), STRICT_DATE_PATTERN (line 15), SHORT_MD_DATE_PATTERN (line 19)
+- `apps/web/src/lib/parser/pdf.ts` — fallbackDatePattern (line 509), STRICT_DATE_PATTERN (line 38), SHORT_MD_DATE_PATTERN (line 42)
 
-**Problem:** `isDateLikeShort()` uses `day <= 31` instead of month-aware validation. Impossible dates like "2/31", "4/31", "6/31", "9/31", "11/31" pass validation, inconsistent with PDF parsers which use `MAX_DAYS_PER_MONTH`.
+**Problem:** Date regexes only match ASCII `.` separator. Korean bank exports occasionally use full-width dot (U+FF0E `．`) or ideographic full stop (U+3002 `。`). Dates like `2024．01．15` fail to parse, causing transaction loss.
 
-**Fix:** Import `daysInMonth` from `date-utils.ts` and replace `day <= 31` with `day <= daysInMonth(new Date().getFullYear(), month)`. The `daysInMonth` function uses the Date constructor which correctly handles leap years. Since this is for column detection heuristics (not date parsing), using the current year is acceptable -- the important thing is rejecting impossible month/day combinations.
+**Fix:** Update `[.\-\/]` character classes in date regexes to include full-width dot variants. In regex: `[.\-\/\．\。]` or equivalently `[.\-\/．。]`.
 
-For the server side:
-```typescript
-import { daysInMonth } from '../date-utils.js';
+Specific changes per file:
 
-function isDateLikeShort(value: string): boolean {
-  const match = value.match(/^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/);
-  if (!match) return false;
-  const parts = value.trim().split(/[.\-\/]/);
-  const month = parseInt(parts[0] ?? '', 10);
-  const day = parseInt(parts[1] ?? '', 10);
-  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
-}
+**CSV DATE_PATTERNS** (both server and web):
+```ts
+const DATE_PATTERNS = [
+  /^\d{4}[\s]*[.\-\/．。][\s]*\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}$/,  // 2024-01-15, 2024．01．15
+  /^\d{2}[\s]*[.\-\/．。][\s]*\d{2}[\s]*[.\-\/．。][\s]*\d{2}$/,       // 24-01-15, 24．01．15
+  /^\d{4}\d{2}\d{2}$/,                                           // 20240115
+  /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,                          // 2024년 1월 15일
+  /^\d{1,2}월\s*\d{1,2}일$/,                                    // 1월 15일
+];
 ```
 
-For the web side (web has its own date-utils.ts):
-```typescript
-import { daysInMonth } from './date-utils.js';
+**date-utils.ts parseDateStringToISO** (both server and web):
+- Full date match: `/^(\d{4})[\s]*[.\-\/．。][\s]*(\d{1,2})[\s]*[.\-\/．。][\s]*(\d{1,2})/`
+- Short year match: `/^(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})$/`
+- Short date match: `/^(\d{1,2})[.\-\/．。](\d{1,2})$/`
+- Also update split pattern: `value.trim().split(/[.\-\/．。]/)`
 
-function isDateLikeShort(value: string): boolean {
-  const match = value.match(/^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/);
-  if (!match) return false;
-  const parts = value.trim().split(/[.\-\/]/);
-  const month = parseInt(parts[0] ?? '', 10);
-  const day = parseInt(parts[1] ?? '', 10);
-  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
-}
+**PDF STRICT_DATE_PATTERN** (both server and web):
+- `/(\d{4})[.\-\/．。](\d{1,2})[.\-\/．。](\d{1,2})/`
+
+**PDF SHORT_YEAR_DATE_PATTERN** (both server and web):
+- `/(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})/`
+
+**PDF SHORT_MD_DATE_PATTERN** (both server and web):
+- `/^\d{1,2}[.\-\/．。]\d{1,2}$/`
+
+**PDF isValidShortDate split** (both server and web):
+- `cell.split(/[.\-\/．。]/)`
+
+**PDF fallbackDatePattern** (both server and web):
+- Update `[.\-\/]` to `[.\-\/．。]` in all date sub-patterns
+
+**Tests:** Add test cases in `packages/parser/__tests__/date-utils.test.ts` and `packages/parser/__tests__/csv.test.ts`:
+- `2024．01．15` → `2024-01-15`
+- `24．01．15` → `2024-01-15`
+- `1．15` → inferred year + `01-15`
+- `2024。01。15` → `2024-01-15`
+
+### 2. C22-02: Web CSV reservedCols -1 filter parity (LOW)
+
+**File:** `apps/web/src/lib/parser/csv.ts` line 240
+
+**Fix:** Add `.filter((c) => c !== -1)` to match server-side:
+```ts
+const reservedCols = new Set([dateCol, amountCol, installmentsCol, categoryCol, memoCol].filter((c) => c !== -1));
 ```
-
-**Tests:** Add tests in `packages/parser/__tests__/csv.test.ts`:
-- "2/31" should NOT be detected as a date column
-- "4/31" should NOT be detected as a date column
-- "2/28" should be detected as a valid date
-- "1/31" should be detected as a valid date
-
-### 2. F21-02: Web XLSX parseAmount whitespace stripping (LOW)
-
-**File:** `apps/web/src/lib/parser/xlsx.ts:281`
-
-**Fix:** Add `.replace(/\s/g, '')` after the comma removal:
-```typescript
-let cleaned = raw.trim().replace(/원$/, '').replace(/[₩𝐖]/g, '').replace(/,/g, '').replace(/\s/g, '');
-```
-
-**Tests:** Add test in existing XLSX parity test for whitespace amounts.
-
-### 3. F21-03: Server CSV parseCSVAmount whitespace strip order (LOW)
-
-**File:** `packages/parser/src/csv/shared.ts:37`
-
-**Fix:** Move whitespace stripping before parenthesized negative check for consistency:
-```typescript
-let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-```
-(Currently `.replace(/\s/g, '')` is last, move it to same position as other parsers.)
 
 **Tests:** Existing tests should continue to pass.
 
 ## Deferred
-- D-01 through D-09: Same as cycle 20 (architecture, build system, UI concerns)
+- D-01 through D-09: Same as cycle 21 (architecture, build system, UI concerns)

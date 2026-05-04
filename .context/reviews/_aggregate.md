@@ -1,16 +1,19 @@
-# Cycle 21 Aggregate Review
+# Cycle 22 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 21
-**Tests:** 495 bun + 236 vitest = 731 total
+**Cycles completed:** 22
+**Tests:** 499 bun + 239 vitest = 738 total
 
-## Actionable Findings (3)
+## Actionable Findings (2)
 
 | ID | Severity | Description | File |
 |---|---|---|---|
-| F21-01 | MEDIUM | CSV generic `isDateLikeShort` uses `day <= 31` instead of month-aware validation; impossible dates like "2/31" pass, inconsistent with PDF parsers which use `MAX_DAYS_PER_MONTH` | `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts` |
-| F21-02 | LOW | Web XLSX `parseAmount` missing whitespace stripping (`.replace(/\s/g, '')`); server XLSX and both CSV parsers have it | `apps/web/src/lib/parser/xlsx.ts` |
-| F21-03 | LOW | Server CSV `parseCSVAmount` strips whitespace after parenthesized negative check; should strip before for consistency with all other parsers | `packages/parser/src/csv/shared.ts` |
+| C22-01 | MEDIUM | Full-width dot (U+FF0E `．`) and ideographic full stop (U+3002 `。`) not supported in date patterns — dates like `2024．01．15` fail to parse in CSV and PDF parsers. The column-matcher's `normalizeHeader` already strips U+FF0E for headers, but data cells are parsed raw. | `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`, `packages/parser/src/pdf/index.ts`, `apps/web/src/lib/parser/pdf.ts`, both `date-utils.ts` |
+| C22-02 | LOW | Server generic CSV `reservedCols` filters `-1` from Set but web-side does not — inconsistent parity (harmless but sloppy) | `apps/web/src/lib/parser/csv.ts` |
+
+## Trend
+
+Findings continue to decline (2 this cycle vs 3 in cycle 21, 2-3 in cycle 20). Both findings are concrete and actionable. Format diversity coverage is converging.
 
 ## Deferred Items (carried from prior cycles)
 
@@ -27,6 +30,6 @@
 | D-09 | XLSX forward-fill code duplication | Requires shared module (D-01) |
 
 ## Test Baseline
-- 495 bun tests passing
-- 236 vitest tests passing
+- 499 bun tests passing
+- 239 vitest tests passing
 - 0 failures
