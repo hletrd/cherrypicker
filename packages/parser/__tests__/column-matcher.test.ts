@@ -385,6 +385,29 @@ describe('SUMMARY_ROW_PATTERN', () => {
 });
 
 // ---------------------------------------------------------------------------
+// isValidHeaderRow edge cases — summary rows with date-like content (C26)
+// ---------------------------------------------------------------------------
+describe('isValidHeaderRow rejects summary rows with date context (C26)', () => {
+  it('rejects row with date-format string and summary keyword', () => {
+    // A summary row that happens to contain a date-like value should not
+    // be recognized as a header — it only has amount-category keywords.
+    expect(isValidHeaderRow(['2024-01-15', '합계', '50000'])).toBe(false);
+  });
+
+  it('rejects row with short date and approval total keyword', () => {
+    expect(isValidHeaderRow(['01/15', '승인합계', '100,000'])).toBe(false);
+  });
+
+  it('rejects row with total usage and numeric data', () => {
+    expect(isValidHeaderRow(['총사용', '200,000', '1234'])).toBe(false);
+  });
+
+  it('rejects row with English total and date-like content', () => {
+    expect(isValidHeaderRow(['total', '50,000', '20240115'])).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Keyword Set completeness — catch drift between Sets and regex patterns
 // ---------------------------------------------------------------------------
 describe('Keyword Set completeness (C24)', () => {

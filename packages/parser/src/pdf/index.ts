@@ -155,13 +155,17 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
       }
       // Fallback: if no merchant from header or header column is empty,
       // use the cell between date and amount (positional heuristic).
-      if (!merchant && dateIdx < amountIdx) {
+      if (!merchant && dateIdx !== amountIdx) {
         // Find the longest text cell between date and amount — this is
         // more likely to be the merchant name than the first non-empty
         // cell, which might be a short category label (C15-04).
+        // Handles both normal (date < amount) and reversed (amount < date)
+        // column orderings in PDF tables (C26-01).
+        const lo = Math.min(dateIdx, amountIdx) + 1;
+        const hi = Math.max(dateIdx, amountIdx);
         let bestIdx = -1;
         let bestLen = 0;
-        for (let i = dateIdx + 1; i < amountIdx; i++) {
+        for (let i = lo; i < hi; i++) {
           const cellText = (row[i] ?? '').trim();
           if (cellText.length > bestLen) {
             bestLen = cellText.length;

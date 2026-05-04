@@ -411,6 +411,25 @@ describe('getHeaderColumns', () => {
     expect(layout).not.toBeNull();
     expect(layout!.memoCol).toBe(3);
   });
+
+  test('identifies columns with reversed order (amount before date) (C26-01)', () => {
+    // Some PDF exports have amount before date — the header column detection
+    // should correctly identify column positions regardless of order.
+    const layout = getHeaderColumns(['이용금액', '가맹점명', '이용일']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(2);
+    expect(layout!.merchantCol).toBe(1);
+    expect(layout!.amountCol).toBe(0);
+  });
+
+  test('identifies columns with reversed order and extras (C26-01)', () => {
+    const layout = getHeaderColumns(['금액', '할부', '가맹점', '날짜']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(3);
+    expect(layout!.merchantCol).toBe(2);
+    expect(layout!.amountCol).toBe(0);
+    expect(layout!.installmentsCol).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

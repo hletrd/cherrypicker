@@ -354,10 +354,15 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
       if (merchantIdx >= 0 && merchantIdx < row.length) {
         merchant = (row[merchantIdx] ?? '').trim();
       }
-      if (!merchant && dateIdx < amountIdx) {
+      if (!merchant && dateIdx !== amountIdx) {
+        // Find the longest text cell between date and amount.
+        // Handles both normal (date < amount) and reversed (amount < date)
+        // column orderings in PDF tables (C26-01).
+        const lo = Math.min(dateIdx, amountIdx) + 1;
+        const hi = Math.max(dateIdx, amountIdx);
         let bestIdx = -1;
         let bestLen = 0;
-        for (let i = dateIdx + 1; i < amountIdx; i++) {
+        for (let i = lo; i < hi; i++) {
           const cellText = (row[i] ?? '').trim();
           if (cellText.length > bestLen) {
             bestLen = cellText.length;
