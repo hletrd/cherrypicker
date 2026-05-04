@@ -44,6 +44,11 @@ export const INSTALLMENTS_COLUMN_PATTERN = /할부|할부개월|할부기간|할
 export const CATEGORY_COLUMN_PATTERN = /업종|카테고리|분류|업종분류|업종명|^category$|^type$/i;
 export const MEMO_COLUMN_PATTERN = /비고|적요|메모|내용|설명|참고|^memo$|^note$|^remarks?$/i;
 
+// Summary/total row pattern — shared across all parsers. Matches Korean bank
+// statement footer rows like "총 합계", "누계", "잔액" that should be skipped.
+// Must stay in sync with packages/parser/src/csv/column-matcher.ts.
+export const SUMMARY_ROW_PATTERN = /총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i;
+
 // Header keyword vocabulary — must stay in sync with
 // packages/parser/src/csv/column-matcher.ts (C4-07/C7-07).
 export const HEADER_KEYWORDS: readonly string[] = [

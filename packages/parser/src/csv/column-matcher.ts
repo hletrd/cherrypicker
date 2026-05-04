@@ -48,6 +48,12 @@ export const INSTALLMENTS_COLUMN_PATTERN = /할부|할부개월|할부기간|할
 export const CATEGORY_COLUMN_PATTERN = /업종|카테고리|분류|업종분류|업종명|^category$|^type$/i;
 export const MEMO_COLUMN_PATTERN = /비고|적요|메모|내용|설명|참고|^memo$|^note$|^remarks?$/i;
 
+// Summary/total row pattern — shared across all parsers (server CSV, server XLSX,
+// server PDF, web CSV, web XLSX, web PDF). Matches Korean bank statement footer
+// rows like "총 합계", "누계", "잔액" that should be skipped during parsing.
+// Includes English equivalents for international exports.
+export const SUMMARY_ROW_PATTERN = /총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i;
+
 // Header keyword vocabulary — shared across all parsers (server CSV, server XLSX,
 // web CSV, web XLSX). Used to validate that a candidate header row actually
 // contains column names rather than metadata text. Includes English equivalents
