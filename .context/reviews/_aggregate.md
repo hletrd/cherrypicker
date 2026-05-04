@@ -1,49 +1,54 @@
-# Cycle 7 Aggregate Review
+# Cycle 9 Review Aggregate
 
-## Summary
-8 new findings from code review. Baseline: 218 vitest + 201 bun tests passing.
+**Date:** 2026-05-04
+**Reviews:** 1 comprehensive (cycle-9)
+**Previous cycles:** 8 cycles, ~26 commits
+**Baseline:** 231 bun tests passing
 
-## Critical Findings (Must Fix)
+## New Findings (4 actionable, 4 deferred, 2 no-action)
 
-### F1: UTF-16 CSV Support [C7-02]
-Korean Windows Excel commonly exports UTF-16 LE CSVs. The parser completely ignores UTF-16.
-**Impact**: High — entire files unparseable
-**Fix**: Detect UTF-16 LE/BE BOMs, decode with TextDecoder('utf-16le'/'utf-16be')
+### MEDIUM Priority
+1. **F4** — XLSX parser has no try/catch around `xlsx.read()` — corrupted files crash
+2. **F5** — PDF `AMOUNT_PATTERN` matches any digit sequence, causing false-positive row detection
+3. **F7** — PDF fallback line scanner doesn't validate short dates with `isValidShortDate()`
 
-### F2: CP949 Encoding Before Bank Detection [C7-03, A7-02]
-detectFormat() decodes CSV as UTF-8 for bank detection, garbling CP949 Korean text. Bank detection fails.
-**Impact**: High — wrong adapter or generic fallback used
-**Fix**: Detect encoding from raw bytes before decoding
+### LOW Priority
+4. **F6** — XLSX `findCol()` duplicates shared `findColumn()` from column-matcher
 
-### F3: BOM Literal Character [C7-01]
-detect.ts uses invisible literal BOM instead of `﻿` escape.
-**Impact**: Medium — maintenance hazard, inconsistency
-**Fix**: Replace with explicit `﻿`
+### Deferred (explicit deferral)
+5. **F1** — XLSX duplicate column picks first match (requires data-aware heuristics)
+6. **F3** — CSV splitCSVLine only handles quoted fields for comma delimiter
+7. **F8** — English merchant column inference gap in generic parser
 
-### F4: Won Sign in Column Inference [C7-06]
-Generic parser's AMOUNT_PATTERNS don't recognize ₩/￦ prefixed amounts.
-**Impact**: Medium — amount column not detected during inference
-**Fix**: Add ₩/￦ to patterns
+### No Action Required
+8. **F2** — Server/web detectBank parity confirmed OK
+9. **F9** — XLSX formula cells already handled gracefully
+10. **F10** — Date validation parity confirmed OK
+11. **F11** — BOM detection correct as-is
 
-## Moderate Findings (Should Fix)
+## Implementation Plan
 
-### F5: English Column Name Patterns [C7-07]
-Column matcher only recognizes Korean headers. English headers ("Date", "Amount") not matched.
-**Impact**: Medium — user-modified files fail
-**Fix**: Add English alternatives to column regex patterns
+### Fix F4: XLSX graceful degradation
+- Wrap `xlsx.read()` in try/catch in `parseXLSX()`
+- Return user-friendly ParseResult with Korean error message
+- Add test for corrupted XLSX buffer
 
-### F6: Dead Legacy Adapter Files [C7-05]
-10 files in packages/parser/src/csv/ are dead code.
-**Impact**: Low — confusion, maintenance burden
-**Fix**: Remove all 10 files
+### Fix F5: Stricter PDF amount pattern
+- Change `AMOUNT_PATTERN` to exclude hyphenated number sequences (card/phone numbers)
+- Update both server and web-side PDF parsers
+- Add test for false-positive rejection
 
-## Deferred Items
+### Fix F6: Use shared findColumn in XLSX
+- Replace inline `findCol()` closure with imported `findColumn()`
 
-### D1: Web vs Server Parser Duplication [A7-03]
-Requires shared module refactor. Deferred.
+### Fix F7: PDF fallback short date validation
+- Add `isValidShortDate()` check after fallback date pattern match
 
-### D2: Input Size Limits [C7-S03]
-Acceptable for CLI tool. Deferred for web upload.
-
-### D3: PDF Amount Pattern Anchoring [C7-08]
-Low severity, filterTransactionRows provides sufficient guard. Deferred.
+## Deferred Items (for future cycles)
+- Server/web CSV parser dedup (D-01 architectural refactor)
+- PDF multi-line header support
+- XLSX duplicate column resolution with data-aware heuristics
+- Historical amount display format
+- Card name suffixes
+- Global config integration
+- Generic parser fallback behavior
