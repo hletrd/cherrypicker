@@ -211,3 +211,48 @@ describe('parseXLSX', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Merged cell forward-fill tests (C4-04)
+// ---------------------------------------------------------------------------
+
+describe('XLSX merged cell forward-fill', () => {
+  test('forward-fills date for rows with empty date cell', async () => {
+    // Simulates merged cells: date appears only in first row of a group
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2026-02-01', '스타벅스', 5500],
+      ['', '이마트', 30000],
+      ['', '편의점', 3500],
+      ['2026-02-02', '카페', 4500],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(4);
+      expect(result.transactions[0]?.date).toBe('2026-02-01');
+      expect(result.transactions[1]?.date).toBe('2026-02-01');
+      expect(result.transactions[2]?.date).toBe('2026-02-01');
+      expect(result.transactions[3]?.date).toBe('2026-02-02');
+      expect(result.transactions[1]?.merchant).toBe('이마트');
+      expect(result.transactions[1]?.amount).toBe(30000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('does not forward-fill when date cells are all populated', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2026-02-01', '스타벅스', 5500],
+      ['2026-02-02', '이마트', 30000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.date).toBe('2026-02-01');
+      expect(result.transactions[1]?.date).toBe('2026-02-02');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+});

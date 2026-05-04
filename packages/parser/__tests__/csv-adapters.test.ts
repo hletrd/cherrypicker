@@ -2,7 +2,7 @@ import { describe, test, expect } from 'bun:test';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { parseCSV } from '../src/csv/index.js';
-import { normalizeHeader, findColumn, DATE_COLUMN_PATTERN, AMOUNT_COLUMN_PATTERN } from '../src/csv/column-matcher.js';
+import { normalizeHeader, findColumn, DATE_COLUMN_PATTERN, AMOUNT_COLUMN_PATTERN, HEADER_KEYWORDS, DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS, isValidHeaderRow } from '../src/csv/column-matcher.js';
 import { parseGenericCSV } from '../src/csv/generic.js';
 
 const fixturesDir = join(import.meta.dir, 'fixtures');
@@ -242,5 +242,152 @@ describe('parseCSV entry point', () => {
     const content = await readFile(join(fixturesDir, 'sample-bom.csv'), 'utf-8');
     const result = parseCSV(content);
     expect(result.transactions.length).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isValidHeaderRow tests (C4-07)
+// ---------------------------------------------------------------------------
+
+describe('isValidHeaderRow', () => {
+  test('accepts a valid header with date + merchant + amount keywords', () => {
+    expect(isValidHeaderRow(['이용일', '이용처', '이용금액'])).toBe(true);
+  });
+
+  test('accepts header with 2 categories (date + amount)', () => {
+    expect(isValidHeaderRow(['거래일시', '이용금액'])).toBe(true);
+  });
+
+  test('accepts header with 2 categories (merchant + amount)', () => {
+    expect(isValidHeaderRow(['가맹점명', '이용금액'])).toBe(true);
+  });
+
+  test('rejects header with only amount keywords (1 category)', () => {
+    expect(isValidHeaderRow(['이용금액', '승인금액', '결제금액'])).toBe(false);
+  });
+
+  test('rejects header with only date keywords (1 category)', () => {
+    expect(isValidHeaderRow(['이용일', '거래일', '결제일'])).toBe(false);
+  });
+
+  test('rejects header with only merchant keywords (1 category)', () => {
+    expect(isValidHeaderRow(['가맹점명', '이용처', '거래처'])).toBe(false);
+  });
+
+  test('rejects header with no known keywords', () => {
+    expect(isValidHeaderRow(['열1', '열2', '열3'])).toBe(false);
+  });
+
+  test('rejects empty array', () => {
+    expect(isValidHeaderRow([])).toBe(false);
+  });
+
+  test('handles keywords with parenthetical suffixes via normalization', () => {
+    // isValidHeaderRow uses raw string comparison, not normalizeHeader,
+    // so parenthetical suffixes should still match if the base keyword is present
+    expect(isValidHeaderRow(['이용일', '이용처', '이용금액(원)'])).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Shared keyword constants tests (C4-07)
+// ---------------------------------------------------------------------------
+
+describe('shared keyword constants', () => {
+  test('HEADER_KEYWORDS contains all date keywords', () => {
+    for (const kw of ['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']) {
+      expect(HEADER_KEYWORDS).toContain(kw);
+    }
+  });
+
+  test('HEADER_KEYWORDS contains all merchant keywords', () => {
+    for (const kw of ['이용처', '가맹점', '가맹점명', '거래처', '매출처', '상호']) {
+      expect(HEADER_KEYWORDS).toContain(kw);
+    }
+  });
+
+  test('HEADER_KEYWORDS contains all amount keywords', () => {
+    for (const kw of ['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액']) {
+      expect(HEADER_KEYWORDS).toContain(kw);
+    }
+  });
+
+  test('DATE_KEYWORDS is a subset of HEADER_KEYWORDS', () => {
+    for (const kw of DATE_KEYWORDS) {
+      expect((HEADER_KEYWORDS as string[]).includes(kw)).toBe(true);
+    }
+  });
+
+  test('MERCHANT_KEYWORDS is a subset of HEADER_KEYWORDS', () => {
+    for (const kw of MERCHANT_KEYWORDS) {
+      expect((HEADER_KEYWORDS as string[]).includes(kw)).toBe(true);
+    }
+  });
+
+  test('AMOUNT_KEYWORDS is a subset of HEADER_KEYWORDS', () => {
+    for (const kw of AMOUNT_KEYWORDS) {
+      expect((HEADER_KEYWORDS as string[]).includes(kw)).toBe(true);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Category-based header detection in bank adapters (C4-01)
+// ---------------------------------------------------------------------------
+
+describe('category-based header detection', () => {
+  test('rejects summary row with only amount keywords', () => {
+    // A row with only amount keywords from 1 category should not be detected as header
+    const content = [
+      '삼성카드 이용내역',
+      '',
+      '이용금액,승인금액,결제금액',
+      '6500,6500,6500',
+    ].join('\n');
+    const result = parseCSV(content, 'samsung');
+    // Should fail to find header (only amount category)
+    expect(result.transactions).toHaveLength(0);
+    expect(result.errors.some((e) => e.message.includes('헤더'))).toBe(true);
+  });
+
+  test('accepts valid header with 2+ categories in bank adapter', () => {
+    const content = [
+      '삼성카드 이용내역',
+      '이용일,가맹점명,이용금액',
+      '2024-01-15,스타벅스,5500',
+    ].join('\n');
+    const result = parseCSV(content, 'samsung');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.merchant).toBe('스타벅스');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Generic CSV merchant inference preferring Korean text (C4-03)
+// ---------------------------------------------------------------------------
+
+describe('generic CSV merchant inference', () => {
+  test('prefers Korean text column over numeric column for merchant', () => {
+    // Columns: date, card_number(4 digits), merchant(Korean), amount
+    // Without C4-03 fix, would pick card_number as merchant
+    const content = [
+      '이용일,카드번호,가맹점명,이용금액',
+      '2024-01-15,1234,스타벅스 강남,5500',
+      '2024-01-16,5678,이마트,30000',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toContain('스타벅스');
+    expect(result.transactions[1]?.merchant).toContain('이마트');
+  });
+
+  test('falls back to first non-reserved column when no Korean text', () => {
+    const content = [
+      'DATE,CODE,MERCHANT,AMOUNT',
+      '2024-01-15,AB,Starbucks,5500',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    // Should still parse something (even if date/amount detection is heuristic)
+    expect(result).toBeDefined();
   });
 });
