@@ -1,16 +1,12 @@
-# Architect Review -- Cycle 50
+# Architect Review -- Cycle 52
 
 ## Architecture Status
+Server-side and web-side parsers are well-structured with clear separation. The factory pattern (adapter-factory.ts) and shared column-matcher eliminate per-bank duplication on the server side. The web-side still has individual bank adapter objects alongside a factory, but this is a known deferred item (D-01).
 
-The parser architecture is mature after 49 cycles. The factory pattern, shared column-matcher, and centralized date-utils provide a solid foundation.
+## Findings
+- All C52 findings (01-07) are column-matcher pattern additions that apply symmetrically to both server and web sides.
+- No architectural changes needed for this cycle's fixes.
+- The D-01 refactor (shared module between Bun and browser) remains deferred -- different build systems prevent direct imports.
 
-## Remaining Architecture Items
-
-### A1. Server/web shared module (D-01) -- DEFERRED
-Full dedup requires a shared package consumable by both Bun and browser. Not actionable this cycle.
-
-### A2. PDF getHeaderColumns should use findColumn() -- ACTIONABLE
-The PDF's getHeaderColumns() duplicates pattern-matching logic instead of using the shared findColumn() from column-matcher.ts. Refactoring would automatically get combined-header splitting, case normalization, and future pattern additions.
-
-### A3. Web CSV hand-rolled adapters (D-03) -- DEFERRED
-The 10 hand-written bank adapters in web-side csv.ts duplicate the factory pattern. Refactoring is a large change with high risk of regression.
+## Verdict
+Low-risk cycle focused on pattern expansion. No architectural debt changes.
