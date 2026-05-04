@@ -1,45 +1,47 @@
-# Cycle 37 Aggregate Review
+# Cycle 38 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 37
-**Tests:** 673 bun (before changes)
-**Reviewer:** Cycle 37 inline deep scan
+**Cycles completed:** 38
+**Tests:** 683 bun (before changes)
+**Reviewer:** Cycle 38 inline deep scan (server/web parity focus)
 
 ---
 
-## Finding 1: PDF table parser AMOUNT_PATTERN missing 마이너스 prefix [BUG]
+## Finding 1: Server-side CATEGORY_COLUMN_PATTERN missing "카테고리" [BUG-FIX]
 - **Severity**: Medium
-- **Files**: `packages/parser/src/pdf/table-parser.ts:14`, `apps/web/src/lib/parser/pdf.ts:42`
-- Both server and web PDF `AMOUNT_PATTERN` (used by `filterTransactionRows()`) does NOT include `마이너스[\d,]+원?` as an alternative.
-- Result: PDFs with 마이너스-prefixed amounts skip structured table parsing and fall through to the fallback line scanner, losing structured metadata (category, memo, installments).
-- The `parseAmount()` function on both sides DOES handle 마이너스. Only the row-detection regex is missing it.
-- **Impact**: Format diversity bug -- 마이너스 PDFs silently degrade.
+- **File**: `packages/parser/src/csv/column-matcher.ts:60`
+- **Detail**: Web-side column-matcher.ts (line 54) includes `카테고리` in CATEGORY_COLUMN_PATTERN, but server-side does not. Files with "카테고리" headers fail category detection on server-side CSV/XLSX parsers.
+- **Impact**: Format diversity bug -- "카테고리" is a common Korean column header.
 
-## Finding 2: Server CSV adapter-factory only has 10 banks [COVERAGE]
+## Finding 2: Web-side column patterns missing ~15 keywords from server-side [BUG-FIX]
 - **Severity**: Medium
-- **File**: `packages/parser/src/csv/adapter-factory.ts`
-- Server CSV factory creates adapters for only 10 banks.
-- XLSX adapter config (`packages/parser/src/xlsx/adapters/index.ts`) has 24 banks (adds kakao, toss, kbank, bnk, dgb, suhyup, jb, kwangju, jeju, sc, mg, cu, kdb, epost).
-- If a CSV from one of these 14 banks is uploaded, the bank is detected but no bank-specific adapter exists, falling through to the generic parser.
-- **Impact**: These 14 banks use the generic parser with weaker header matching.
+- **File**: `apps/web/src/lib/parser/column-matcher.ts`
+- **Detail**: Keyword-level diff:
+  - DATE: web missing `승인일시`, `접수일`, `발행일`, `posted`, `billing`
+  - MERCHANT: web missing `승인가맹점`, `이용내용`, `거래내용`, `name`
+  - AMOUNT: web missing `청구금액`, `출금액`, `결제대금`, `승인취소금액`, `charge`, `payment`
+  - INSTALLMENTS: web missing `할부횟수`
+- **Impact**: Web-side fails to detect these header variants in CSV/XLSX/PDF files.
 
-## Finding 3: Web CSV parser hand-written adapters [TECH DEBT / DEFERRED]
-- **File**: `apps/web/src/lib/parser/csv.ts` (1100+ lines)
-- 10 hand-written adapters + duplicated helpers. Server-side solved with `createBankAdapter()`.
-- **Decision**: DEFERRED to D-01 architectural refactor (requires shared module between Bun and browser).
+## Finding 3: Web-side HEADER_KEYWORDS and category Sets missing ~14 entries [BUG-FIX]
+- **Severity**: Medium
+- **File**: `apps/web/src/lib/parser/column-matcher.ts`
+- **Detail**:
+  - HEADER_KEYWORDS: missing `접수일`, `발행일`, `승인일시`, `이용내용`, `거래내용`, `청구금액`, `출금액`, `결제대금`, `승인취소금액`, `name`, `charge`, `payment`, `posted`, `billing`
+  - DATE_KEYWORDS: missing `접수일`, `발행일`, `승인일시`, `posted`, `billing`
+  - MERCHANT_KEYWORDS: missing `승인가맹점`, `이용내용`, `거래내용`, `name`
+  - AMOUNT_KEYWORDS: missing `청구금액`, `출금액`, `결제대금`, `승인취소금액`, `charge`, `payment`
+- **Impact**: Header row validation on web-side rejects valid header rows using these keywords.
 
-## Finding 4: Missing test for PDF 마이너스 table rows [TEST]
-- **File**: `packages/parser/__tests__/table-parser.test.ts`
-- No test for `filterTransactionRows()` with 마이너스 amounts.
-
-## Finding 5: Missing test for CSV adapters of non-top-10 banks [TEST]
-- No tests for kakao, toss, kbank, etc. bank-specific CSVs via adapter-factory.
+## Finding 4: Missing tests for newly synced keywords [TEST]
+- No tests verify that server-side patterns match keywords like `접수일`, `발행일`, `청구금액`, `할부횟수`.
+- **Fix**: Add test cases in column-matcher.test.ts.
 
 ---
 
-## Plan
-1. **FIX**: Add 마이너스 to PDF AMOUNT_PATTERN (server + web)
-2. **FIX**: Add 14 missing bank adapters to server CSV adapter-factory
-3. **TEST**: Add tests for PDF 마이너스 table rows
-4. **TEST**: Add tests for new CSV bank adapters (kakao, toss, kbank sample)
-5. **DEFER**: Web CSV duplication (D-01 architectural refactor)
+## Deferred Items
+| ID | Item | Reason |
+|----|------|--------|
+| D-01 | Web CSV adapter factory refactor (14 missing banks) | Architecture refactor |
+| D-02 | PDF multi-line header support | Complex, low ROI |
+| D-03 | Server/web CSV parser dedup | Architecture refactor |
