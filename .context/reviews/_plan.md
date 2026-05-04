@@ -1,38 +1,36 @@
-# Implementation Plan -- Cycle 50
+# Implementation Plan -- Cycle 53
 
-## P1. PDF YYMMDD date validation in filterTransactionRows [MEDIUM]
+## Fix C53-01: Full-width digit/comma normalization in amount parsing
+**Priority:** HIGH
+**Files:**
+- `packages/parser/src/csv/shared.ts` (parseCSVAmount)
+- `packages/parser/src/xlsx/index.ts` (parseAmount)
+- `packages/parser/src/pdf/index.ts` (parseAmount)
+- `apps/web/src/lib/parser/csv.ts` (parseAmount)
+- `apps/web/src/lib/parser/xlsx.ts` (parseAmount)
+- `apps/web/src/lib/parser/pdf.ts` (parseAmount)
+- `packages/parser/__tests__/csv-shared.test.ts` (tests)
+- `packages/parser/__tests__/xlsx.test.ts` (tests)
+- `packages/parser/__tests__/table-parser.test.ts` (tests)
 
-**Files:** `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
+**Change:** Add full-width digit normalization (U+FF10-U+FF19 -> 0-9) and full-width comma normalization (U+FF0C -> ,) to the cleaning step of all parseAmount implementations. Add test cases for full-width amounts.
 
-Add a validation helper that checks date cells after filterTransactionRows:
-- Import or replicate isYYMMDDLike logic
-- In the server-side PDF index.ts tryStructuredParse, validate txRows date cells
-- In the web-side pdf.ts tryStructuredParse, do the same
-- Reject rows where the date cell is a 6-digit string that fails YYMMDD validation
+## Fix C53-02: PDF inline daysInMonth -> shared utility
+**Priority:** MEDIUM
+**Files:**
+- `packages/parser/src/pdf/table-parser.ts` (import + replace)
+- `apps/web/src/lib/parser/pdf.ts` (import + replace)
 
-**Tests:** Add test in table-parser.test.ts with YYMMDD dates ("240115") and transaction ID false positives ("123456").
+**Change:** Import daysInMonth from date-utils.ts and replace inline `new Date(fullYear, month, 0).getDate()` with `daysInMonth(fullYear, month)`.
 
-## P2. PDF getHeaderColumns use findColumn [MEDIUM]
+## Fix C53-03: Add missing memo terms to HEADER_KEYWORDS
+**Priority:** LOW
+**Files:**
+- `packages/parser/src/csv/column-matcher.ts` (HEADER_KEYWORDS array)
+- `apps/web/src/lib/parser/column-matcher.ts` (HEADER_KEYWORDS array)
 
-**Files:** `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
-
-Refactor getHeaderColumns() to use findColumn() from column-matcher.ts:
-- Import findColumn in table-parser.ts
-- Replace manual pattern.test() loop with findColumn() calls
-- This automatically handles combined-header splitting on "/" and "|"
-
-**Tests:** Add test for combined headers like "이용일/승인일", "비고/적요".
-
-## P3. Summary row pattern "합 계" variant [LOW]
-
-**File:** `packages/parser/src/csv/column-matcher.ts`
-
-Add standalone `(?<![가-힣])합\s*계(?![가-힣])(?=[\s,;]|$)` to SUMMARY_ROW_PATTERN.
-
-**Tests:** Add test for "합 계" detection in column-matcher.test.ts.
+**Change:** Add `내용`, `설명`, `참고`, `상세내역`, `memo`, `note`, `remarks` to HEADER_KEYWORDS.
 
 ## Deferred
-
-- D-01: Server/web shared module (architectural)
-- D-02: PDF multi-line headers
-- D-03: Web CSV factory refactor
+- C53-04: Web-side CSV adapter dedup (requires D-01 shared module)
+- C53-05: XLSX data-inference fallback (complex, separate effort)
