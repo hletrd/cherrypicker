@@ -126,8 +126,8 @@ function parseInstallments(raw: string | undefined): number | undefined {
 // matches decimal amounts like "3.5" or "12.34". Short dates are validated
 // separately by isDateLikeShort() with month/day range checks (F20-02).
 const DATE_PATTERNS = [
-  /^\d{4}[\s]*[.\-\/][\s]*\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/,  // 2024-01-15, "2024 - 01 - 15"
-  /^\d{2}[\s]*[.\-\/][\s]*\d{2}[\s]*[.\-\/][\s]*\d{2}$/,       // 24-01-15 (YY-MM-DD)
+  /^\d{4}[\s]*[.\-\/．。][\s]*\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}$/,  // 2024-01-15, 2024．01．15 (C22-01)
+  /^\d{2}[\s]*[.\-\/．。][\s]*\d{2}[\s]*[.\-\/．。][\s]*\d{2}$/,       // 24-01-15, 24．01．15 (C22-01)
   /^\d{4}\d{2}\d{2}$/,                                           // 20240115
   /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,                          // 2024년 1월 15일
   /^\d{1,2}월\s*\d{1,2}일$/,                                    // 1월 15일
@@ -140,9 +140,9 @@ const DATE_PATTERNS = [
  *  (F21-01). Also rejects decimal amounts like "12.34" (month 12, day 34
  *  fails daysInMonth) while accepting valid short dates like "1/15". */
 function isDateLikeShort(value: string): boolean {
-  const match = value.match(/^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/);
+  const match = value.match(/^\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}$/);
   if (!match) return false;
-  const parts = value.trim().split(/[.\-\/]/);
+  const parts = value.trim().split(/[.\-\/．。]/);
   const month = parseInt(parts[0] ?? '', 10);
   const day = parseInt(parts[1] ?? '', 10);
   if (month < 1 || month > 12) return false;
@@ -237,7 +237,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
       // picking numeric columns like installments or card number suffixes.
       // Aligns with the server-side logic in packages/parser/src/csv/generic.ts
       // (C5-04).
-      const reservedCols = new Set([dateCol, amountCol, installmentsCol, categoryCol, memoCol]);
+      const reservedCols = new Set([dateCol, amountCol, installmentsCol, categoryCol, memoCol].filter((c) => c !== -1));
       for (let i = 0; i < headers.length; i++) {
         if (!reservedCols.has(i)) {
           const hasKorean = sampleRows.some((row) => {

@@ -30,16 +30,16 @@ type PdfTextMarkedContent = { type: string; id: string };
 // handled by parseDateStringToISO() in date-utils.ts. If a new date format is
 // added there, update the DATE_PATTERN, STRICT_DATE_PATTERN, and related
 // constants accordingly.
-const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|(?<![.\d])\d{1,2}[.\-\/]\d{1,2}(?![.\-\/\d]))/;
+const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|(?<![.\d．。])\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。]))/;
 // Korean amount pattern — excludes digit sequences adjacent to hyphens
 // to prevent false positives from card numbers (1234-5678-9012-3456) and
 // phone numbers (010-1234-5678) being matched as amounts (F5-01).
 const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])[₩￦]?[\d,]+원?(?![a-zA-Z\d-])|\([\d,]+\)/;
-const STRICT_DATE_PATTERN = /(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/;
-const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})/;
+const STRICT_DATE_PATTERN = /(\d{4})[.\-\/．。](\d{1,2})[.\-\/．。](\d{1,2})/;
+const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})/;
 const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
 const KOREAN_SHORT_DATE_PATTERN = /\d{1,2}월\s*\d{1,2}일/;
-const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/]\d{1,2}$/;
+const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 
 /** Maximum days per month for a non-leap year, indexed 1-12.
  *  Used by isValidShortDate for month-aware day validation when no
@@ -59,7 +59,7 @@ const MAX_DAYS_PER_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 function isValidShortDate(cell: string): boolean {
   const match = cell.match(SHORT_MD_DATE_PATTERN);
   if (!match) return false;
-  const parts = cell.split(/[.\-\/]/);
+  const parts = cell.split(/[.\-\/．。]/);
   const month = parseInt(parts[0] ?? '', 10);
   const day = parseInt(parts[1] ?? '', 10);
   return month >= 1 && month <= 12 && day >= 1 && day <= (MAX_DAYS_PER_MONTH[month] ?? 0);
@@ -506,7 +506,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   // Fallback: scan every line for date + amount patterns
   const fallbackTransactions: RawTransaction[] = [];
   const lines = text.split('\n');
-  const fallbackDatePattern = /(\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/]\d{1,2}(?![.\-\/\d]))/;
+  const fallbackDatePattern = /(\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。]))/;
   // The 'g' flag is required for matchAll() below. Do NOT hoist this regex
   // to module scope — the global flag's lastIndex mutation would break
   // .test()/.exec() calls if the regex were shared across invocations.

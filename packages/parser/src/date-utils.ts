@@ -50,8 +50,10 @@ export function inferYear(month: number, day: number): number {
 export function parseDateStringToISO(raw: string): string {
   const cleaned = raw.trim();
 
-  // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD (with optional spaces around delimiters)
-  const fullMatch = cleaned.match(/^(\d{4})[\s]*[.\-\/][\s]*(\d{1,2})[\s]*[.\-\/][\s]*(\d{1,2})/);
+  // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD (with optional spaces around delimiters).
+  // Also accepts full-width dot (U+FF0E) and ideographic full stop (U+3002) which
+  // Korean bank exports occasionally use (C22-01).
+  const fullMatch = cleaned.match(/^(\d{4})[\s]*[.\-\/．。][\s]*(\d{1,2})[\s]*[.\-\/．。][\s]*(\d{1,2})/);
   if (fullMatch) {
     const year = parseInt(fullMatch[1]!, 10);
     const month = parseInt(fullMatch[2]!, 10);
@@ -71,8 +73,8 @@ export function parseDateStringToISO(raw: string): string {
     }
   }
 
-  // YY-MM-DD or YY.MM.DD
-  const shortYearMatch = cleaned.match(/^(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})$/);
+  // YY-MM-DD or YY.MM.DD (also accepts full-width dot variants C22-01)
+  const shortYearMatch = cleaned.match(/^(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})$/);
   if (shortYearMatch) {
     const year = parseInt(shortYearMatch[1]!, 10);
     const fullYear = year >= 50 ? 1900 + year : 2000 + year;
@@ -83,8 +85,8 @@ export function parseDateStringToISO(raw: string): string {
     }
   }
 
-  // MM/DD or MM.DD — infer year with look-back heuristic
-  const shortMatch = cleaned.match(/^(\d{1,2})[.\-\/](\d{1,2})$/);
+  // MM/DD or MM.DD — infer year with look-back heuristic (also accepts full-width dot C22-01)
+  const shortMatch = cleaned.match(/^(\d{1,2})[.\-\/．。](\d{1,2})$/);
   if (shortMatch) {
     const month = parseInt(shortMatch[1]!, 10);
     const day = parseInt(shortMatch[2]!, 10);

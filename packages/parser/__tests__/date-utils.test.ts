@@ -146,6 +146,28 @@ describe('parseDateStringToISO', () => {
   test('handles empty string', () => {
     expect(parseDateStringToISO('')).toBe('');
   });
+
+  // Full-width dot (U+FF0E) and ideographic full stop (U+3002) support (C22-01)
+  test('parses YYYY．MM．DD with full-width dot', () => {
+    expect(parseDateStringToISO('2024．01．15')).toBe('2024-01-15');
+  });
+
+  test('parses YYYY。MM。DD with ideographic full stop', () => {
+    expect(parseDateStringToISO('2024。01。15')).toBe('2024-01-15');
+  });
+
+  test('parses YY．MM．DD with full-width dot', () => {
+    expect(parseDateStringToISO('24．01．15')).toBe('2024-01-15');
+  });
+
+  test('parses MM．DD with full-width dot (year inferred)', () => {
+    const result = parseDateStringToISO('1．15');
+    expect(result).toMatch(/^\d{4}-01-15$/);
+  });
+
+  test('parses mixed dot types YYYY．MM.DD', () => {
+    expect(parseDateStringToISO('2024．01.15')).toBe('2024-01-15');
+  });
 });
 
 // ---------------------------------------------------------------------------
