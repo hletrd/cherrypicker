@@ -1,29 +1,32 @@
-# Cycle 11 Aggregate Review
+# Cycle 12 Aggregate Review
 
-## Findings Summary
+**Date:** 2026-05-05
+**Test Status:** 313 bun + 231 vitest = 544 tests passing
+
+## New Findings (6)
 
 ### HIGH Priority
-1. **PDF DATE_PATTERN missing short dates (MM.DD)** — `parseTable()` and `filterTransactionRows()` use a DATE_PATTERN that doesn't include MM.DD short dates. Structured PDF parsing fails silently for PDFs using short date formats, falling through to the less reliable line scanner. (code-reviewer)
+1. **C12-01** (code-reviewer): Server CSV adapter-factory silently swallows unparseable dates — `parseDateStringToISO(dateRaw)` called without error reporting params, unlike generic parser
+2. **C12-06** (code-reviewer): Server CSV adapter-factory does not validate parsed dates with `isValidISODate()`
 
 ### MEDIUM Priority
-2. **Web XLSX missing serial date error reporting** — Server XLSX parser reports errors for out-of-range serial dates but web parser silently returns the raw value. Parity issue. (code-reviewer, verifier)
-3. **normalizeHeader doesn't strip zero-width spaces** — JavaScript `\s` doesn't match U+200B/U+200C/U+200D. Korean bank exports with these characters will fail header matching. (code-reviewer)
+3. **C12-02** (code-reviewer): Web XLSX parser uses local `findCol()` closure instead of shared `findColumn` from column-matcher.ts
+4. **C12-03** (test-engineer): Column-matcher module has zero dedicated test coverage — `normalizeHeader`, `findColumn`, `isValidHeaderRow`, all pattern constants untested
 
 ### LOW Priority
-4. **No tests for PDF short date structured parsing** — After fix #1, comprehensive tests needed. (test-engineer)
-5. **XLSX formula error cells untested** — SheetJS error cells (#REF!, #VALUE!) should be handled gracefully. (test-engineer)
+5. **C12-04** (code-reviewer): CSV `isDateLike()` patterns don't allow spaces around date delimiters, breaking inference for "2024 - 01 - 15" format
+6. **C12-05** (code-reviewer): Web XLSX `BANK_COLUMN_CONFIGS` is 153-line duplication of server config
 
-### DEFERRED (no action this cycle)
-| # | Item |
-|---|------|
-| D-01 | Server/web shared module refactoring |
-| D-02 | Web CSV adapter factory pattern |
-| D-03 | PDF parser deduplication |
-| D-04 | PDF multi-line transaction support |
-| D-05 | Historical amount display format |
-| D-06 | Card name suffixes |
-| D-07 | Global config integration |
-| D-08 | Generic parser fallback behavior |
-| D-09 | CSS dark mode complete migration |
+## Reviewer Consensus
+- **code-reviewer**: 6 findings (2 high, 2 medium, 2 low)
+- **test-engineer**: 4 findings — column-matcher tests is top priority
+- **verifier**: Server/web parity gaps confirmed for date error reporting and findColumn usage
+- **architect**: Column-matcher pattern solid; adapter factory should be adopted by web side
+- **perf-reviewer**: No performance issues
+- **security-reviewer**: No security issues
 
-## Total: 5 findings (1 HIGH, 2 MEDIUM, 2 LOW)
+## Agreed Action Items
+1. Fix C12-01+C12-06: Add date error reporting + validation to adapter-factory (HIGH)
+2. Fix C12-02: Use shared findColumn in web XLSX parser (MEDIUM)
+3. Fix C12-03: Add comprehensive column-matcher tests (MEDIUM)
+4. Fix C12-04: Add whitespace tolerance to isDateLike patterns (LOW)

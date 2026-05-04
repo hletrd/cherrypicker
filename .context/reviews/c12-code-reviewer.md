@@ -1,35 +1,43 @@
-# Code Reviewer — Cycle 12
+# Code Review — Cycle 12
 
-**Date:** 2026-04-24
+**Date:** 2026-05-05
 **Reviewer:** code-reviewer
 
-## Findings
+## Critical Findings
 
-### C12-CR01: `calculateRewards` globalMonthUsed can exceed globalCap after rollback [MEDIUM]
-- **File:** `packages/core/src/calculator/reward.ts:311-331`
-- **Description:** When the global cap clips a reward, `ruleMonthUsed` is rolled back by `overcount`, but `globalMonthUsed` is advanced by only `appliedReward`. This is correct. However, if a subsequent transaction's reward is NOT clipped by the global cap, `globalMonthUsed += appliedReward` (line 331) uses the full reward amount. But the `ruleMonthUsed` for that same rule may have been rolled back previously, meaning the rule-level tracker thinks more cap is available than the global tracker does. This creates a scenario where two different rules sharing the same global cap can have their rule-level trackers over-report remaining capacity relative to the global constraint. In practice this is unlikely to cause visible bugs because the global cap check (line 312) is applied independently per transaction, but it is a latent inconsistency.
-- **Confidence:** Low
-- **Severity:** MEDIUM (latent inconsistency in cap tracking)
-- **Fix:** After rolling back `ruleMonthUsed`, also adjust `globalMonthUsed` to reflect the actual applied amount rather than advancing it separately. Or, track only the global used amount and derive rule-level remaining from it.
+### C12-01: Server CSV adapter-factory silently swallows unparseable dates (BUG)
+**File**: `packages/parser/src/csv/adapter-factory.ts:129`
+**Severity**: High (data loss)
+The adapter factory calls `parseDateStringToISO(dateRaw)` WITHOUT passing `errors` and `lineIdx` parameters. This means unparseable dates are silently returned as raw strings with no error reported to the user. Compare with the generic CSV parser (`csv/generic.ts:180`) which DOES report date errors via `isValidISODate()`. Users of bank-specific adapters (hyundai, kb, ibk, woori, samsung, shinhan, lotte, hana, nh, bc) get no feedback about malformed dates.
 
-### C12-CR02: `formatSavingsValue` negative prefixValue with positive value shows no sign [LOW]
-- **File:** `apps/web/src/lib/formatters.ts:224-227`
-- **Description:** When `prefixValue` is negative (e.g., -5000) and `value` is positive (e.g., 5000), the function shows `5,000원` without any sign indicator. The `>= 100` check only adds `+`. This is the same class as C11-CR06 and is documented as intentional (direction communicated by label), but the footgun remains for any future caller that doesn't use a directional label.
-- **Confidence:** High
-- **Severity:** LOW
+### C12-02: Web XLSX parser uses local findCol instead of shared findColumn (Inconsistency)
+**File**: `apps/web/src/lib/parser/xlsx.ts:423-430`
+**Severity**: Medium (code quality)
+The web XLSX parser defines a local `findCol()` closure instead of importing `findColumn` from `./column-matcher.ts`. While functionally similar, this bypasses the shared module. If the shared `findColumn` logic ever changes (e.g., adding priority weighting), the web XLSX parser would not benefit.
 
-### C12-CR03: No `crypto` import guard in `loadCardsData` for non-browser environments [LOW]
-- **File:** `apps/web/src/lib/cards.ts:193-241`
-- **Description:** `loadCardsData` uses `fetch` which is only available in browser environments. The function is only called from the web app, so this is fine. However, the `chainAbortSignal` helper and `isAbortError` are defensive but the AbortController and AbortSignal APIs are assumed to exist. In extremely old browsers this would fail, but the app already requires modern JS features (Svelte 5, $state runes), so this is acceptable.
-- **Confidence:** High
-- **Severity:** LOW (informational)
+### C12-03: Column-matcher module has zero dedicated test coverage (Test gap)
+**File**: `packages/parser/src/csv/column-matcher.ts`
+**Severity**: Medium (test coverage)
+The `findColumn()`, `normalizeHeader()`, `isValidHeaderRow()`, and all `*_COLUMN_PATTERN` constants are core infrastructure used by every parser. Yet there are NO dedicated tests for this module. Edge cases like zero-width spaces, parenthetical suffixes, English case-insensitive matching, and category-based header validation are only tested indirectly through adapter tests.
 
-### C12-CR04: XLSX parser `BANK_COLUMN_CONFIGS` duplicates bank header names [LOW]
-- **File:** `apps/web/src/lib/parser/xlsx.ts:18-170`
-- **Description:** The `BANK_COLUMN_CONFIGS` record maps BankId to header names, duplicating the same header names also present in the CSV adapters (`apps/web/src/lib/parser/csv.ts`). This is the same class of finding as D-01 (duplicate parser implementations). Fully deduplicating requires the D-01 architectural refactor.
-- **Confidence:** High
-- **Severity:** LOW (same class as D-01, already tracked)
+### C12-04: CSV isDateLike() patterns don't allow spaces around delimiters
+**File**: `packages/parser/src/csv/generic.ts:19-26`
+**Severity**: Low-Medium (format diversity)
+The `isDateLike()` heuristic patterns use `\d{4}[.\-\/]\d{1,2}` without allowing spaces. But `parseDateStringToISO()` uses `[.\-\/\s]` which DOES allow spaces. A cell like "2024 - 01 - 15" would parse correctly but NOT be detected as a date column by the generic parser's inference path. Same issue in web CSV `csv.ts:121`.
 
-## Convergence Note
+### C12-05: Web XLSX BANK_COLUMN_CONFIGS is full duplication
+**File**: `apps/web/src/lib/parser/xlsx.ts:28-180`
+**Severity**: Low (tech debt)
+153 lines of bank config duplicated from `packages/parser/src/xlsx/adapters/index.ts`.
 
-All four findings are either LOW severity instances of already-tracked patterns (D-01, C11-CR06) or latent issues with low confidence of real-world impact (C12-CR01). No new HIGH-severity findings. The codebase is well-defended with extensive inline comments documenting edge cases, guard clauses, and cross-reference tags (C-XX-YY patterns).
+### C12-06: Server CSV adapter-factory does not validate parsed dates
+**File**: `packages/parser/src/csv/adapter-factory.ts:129`
+**Severity**: Medium (parity)
+Unlike the generic CSV parser and all other parsers, the adapter-factory path does not call `isValidISODate()` after parsing. A malformed date could propagate downstream as a non-ISO string.
+
+## Positive Notes
+- Column-matcher patterns are comprehensive with English alternatives
+- Forward-fill for merged XLSX cells is well-implemented across both server/web
+- PDF fallback line scanner with short-date validation is solid
+- Bank detection confidence capping for single-pattern banks is good defensive code
+- All 313 bun + 231 vitest tests passing

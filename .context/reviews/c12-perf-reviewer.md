@@ -1,28 +1,23 @@
 # Performance Reviewer — Cycle 12
 
-**Date:** 2026-04-24
+**Date:** 2026-05-05
 **Reviewer:** perf-reviewer
 
-## Findings
+## Performance Findings
 
-### C12-PR01: `scoreCardsForTransaction` recalculates all card rewards per transaction [LOW]
-- **File:** `packages/core/src/optimizer/greedy.ts:124-156`
-- **Description:** For each transaction, `scoreCardsForTransaction` calls `calculateCardOutput` twice per card (before push + after push), each of which iterates all previously assigned transactions. This is O(T * C * T) where T is transactions and C is cards. For typical usage (< 1000 tx, < 10 cards) this is fast enough. This is the same finding as D-09, already tracked as deferred.
-- **Confidence:** High
-- **Severity:** LOW (already deferred as D-09)
+### P12-01: No performance regressions detected
+The parser code is well-structured for performance:
+- Delimiter detection scans only first 30 lines
+- Header detection scans only first 30 rows
+- Bank detection scans first 4KB for encoding
+- Column-matcher uses regex pre-compilation (module-level constants)
+- XLSX sheet_to_json with `raw: true` avoids unnecessary formatting
 
-### C12-PR02: `CategoryBreakdown` re-sorts already-sorted assignments [LOW]
-- **File:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:125`
-- **Description:** The component re-sorts assignments by spending even though the optimizer already returns them sorted. This was documented as intentional (C9-07) to avoid hidden coupling. Acceptable tradeoff — sort is O(n log n) for a small n.
-- **Confidence:** High
-- **Severity:** LOW (already resolved per C9-07)
+### P12-02: CSV splitLine re-parses RFC 4180 quotes on every row
+The CSV line splitter re-implements quote parsing on every line. For large files (10K+ rows), this is the hot path. The current implementation is already O(n) per line which is optimal. No improvement needed.
 
-### C12-PR03: sessionStorage JSON.stringify + JSON.parse on every store mutation [LOW]
-- **File:** `apps/web/src/lib/store.svelte.ts:146-190`
-- **Description:** `persistToStorage` serializes the entire analysis result (potentially hundreds of transactions) on every `analyze()` and `reoptimize()` call. For very large statement sets, this could cause micro-stutters. However, `reoptimize` is only called on explicit user action (category edit + "apply"), so the frequency is low. The 4MB cap also limits the data volume.
-- **Confidence:** Medium
-- **Severity:** LOW
+### P12-03: XLSX forward-fill is O(1) per cell (GOOD)
+The merged-cell forward-fill uses simple variable tracking (lastDate, lastMerchant, etc.) rather than scanning backwards. This is optimal.
 
-## Convergence Note
-
-No new MEDIUM or HIGH performance findings. All findings are LOW-severity instances of known deferred patterns or acceptable tradeoffs. The O(n*m) scoring (D-09) remains the dominant theoretical concern but is impractical to fix without incremental reward tracking.
+## Summary
+No performance issues found in this cycle.
