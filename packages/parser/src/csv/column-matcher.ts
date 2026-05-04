@@ -9,7 +9,7 @@
  *  joiners U+200D, soft hyphens U+00AD), trim whitespace, collapse internal
  *  whitespace, and remove parenthetical suffixes like "이용금액(원)" (C11-03). */
 export function normalizeHeader(h: string): string {
-  return h.replace(/[​‌‍­ 　\t\n\r‎‏‪‫‬‭‮﻿]/g, '').trim().replace(/\s+/g, '').replace(/\([^)]*\)/g, '');
+  return h.replace(/[​‌‍­ 　\t\n\r‎‏‪‫‬‭‮﻿︀︁︂︃︄︅︆︇︈︉︊︋︌︍︎️⁠]/g, '').trim().replace(/\s+/g, '').replace(/\([^)]*\)/g, '');
 }
 
 /** Find a column index by exact name (normalized) first, then by regex pattern.

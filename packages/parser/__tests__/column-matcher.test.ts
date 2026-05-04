@@ -840,3 +840,31 @@ describe('Cycle 36: Header row with new terms (integration)', () => {
     expect(isValidHeaderRow(['발행일', '이용내용', '결제대금', '할부횟수'])).toBe(true);
   });
 });
+// ---------------------------------------------------------------------------
+// Variation selector and invisible character handling (C40-01)
+// ---------------------------------------------------------------------------
+
+describe('normalizeHeader variation selectors (C40-01)', () => {
+  it('strips variation selectors U+FE00-FE0F from headers', () => {
+    // U+FE00 is a variation selector that some Unicode-aware editors insert
+    const header = '이︀용︁일︂';
+    expect(normalizeHeader(header)).toBe('이용일');
+  });
+
+  it('strips word joiner U+2060 from headers', () => {
+    const header = '이⁠용⁠금⁠액';
+    expect(normalizeHeader(header)).toBe('이용금액');
+  });
+
+  it('still strips zero-width spaces alongside variation selectors', () => {
+    const header = '이​용︀일';
+    expect(normalizeHeader(header)).toBe('이용일');
+  });
+
+  it('findColumn matches headers with variation selectors', () => {
+    const headers = ['이︀용︁일', '이⁠용⁠처', '이​용​금​액'];
+    expect(findColumn(headers, '이용일', DATE_COLUMN_PATTERN)).toBe(0);
+    expect(findColumn(headers, '이용처', MERCHANT_COLUMN_PATTERN)).toBe(1);
+    expect(findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+});

@@ -1018,6 +1018,230 @@ const bcAdapter: BankAdapter = {
 };
 
 // ---------------------------------------------------------------------------
+// Additional bank adapters (14 banks matching server-side adapter-factory)
+// Uses a factory helper to avoid 14 near-identical adapter objects (C40-01).
+// ---------------------------------------------------------------------------
+
+interface BankCSVConfig {
+  bankId: BankId;
+  headerKeywords: string[];
+  dateHeader?: string;
+  merchantHeader?: string;
+  amountHeader?: string;
+  installmentsHeader?: string;
+  categoryHeader?: string;
+  memoHeader?: string;
+}
+
+function createBankAdapter(config: BankCSVConfig): BankAdapter {
+  const {
+    bankId,
+    headerKeywords,
+    dateHeader,
+    merchantHeader,
+    amountHeader,
+    installmentsHeader,
+    categoryHeader,
+    memoHeader,
+  } = config;
+
+  const normalizedKeywords = headerKeywords.map((k) => normalizeHeader(k));
+
+  return {
+    bankId,
+
+    detect(content: string): boolean {
+      const { bank } = detectBank(content);
+      return bank === bankId;
+    },
+
+    parseCSV(content: string): ParseResult {
+      const delimiter = detectCSVDelimiter(content);
+      const lines = content.split('\n').filter((l) => l.trim());
+      const errors: ParseError[] = [];
+      const transactions: RawTransaction[] = [];
+
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(30, lines.length); i++) {
+        const cells = splitLine(lines[i] ?? '', delimiter);
+        const normalizedCells = cells.map((c) => normalizeHeader(c));
+        if (normalizedCells.some((c) => normalizedKeywords.includes(c)) && isValidHeaderRow(cells.map((c) => c.trim()))) {
+          headerIdx = i;
+          break;
+        }
+      }
+      if (headerIdx === -1) {
+        return { bank: bankId, format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
+      }
+
+      const headers = splitLine(lines[headerIdx] ?? '', delimiter);
+      const dateCol = findColumn(headers, dateHeader, DATE_COLUMN_PATTERN);
+      const merchantCol = findColumn(headers, merchantHeader, MERCHANT_COLUMN_PATTERN);
+      const amountCol = findColumn(headers, amountHeader, AMOUNT_COLUMN_PATTERN);
+      const installCol = findColumn(headers, installmentsHeader, INSTALLMENTS_COLUMN_PATTERN);
+      const categoryCol = findColumn(headers, categoryHeader, CATEGORY_COLUMN_PATTERN);
+      const memoCol = findColumn(headers, memoHeader, MEMO_COLUMN_PATTERN);
+
+      for (let i = headerIdx + 1; i < lines.length; i++) {
+        const line = lines[i] ?? '';
+        if (!line.trim()) continue;
+        if (SUMMARY_ROW_PATTERN.test(line)) continue;
+        const cells = splitLine(line, delimiter);
+
+        const dateRaw = dateCol !== -1 ? (cells[dateCol] ?? '') : '';
+        const merchantRaw = merchantCol !== -1 ? (cells[merchantCol] ?? '') : '';
+        const amountRaw = amountCol !== -1 ? (cells[amountCol] ?? '') : '';
+
+        if (!dateRaw && !merchantRaw) continue;
+
+        const amount = parseAmount(amountRaw);
+        if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+
+        const tx: RawTransaction = {
+          date: parseDateToISO(dateRaw, errors, i),
+          merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
+          amount,
+        };
+
+        if (installCol !== -1 && cells[installCol]) {
+          const inst = parseInstallments(cells[installCol]);
+          if (inst !== undefined) tx.installments = inst;
+        }
+        if (categoryCol !== -1 && cells[categoryCol]) tx.category = cells[categoryCol];
+        if (memoCol !== -1 && cells[memoCol]) tx.memo = cells[memoCol];
+
+        transactions.push(tx);
+      }
+
+      return { bank: bankId, format: 'csv', transactions, errors };
+    },
+  };
+}
+
+const kakaoAdapter = createBankAdapter({
+  bankId: 'kakao',
+  headerKeywords: ['거래일시', '이용처', '이용금액'],
+  dateHeader: '거래일시',
+  merchantHeader: '이용처',
+  amountHeader: '이용금액',
+});
+
+const tossAdapter = createBankAdapter({
+  bankId: 'toss',
+  headerKeywords: ['거래일', '이용처', '이용금액'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '이용금액',
+});
+
+const kbankAdapter = createBankAdapter({
+  bankId: 'kbank',
+  headerKeywords: ['거래일', '이용처', '거래금액'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '거래금액',
+});
+
+const bnkAdapter = createBankAdapter({
+  bankId: 'bnk',
+  headerKeywords: ['거래일', '가맹점', '이용금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부',
+});
+
+const dgbAdapter = createBankAdapter({
+  bankId: 'dgb',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+const suhyupAdapter = createBankAdapter({
+  bankId: 'suhyup',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+const jbAdapter = createBankAdapter({
+  bankId: 'jb',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+const kwangjuAdapter = createBankAdapter({
+  bankId: 'kwangju',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+const jejuAdapter = createBankAdapter({
+  bankId: 'jeju',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+const scAdapter = createBankAdapter({
+  bankId: 'sc',
+  headerKeywords: ['거래일', '이용처', '이용금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부',
+});
+
+const mgAdapter = createBankAdapter({
+  bankId: 'mg',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+const cuAdapter = createBankAdapter({
+  bankId: 'cu',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+const kdbAdapter = createBankAdapter({
+  bankId: 'kdb',
+  headerKeywords: ['거래일', '이용처', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+const epostAdapter = createBankAdapter({
+  bankId: 'epost',
+  headerKeywords: ['거래일', '이용처', '거래금액', '할부'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+});
+
+// ---------------------------------------------------------------------------
 // Adapter registry & main parseCSV export
 // ---------------------------------------------------------------------------
 
@@ -1032,6 +1256,20 @@ const ADAPTERS: BankAdapter[] = [
   hanaAdapter,
   nhAdapter,
   bcAdapter,
+  kakaoAdapter,
+  tossAdapter,
+  kbankAdapter,
+  bnkAdapter,
+  dgbAdapter,
+  suhyupAdapter,
+  jbAdapter,
+  kwangjuAdapter,
+  jejuAdapter,
+  scAdapter,
+  mgAdapter,
+  cuAdapter,
+  kdbAdapter,
+  epostAdapter,
 ];
 
 export function parseCSV(content: string, bank?: BankId): ParseResult {
