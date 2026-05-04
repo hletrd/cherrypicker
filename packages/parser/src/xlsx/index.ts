@@ -11,6 +11,8 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
+  HEADER_KEYWORDS,
+  isValidHeaderRow,
 } from '../csv/column-matcher.js';
 
 // SheetJS is imported as a CommonJS module
@@ -132,21 +134,8 @@ export async function parseXLSX(filePath: string, bank?: BankId): Promise<ParseR
   return bestResult ?? { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트 데이터를 읽을 수 없습니다.' }] };
 }
 
-// ---------------------------------------------------------------------------
-// Header keyword vocabulary (matches frontend)
-// ---------------------------------------------------------------------------
-
-const HEADER_KEYWORDS = [
-  '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일',
-  '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
-  '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
-];
-
-// Keyword categories for header detection — hoisted to module scope to avoid
-// recreating Sets on every parse call. Matches the generic CSV parser.
-const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
-const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
-const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+// Header keyword vocabulary and category Sets are imported from the shared
+// column-matcher module (C4-07) to avoid duplication across 4 parser files.
 
 function parseXLSXSheet(
   sheet: xlsx.WorkSheet,
@@ -176,31 +165,18 @@ function parseXLSXSheet(
   }
 
   // Find header row — scan up to 30 rows for banks with long preambles.
-  // Require keywords from at least 2 distinct categories (date, merchant,
-  // amount) to avoid matching summary rows with only amount keywords.
-  // Matches the web-side xlsx.ts (C86-05) and both generic CSV parsers.
+  // Uses shared isValidHeaderRow from column-matcher (C4-07) which requires
+  // keywords from at least 2 distinct categories.
   let headerRowIdx = -1;
   let headers: string[] = [];
-
-  // Module-level keyword Sets (hoisted above parseXLSXSheet) avoid
-  // recreating on every call.
-  const xlsxDateKeywords = DATE_KEYWORDS;
-  const xlsxMerchantKeywords = MERCHANT_KEYWORDS;
-  const xlsxAmountKeywords = AMOUNT_KEYWORDS;
 
   for (let i = 0; i < Math.min(30, rows.length); i++) {
     const row = rows[i] ?? [];
     const rowStrings = row.map((c) => String(c ?? '').trim());
-    const matchCount = rowStrings.filter((c) => HEADER_KEYWORDS.includes(c)).length;
-    if (matchCount >= 2) {
-      const matchedCategories = [xlsxDateKeywords, xlsxMerchantKeywords, xlsxAmountKeywords]
-        .filter(catSet => rowStrings.some((c) => catSet.has(c)))
-        .length;
-      if (matchedCategories >= 2) {
-        headerRowIdx = i;
-        headers = rowStrings;
-        break;
-      }
+    if (isValidHeaderRow(rowStrings)) {
+      headerRowIdx = i;
+      headers = rowStrings;
+      break;
     }
   }
 
@@ -238,6 +214,11 @@ function parseXLSXSheet(
   const transactions: import('../types.js').RawTransaction[] = [];
   const errors: import('../types.js').ParseError[] = [];
 
+  // Track last non-empty date value for merged cell forward-fill.
+  // Korean bank XLSX exports commonly merge date cells across installment
+  // rows — SheetJS fills merged cells with empty strings (C4-04).
+  let lastDate: unknown = '';
+
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
     if (row.every((c) => !c)) continue;
@@ -246,7 +227,12 @@ function parseXLSXSheet(
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (/합계|총계|소계|total|sum/i.test(rowText)) continue;
 
-    const dateRaw = dateCol !== -1 ? row[dateCol] : '';
+    // Forward-fill date column for merged cells (C4-04)
+    const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
+    if (dateCol !== -1 && rawDateValue !== '' && rawDateValue != null) {
+      lastDate = rawDateValue;
+    }
+    const dateRaw = dateCol !== -1 ? (rawDateValue !== '' && rawDateValue != null ? rawDateValue : lastDate) : '';
     const merchantRaw = merchantCol !== -1 ? row[merchantCol] : '';
     const amountRaw = amountCol !== -1 ? row[amountCol] : '';
 

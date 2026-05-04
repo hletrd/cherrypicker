@@ -10,6 +10,8 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
+  HEADER_KEYWORDS,
+  isValidHeaderRow,
 } from './column-matcher.js';
 
 // Korean date patterns — must cover all formats that parseDateStringToISO
@@ -41,23 +43,6 @@ function isAmountLike(value: string): boolean {
 // The local parseDateToISO was removed in favor of the centralized
 // implementation to avoid divergence (C35-03).
 
-// Header keyword vocabulary — matches the XLSX parser and web-side CSV parser.
-// Used to validate that a candidate header row actually contains column names
-// rather than metadata text (C1-01).
-const HEADER_KEYWORDS = [
-  '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일',
-  '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
-  '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
-];
-
-// Keyword categories for header detection — a valid header row should contain
-// keywords from at least 2 distinct categories (date, merchant, amount) to
-// avoid matching summary table rows that only have amount keywords (C1-01).
-// Hoisted to module scope to avoid recreating on every parse call.
-const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
-const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
-const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
-
 export function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   const delimiter = detectCSVDelimiter(content);
   const lines = content.split('\n').filter((l) => l.trim());
@@ -73,21 +58,14 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   // A valid header row must contain at least one known header keyword AND
   // keywords from at least 2 distinct categories (date, merchant, amount)
   // to avoid matching summary rows that only have amount keywords (C1-01).
+  // Uses shared isValidHeaderRow from column-matcher (C4-07).
   let headerIdx = -1;
   for (let i = 0; i < Math.min(30, lines.length); i++) {
     const cells = splitCSVLine(lines[i] ?? '', delimiter);
     const hasNonNumeric = cells.some((c) => /[가-힣a-zA-Z]/.test(c));
-    if (hasNonNumeric) {
-      const hasHeaderKeyword = cells.some((c) => HEADER_KEYWORDS.includes(c.trim()));
-      if (hasHeaderKeyword) {
-        const matchedCategories = [DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS]
-          .filter(catSet => cells.some((c) => catSet.has(c.trim())))
-          .length;
-        if (matchedCategories >= 2) {
-          headerIdx = i;
-          break;
-        }
-      }
+    if (hasNonNumeric && isValidHeaderRow(cells.map((c) => c.trim()))) {
+      headerIdx = i;
+      break;
     }
   }
 
@@ -131,13 +109,31 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
         else if (amountCol === -1 && isAmountLike(cell) && !isDateLike(cell)) amountCol = i;
       }
     }
-    // Merchant is likely the column between date and amount — prefer a
-    // text-heavy column (Korean characters) over a numeric one.
+    // Merchant is likely a text-heavy column containing Korean characters.
+    // Prefer the first column (not date/amount/installments/category/memo)
+    // where sample data contains Korean text (C4-03). This avoids picking
+    // numeric columns like installments or card number suffixes.
     if (dateCol !== -1 && amountCol !== -1 && merchantCol === -1) {
       for (let i = 0; i < headers.length; i++) {
         if (i !== dateCol && i !== amountCol && i !== installmentsCol && i !== categoryCol && i !== memoCol) {
-          merchantCol = i;
-          break;
+          // Check if any sample data in this column contains Korean characters
+          const hasKorean = sampleRows.some((row) => {
+            const cells = splitCSVLine(row, delimiter);
+            return /[가-힣]/.test(cells[i] ?? '');
+          });
+          if (hasKorean) {
+            merchantCol = i;
+            break;
+          }
+        }
+      }
+      // Fallback: pick the first non-reserved column even without Korean
+      if (merchantCol === -1) {
+        for (let i = 0; i < headers.length; i++) {
+          if (i !== dateCol && i !== amountCol && i !== installmentsCol && i !== categoryCol && i !== memoCol) {
+            merchantCol = i;
+            break;
+          }
         }
       }
     }

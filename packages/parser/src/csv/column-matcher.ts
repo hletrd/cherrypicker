@@ -42,3 +42,30 @@ export const AMOUNT_COLUMN_PATTERN = /이용금액|거래금액|금액|결제금
 export const INSTALLMENTS_COLUMN_PATTERN = /할부|할부개월|할부기간|할부월|할부개월수/;
 export const CATEGORY_COLUMN_PATTERN = /업종|카테고리|분류|업종분류|업종명/;
 export const MEMO_COLUMN_PATTERN = /비고|적요|메모|내용|설명|참고/;
+
+// Header keyword vocabulary — shared across all parsers (server CSV, server XLSX,
+// web CSV, web XLSX). Used to validate that a candidate header row actually
+// contains column names rather than metadata text.
+export const HEADER_KEYWORDS: readonly string[] = [
+  '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일',
+  '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
+  '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
+];
+
+// Keyword category Sets for multi-category header detection. A valid header
+// row must contain keywords from at least 2 distinct categories to avoid
+// matching summary rows that only have amount keywords.
+export const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일']);
+export const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
+export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+
+/** Check whether a row of trimmed cell values looks like a valid header row
+ *  by requiring keywords from at least 2 distinct categories. */
+export function isValidHeaderRow(cells: string[]): boolean {
+  const hasHeaderKeyword = cells.some((c) => (HEADER_KEYWORDS as string[]).includes(c));
+  if (!hasHeaderKeyword) return false;
+  const matchedCategories = [DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS]
+    .filter(catSet => cells.some((c) => catSet.has(c)))
+    .length;
+  return matchedCategories >= 2;
+}

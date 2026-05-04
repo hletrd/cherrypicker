@@ -16,14 +16,11 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
+  DATE_KEYWORDS,
+  MERCHANT_KEYWORDS,
+  AMOUNT_KEYWORDS,
+  isValidHeaderRow,
 } from './column-matcher.js';
-
-// Keyword categories for header detection — hoisted to module scope to avoid
-// recreating Sets on every parse call. Matches the generic CSV parser and
-// XLSX parser keyword sets.
-const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일']);
-const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
-const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
 
 export interface BankCSVConfig {
   bankId: BankId;
@@ -79,25 +76,15 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       const transactions: RawTransaction[] = [];
 
       // Find header row — scan up to maxHeaderScan rows, looking for a row
-      // that contains at least one of the bank's expected header keywords.
-      // Additionally require keywords from at least 2 distinct categories
-      // (date, merchant, amount) to avoid matching summary rows that only
-      // contain amount keywords. Matches the generic CSV parser behavior.
-      // Hoisted to module scope via the constants below to avoid
-      // recreating Sets on every parse call.
-      const adapterDateKeywords = DATE_KEYWORDS;
-      const adapterMerchantKeywords = MERCHANT_KEYWORDS;
-      const adapterAmountKeywords = AMOUNT_KEYWORDS;
-
+      // that contains at least one of the bank's expected header keywords
+      // AND keywords from at least 2 distinct categories (date, merchant,
+      // amount) to avoid matching summary rows. Uses shared isValidHeaderRow
+      // from column-matcher (C4-07).
       let headerIdx = -1;
       for (let i = 0; i < Math.min(maxHeaderScan, lines.length); i++) {
         const cells = splitCSVLine(lines[i] ?? '', delimiter);
         if (cells.some((c) => headerKeywords.includes(c.trim()))) {
-          const trimmedCells = cells.map((c) => c.trim());
-          const matchedCategories = [adapterDateKeywords, adapterMerchantKeywords, adapterAmountKeywords]
-            .filter(catSet => trimmedCells.some((c) => catSet.has(c)))
-            .length;
-          if (matchedCategories >= 2) {
+          if (isValidHeaderRow(cells.map((c) => c.trim()))) {
             headerIdx = i;
             break;
           }
