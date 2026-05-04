@@ -70,7 +70,7 @@ const AMOUNT_PATTERNS = [
   /^－[\d,]+원?$/,       // －1,234 — fullwidth-minus negative (C54-01)
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
-  /^\d{5,}원?$/,         // Bare 5+ digit integers: 50000 or 50000원 (C49-01)
+  /^\d{8,}원?$/,         // Bare 8+ digit integers: 10000000 or 10000000원 (C61-01, raised from 5)
   /^KRW[\d,]+원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
 ];
 

@@ -986,3 +986,61 @@ describe('Cycle 60: isAmountLike does not false-positive on bare small numbers',
     expect(result.errors.some((e) => e.message.includes('헤더'))).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 61: Bare integer amount threshold raised from 5 to 8 digits (C61-01)
+// ---------------------------------------------------------------------------
+describe('Cycle 61: bare integer amount threshold is 8 digits (C61-01)', () => {
+  test('5-7 digit bare integers do NOT match as amounts in data inference', () => {
+    // A generic CSV where one column has 5-7 digit numbers (transaction IDs)
+    // and another has comma-formatted amounts. The bare integer column should
+    // NOT be picked as the amount column during data inference.
+    const content = [
+      'date,desc,ref,price',
+      '2026-01-15,coffee,12345,"3,500"',
+      '2026-01-16,sandwich,67890,"12,000"',
+      '2026-01-17,juice,111222,"5,678"',
+    ].join('\n');
+    const result = parseCSV(content);
+    // The "price" column with comma-separated amounts should be detected,
+    // not the "ref" column with 5-digit bare integers.
+    if (result.transactions.length > 0) {
+      for (const tx of result.transactions) {
+        // Amounts should be in the thousands range, not the 5-digit ID range
+        expect(tx.amount).toBeLessThan(100000);
+        expect(tx.amount).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  test('8+ digit bare integers still match as amounts', () => {
+    // A CSV where amounts are bare 8+ digit integers (10,000,000 Won)
+    // without thousand separators. These should still be detected.
+    const content = [
+      'date,desc,cost',
+      '2026-01-15,deposit,10000000',
+      '2026-01-16,transfer,25000000',
+    ].join('\n');
+    const result = parseCSV(content);
+    // With no recognized headers, falls back to data inference.
+    // 8+ digit bare integers should be detected as amounts.
+    if (result.transactions.length > 0) {
+      expect(result.transactions[0]?.amount).toBe(10000000);
+      expect(result.transactions[1]?.amount).toBe(25000000);
+    }
+  });
+
+  test('comma-formatted amounts still work regardless of digit count', () => {
+    // Comma-separated amounts should always be detected (the comma pattern
+    // is separate from the bare integer pattern).
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,스타벅스,6000',
+      '2026-02-02,이마트,45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(6000);
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+});

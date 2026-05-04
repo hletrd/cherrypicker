@@ -184,7 +184,7 @@ const AMOUNT_PATTERNS = [
   /^－[\d,]+원?$/,       // －1,234 — fullwidth-minus negative (C54-01)
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
-  /^\d{5,}원?$/,         // Bare 5+ digit integers: 50000 or 50000원 (C49-01)
+  /^\d{8,}원?$/,         // Bare 8+ digit integers: 10000000 or 10000000원 (C61-01, raised from 5)
   /^KRW[\d,]+원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
 ];
 
@@ -353,711 +353,8 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
 }
 
 // ---------------------------------------------------------------------------
-// Bank adapters
-// ---------------------------------------------------------------------------
-
-const samsungAdapter: BankAdapter = {
-  bankId: 'samsung',
-
-  detect(content: string): boolean {
-    return /삼성카드/.test(content) || /SAMSUNG\s*CARD/i.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-
-    let headerIdx = -1;
-    // Scan up to 30 rows for header — matching the generic parser's limit
-    // (C81-02). Some bank exports have 10+ metadata rows before the header.
-    // Use flexible matching: normalize cells and check for ANY known keyword
-    // rather than requiring exact matches, matching server-side factory
-    // behavior with normalizedKeywords.some() (F18-03).
-    const SAMSUNG_KEYWORDS = ['이용일', '가맹점명', '이용금액', '할부', '업종'].map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => SAMSUNG_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'samsung', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '가맹점명', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
-    const categoryIdx = findColumn(headers, '업종', CATEGORY_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'samsung', format: 'csv', transactions, errors };
-  },
-};
-
-const shinhanAdapter: BankAdapter = {
-  bankId: 'shinhan',
-
-  detect(content: string): boolean {
-    return /신한카드/.test(content) || /SHINHAN/i.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-
-    let headerIdx = -1;
-    const SHINHAN_KEYWORDS = ['이용일', '이용처', '이용금액', '할부개월수', '업종분류'].map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => SHINHAN_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'shinhan', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '이용처', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부개월수', INSTALLMENTS_COLUMN_PATTERN);
-    const categoryIdx = findColumn(headers, '업종분류', CATEGORY_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'shinhan', format: 'csv', transactions, errors };
-  },
-};
-
-const kbAdapter: BankAdapter = {
-  bankId: 'kb',
-
-  detect(content: string): boolean {
-    return /KB국민카드/.test(content) || /국민카드/.test(content) || /kbcard/i.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-    const KB_HEADERS = ['거래일시', '가맹점명', '이용금액', '할부개월', '업종'];
-
-    let headerIdx = -1;
-    const KB_HEADERS_NORM = KB_HEADERS.map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => KB_HEADERS_NORM.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'kb', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '거래일시', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '가맹점명', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부개월', INSTALLMENTS_COLUMN_PATTERN);
-    const categoryIdx = findColumn(headers, '업종', CATEGORY_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'kb', format: 'csv', transactions, errors };
-  },
-};
-
-const hyundaiAdapter: BankAdapter = {
-  bankId: 'hyundai',
-
-  detect(content: string): boolean {
-    return /현대카드/.test(content) || /HYUNDAICARD/.test(content) || /hdcard/i.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-    const HYUNDAI_HEADERS = ['이용일', '이용처', '이용금액', '할부', '비고'];
-
-    let headerIdx = -1;
-    const HYUNDAI_HEADERS_NORM = HYUNDAI_HEADERS.map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => HYUNDAI_HEADERS_NORM.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'hyundai', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '이용처', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
-    const memoIdx = findColumn(headers, '비고', MEMO_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'hyundai', format: 'csv', transactions, errors };
-  },
-};
-
-const lotteAdapter: BankAdapter = {
-  bankId: 'lotte',
-
-  detect(content: string): boolean {
-    return /롯데카드/.test(content) || /LOTTE\s*CARD/i.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-
-    let headerIdx = -1;
-    const LOTTE_KEYWORDS = ['거래일', '이용가맹점', '이용금액', '할부', '업종'].map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => LOTTE_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'lotte', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '거래일', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '이용가맹점', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
-    const categoryIdx = findColumn(headers, '업종', CATEGORY_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'lotte', format: 'csv', transactions, errors };
-  },
-};
-
-const hanaAdapter: BankAdapter = {
-  bankId: 'hana',
-
-  detect(content: string): boolean {
-    return /하나카드/.test(content) || /HANA\s*CARD/i.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-
-    let headerIdx = -1;
-    const HANA_KEYWORDS = ['이용일자', '가맹점명', '이용금액', '할부개월', '적요'].map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => HANA_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'hana', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '이용일자', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '가맹점명', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부개월', INSTALLMENTS_COLUMN_PATTERN);
-    const memoIdx = findColumn(headers, '적요', MEMO_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'hana', format: 'csv', transactions, errors };
-  },
-};
-
-const wooriAdapter: BankAdapter = {
-  bankId: 'woori',
-
-  detect(content: string): boolean {
-    return /우리카드/.test(content) || /wooricard/i.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-    const WOORI_HEADERS = ['이용일자', '이용가맹점', '이용금액', '할부기간', '비고'];
-
-    let headerIdx = -1;
-    const WOORI_HEADERS_NORM = WOORI_HEADERS.map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => WOORI_HEADERS_NORM.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'woori', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '이용일자', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '이용가맹점', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부기간', INSTALLMENTS_COLUMN_PATTERN);
-    const memoIdx = findColumn(headers, '비고', MEMO_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'woori', format: 'csv', transactions, errors };
-  },
-};
-
-const nhAdapter: BankAdapter = {
-  bankId: 'nh',
-
-  detect(content: string): boolean {
-    return /NH농협/.test(content) || /농협카드/.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-
-    let headerIdx = -1;
-    const NH_KEYWORDS = ['거래일', '이용처', '거래금액', '할부', '비고'].map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => NH_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'nh', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '거래일', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '이용처', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '거래금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
-    const memoIdx = findColumn(headers, '비고', MEMO_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'nh', format: 'csv', transactions, errors };
-  },
-};
-
-const ibkAdapter: BankAdapter = {
-  bankId: 'ibk',
-
-  detect(content: string): boolean {
-    return /IBK기업은행/.test(content) || /기업은행/.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-    const IBK_HEADERS = ['거래일', '가맹점', '거래금액', '할부', '적요'];
-
-    let headerIdx = -1;
-    const IBK_HEADERS_NORM = IBK_HEADERS.map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => IBK_HEADERS_NORM.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'ibk', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '거래일', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '가맹점', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '거래금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
-    const memoIdx = findColumn(headers, '적요', MEMO_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (memoIdx !== -1 && cells[memoIdx]) tx.memo = cells[memoIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'ibk', format: 'csv', transactions, errors };
-  },
-};
-
-const bcAdapter: BankAdapter = {
-  bankId: 'bc',
-
-  detect(content: string): boolean {
-    return /BC카드/.test(content) || /비씨카드/.test(content);
-  },
-
-  parseCSV(content: string): ParseResult {
-    const delimiter = detectCSVDelimiter(content);
-    const lines = content.split('\n').filter((l) => l.trim());
-    const errors: ParseError[] = [];
-    const transactions: RawTransaction[] = [];
-
-    let headerIdx = -1;
-    const BC_KEYWORDS = ['이용일', '가맹점', '이용금액', '할부', '업종'].map(h => normalizeHeader(h));
-    for (let i = 0; i < Math.min(30, lines.length); i++) {
-      const cells = splitLine(lines[i] ?? '', delimiter);
-      const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.some((c) => BC_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
-        headerIdx = i;
-        break;
-      }
-    }
-    if (headerIdx === -1) {
-      return { bank: 'bc', format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
-    }
-
-    const headers = splitLine(lines[headerIdx] ?? '', delimiter);
-    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
-    const merchantIdx = findColumn(headers, '가맹점', MERCHANT_COLUMN_PATTERN);
-    const amountIdx = findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN);
-    const installIdx = findColumn(headers, '할부', INSTALLMENTS_COLUMN_PATTERN);
-    const categoryIdx = findColumn(headers, '업종', CATEGORY_COLUMN_PATTERN);
-
-    for (let i = headerIdx + 1; i < lines.length; i++) {
-      const line = lines[i] ?? '';
-      if (!line.trim()) continue;
-      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
-      if (SUMMARY_ROW_PATTERN.test(line)) continue;
-      const cells = splitLine(line, delimiter);
-
-      const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
-      const merchantRaw = merchantIdx !== -1 ? (cells[merchantIdx] ?? '') : '';
-      const amountRaw = amountIdx !== -1 ? (cells[amountIdx] ?? '') : '';
-
-      if (!dateRaw && !merchantRaw) continue;
-
-      const amount = parseAmount(amountRaw);
-      if (!isValidAmount(amount, amountRaw, i, errors)) continue;
-
-      const tx: RawTransaction = {
-        date: parseDateToISO(dateRaw, errors, i),
-        merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-        amount,
-      };
-
-      if (installIdx !== -1 && cells[installIdx]) {
-        const inst = parseInstallments(cells[installIdx]);
-        if (inst !== undefined) tx.installments = inst;
-      }
-      if (categoryIdx !== -1 && cells[categoryIdx]) tx.category = cells[categoryIdx];
-
-      transactions.push(tx);
-    }
-
-    return { bank: 'bc', format: 'csv', transactions, errors };
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Additional bank adapters (14 banks matching server-side adapter-factory)
-// Uses a factory helper to avoid 14 near-identical adapter objects (C40-01).
+// Bank adapters — all 24 banks use the createBankAdapter() factory
+// to eliminate duplicated parse logic (C61-02).
 // ---------------------------------------------------------------------------
 
 interface BankCSVConfig {
@@ -1155,6 +452,107 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
     },
   };
 }
+
+// Original 10 banks — previously hand-written, now using factory (C61-02).
+const samsungAdapter = createBankAdapter({
+  bankId: 'samsung',
+  headerKeywords: ['이용일', '가맹점명', '이용금액', '할부', '업종'],
+  dateHeader: '이용일',
+  merchantHeader: '가맹점명',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부',
+  categoryHeader: '업종',
+});
+
+const shinhanAdapter = createBankAdapter({
+  bankId: 'shinhan',
+  headerKeywords: ['이용일', '이용처', '이용금액', '할부개월수', '업종분류'],
+  dateHeader: '이용일',
+  merchantHeader: '이용처',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부개월수',
+  categoryHeader: '업종분류',
+});
+
+const kbAdapter = createBankAdapter({
+  bankId: 'kb',
+  headerKeywords: ['거래일시', '가맹점명', '이용금액', '할부개월', '업종'],
+  dateHeader: '거래일시',
+  merchantHeader: '가맹점명',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부개월',
+  categoryHeader: '업종',
+});
+
+const hyundaiAdapter = createBankAdapter({
+  bankId: 'hyundai',
+  headerKeywords: ['이용일', '이용처', '이용금액', '할부', '비고'],
+  dateHeader: '이용일',
+  merchantHeader: '이용처',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부',
+  memoHeader: '비고',
+});
+
+const lotteAdapter = createBankAdapter({
+  bankId: 'lotte',
+  headerKeywords: ['거래일', '이용가맹점', '이용금액', '할부', '업종'],
+  dateHeader: '거래일',
+  merchantHeader: '이용가맹점',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부',
+  categoryHeader: '업종',
+});
+
+const hanaAdapter = createBankAdapter({
+  bankId: 'hana',
+  headerKeywords: ['이용일자', '가맹점명', '이용금액', '할부개월', '적요'],
+  dateHeader: '이용일자',
+  merchantHeader: '가맹점명',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부개월',
+  memoHeader: '적요',
+});
+
+const wooriAdapter = createBankAdapter({
+  bankId: 'woori',
+  headerKeywords: ['이용일자', '이용가맹점', '이용금액', '할부기간', '비고'],
+  dateHeader: '이용일자',
+  merchantHeader: '이용가맹점',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부기간',
+  memoHeader: '비고',
+});
+
+const nhAdapter = createBankAdapter({
+  bankId: 'nh',
+  headerKeywords: ['거래일', '이용처', '거래금액', '할부', '비고'],
+  dateHeader: '거래일',
+  merchantHeader: '이용처',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+  memoHeader: '비고',
+});
+
+const ibkAdapter = createBankAdapter({
+  bankId: 'ibk',
+  headerKeywords: ['거래일', '가맹점', '거래금액', '할부', '적요'],
+  dateHeader: '거래일',
+  merchantHeader: '가맹점',
+  amountHeader: '거래금액',
+  installmentsHeader: '할부',
+  memoHeader: '적요',
+});
+
+const bcAdapter = createBankAdapter({
+  bankId: 'bc',
+  headerKeywords: ['이용일', '가맹점', '이용금액', '할부', '업종'],
+  dateHeader: '이용일',
+  merchantHeader: '가맹점',
+  amountHeader: '이용금액',
+  installmentsHeader: '할부',
+  categoryHeader: '업종',
+});
 
 const kakaoAdapter = createBankAdapter({
   bankId: 'kakao',
