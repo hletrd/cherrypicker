@@ -2,7 +2,7 @@ import { readFile } from 'fs/promises';
 import type { BankId, ParseResult } from '../types.js';
 import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
-import { parseDateStringToISO, isValidDayForMonth } from '../date-utils.js';
+import { parseDateStringToISO, isValidDayForMonth, isValidISODate } from '../date-utils.js';
 import {
   findColumn,
   DATE_COLUMN_PATTERN,
@@ -88,11 +88,9 @@ function parseDateToISO(
     const result = parseDateStringToISO(raw);
     // Report unparseable dates as parse errors so users can see which
     // transactions have malformed dates, matching the web-side behavior
-    // (C5-01).
-    if (result === raw.trim() && raw.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(result)) {
-      if (errors && lineIdx !== undefined) {
-        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
-      }
+    // in apps/web/src/lib/parser/xlsx.ts (C71-04).
+    if (!isValidISODate(result) && raw.trim() && errors && lineIdx !== undefined) {
+      errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
     }
     return result;
   }
@@ -261,6 +259,7 @@ function parseXLSXSheet(
   let lastDate: unknown = '';
   let lastMerchant: unknown = '';
   let lastCategory: unknown = '';
+  let lastInstallments: unknown = '';
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -295,6 +294,17 @@ function parseXLSXSheet(
       ? (rawCategoryValue !== '' && rawCategoryValue != null ? rawCategoryValue : lastCategory)
       : '';
 
+    // Forward-fill installments column for merged cells (C10-03).
+    // Korean bank XLSX exports sometimes merge installment cells across
+    // sub-rows of the same transaction.
+    const rawInstallValue = installCol !== -1 ? row[installCol] : '';
+    if (installCol !== -1 && rawInstallValue !== '' && rawInstallValue != null) {
+      lastInstallments = rawInstallValue;
+    }
+    const installRaw = installCol !== -1
+      ? (rawInstallValue !== '' && rawInstallValue != null ? rawInstallValue : lastInstallments)
+      : '';
+
     const amountRaw = amountCol !== -1 ? row[amountCol] : '';
 
     if (!dateRaw && !merchantRaw) continue;
@@ -320,8 +330,8 @@ function parseXLSXSheet(
       date: parseDateToISO(dateRaw, errors, i),
       merchant: String(merchantRaw ?? '').replace(/^"(.*)"$/, '$1').trim(),
       amount,
-      ...(installCol !== -1 && row[installCol]
-        ? { installments: parseInstallments(row[installCol]) }
+      ...(installCol !== -1 && installRaw
+        ? { installments: parseInstallments(String(installRaw)) }
         : {}),
       ...(categoryCol !== -1 && categoryRaw
         ? { category: String(categoryRaw).trim() }

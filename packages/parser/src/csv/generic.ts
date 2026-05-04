@@ -1,6 +1,6 @@
 import type { BankId, ParseError, ParseResult, RawTransaction } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
-import { parseDateStringToISO } from '../date-utils.js';
+import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
 import { splitCSVLine, parseCSVAmount, parseCSVInstallments } from './shared.js';
 import {
   normalizeHeader,
@@ -32,6 +32,7 @@ const AMOUNT_PATTERNS = [
   /^￦-?[\d,]+원?$/,     // ￦1,234 (fullwidth Won sign)
   /^-?[\d,]+원?$/,      // 1,234원 or 1,234 or -1,234
   /^-?[\d,]+$/,         // Integer amounts only — Korean Won has no subunits
+  /^\([\d,]+\)$/,       // Parenthesized negatives: (1,234) → -1234
 ];
 
 function isDateLike(value: string): boolean {
@@ -172,8 +173,16 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     // and would inflate monthly spending totals (C42-01/C42-02).
     if (amount <= 0) continue;
 
+    const parsedDate = parseDateStringToISO(dateRaw);
+    // Report unparseable dates as parse errors so users can see which
+    // transactions have malformed dates, matching the web-side parser
+    // behavior in apps/web/src/lib/parser/csv.ts (C71-04).
+    if (!isValidISODate(parsedDate) && dateRaw.trim()) {
+      errors.push({ line: i + 1, message: `날짜를 해석할 수 없습니다: ${dateRaw.trim()}` });
+    }
+
     const tx: RawTransaction = {
-      date: parseDateStringToISO(dateRaw),
+      date: parsedDate,
       merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
       amount,
     };

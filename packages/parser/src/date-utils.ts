@@ -122,3 +122,11 @@ export function parseDateStringToISO(raw: string): string {
 
   return cleaned;
 }
+
+/** Check if a string is a valid ISO 8601 date (YYYY-MM-DD).
+ *  Used by parsers to detect unparseable dates returned by
+ *  parseDateStringToISO() and report them as parse errors.
+ *  Parity with web-side apps/web/src/lib/parser/date-utils.ts. */
+export function isValidISODate(date: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date);
+}

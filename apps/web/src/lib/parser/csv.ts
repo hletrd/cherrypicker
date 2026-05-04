@@ -133,6 +133,7 @@ const AMOUNT_PATTERNS = [
   /^￦-?[\d,]+원?$/,     // ￦1,234 (fullwidth Won sign)
   /^-?[\d,]+원?$/,      // 1,234원 or 1,234 or -1,234
   /^-?[\d,]+$/,         // Integer amounts only — Korean Won has no subunits
+  /^\([\d,]+\)$/,       // Parenthesized negatives: (1,234) → -1234
 ];
 
 function isDateLike(value: string): boolean {

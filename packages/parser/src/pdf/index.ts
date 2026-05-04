@@ -16,7 +16,7 @@ const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})/;
 const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
 const KOREAN_SHORT_DATE_PATTERN = /\d{1,2}월\s*\d{1,2}일/;
 const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/]\d{1,2}$/;
-const AMOUNT_PATTERN = /^-?[\d,]+원?$/;
+const AMOUNT_PATTERN = /^[₩￦]?-?[\d,]+원?$|^\([\d,]+\)$/;
 
 /** Maximum days per month for a non-leap year, indexed 1-12.
  *  Used by isValidShortDate for month-aware day validation when no
@@ -138,6 +138,11 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
 
     return transactions.length > 0 ? transactions : null;
   } catch (err) {
+    // Log structured parse failure for diagnostics — the fallback line scanner
+    // will still attempt recovery, but the structured parse failure should be
+    // visible in the console for debugging malformed PDFs.
+    // Matches web-side behavior in apps/web/src/lib/parser/pdf.ts (C25-06).
+    console.warn('[cherrypicker] Structured PDF table parse failed, falling back to line scan:', err instanceof Error ? err.message : String(err));
     if (err instanceof SyntaxError || err instanceof TypeError || err instanceof RangeError) {
       return null;
     }

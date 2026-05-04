@@ -511,3 +511,37 @@ describe('Won sign amount column inference (C7-06)', () => {
     expect(result.transactions[1]?.amount).toBe(125000);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Parenthesized negative amount column inference (C10-01)
+// ---------------------------------------------------------------------------
+
+describe('parenthesized negative amount inference', () => {
+  test('isAmountLike matches parenthesized negatives for column inference', () => {
+    // Use known header keywords so the header row is detected, but with
+    // unnamed amount column (header says "기타" not "금액") so the parser
+    // must infer the amount column from data patterns. Parenthesized
+    // amounts like (1,234) should be recognized as amounts.
+    const content = [
+      '이용일,가맹점명,기타',
+      '2024-01-15,테스트,(5,500)',
+      '2024-01-20,테스트2,(125,000)',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    // The parser should infer column 3 as amount from the data patterns.
+    // Parenthesized amounts are parsed as negative by parseCSVAmount.
+    // However since amounts <= 0 are filtered, these become 0 transactions.
+    // The key test is that the column IS inferred (no "Cannot parse amount" errors).
+    expect(result.errors.filter(e => e.message.includes('금액'))).toHaveLength(0);
+  });
+
+  test('generic CSV parser reports malformed dates as errors (C10-02)', () => {
+    const content = [
+      '거래일시,가맹점명,이용금액',
+      '날짜아님,스타벅스,5500',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
+  });
+});

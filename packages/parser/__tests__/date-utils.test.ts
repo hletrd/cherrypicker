@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { parseDateStringToISO, daysInMonth, isValidDayForMonth, inferYear } from '../src/date-utils.js';
+import { parseDateStringToISO, daysInMonth, isValidDayForMonth, inferYear, isValidISODate } from '../src/date-utils.js';
 
 describe('daysInMonth', () => {
   test('returns 28 for Feb in non-leap year', () => {
@@ -145,5 +145,43 @@ describe('parseDateStringToISO', () => {
 
   test('handles empty string', () => {
     expect(parseDateStringToISO('')).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isValidISODate tests
+// ---------------------------------------------------------------------------
+
+describe('isValidISODate', () => {
+  test('accepts valid ISO date', () => {
+    expect(isValidISODate('2024-01-15')).toBe(true);
+  });
+
+  test('accepts leap year date', () => {
+    expect(isValidISODate('2024-02-29')).toBe(true);
+  });
+
+  test('rejects date without leading zeros', () => {
+    expect(isValidISODate('2024-1-5')).toBe(false);
+  });
+
+  test('rejects raw date string', () => {
+    expect(isValidISODate('2024.01.15')).toBe(false);
+  });
+
+  test('rejects Korean date format', () => {
+    expect(isValidISODate('2024년 1월 15일')).toBe(false);
+  });
+
+  test('rejects empty string', () => {
+    expect(isValidISODate('')).toBe(false);
+  });
+
+  test('rejects garbage string', () => {
+    expect(isValidISODate('not-a-date')).toBe(false);
+  });
+
+  test('rejects date with extra content', () => {
+    expect(isValidISODate('2024-01-15 extra')).toBe(false);
   });
 });
