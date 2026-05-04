@@ -2,6 +2,15 @@ import type { BankId, ParseError, ParseResult, RawTransaction } from '../types.j
 import { detectCSVDelimiter } from '../detect.js';
 import { parseDateStringToISO } from '../date-utils.js';
 import { splitCSVLine, parseCSVAmount, parseCSVInstallments } from './shared.js';
+import {
+  normalizeHeader,
+  DATE_COLUMN_PATTERN,
+  MERCHANT_COLUMN_PATTERN,
+  AMOUNT_COLUMN_PATTERN,
+  INSTALLMENTS_COLUMN_PATTERN,
+  CATEGORY_COLUMN_PATTERN,
+  MEMO_COLUMN_PATTERN,
+} from './column-matcher.js';
 
 // Korean date patterns — must cover all formats that parseDateStringToISO
 // handles. Kept in sync with the web-side DATE_PATTERNS (C1-01).
@@ -96,16 +105,18 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   let categoryCol = -1;
   let memoCol = -1;
 
-  // First pass: look for header keywords — use regex patterns matching the
-  // XLSX parser's findCol approach for maximum flexibility (C1-02).
+  // First pass: look for header keywords — use shared ColumnMatcher patterns
+  // for maximum flexibility and consistency with the adapter-factory and XLSX
+  // parser. Uses normalizeHeader() to tolerate whitespace and parenthetical
+  // suffixes in column names.
   for (let i = 0; i < headers.length; i++) {
-    const h = headers[i] ?? '';
-    if (/이용일|이용일자|거래일|거래일시|날짜|일시|결제일|승인일|매출일/.test(h) && dateCol === -1) dateCol = i;
-    else if (/이용처|가맹점|상호|이용가맹점|가맹점명|거래처|매출처|사용처|결제처/.test(h) && merchantCol === -1) merchantCol = i;
-    else if (/이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액/.test(h) && amountCol === -1) amountCol = i;
-    else if (/할부|할부개월|할부기간|할부월/.test(h) && installmentsCol === -1) installmentsCol = i;
-    else if (/업종|카테고리|분류|업종분류|업종명/.test(h) && categoryCol === -1) categoryCol = i;
-    else if (/비고|적요|메모|내용|설명|참고/.test(h) && memoCol === -1) memoCol = i;
+    const h = normalizeHeader(headers[i] ?? '');
+    if (DATE_COLUMN_PATTERN.test(h) && dateCol === -1) dateCol = i;
+    else if (MERCHANT_COLUMN_PATTERN.test(h) && merchantCol === -1) merchantCol = i;
+    else if (AMOUNT_COLUMN_PATTERN.test(h) && amountCol === -1) amountCol = i;
+    else if (INSTALLMENTS_COLUMN_PATTERN.test(h) && installmentsCol === -1) installmentsCol = i;
+    else if (CATEGORY_COLUMN_PATTERN.test(h) && categoryCol === -1) categoryCol = i;
+    else if (MEMO_COLUMN_PATTERN.test(h) && memoCol === -1) memoCol = i;
   }
 
   // Second pass: infer from data if headers didn't match
