@@ -27,6 +27,7 @@ import {
   HEADER_KEYWORDS,
   isValidHeaderRow,
 } from '../csv/column-matcher.js';
+import { daysInMonth } from '../date-utils.js';
 
 interface Column {
   start: number;
@@ -163,7 +164,7 @@ function isValidYYMMDD(value: string): boolean {
   const month = parseInt(value.slice(2, 4), 10);
   const day = parseInt(value.slice(4, 6), 10);
   if (month < 1 || month > 12) return false;
-  return day >= 1 && day <= new Date(fullYear, month, 0).getDate();
+  return day >= 1 && day <= daysInMonth(fullYear, month);
 }
 
 /** Validate that a cell contains a plausible date value. Rejects

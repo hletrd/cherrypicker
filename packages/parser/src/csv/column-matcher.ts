@@ -90,8 +90,8 @@ export const HEADER_KEYWORDS: readonly string[] = [
   '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '승인일시', '매출일', '작성일', '접수일', '발행일', '사용일', '사용일자',
   '이용처', '가맹점', '가맹점명', '이용가맹점', '승인가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처', '이용내용', '거래내용', '이용업소', '승인점', '매장명', '이용매장',
   '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액', '청구금액', '출금액', '결제대금', '승인취소금액', '매입금액',
-  '비고', '적요', '메모', '비고란', '메모란', '비고내용', '메모내용', '상세',
-  'date', 'merchant', 'amount', 'total', 'store', 'shop', 'price', 'won', 'description', 'vendor', 'item', 'name', 'charge', 'payment', 'posted', 'billing', 'payee',
+  '비고', '적요', '메모', '내용', '설명', '참고', '상세내역', '비고란', '메모란', '비고내용', '메모내용', '상세',
+  'date', 'merchant', 'amount', 'total', 'store', 'shop', 'price', 'won', 'description', 'vendor', 'item', 'name', 'charge', 'payment', 'posted', 'billing', 'payee', 'memo', 'note', 'remarks',
 ];
 
 // Keyword category Sets for multi-category header detection. A valid header
