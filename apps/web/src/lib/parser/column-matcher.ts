@@ -17,7 +17,11 @@ export function normalizeHeader(h: string): string {
 }
 
 /** Find a column index by exact name (normalized) first, then by regex pattern.
- *  Returns -1 if no match is found. */
+ *  Returns -1 if no match is found.
+ *
+ *  Handles combined/delimited column headers like "이용일/승인일" or
+ *  "이용금액/취소금액" by splitting on "/" and testing each part individually
+ *  before testing the full header (C33-04). */
 export function findColumn(headers: string[], exactName: string | undefined, pattern: RegExp): number {
   if (exactName) {
     const normalizedExact = normalizeHeader(exactName);
@@ -26,7 +30,13 @@ export function findColumn(headers: string[], exactName: string | undefined, pat
     }
   }
   for (let i = 0; i < headers.length; i++) {
-    if (pattern.test(normalizeHeader(headers[i] ?? ''))) return i;
+    const normalized = normalizeHeader(headers[i] ?? '');
+    if (pattern.test(normalized)) return i;
+    // Split combined headers on "/" and test each part (C33-04)
+    if (normalized.includes('/')) {
+      const parts = normalized.split('/');
+      if (parts.some((part) => pattern.test(part))) return i;
+    }
   }
   return -1;
 }
@@ -69,13 +79,25 @@ export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '�
  *  by requiring keywords from at least 2 distinct categories. Normalizes
  *  each cell before matching so that parenthetical suffixes like "이용금액(원)"
  *  and extra whitespace like "이용 금액" are tolerated (C6-01). English
- *  keywords are matched case-insensitively via toLowerCase() (C7-07). */
+ *  keywords are matched case-insensitively via toLowerCase() (C7-07).
+ *
+ *  Handles combined/delimited column headers like "이용일/승인일" by splitting
+ *  on "/" and testing each part against keywords (C33-04). */
 export function isValidHeaderRow(cells: string[]): boolean {
-  const normalized = cells.map((c) => normalizeHeader(c).toLowerCase());
-  const hasHeaderKeyword = normalized.some((c) => (HEADER_KEYWORDS as string[]).includes(c));
+  // Split combined headers (e.g., "이용일/승인일") into individual terms
+  // before keyword matching (C33-04).
+  const terms: string[] = [];
+  for (const c of cells) {
+    const normalized = normalizeHeader(c).toLowerCase();
+    terms.push(normalized);
+    if (normalized.includes('/')) {
+      terms.push(...normalized.split('/'));
+    }
+  }
+  const hasHeaderKeyword = terms.some((c) => (HEADER_KEYWORDS as string[]).includes(c));
   if (!hasHeaderKeyword) return false;
   const matchedCategories = [DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS]
-    .filter(catSet => normalized.some((c) => catSet.has(c)))
+    .filter(catSet => terms.some((c) => catSet.has(c)))
     .length;
   return matchedCategories >= 2;
 }

@@ -587,3 +587,56 @@ describe('CATEGORY_COLUMN_PATTERN expanded keywords (C31)', () => {
     expect(findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN)).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Combined/delimited column headers (C33-04)
+// ---------------------------------------------------------------------------
+describe('Combined column headers (C33-04)', () => {
+  it('findColumn matches "이용일/승인일" as date column', () => {
+    const headers = ['이용일/승인일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('findColumn matches "이용금액/취소금액" as amount column', () => {
+    const headers = ['이용일', '가맹점명', '이용금액/취소금액'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('findColumn matches "비고/메모" as memo column', () => {
+    const headers = ['이용일', '가맹점명', '이용금액', '비고/메모'];
+    expect(findColumn(headers, undefined, MEMO_COLUMN_PATTERN)).toBe(3);
+  });
+
+  it('findColumn matches "할부/분할" as installments column', () => {
+    const headers = ['이용일', '이용처', '금액', '할부/분할'];
+    expect(findColumn(headers, undefined, INSTALLMENTS_COLUMN_PATTERN)).toBe(3);
+  });
+
+  it('findColumn still matches non-delimited headers normally', () => {
+    const headers = ['이용일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('isValidHeaderRow accepts combined header "이용일/승인일"', () => {
+    expect(isValidHeaderRow(['이용일/승인일', '가맹점명', '이용금액'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts combined header with 2 categories via split', () => {
+    // "이용일/승인일" splits to date keywords, "이용금액" is amount = 2 categories
+    expect(isValidHeaderRow(['이용일/승인일', '이용금액'])).toBe(true);
+  });
+
+  it('isValidHeaderRow rejects combined header with only 1 category', () => {
+    // "이용일/거래일" both date = 1 category, "날짜" also date = still 1
+    expect(isValidHeaderRow(['이용일/거래일', '날짜'])).toBe(false);
+  });
+
+  it('findColumn with exactName also works for combined headers', () => {
+    const headers = ['이용일/승인일', '가맹점명', '이용금액'];
+    // Exact name "이용일" won't match "이용일/승인일" directly,
+    // but regex fallback should find it via split
+    expect(findColumn(headers, '이용일', DATE_COLUMN_PATTERN)).toBe(0);
+  });
+});

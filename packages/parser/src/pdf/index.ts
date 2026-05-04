@@ -20,7 +20,7 @@ const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 // C27-01: Require either a comma (thousand separator) or minimum 5 digits
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
-const AMOUNT_PATTERN = /^[₩￦]?-?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/;
+const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^[₩￦]?-?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/;
 
 /** Maximum days per month for a non-leap year, indexed 1-12.
  *  Used by isValidShortDate for month-aware day validation when no
@@ -290,7 +290,7 @@ export async function parsePDF(
   // and should be treated as negative amounts by parseAmount() (C17-02).
   // C27-01: Exclude 4-digit years by requiring either a comma or 5+ digits
   // for bare integers. "2024" alone won't match; "1,234" and "10000" will.
-  const fallbackAmountPattern = /\(([\d,]+)\)|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
@@ -312,7 +312,7 @@ export async function parsePDF(
       if (amountStart > dateEnd) {
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
-          const amountRaw = (amountMatch[1] ?? amountMatch[2])!;
+          const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3])!;
           const amount = parseAmount(amountRaw);
           // parseAmount returns null for unparseable inputs — skip the row
           // rather than silently treating it as 0 (C34-01).

@@ -66,9 +66,14 @@ function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): s
  *  not enforce null checks at the call site. */
 function parseAmount(raw: string): number | null {
   let cleaned = raw.trim();
+  // Handle "마이너스" prefix — some Korean bank exports use this instead of
+  // a negative sign or parentheses (parity with server-side parseCSVAmount
+  // in packages/parser/src/csv/shared.ts C33-03).
+  const isManeuners = /^마이너스/.test(cleaned);
+  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
   // Handle (1,234) format for negative amounts
-  const isNegative = cleaned.startsWith('(') && cleaned.endsWith(')');
-  if (isNegative) cleaned = cleaned.slice(1, -1);
+  const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners;
+  if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
   cleaned = cleaned.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Use Math.round(parseFloat(...)) to match the xlsx parser's rounding behavior
   // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
