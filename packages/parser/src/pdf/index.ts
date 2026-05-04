@@ -20,7 +20,7 @@ const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 // C27-01: Require either a comma (thousand separator) or minimum 5 digits
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
-const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/;
+const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/i;
 
 /** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
  *  values using month-aware day limits. This prevents decimal amounts

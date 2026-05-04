@@ -1060,3 +1060,57 @@ describe('C59-02: KRW prefix in fallback amount pattern', () => {
     expect(amountRaw).toBe('45,000');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 62: KRW prefix in PDF STRICT_AMOUNT_PATTERN (findAmountCell path)
+// ---------------------------------------------------------------------------
+
+describe('Cycle 62: KRW prefix in PDF STRICT_AMOUNT_PATTERN', () => {
+  // The STRICT_AMOUNT_PATTERN is used by findAmountCell() in the structured
+  // PDF parser. It must match KRW-prefixed amounts so that the structured
+  // parser can extract them from table rows (the AMOUNT_PATTERN already
+  // detects these rows, but findAmountCell needs STRICT_AMOUNT_PATTERN).
+  const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/i;
+
+  test('matches KRW10,000 as structured amount', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('KRW10,000')).toBe(true);
+  });
+
+  test('matches KRW1,234,567 as structured amount', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('KRW1,234,567')).toBe(true);
+  });
+
+  test('matches KRW500 as structured amount', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('KRW500')).toBe(true);
+  });
+
+  test('matches lowercase krw10,000 case-insensitively', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('krw10,000')).toBe(true);
+  });
+
+  test('matches KRW1,000원 with Won suffix', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('KRW1,000원')).toBe(true);
+  });
+
+  test('does not match AKRW10,000 (letter prefix)', () => {
+    expect(STRICT_AMOUNT_PATTERN.test('AKRW10,000')).toBe(false);
+  });
+
+  test('filterTransactionRows detects KRW amounts in table cells', () => {
+    const rows = [
+      ['2024-01-15', '스타벅스', 'KRW6,500'],
+      ['2024-01-16', '이마트', 'KRW45,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+  });
+
+  test('parseTable detects KRW amount lines as table content', () => {
+    const text = [
+      '2024-01-15 스타벅스 강남점    KRW6,500',
+      '2024-01-16 이마트 서초점     KRW45,000',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
+});

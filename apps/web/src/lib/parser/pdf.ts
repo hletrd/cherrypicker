@@ -69,7 +69,7 @@ function isValidShortDate(cell: string): boolean {
 // C27-01: Require either a comma (thousand separator) or minimum 5 digits
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
-const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/;
+const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/i;
 
 interface Column {
   start: number;

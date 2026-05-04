@@ -1,38 +1,32 @@
-# Cycle 61 Aggregate Review
+# Cycle 62 Aggregate Review
 
-## Findings (3 actionable, 1 deferred)
+## Findings (2 actionable, 1 deferred)
 
-### F1: isAmountLike bare-integer threshold too loose in data inference (BUG - Medium)
-Files: `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
-The AMOUNT_PATTERNS include `/^\d{5,}원?$/` which accepts 5-digit bare integers
-(e.g., "12345", "67890") as amounts. During generic CSV data inference, this causes
-false-positive amount column detection when columns contain transaction IDs, phone
-suffixes, or serial numbers. Korean Won amounts of 5+ digits without thousand-separator
-commas are uncommon in bank exports.
-Fix: Raise threshold to 8 digits (`/^\d{8,}원?$/`) — bare amounts of 10,000,000 Won
-without commas are plausible but rare, while 5-7 digit numbers are overwhelmingly
-non-amount values. The comma-requiring pattern already handles "10,000,000".
+### F1: PDF STRICT_AMOUNT_PATTERN missing KRW prefix (BUG - Medium)
+Files: `packages/parser/src/pdf/index.ts` (line 23), `apps/web/src/lib/parser/pdf.ts` (line 72)
+The `STRICT_AMOUNT_PATTERN` used by `findAmountCell()` for structured PDF parsing does NOT
+include KRW prefix matching. The `AMOUNT_PATTERN` (used for table row detection) DOES have
+KRW support via `(?<![a-zA-Z\d])KRW[\d,]+원?(?![a-zA-Z\d])`.
 
-### F2: Web-side CSV has 10 redundant hand-written bank adapters (TECH DEBT - Medium)
-File: `apps/web/src/lib/parser/csv.ts` (lines 359-1056)
-10 bank adapters (samsung, shinhan, kb, hyundai, lotte, hana, woori, nh, ibk, bc)
-are hand-written with identical parse logic. The file already has `createBankAdapter()`
-factory (lines 1074-1157) used by the remaining 14 banks. Converting the 10 adapters
-to use the factory eliminates ~700 lines of duplicated code.
-Fix: Replace all 10 hand-written adapters with createBankAdapter() factory calls.
+This means: table row detection finds rows with "KRW10,000" amounts, but `findAmountCell()`
+cannot extract the KRW amount from the row, causing the structured parser to skip those rows.
+The fallback line scanner handles KRW correctly, so the inconsistency only affects the
+structured parse path.
 
-### F3: Test gap for 8-digit bare integer amount threshold (TEST COVERAGE - Low)
-Files: `packages/parser/__tests__/csv.test.ts`
-After fixing F1, need a test to verify that 5-7 digit bare integers don't trigger
-amount detection while 8+ digit bare integers do.
+Fix: Add KRW prefix alternative to STRICT_AMOUNT_PATTERN on both server and web sides.
+
+### F2: Test gap for KRW amounts in PDF STRICT_AMOUNT_PATTERN (TEST COVERAGE - Low)
+Files: `packages/parser/__tests__/table-parser.test.ts`
+No tests verify that `getHeaderColumns` or the structured parse path handles KRW-prefixed
+amounts in PDF table cells. Existing KRW tests (C59-01/C59-02) only cover the AMOUNT_PATTERN
+(detection) and fallback pattern, not the STRICT_AMOUNT_PATTERN (structured extraction).
 
 ## Deferred
 ### D1: PDF multi-line header support
-PDFs where header text wraps across 2+ lines remain unsupported. The table parser
-detects single-row headers only. Low frequency, high complexity. Deferred to future cycle.
+PDFs where header text wraps across 2+ lines remain unsupported. Low frequency, high
+complexity. Deferred to future cycle.
 
 ## Plan
-1. Fix F1: Tighten AMOUNT_PATTERNS bare-integer threshold in server+web generic CSV
-2. Fix F2: Replace 10 web-side hand-written adapters with factory calls
-3. Fix F3: Add test for bare integer amount threshold
-4. Run all gates
+1. Fix F1: Add KRW prefix to STRICT_AMOUNT_PATTERN in server+web PDF parsers
+2. Fix F2: Add test for KRW amounts in PDF structured parsing
+3. Run all gates
