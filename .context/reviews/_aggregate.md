@@ -1,35 +1,21 @@
-# Cycle 39 Aggregate Review
+# Aggregate Review -- Cycle 40
 
-**Date:** 2026-05-05
-**Cycles completed:** 39
-**Tests:** 683 bun (baseline)
-**Reviewer:** Cycle 39 inline deep scan (PDF parity + test coverage focus)
+## New Findings: 3 actionable, 3 deferred
 
----
+### Actionable
+1. **[HIGH]** Web-side CSV parser missing 14 bank adapters (kakao, toss, kbank, etc.)
+2. **[MEDIUM]** No tests for the 14 additional bank CSV adapters
+3. **[LOW]** normalizeHeader regex misses variation selectors (U+FE00-FE0F)
 
-## Finding 1: Server-side PDF parseAmount missing whitespace stripping [BUG-FIX]
-- **Severity**: Medium
-- **File**: `packages/parser/src/pdf/index.ts:57`
-- **Detail**: Missing `.replace(/\s/g, '')` in cleaning chain. ALL other 5 parseAmount implementations include this. PDF text extraction can produce amounts with spaces (e.g., "12 345").
-- **Impact**: Silent transaction loss for PDF files with whitespace in amounts.
+### Deferred
+- D-01: Web/server CSV parser shared module (large architecture refactor)
+- D-02: Bank column config triplication (depends on D-01)
+- D-03: Server/web PDF parser duplication (depends on D-01)
 
-## Finding 2: Server-side PDF tryStructuredParse doesn't report amount parse errors [BUG-FIX]
-- **Severity**: Medium
-- **File**: `packages/parser/src/pdf/index.ts:190-195`
-- **Detail**: `if (amount === null) continue;` without pushing ParseError. ALL other parsers report unparseable amounts. The fallback scanner in the same file also has this issue at line 326.
-- **Impact**: Silent data loss -- users cannot identify which PDF rows had parse failures.
+## No Regressions
+All 942 tests (692 bun + 250 vitest) passing.
 
-## Finding 3: 7 bank adapters missing test coverage [TEST]
-- **Severity**: Low
-- **File**: `packages/parser/__tests__/csv-adapters.test.ts`
-- **Detail**: suhyup, jb, kwangju, jeju, mg, cu, kdb adapters have zero test coverage. The other 7 new adapters (kakao, toss, kbank, bnk, dgb, sc, epost) were tested in C37-02.
-- **Impact**: Regression risk.
-
----
-
-## Deferred Items
-| ID | Item | Reason |
-|----|------|--------|
-| D-01 | Web CSV adapter factory refactor (14 missing banks) | Architecture refactor |
-| D-02 | PDF multi-line header support | Complex, low ROI |
-| D-03 | Server/web CSV parser dedup | Architecture refactor |
+## Plan for This Cycle
+1. Add 14 missing bank adapters to web-side CSV parser
+2. Add tests for the 14 new CSV adapters
+3. Add variation selectors to normalizeHeader regex (server + web)
