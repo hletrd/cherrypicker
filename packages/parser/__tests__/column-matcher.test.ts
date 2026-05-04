@@ -2283,3 +2283,47 @@ describe('Cycle 80: Integration - fullwidth header CSV parsing', () => {
     expect(isValidHeaderRow(['Ｄａｔｅ', '가맹점명', '이용금액'])).toBe(true);
   });
 });
+
+describe('Cycle 85: New column pattern keywords', () => {
+  it('AMOUNT_COLUMN_PATTERN matches 승인액 (abbreviated form)', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('승인액')).toBe(true);
+  });
+
+  it('AMOUNT_KEYWORDS includes 승인액', () => {
+    expect(AMOUNT_KEYWORDS.has('승인액')).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches 취소승인일', () => {
+    expect(DATE_COLUMN_PATTERN.test('취소승인일')).toBe(true);
+  });
+
+  it('DATE_KEYWORDS includes 취소승인일', () => {
+    expect(DATE_KEYWORDS.has('취소승인일')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS includes 승인액', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('승인액')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS includes 취소승인일', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('취소승인일')).toBe(true);
+  });
+
+  it('SUMMARY_ROW_PATTERN matches 카드이용한도', () => {
+    expect(SUMMARY_ROW_PATTERN.test('카드이용한도 1,000,000')).toBe(true);
+  });
+
+  it('SUMMARY_ROW_PATTERN does not match merchant name containing 카드이용한도', () => {
+    expect(SUMMARY_ROW_PATTERN.test('카드이용한도마트')).toBe(false);
+  });
+
+  it('findColumn detects 승인액 as amount column', () => {
+    const headers = ['거래일', '가맹점명', '승인액'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('findColumn detects 취소승인일 as date column', () => {
+    const headers = ['취소승인일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+});
