@@ -1339,6 +1339,54 @@ describe('Cycle 83: Semicolon-delimited CSV end-to-end (C83-03)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Cycle 84: Full-width digit amounts in CSV column detection (C84-01)
+// ---------------------------------------------------------------------------
+describe('Cycle 84: Full-width digit amounts in CSV column detection (C84-01)', () => {
+  test('parses full-width comma-separated amounts via header detection', () => {
+    // Headers are recognized, so column inference is not needed.
+    // Tests that parseCSVAmount correctly handles full-width digits.
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,스타벅스,"６，５００"',
+      '2026-02-02,이마트,"４５，０００"',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(6500);
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+
+  test('infers amount column from full-width comma-separated data (C84-01)', () => {
+    // Unrecognized headers force data-inference; amounts use full-width digits.
+    const content = [
+      '날짜,가게,값',
+      '2026-01-15,스타벅스,"６，５００"',
+      '2026-01-16,이마트,"４５，０００"',
+      '2026-01-17,편의점,"３，２００"',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions.length).toBeGreaterThanOrEqual(2);
+    if (result.transactions.length >= 2) {
+      expect(result.transactions[0]?.amount).toBe(6500);
+      expect(result.transactions[1]?.amount).toBe(45000);
+    }
+  });
+
+  test('infers amount column from bare 5+ digit full-width integers (C84-01)', () => {
+    const content = [
+      '날짜,가게,값',
+      '2026-01-15,스타벅스,６５００',
+      '2026-01-16,이마트,４５０００',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions.length).toBeGreaterThanOrEqual(1);
+    if (result.transactions.length > 0) {
+      expect(result.transactions[0]?.amount).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Cycle 83: Amount column with 원 suffix detection (C83-04)
 // ---------------------------------------------------------------------------
 describe('Cycle 83: Amount column with 원 suffix detection (C83-04)', () => {

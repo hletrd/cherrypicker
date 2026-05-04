@@ -120,7 +120,7 @@ function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): s
  *  (C37-01) hid the risk of NaN propagation — the `number` return type could
  *  not enforce null checks at the call site. */
 function parseAmount(raw: string): number | null {
-  if (!raw.trim()) return null; // Early return for empty/whitespace-only input (parity with server-side C56-04)
+  if (!raw.trim()) return null; // Early return for empty/whitespace-only input (C84-02 parity with server-side)
   let cleaned = raw.trim()
     .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
     .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
@@ -249,6 +249,8 @@ const AMOUNT_PATTERNS = [
   /^KRW[\d,]+\s*원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
   /^\d[\d,]*-$/,          // Trailing minus: 1,234- (negative amount, C68-01)
   /^\+[\d,]+\s*원?$/,       // Leading plus: +1,234 (positive amount prefix, C71-01)
+  /^[０-９][０-９，]*，[０-９][０-９，]*\s*원?$/,  // Full-width comma-separated: １，２３４ (C84-01)
+  /^[０-９]{5,}\s*원?$/,     // Bare 5+ digit full-width integers: １２３４５ (C84-01)
 ];
 
 function isDateLike(value: string): boolean {

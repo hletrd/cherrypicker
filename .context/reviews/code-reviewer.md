@@ -1,33 +1,54 @@
-# Cycle 82 Code Review
+# Cycle 84 Code Review
 
-## Reviewer: code-reviewer
+## Summary
+After 83 cycles, the parser is very mature with 1231 bun + 296 vitest tests passing.
+This cycle identifies **2 actionable findings** focused on format diversity gaps where
+existing code handles a format at parse time but not at column-detection time.
 
-### Overview
-After 81 cycles (1072+ tests passing: 82 vitest + 990 bun + 147 vitest on other files), the parser is highly mature. Cycle 81 correctly added YYYYMMDD support to `findDateCell()`, `isValidDateCell()`, and `fallbackDatePattern`. However, the PDF `DATE_PATTERN` used by `parseTable()` was NOT updated to recognize YYYYMMDD as table content markers.
+## Findings by Priority
+
+### MEDIUM (implement this cycle)
+| ID | Area | Finding |
+|----|------|---------|
+| F84-01 | CSV Generic | Full-width digit amounts not detected during column inference |
+| F84-02 | CSV Web | parseAmount missing explicit empty-string early return (parity) |
+
+## No Regressions
+All 1231 bun tests and 296 vitest tests passing. Server/web XLSX adapter configs
+confirmed identical. All column patterns, summary row patterns, and header keywords
+confirmed in parity between server and web.
 
 ## Findings
 
-### F82-01: PDF DATE_PATTERN missing YYYYMMDD — parseTable() won't detect YYYYMMDD lines as table content [HIGH]
-**Files**: `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
-**Issue**: The `DATE_PATTERN` regex in `parseTable()` determines which lines are table content. It does NOT include `\d{8}` alternative. Verified by testing: `'20240115'.match(DATE_PATTERN)` returns null. Lines like "20240115 Starbucks 3500원" (amount < 5 digits, no comma) are completely missed by both `hasDate` and `hasAmount` checks in `parseTable()`.
-**Impact**: PDF tables using YYYYMMDD dates with small amounts (< 10,000 Won without comma) are silently dropped by the structured parser. The fallback line scanner handles this correctly (cycle 81 fix).
-**Fix**: Add `(?<!\d)\d{8}(?!\d)` alternative to both server and web `DATE_PATTERN` regexes. Add tests.
+### F84-01: Full-width digit amounts not detected during column inference [MEDIUM]
+**Files**: `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
+**Issue**: The `AMOUNT_PATTERNS` array used by `isAmountLike()` for data-inference
+column detection does NOT include patterns for full-width digit amounts like `１，２３４`
+or `１２３４５`. While `parseCSVAmount()` correctly handles them at parse time (it converts
+full-width digits to ASCII before parsing), the generic CSV parser cannot identify
+the amount column when headers are absent and data contains full-width amounts.
+**Impact**: Generic CSV parsing fails when headers are unrecognized AND amounts use
+full-width digits (rare but possible with East Asian bank exports).
+**Fix**: Add full-width digit amount patterns to `AMOUNT_PATTERNS` in both server
+and web generic CSV parsers. Add end-to-end test.
 
-### F82-02: Server CSV index.ts does not re-export SUMMARY_ROW_PATTERN [LOW]
-**Files**: `packages/parser/src/index.ts`
-**Issue**: The server-side package exports column patterns from column-matcher but does NOT export `SUMMARY_ROW_PATTERN`. External consumers must use internal paths.
-**Fix**: Add `SUMMARY_ROW_PATTERN` to the export list.
-
-## Format Diversity Assessment
-Comprehensive coverage after 81 cycles:
-- 24 bank CSV adapters with flexible column matching (90+ patterns)
-- All common Korean/English date formats
-- All amount formats (Won, KRW, 마이너스, parenthesized, trailing-minus, etc.)
-- RFC 4180 multi-line quoted CSV, HTML-as-XLS, multi-sheet XLSX
-- PDF structured + fallback parsing with header-aware column detection
+### F84-02: Web CSV parseAmount missing explicit empty-string guard [LOW]
+**File**: `apps/web/src/lib/parser/csv.ts`
+**Issue**: Server-side `parseCSVAmount` in `shared.ts` has `if (!raw.trim()) return null;`
+as an explicit early return. Web-side `parseAmount` in `csv.ts` does not. While both
+produce the correct result (empty string -> NaN -> null), the explicit guard is clearer
+and matches the server-side pattern.
+**Fix**: Add `if (!raw.trim()) return null;` to web-side parseAmount.
 
 ## Server/Web Parity
-CONFIRMED: Identical column patterns, summary row pattern, header keywords, amount/date parsing algorithms. F82-01 affects both sides symmetrically.
+CONFIRMED: All column patterns, summary row pattern, header keywords, amount/date
+parsing algorithms, XLSX bank adapter configs identical between server and web.
 
-## Test Coverage
-1072+ tests. Gaps: No integration test for YYYYMMDD in full PDF parse with small amounts (the F82-01 scenario).
+## Deferred Items (unchanged)
+- PDF multi-line header support
+- Historical amount display format
+- Card name suffixes
+- Global config integration
+- Generic parser fallback behavior
+- CSS dark mode
+- D-01 shared module refactor

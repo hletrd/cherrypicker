@@ -1,50 +1,24 @@
-# Cycle 83 Aggregate Review
+# Cycle 84 Aggregate Review
 
 ## Summary
-After 82 cycles, the parser is highly mature with 1222 bun + 287 vitest tests passing.
-This cycle identifies **6 actionable findings** focused on test coverage gaps for
-format diversity features that already exist in code but lack test coverage.
+After 83 cycles, the parser is very mature with 1231 bun + 296 vitest tests passing.
+This cycle identifies **2 actionable findings**: a format diversity gap in CSV column
+inference and a minor parity fix.
 
 ## Findings by Priority
-
-### HIGH (implement this cycle)
-| ID | Area | Finding |
-|----|------|---------|
-| F1 | CSV | Datetime strings in column detection untested |
-| F2 | CSV | Tab/pipe/semicolon-delimited CSV full parse untested |
 
 ### MEDIUM (implement this cycle)
 | ID | Area | Finding |
 |----|------|---------|
-| F4 | Column Matcher | normalizeHeader fullwidth alphanumeric untested |
-| F5 | Column Matcher | findColumn "+" / "＋" delimiter splitting untested |
-
-### LOW (implement if time permits)
-| ID | Area | Finding |
-|----|------|---------|
-| F6 | CSV | Amount column with 원 suffix detection untested |
+| F84-01 | CSV Generic | Full-width digit amounts not detected during column inference |
+| F84-02 | CSV Web | parseAmount missing explicit empty-string early return (parity) |
 
 ## No Regressions
-All 1222 bun tests and 287 vitest tests passing.
-
-## Findings
-
-### F82-01: PDF DATE_PATTERN missing YYYYMMDD — parseTable() won't detect 8-digit date lines [HIGH]
-**Files**: `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
-**Issue**: The `DATE_PATTERN` regex used by `parseTable()` does NOT include `\d{8}` alternative. Verified: `'20240115'.match(DATE_PATTERN)` returns null. Lines with YYYYMMDD dates and small amounts (< 10,000 Won without comma) are completely missed.
-**Impact**: PDF tables using YYYYMMDD dates with small unformatted amounts silently dropped by structured parser.
-**Fix**: Add `(?<!\d)\d{8}(?!\d)` to both server and web `DATE_PATTERN`. Add tests.
-
-### F82-02: Server CSV index.ts missing SUMMARY_ROW_PATTERN export [LOW]
-**Files**: `packages/parser/src/index.ts`
-**Issue**: Column patterns are exported but `SUMMARY_ROW_PATTERN` is not.
-**Fix**: Add to export list.
-
-### F82-03: F81 findings confirmed resolved [INFO]
-**Status**: F81-01 (YYYYMMDD in findDateCell/isValidDateCell/fallbackDatePattern) confirmed correctly implemented in cycle 81.
+All 1231 bun tests and 296 vitest tests passing.
 
 ## Server/Web Parity
-CONFIRMED: Identical column patterns, summary row pattern, header keywords, amount/date parsing algorithms. F82-01 affects both sides symmetrically.
+CONFIRMED: All column patterns, summary row pattern, header keywords, amount/date
+parsing algorithms, XLSX bank adapter configs identical between server and web.
 
 ## Deferred Items (unchanged)
 - PDF multi-line header support
