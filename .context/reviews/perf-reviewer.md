@@ -1,3 +1,4 @@
-# Cycle 61 Review — perf-reviewer
+# Cycle 65 Perf Reviewer Report
 
-See _aggregate.md for consolidated findings.
+No performance concerns. The threshold change from 8 to 5 digits has negligible impact
+on column detection matching. The console.warn addition is a one-time per-failure call.

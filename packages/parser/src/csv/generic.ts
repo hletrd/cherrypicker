@@ -70,7 +70,7 @@ const AMOUNT_PATTERNS = [
   /^－[\d,]+원?$/,       // －1,234 — fullwidth-minus negative (C54-01)
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
-  /^\d{8,}원?$/,         // Bare 8+ digit integers: 10000000 or 10000000원 (C61-01, raised from 5)
+  /^\d{5,}원?$/,         // Bare 5+ digit integers: 10000 or 10000원 (C65-01, lowered from 8 to match PDF parser)
   /^KRW[\d,]+원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
 ];
 
@@ -188,6 +188,15 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
         }
       }
     }
+  }
+
+  // Report when required columns were not found — prevents silent empty results
+  // when both header matching and data-inference fail (C65-02).
+  if (dateCol === -1 || amountCol === -1) {
+    const missing: string[] = [];
+    if (dateCol === -1) missing.push('날짜');
+    if (amountCol === -1) missing.push('금액');
+    errors.push({ message: `필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}` });
   }
 
   // Parse data rows

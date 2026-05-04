@@ -97,6 +97,7 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
       } catch (err) {
         // Track the failure so it can be reported in the result
         const msg = `${adapter.bankId} 어댑터(자동 감지) 파싱 실패: ${err instanceof Error ? err.message : String(err)}`;
+        console.warn(`[cherrypicker] Bank adapter ${adapter.bankId} (detect) failed:`, err);
         signatureFailures.push(msg);
         continue;
       }

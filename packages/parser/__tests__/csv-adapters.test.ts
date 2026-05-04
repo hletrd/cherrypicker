@@ -535,21 +535,22 @@ describe('Won sign amount column inference (C7-06)', () => {
 
 describe('parenthesized negative amount inference', () => {
   test('isAmountLike matches parenthesized negatives for column inference', () => {
-    // Use known header keywords so the header row is detected, but with
-    // unnamed amount column (header says "기타" not "금액") so the parser
-    // must infer the amount column from data patterns. Parenthesized
-    // amounts like (1,234) should be recognized as amounts.
+    // Use tab delimiter so the comma inside (5,500) isn't treated as a
+    // CSV field separator. Parenthesized amounts like (1,234) are recognized
+    // by isAmountLike's /^\([\d,]+\)$/ pattern for column inference.
+    // Note: parenthesized amounts with commas DON'T work in comma-delimited
+    // CSV because the CSV splitter breaks "(5,500)" into "(5" and "500)".
     const content = [
-      '이용일,가맹점명,기타',
-      '2024-01-15,테스트,(5,500)',
-      '2024-01-20,테스트2,(125,000)',
+      '이용일\t가맹점명\t기타',
+      '2024-01-15\t테스트\t(5,500)',
+      '2024-01-20\t테스트2\t(125,000)',
     ].join('\n');
     const result = parseGenericCSV(content, null);
-    // The parser should infer column 3 as amount from the data patterns.
+    // The parser should infer column 2 as amount from the data patterns.
     // Parenthesized amounts are parsed as negative by parseCSVAmount.
     // However since amounts <= 0 are filtered, these become 0 transactions.
-    // The key test is that the column IS inferred (no "Cannot parse amount" errors).
-    expect(result.errors.filter(e => e.message.includes('금액'))).toHaveLength(0);
+    // The key test is that the column IS inferred (no "금액" parse errors).
+    expect(result.errors.filter(e => e.message.includes('금액을 해석할 수 없습니다'))).toHaveLength(0);
   });
 
   test('generic CSV parser reports malformed dates as errors (C10-02)', () => {

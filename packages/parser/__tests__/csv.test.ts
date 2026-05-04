@@ -1044,3 +1044,121 @@ describe('Cycle 61: bare integer amount threshold is 8 digits (C61-01)', () => {
     expect(result.transactions[1]?.amount).toBe(45000);
   });
 });
+
+// ---------------------------------------------------------------------------
+// C65-01: Bare-integer amount threshold lowered from 8 to 5 digits
+// ---------------------------------------------------------------------------
+
+describe('C65-01: Bare-integer amount column detection at 5+ digits', () => {
+  test('5-digit bare integer "45000" parsed as amount with recognized headers', () => {
+    // CSV with recognized Korean headers and unformatted 5-digit amounts.
+    // The amount column is found by header matching, not data-inference.
+    // Tests that parseCSVAmount correctly parses 5-digit bare integers.
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-01-15,스타벅스,45000',
+      '2026-01-16,이마트,12000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(45000);
+    expect(result.transactions[1]?.amount).toBe(12000);
+  });
+
+  test('6-digit bare integer "123456" parsed as amount (C65-01)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-01-15,deposit,123456',
+      '2026-01-16,transfer,654321',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(123456);
+    expect(result.transactions[1]?.amount).toBe(654321);
+  });
+
+  test('7-digit bare integer "1000000" parsed as amount (C65-01)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-01-15,대형마트,1000000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(1000000);
+  });
+
+  test('comma-formatted and bare-integer amounts mixed (C65-01)', () => {
+    // Some rows have comma formatting (quoted to protect the comma), others
+    // don't — both should parse correctly.
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-01-15,스타벅스,"6,500"',
+      '2026-01-16,이마트,45000',
+      '2026-01-17,편의점,3200',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(3);
+    expect(result.transactions[0]?.amount).toBe(6500);
+    expect(result.transactions[1]?.amount).toBe(45000);
+    expect(result.transactions[2]?.amount).toBe(3200);
+  });
+
+  test('data-inference detects 5-digit bare integer as amount column (C65-01)', () => {
+    // Use headers with 2+ category keywords (date + merchant) for isValidHeaderRow,
+    // but the amount header is unrecognized ("값"), forcing data-inference for amount.
+    // isValidHeaderRow checks 3 categories: date, merchant, amount. Having
+    // '이용일' (date) and '가맹점' (merchant) gives 2 categories, which passes.
+    const content = [
+      '이용일,가맹점,값',
+      '2026-01-15,스타벅스,45000',
+      '2026-01-16,이마트,12000',
+    ].join('\n');
+    const result = parseCSV(content);
+    // "값" doesn't match AMOUNT_COLUMN_PATTERN, so data-inference runs.
+    // "45000" (5 digits) should now be detected as amount by C65-01 change.
+    expect(result.transactions.length).toBeGreaterThanOrEqual(1);
+    if (result.transactions.length > 0) {
+      expect(result.transactions[0]?.amount).toBe(45000);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C65-02: Data-inference silent failure error message
+// ---------------------------------------------------------------------------
+
+describe('C65-02: Data-inference column detection failure error message', () => {
+  test('reports error when date column found but amount column missing', () => {
+    // Valid header with 2+ categories (date + merchant) so header detection passes,
+    // but amount column has an unrecognized header ("값") and data has no amount
+    // patterns — should report missing amount column.
+    const content = [
+      '이용일,가맹점,값',
+      '2026-01-15,hello,world',
+      '2026-01-16,foo,bar',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(0);
+    const missingError = result.errors.find((e) =>
+      e.message.includes('필수 컬럼을 찾을 수 없습니다'),
+    );
+    expect(missingError).toBeDefined();
+    expect(missingError?.message).toContain('금액');
+  });
+
+  test('reports header-not-found error for headers without keywords', () => {
+    // Headers with no recognized keywords at all — header detection fails.
+    const content = [
+      'a,b,c',
+      'hello,world,test',
+      'foo,bar,baz',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(0);
+    // Should report header not found (this error comes first)
+    const headerError = result.errors.find((e) =>
+      e.message.includes('헤더 행을 찾을 수 없습니다'),
+    );
+    expect(headerError).toBeDefined();
+  });
+});

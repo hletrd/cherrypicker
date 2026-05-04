@@ -1,30 +1,35 @@
-# Cycle 63 Aggregate Review
+# Cycle 65 Aggregate Review
 
-## Findings (2 actionable, 1 deferred)
+## Findings (3 actionable, 1 deferred)
 
-### F1: Server-side STRICT_AMOUNT_PATTERN missing KRW and 마이너스 prefixes (BUG - Medium)
-Files: `packages/parser/src/pdf/index.ts` (line 23)
-The server-side `STRICT_AMOUNT_PATTERN` used by `findAmountCell()` for structured PDF parsing
-does NOT include KRW or 마이너스 prefix matching. The web-side `pdf.ts` already has both.
+### F1: CSV generic bare-integer amount threshold too high (FORMAT DIVERSITY - Medium)
+Files:
+- `packages/parser/src/csv/generic.ts` line 73: `^\d{8,}원?$`
+- `apps/web/src/lib/parser/csv.ts` line 188: `^\d{8,}원?$`
 
-The `AMOUNT_PATTERN` (table row detection) DOES have KRW support. This creates a mismatch:
-rows with "KRW10,000" or "마이너스1,234" amounts are detected by `filterTransactionRows`
-but `findAmountCell()` cannot extract them. The fallback line scanner handles these correctly,
-so this only affects the structured parse path.
+The AMOUNT_PATTERNS used for column detection in the generic CSV parsers require 8+ digits
+for bare integers without comma separators. The PDF parser (both server and web) uses 5+ digits
+via its AMOUNT_PATTERN regex. This means CSV files with unformatted amounts like "45000" (5 digits,
+45,000 won) or "1234567" (7 digits) will NOT be detected as amount columns during the
+data-inference fallback path when headers don't match. Lowering to 5 digits aligns with the PDF
+parser and covers amounts >= 10,000 won (common for credit card transactions).
 
-Fix: Add KRW and 마이너스 alternatives to STRICT_AMOUNT_PATTERN on server side for parity.
+The false-positive risk is low because:
+1. `^\d{5,}$` requires the ENTIRE cell to be just digits (+ optional 원 suffix)
+2. Transaction IDs typically contain non-digit characters (letters, hyphens)
+3. The column must pass data-inference across 8 sample rows consistently
 
-### F2: No tests for KRW/마이너스 amounts in PDF structured parsing (TEST COVERAGE - Low)
-Files: `packages/parser/__tests__/table-parser.test.ts`
-No tests verify that `getHeaderColumns()` or the structured parse path handles KRW-prefixed
-or 마이너스-prefixed amounts in PDF table cells.
+### F2: Server adapter-factory missing console.warn on detect failure (PARITY - Low)
+File: `packages/parser/src/csv/adapter-factory.ts`
+The web-side csv.ts logs `console.warn` when a bank adapter fails during the signature-detect
+loop (line 753). The server-side adapter-factory silently continues. Add `console.warn` for parity.
+
+### F3: Silent failure when data-inference detects no columns (UX - Low)
+File: `packages/parser/src/csv/generic.ts` lines 149-191
+When headers don't match and the data-inference fallback also fails to detect required
+columns (date, amount), the parser returns zero transactions with NO error message.
+Add an error message when required columns are not found after data-inference.
 
 ## Deferred
 ### D1: PDF multi-line header support
-PDFs where header text wraps across 2+ lines remain unsupported. Low frequency, high
-complexity. Deferred to future cycle.
-
-## Plan
-1. Fix F1: Add KRW and 마이너스 to STRICT_AMOUNT_PATTERN in server PDF parser
-2. Fix F2: Add test for KRW/마이너스 amounts in PDF structured parsing
-3. Run all gates
+PDFs where header text wraps across 2+ lines remain unsupported. Low frequency, high complexity.
