@@ -1,25 +1,17 @@
-# Cycle 70 Aggregate Review
+# Cycle 71 Aggregate Review
 
-## Findings (3 actionable, all fixed)
+## Findings (1 actionable)
 
-### F1: Server adapter-factory missing-column error (SERVER/WEB PARITY - MEDIUM) -- FIXED
-**File**: `packages/parser/src/csv/adapter-factory.ts`
-Server-side createBankAdapter() silently returned empty results when required
-columns (date, amount) were not found. Added "필수 컬럼을 찾을 수 없습니다" error
-reporting matching web-side behavior.
+### C71-01: AMOUNT_PATTERNS missing leading-plus pattern (FORMAT DIVERSITY - MEDIUM)
 
-### F2: ISO 8601 T-separator datetime not detected (FORMAT DIVERSITY - LOW-MEDIUM) -- FIXED
-**Files**: `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
-CSV column detection's `isDateLike()` only matched datetime with space separator.
-Added `[\sT]` to match both "2024-01-15 10:30:00" and "2024-01-15T10:30:00".
+All four CSV/PDF parsers' column-detection amount patterns lack support for leading-plus amounts (`+1,234`). The actual parse functions DO handle leading-plus (added C66-02), but the column-detection patterns were not updated. This causes generic CSV parsing to fail when banks export amounts with explicit `+` prefix.
 
-### F3: Memo column pattern gap (FORMAT DIVERSITY - LOW) -- FIXED
-**File**: `packages/parser/src/csv/column-matcher.ts`
-Added "비고내역" to MEMO_COLUMN_PATTERN for broader Korean bank header coverage.
+**Fix:** Add `^\+[\d,]+원?$` to CSV `AMOUNT_PATTERNS` arrays. Add `\+(?=[\d,])` alternative to PDF `AMOUNT_PATTERN` / `STRICT_AMOUNT_PATTERN`.
 
-## Deferred
-- D1: PDF multi-line header support
-- D2: D-01 architectural refactor (shared module between Bun/browser)
-- D3: Historical amount display format
-- D4: Card name suffixes
-- D5: Global config integration
+### C71-02: No test coverage for leading-plus column detection (TEST - LOW)
+
+Need test verifying that generic CSV parser with `+1,234` amounts correctly infers the amount column.
+
+## No Regressions
+
+Server/web parity is excellent. All major format diversity issues have been addressed over 70 cycles. Architecture is mature.

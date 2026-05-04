@@ -1,8 +1,9 @@
-# Cycle 67 Test Engineer Review
+# Cycle 71 Test Engineer Review
 
-## Test Gaps
-The web-side CSV parser changes (F1-F4) should be tested via the existing vitest test suite.
-The splitCSVContent function already has tests in packages/parser; the web-side implementation
-is a port of the same logic.
+## T71-01: Missing test for leading-plus amount column detection
 
-No new test files needed - existing coverage validates the patterns.
+The `isAmountLike()` function is the gatekeeper for data-inference column detection. No test verifies that leading-plus amounts like `+1,234` are recognized. Need tests for:
+1. Server CSV generic parser with `+1,234` amounts in data-inference path
+2. Web CSV generic parser with same
+
+## No regressions in existing tests. 1270+ bun + 283+ vitest tests cover all major paths.

@@ -1,24 +1,24 @@
-# Cycle 70 Plan
+# Cycle 71 Plan
 
-## Fix 1: Server adapter-factory missing-column error (F1)
-**File**: `packages/parser/src/csv/adapter-factory.ts`
-After column detection via `findColumn()`, add "필수 컬럼을 찾을 수 없습니다" error
-reporting matching the web-side `apps/web/src/lib/parser/csv.ts` createBankAdapter().
+## Fix 1: Add leading-plus pattern to CSV AMOUNT_PATTERNS (C71-01)
+**Files:**
+- `packages/parser/src/csv/generic.ts` - add `^\+[\d,]+원?$` to AMOUNT_PATTERNS
+- `apps/web/src/lib/parser/csv.ts` - same
 
-## Fix 2: ISO 8601 T-separator datetime detection (F2)
-**Files**: `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
-Change datetime pattern from `\s+` to `[\sT]` to match both space and T separators:
-`/^\d{4}[\s]*[.\-\/．。]...[\s]*\d{1,2}[\sT]\d/`
+## Fix 2: Add leading-plus pattern to PDF amount patterns (C71-01)
+**Files:**
+- `packages/parser/src/pdf/table-parser.ts` - add `(?<![a-zA-Z\d])\+[\d,]+원?` to AMOUNT_PATTERN
+- `packages/parser/src/pdf/index.ts` - add leading-plus to STRICT_AMOUNT_PATTERN
+- `apps/web/src/lib/parser/pdf.ts` - same for both AMOUNT_PATTERN and STRICT_AMOUNT_PATTERN
 
-## Fix 3: Memo column pattern coverage (F3)
-**File**: `packages/parser/src/csv/column-matcher.ts`
-Add "비고내역" to MEMO_COLUMN_PATTERN and HEADER_KEYWORDS.
+## Fix 3: Add test for leading-plus column detection (C71-02)
+**Files:**
+- `packages/parser/__tests__/csv.test.ts` - add test for generic CSV with leading-plus amounts
 
-## Fix 4: Tests
-Add tests for the new fixes.
-
-## Deferred items (STRICT)
-- PDF multi-line header support -- complex, low impact
-- Historical amount display format -- feature request
-- Card name suffixes -- feature request
-- Global config integration -- architecture
+## Deferred (explicitly not this cycle)
+- PDF multi-line headers: architecturally complex, marginal benefit
+- Historical amount display format: not a parser concern
+- Card name suffixes: not a parser concern
+- Global config integration: not blocking
+- CSS dark mode: not a parser concern
+- Generic parser fallback behavior: already well-handled

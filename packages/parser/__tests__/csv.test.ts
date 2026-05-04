@@ -1187,4 +1187,21 @@ describe('C65-02: Data-inference column detection failure error message', () => 
     );
     expect(headerError).toBeDefined();
   });
+
+  test('generic parser detects leading-plus amounts via data-inference (C71-01)', () => {
+    // Some Korean banks export amounts with explicit "+" prefix for positive
+    // amounts (e.g., "+15000"). The column-detection AMOUNT_PATTERNS must
+    // recognize this format so data-inference can identify the amount column.
+    const content = [
+      'Date,Description,Amount',
+      '2024-01-15,Coffee Shop,+3500',
+      '2024-01-16,Restaurant,+15000',
+      '2024-01-17,Supermarket,+28000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(3);
+    expect(result.transactions[0]?.amount).toBe(3500);
+    expect(result.transactions[1]?.amount).toBe(15000);
+    expect(result.transactions[2]?.amount).toBe(28000);
+  });
 });
