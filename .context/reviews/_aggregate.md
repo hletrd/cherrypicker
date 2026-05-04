@@ -1,51 +1,45 @@
-# Cycle 35 Aggregate Review
+# Cycle 37 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 35
-**Tests:** 610 bun, 103 vitest (713 total)
+**Cycles completed:** 37
+**Tests:** 673 bun (before changes)
+**Reviewer:** Cycle 37 inline deep scan
 
-## Summary
-Found 4 actionable findings including 1 critical bug in web PDF fallback amount extraction and 3 parity gaps between server-side and web-side PDF parsers. All cycle 34 findings confirmed already fixed.
+---
 
-## Cycle 34 Status Verification
-All 5 cycle 34 findings are confirmed fixed:
-- F-01 (PDF AMOUNT_PATTERN Won-sign): Server PDF already has ₩/￦ alternations
-- F-02 (fallbackAmountPattern Won-sign): Both server/web PDF fallback regexes already include Won-sign groups
-- F-03 (Server XLSX 마이너스): Already present at xlsx/index.ts:130
-- F-04 (Web PDF 마이너스): Already present at web/pdf.ts:270
-- F-05 (test coverage): Tests passing for all paths
+## Finding 1: PDF table parser AMOUNT_PATTERN missing 마이너스 prefix [BUG]
+- **Severity**: Medium
+- **Files**: `packages/parser/src/pdf/table-parser.ts:14`, `apps/web/src/lib/parser/pdf.ts:42`
+- Both server and web PDF `AMOUNT_PATTERN` (used by `filterTransactionRows()`) does NOT include `마이너스[\d,]+원?` as an alternative.
+- Result: PDFs with 마이너스-prefixed amounts skip structured table parsing and fall through to the fallback line scanner, losing structured metadata (category, memo, installments).
+- The `parseAmount()` function on both sides DOES handle 마이너스. Only the row-detection regex is missing it.
+- **Impact**: Format diversity bug -- 마이너스 PDFs silently degrade.
 
-## New Findings
+## Finding 2: Server CSV adapter-factory only has 10 banks [COVERAGE]
+- **Severity**: Medium
+- **File**: `packages/parser/src/csv/adapter-factory.ts`
+- Server CSV factory creates adapters for only 10 banks.
+- XLSX adapter config (`packages/parser/src/xlsx/adapters/index.ts`) has 24 banks (adds kakao, toss, kbank, bnk, dgb, suhyup, jb, kwangju, jeju, sc, mg, cu, kdb, epost).
+- If a CSV from one of these 14 banks is uploaded, the bank is detected but no bank-specific adapter exists, falling through to the generic parser.
+- **Impact**: These 14 banks use the generic parser with weaker header matching.
 
-### F-01: CRITICAL — Web PDF fallback amount group 3 not extracted (HIGH)
-`apps/web/src/lib/parser/pdf.ts` line 554: `amountMatch[1] ?? amountMatch[2]` is missing `?? amountMatch[3]`.
+## Finding 3: Web CSV parser hand-written adapters [TECH DEBT / DEFERRED]
+- **File**: `apps/web/src/lib/parser/csv.ts` (1100+ lines)
+- 10 hand-written adapters + duplicated helpers. Server-side solved with `createBankAdapter()`.
+- **Decision**: DEFERRED to D-01 architectural refactor (requires shared module between Bun and browser).
 
-The `fallbackAmountPattern` has 3 capture groups:
-1. `\(([\d,]+\)` — parenthesized negatives
-2. `[₩￦]([\d,]+)원?` — Won-sign amounts
-3. `([\d,]*(?:,|\d{5,})[\d,]*)원?` — plain comma/5+digit amounts
+## Finding 4: Missing test for PDF 마이너스 table rows [TEST]
+- **File**: `packages/parser/__tests__/table-parser.test.ts`
+- No test for `filterTransactionRows()` with 마이너스 amounts.
 
-Group 3 covers the most common amount format (e.g., "10,000" without Won sign). When these match, groups 1 and 2 are undefined, causing `amountRaw` to be `undefined`. `parseAmount(undefined)` then tries to call `.replace()` on undefined, crashing at runtime.
+## Finding 5: Missing test for CSV adapters of non-top-10 banks [TEST]
+- No tests for kakao, toss, kbank, etc. bank-specific CSVs via adapter-factory.
 
-The server-side PDF parser at `packages/parser/src/pdf/index.ts` line 315 correctly has `amountMatch[1] ?? amountMatch[2] ?? amountMatch[3]`.
+---
 
-**Impact:** All PDF fallback line-scan transactions with plain comma amounts (no Won sign, no parentheses) silently fail to parse on the web side. This is the most common amount format in Korean bank PDFs.
-
-### F-02: Server PDF parseAmount missing "마이너스" prefix (MEDIUM)
-`packages/parser/src/pdf/index.ts` parseAmount (line 56-68): Handles parenthesized negatives but not "마이너스" prefix. Web PDF (pdf.ts:270), CSV shared (shared.ts:40), and all XLSX parsers handle it. This is the only parseAmount implementation missing 마이너스 support.
-
-### F-03: Server PDF fallback line scanner missing "마이너스" in fallbackAmountPattern (MEDIUM)
-`packages/parser/src/pdf/index.ts` line 293: The fallbackAmountPattern regex doesn't include a capture group for "마이너스"-prefixed amounts. Even though the server PDF's main parseAmount doesn't handle 마이너스 (F-02), the regex should still match these amounts so they can be parsed after F-02 is fixed.
-
-### F-04: Test coverage gaps for web PDF fallback amounts (MEDIUM)
-No existing tests cover the web PDF fallback amount parsing with group 3 amounts (plain comma amounts without Won sign). Adding tests would have caught F-01.
-
-## Deferred Items
-| ID | Item | Reason |
-|----|------|--------|
-| D-01 | Web CSV adapter factory refactor | Requires shared module architecture |
-| D-02 | PDF multi-line header support | Requires header row merging logic |
-| D-03 | Server/web CSV parser dedup | Architecture refactor needed |
-
-## Regressions
-None expected. All changes are additive bug fixes.
+## Plan
+1. **FIX**: Add 마이너스 to PDF AMOUNT_PATTERN (server + web)
+2. **FIX**: Add 14 missing bank adapters to server CSV adapter-factory
+3. **TEST**: Add tests for PDF 마이너스 table rows
+4. **TEST**: Add tests for new CSV bank adapters (kakao, toss, kbank sample)
+5. **DEFER**: Web CSV duplication (D-01 architectural refactor)
