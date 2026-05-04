@@ -40,7 +40,7 @@ const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-
 // commas (e.g., "1,234") or Won signs (e.g., "₩500") always match.
 // C32-01: Won-sign-prefixed amounts (₩/￦) match regardless of digit count,
 // so small amounts like "₩500" are correctly detected as transaction amounts.
-const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+원?|(?<![a-zA-Z\d])KRW[\d,]+원?(?![a-zA-Z\d])|(?<![a-zA-Z\d])\+[\d,]+원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+원?(?![a-zA-Z\d])|\([\d,]+\)|(?:[\d,]*,|\d{5,})[\d,]*-(?![a-zA-Z\d\-－])/;
+const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*\s*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*\s*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+\s*원?|(?<![a-zA-Z\d])KRW[\d,]+\s*원?(?![a-zA-Z\d])|(?<![a-zA-Z\d])\+[\d,]+\s*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*\s*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+\s*원?(?![a-zA-Z\d])|\([\d,]+\)|(?:[\d,]*,|\d{5,})[\d,]*-(?![a-zA-Z\d\-－])/;
 const STRICT_DATE_PATTERN = /(\d{4})[.\-\/．。](\d{1,2})[.\-\/．。](\d{1,2})/;
 const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})/;
 const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
@@ -69,7 +69,7 @@ function isValidShortDate(cell: string): boolean {
 // C27-01: Require either a comma (thousand separator) or minimum 5 digits
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
-const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^\+[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
+const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+\s*원?$|^KRW[\d,]+\s*원?$|^\+[\d,]+\s*원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*\s*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
 
 interface Column {
   start: number;
@@ -266,7 +266,7 @@ function parseAmount(raw: string): number | null {
     .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
     .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
     .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
-    .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Handle "마이너스" prefix — some Korean bank exports use this instead of
   // a negative sign or parentheses (parity with server-side parseCSVAmount
   // in packages/parser/src/csv/shared.ts C33-03).

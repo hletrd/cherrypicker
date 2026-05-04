@@ -20,12 +20,12 @@ const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 // C27-01: Require either a comma (thousand separator) or minimum 5 digits
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
-const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^\+[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
+const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*\s*원?$|^마이너스[\d,]+\s*원?$|^KRW[\d,]+\s*원?$|^\+[\d,]+\s*원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*\s*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
 // STRICT_AMOUNT_PATTERN — used by findAmountCell() for structured PDF parsing.
 // Stricter than AMOUNT_PATTERN: requires digits after Won sign prefix so bare
 // "₩" doesn't match, and includes KRW/마이너스 alternatives for parity with
 // the web-side pdf.ts STRICT_AMOUNT_PATTERN (C63-01).
-const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^\+[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
+const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+\s*원?$|^KRW[\d,]+\s*원?$|^\+[\d,]+\s*원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*\s*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
 
 /** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
  *  values using month-aware day limits. This prevents decimal amounts
@@ -60,7 +60,7 @@ function parseAmount(raw: string): number | null {
     .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
     .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
     .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
-    .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Handle "마이너스" prefix — some Korean bank exports use this instead of
   // a negative sign or parentheses. Parity with web-side parseAmount
   // (apps/web/src/lib/parser/pdf.ts) and CSV shared parseCSVAmount.

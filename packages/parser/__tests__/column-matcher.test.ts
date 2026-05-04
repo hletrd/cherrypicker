@@ -1584,4 +1584,48 @@ describe('Cycle 69: expanded column patterns', () => {
     expect(HEADER_KEYWORDS).toContain('카드번호');
     expect(HEADER_KEYWORDS).toContain('승인내역');
   });
+  it('HEADER_KEYWORDS contains C72 new terms', () => {
+    expect(HEADER_KEYWORDS).toContain('매입일');
+    expect(HEADER_KEYWORDS).toContain('전표일');
+    expect(HEADER_KEYWORDS).toContain('거래내역');
+    expect(HEADER_KEYWORDS).toContain('이용가맹점명');
+    expect(HEADER_KEYWORDS).toContain('사용금액');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C72: New column pattern coverage
+// ---------------------------------------------------------------------------
+
+describe('C72: New column pattern coverage', () => {
+  it('DATE_COLUMN_PATTERN matches 매입일', () => {
+    expect(DATE_COLUMN_PATTERN.test('매입일')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 전표일', () => {
+    expect(DATE_COLUMN_PATTERN.test('전표일')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches 거래내역', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('거래내역')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches 이용가맹점명', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('이용가맹점명')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches 사용금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('사용금액')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains 매입일', () => {
+    expect(DATE_KEYWORDS.has('매입일')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains 전표일', () => {
+    expect(DATE_KEYWORDS.has('전표일')).toBe(true);
+  });
+  it('MERCHANT_KEYWORDS contains 거래내역', () => {
+    expect(MERCHANT_KEYWORDS.has('거래내역')).toBe(true);
+  });
+  it('MERCHANT_KEYWORDS contains 이용가맹점명', () => {
+    expect(MERCHANT_KEYWORDS.has('이용가맹점명')).toBe(true);
+  });
+  it('AMOUNT_KEYWORDS contains 사용금액', () => {
+    expect(AMOUNT_KEYWORDS.has('사용금액')).toBe(true);
+  });
 });

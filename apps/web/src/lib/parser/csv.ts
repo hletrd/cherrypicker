@@ -127,7 +127,7 @@ function parseAmount(raw: string): number | null {
     .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
     .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
     .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
-    .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Handle "마이너스" prefix — some Korean bank exports use this instead of
   // a negative sign or parentheses (parity with server-side parseCSVAmount
   // in packages/parser/src/csv/shared.ts C33-03). Must be checked after
@@ -238,17 +238,17 @@ function isDateLikeShort(value: string): boolean {
 // like "12-34" (card number fragments) or "1-2" being misidentified as
 // amounts during column detection.
 const AMOUNT_PATTERNS = [
-  /^₩-?[\d,]+원?$/,     // ₩1,234 or ₩1,234원 (Won sign prefix)
-  /^￦-?[\d,]+원?$/,     // ￦1,234 (fullwidth Won sign)
-  /^\d[\d,]*,\d[\d,]*원?$/, // 1,234 or 1,234,567 — requires comma separator (C60-01)
-  /^-[\d,]+원?$/,        // -1,234 or -1,234원 (negative with comma)
-  /^－[\d,]+원?$/,       // －1,234 — fullwidth-minus negative (C54-01)
+  /^₩-?[\d,]+\s*원?$/,     // ₩1,234 or ₩1,234원 (Won sign prefix)
+  /^￦-?[\d,]+\s*원?$/,     // ￦1,234 (fullwidth Won sign)
+  /^\d[\d,]*,\d[\d,]*\s*원?$/, // 1,234 or 1,234,567 — requires comma separator (C60-01)
+  /^-[\d,]+\s*원?$/,        // -1,234 or -1,234원 (negative with comma)
+  /^－[\d,]+\s*원?$/,       // －1,234 — fullwidth-minus negative (C54-01)
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
-  /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
-  /^\d{5,}원?$/,         // Bare 5+ digit integers: 10000 or 10000원 (C65-01, lowered from 8 to match PDF parser)
-  /^KRW[\d,]+원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
+  /^마이너스[\d,]+\s*원?$/, // 마이너스1,234 — prefix-based negative used by some banks
+  /^\d{5,}\s*원?$/,         // Bare 5+ digit integers: 10000 or 10000원 (C65-01)
+  /^KRW[\d,]+\s*원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
   /^\d[\d,]*-$/,          // Trailing minus: 1,234- (negative amount, C68-01)
-  /^\+[\d,]+원?$/,       // Leading plus: +1,234 (positive amount prefix, C71-01)
+  /^\+[\d,]+\s*원?$/,       // Leading plus: +1,234 (positive amount prefix, C71-01)
 ];
 
 function isDateLike(value: string): boolean {

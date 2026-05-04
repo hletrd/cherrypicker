@@ -640,3 +640,33 @@ describe('SUMMARY_ROW_PATTERN - subtotal keyword (C66-04)', () => {
     expect(SUMMARY_ROW_PATTERN.test('SUBTOTALSHOES STORE')).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// parseCSVAmount — space before 원 (C72-01)
+// ---------------------------------------------------------------------------
+
+describe('parseCSVAmount - space before 원 (C72-01)', () => {
+  test('parses "1,234 원" with space before Won sign', () => {
+    expect(parseCSVAmount('1,234 원')).toBe(1234);
+  });
+
+  test('parses "10,000 원" with space before Won sign', () => {
+    expect(parseCSVAmount('10,000 원')).toBe(10000);
+  });
+
+  test('parses "₩1,234 원" with Won sign and space before 원', () => {
+    expect(parseCSVAmount('₩1,234 원')).toBe(1234);
+  });
+
+  test('parses negative "(1,234 원)" with parenthesized format', () => {
+    expect(parseCSVAmount('(1,234 원)')).toBe(-1234);
+  });
+
+  test('parses "KRW10,000 원" with space before Won sign', () => {
+    expect(parseCSVAmount('KRW10,000 원')).toBe(10000);
+  });
+
+  test('parses "10000 원" bare integer with space before Won sign', () => {
+    expect(parseCSVAmount('10000 원')).toBe(10000);
+  });
+});

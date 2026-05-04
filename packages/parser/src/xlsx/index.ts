@@ -25,7 +25,11 @@ import xlsx from 'xlsx';
 // ---------------------------------------------------------------------------
 
 function isHTMLContent(buffer: Buffer): boolean {
-  const head = buffer.slice(0, 512).toString('utf-8').trimStart().toLowerCase();
+  // Strip UTF-8 BOM (0xEF 0xBB 0xBF) before checking HTML signatures.
+  // Some Korean card exports include a BOM, which would otherwise prevent
+  // the startsWith checks from matching. Parity with web-side isHTMLContent
+  // in apps/web/src/lib/parser/xlsx.ts (C75-01).
+  const head = buffer.slice(0, 512).toString('utf-8').replace(/^﻿/, '').trimStart().toLowerCase();
   return head.startsWith('<!doctype') || head.startsWith('<html') || /<table[\s>]/.test(head);
 }
 
@@ -129,7 +133,7 @@ function parseAmount(raw: unknown): number | null {
       .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
       .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
       .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
-      .replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+      .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
     // Handle "마이너스" prefix — some Korean bank exports use this instead of
     // a negative sign or parentheses. Parity with server-side parseCSVAmount
     // in packages/parser/src/csv/shared.ts and web-side parsers.
