@@ -20,12 +20,12 @@ const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 // C27-01: Require either a comma (thousand separator) or minimum 5 digits
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
-const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/i;
+const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*원?$|^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
 // STRICT_AMOUNT_PATTERN — used by findAmountCell() for structured PDF parsing.
 // Stricter than AMOUNT_PATTERN: requires digits after Won sign prefix so bare
 // "₩" doesn't match, and includes KRW/마이너스 alternatives for parity with
 // the web-side pdf.ts STRICT_AMOUNT_PATTERN (C63-01).
-const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/i;
+const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
 
 /** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
  *  values using month-aware day limits. This prevents decimal amounts
@@ -66,8 +66,12 @@ function parseAmount(raw: string): number | null {
   // (apps/web/src/lib/parser/pdf.ts) and CSV shared parseCSVAmount.
   const isManeuners = /^마이너스/.test(cleaned);
   if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
+  // Handle trailing minus sign — some Korean bank exports use "1,234-"
+  // instead of "-1,234" for negative amounts (C68-01).
+  const hasTrailingMinus = /\d-$/.test(cleaned);
+  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
   const hasParens = cleaned.startsWith('(') && cleaned.endsWith(')');
-  const isNeg = hasParens || isManeuners;
+  const isNeg = hasParens || isManeuners || hasTrailingMinus;
   if (hasParens) cleaned = cleaned.slice(1, -1);
   if (!cleaned.trim()) return null;
   // Use Math.round(parseFloat(...)) to match the web-side parser's rounding
@@ -356,7 +360,7 @@ export async function parsePDF(
   // C27-01: Exclude 4-digit years by requiring either a comma or 5+ digits
   // for bare integers. "2024" alone won't match; "1,234" and "10000" will.
   // Also matches "마이너스" prefixed amounts used by some Korean banks.
-  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)-|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
@@ -392,7 +396,7 @@ export async function parsePDF(
         between = line.slice(amountEnd, dateStart).trim();
       }
       if (between) {
-        const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6])!;
+        const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6] ?? amountMatch[7])!;
         const amount = parseAmount(amountRaw);
         // parseAmount returns null for unparseable inputs — skip the row
         // rather than silently treating it as 0 (C34-01).

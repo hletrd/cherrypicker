@@ -1146,6 +1146,32 @@ describe('C65-02: Data-inference column detection failure error message', () => 
     expect(missingError?.message).toContain('금액');
   });
 
+  test('parses trailing-minus amount "1,234-" as negative and skips (C68-01)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,환불건,"1,234-"',
+      '2026-02-02,스타벅스,6000',
+    ].join('\n');
+    const result = parseCSV(content);
+    // Trailing-minus amount is negative, so it's skipped
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(6000);
+  });
+
+  test('data-inference detects trailing-minus amounts in column detection (C68-01)', () => {
+    // When headers are recognized but trailing-minus amounts appear in data,
+    // the amount column should still be detected.
+    const content = [
+      '이용일,가맹점,값',
+      '2026-02-01,환불,"1,234-"',
+      '2026-02-02,스타벅스,"6,000"',
+    ].join('\n');
+    const result = parseCSV(content);
+    // The positive amount should be parsed; the negative should be skipped
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(6000);
+  });
+
   test('reports header-not-found error for headers without keywords', () => {
     // Headers with no recognized keywords at all — header detection fails.
     const content = [

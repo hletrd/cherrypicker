@@ -40,7 +40,7 @@ const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-
 // commas (e.g., "1,234") or Won signs (e.g., "₩500") always match.
 // C32-01: Won-sign-prefixed amounts (₩/￦) match regardless of digit count,
 // so small amounts like "₩500" are correctly detected as transaction amounts.
-const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+원?|(?<![a-zA-Z\d])KRW[\d,]+원?(?![a-zA-Z\d])|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+원?(?![a-zA-Z\d])|\([\d,]+\)/;
+const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+원?|(?<![a-zA-Z\d])KRW[\d,]+원?(?![a-zA-Z\d])|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+원?(?![a-zA-Z\d])|\([\d,]+\)|(?:[\d,]*,|\d{5,})[\d,]*-(?![a-zA-Z\d\-－])/;
 const STRICT_DATE_PATTERN = /(\d{4})[.\-\/．。](\d{1,2})[.\-\/．。](\d{1,2})/;
 const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})/;
 const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
@@ -69,7 +69,7 @@ function isValidShortDate(cell: string): boolean {
 // C27-01: Require either a comma (thousand separator) or minimum 5 digits
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
-const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/i;
+const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+원?$|^KRW[\d,]+원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
 
 interface Column {
   start: number;
@@ -272,8 +272,12 @@ function parseAmount(raw: string): number | null {
   // in packages/parser/src/csv/shared.ts C33-03).
   const isManeuners = /^마이너스/.test(cleaned);
   if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
+  // Handle trailing minus sign — some Korean bank exports use "1,234-"
+  // instead of "-1,234" for negative amounts (C68-01).
+  const hasTrailingMinus = /\d-$/.test(cleaned);
+  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
   // Handle parenthesized negatives: (1,234) → -1234 (C36-01).
-  const isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners;
+  const isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
   if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
   if (!cleaned.trim()) return null;
   // Use Math.round(parseFloat(...)) to match the csv.ts (C21-03) and xlsx.ts
@@ -572,7 +576,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   // C27-01: Exclude 4-digit years by requiring either a comma or 5+ digits
   // for bare integers. "2024" alone won't match; "1,234" and "10000" will.
   // Also matches "마이너스" prefixed amounts used by some Korean banks.
-  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)-|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
@@ -606,7 +610,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
         between = line.slice(amountEnd, dateStart).trim();
       }
       if (between) {
-        const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6])!;
+        const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6] ?? amountMatch[7])!;
         const amount = parseAmount(amountRaw);
         // parseAmount returns null for unparseable inputs (C33-03).
         if (amount === null) {

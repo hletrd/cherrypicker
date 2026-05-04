@@ -290,7 +290,11 @@ function parseAmount(raw: unknown): number | null {
     // in packages/parser/src/csv/shared.ts C33-03).
     const isManeuners = /^마이너스/.test(cleaned);
     if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
-    const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners;
+    // Handle trailing minus sign — some Korean bank exports use "1,234-"
+    // instead of "-1,234" for negative amounts (C68-01).
+    const hasTrailingMinus = /\d-$/.test(cleaned);
+    if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
+    const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
     if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
     if (!cleaned) return null;
     // Use Math.round(parseFloat(...)) to match the numeric path's rounding

@@ -283,6 +283,27 @@ describe('parseCSVAmount', () => {
   test('parses parenthesized full-width negative "（１，２３４）"', () => {
     expect(parseCSVAmount('（１，２３４）')).toBe(-1234);
   });
+
+  // C68-01: Trailing minus sign for negative amounts
+  test('parses trailing-minus amount "1,234-" as -1234', () => {
+    expect(parseCSVAmount('1,234-')).toBe(-1234);
+  });
+
+  test('parses trailing-minus amount "5000-" as -5000', () => {
+    expect(parseCSVAmount('5000-')).toBe(-5000);
+  });
+
+  test('parses trailing-minus with comma "6,500-" as -6500', () => {
+    expect(parseCSVAmount('6,500-')).toBe(-6500);
+  });
+
+  test('parses trailing-minus with KRW prefix "KRW 10,000-" as -10000', () => {
+    expect(parseCSVAmount('KRW 10,000-')).toBe(-10000);
+  });
+
+  test('parses trailing-minus with Won sign "₩3,000-" as -3000', () => {
+    expect(parseCSVAmount('₩3,000-')).toBe(-3000);
+  });
 });
 
 // ---------------------------------------------------------------------------

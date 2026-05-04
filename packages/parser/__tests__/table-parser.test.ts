@@ -1170,3 +1170,33 @@ describe('Cycle 64: PDF multi-word merchant names', () => {
     expect(rows.length).toBeGreaterThanOrEqual(3);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 68: Trailing minus sign for negative amounts (C68-01)
+// ---------------------------------------------------------------------------
+
+describe('Cycle 68: Trailing minus sign amount patterns (C68-01)', () => {
+  // AMOUNT_PATTERN (used by filterTransactionRows) should match trailing-minus amounts
+  const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+원?|(?<![a-zA-Z\d])KRW[\d,]+원?(?![a-zA-Z\d])|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+원?(?![a-zA-Z\d])|\([\d,]+\)|(?:[\d,]*,|\d{5,})[\d,]*-(?![a-zA-Z\d\-－])/;
+
+  test('AMOUNT_PATTERN matches trailing-minus "1,234-"', () => {
+    expect(AMOUNT_PATTERN.test('1,234-')).toBe(true);
+  });
+
+  test('AMOUNT_PATTERN matches trailing-minus "50000-"', () => {
+    expect(AMOUNT_PATTERN.test('50000-')).toBe(true);
+  });
+
+  test('AMOUNT_PATTERN matches trailing-minus "1,234,567-"', () => {
+    expect(AMOUNT_PATTERN.test('1,234,567-')).toBe(true);
+  });
+
+  test('filterTransactionRows detects trailing-minus amounts in table rows', () => {
+    const rows = [
+      ['2024-01-15', '환불건', '1,234-'],
+      ['2024-01-16', '스타벅스', '6,500'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+  });
+});

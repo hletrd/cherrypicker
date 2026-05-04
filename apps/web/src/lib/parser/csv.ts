@@ -135,7 +135,11 @@ function parseAmount(raw: string): number | null {
   // detected, and parenthesized amounts like "(1,234원)" work correctly.
   const isManeuners = /^마이너스/.test(cleaned);
   if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
-  const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners;
+  // Handle trailing minus sign — some Korean bank exports use "1,234-"
+  // instead of "-1,234" for negative amounts (C68-01).
+  const hasTrailingMinus = /\d-$/.test(cleaned);
+  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
+  const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
   if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
   // Use Math.round(parseFloat(...)) to match the xlsx parser's rounding behavior
   // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
@@ -243,6 +247,7 @@ const AMOUNT_PATTERNS = [
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
   /^\d{5,}원?$/,         // Bare 5+ digit integers: 10000 or 10000원 (C65-01, lowered from 8 to match PDF parser)
   /^KRW[\d,]+원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
+  /^\d[\d,]*-$/,          // Trailing minus: 1,234- (negative amount, C68-01)
 ];
 
 function isDateLike(value: string): boolean {

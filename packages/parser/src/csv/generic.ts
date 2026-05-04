@@ -72,6 +72,7 @@ const AMOUNT_PATTERNS = [
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
   /^\d{5,}원?$/,         // Bare 5+ digit integers: 10000 or 10000원 (C65-01, lowered from 8 to match PDF parser)
   /^KRW[\d,]+원?$/i,     // KRW10,000 — ISO 4217 currency prefix (C56-01)
+  /^\d[\d,]*-$/,          // Trailing minus: 1,234- (negative amount, C68-01)
 ];
 
 function isDateLike(value: string): boolean {
