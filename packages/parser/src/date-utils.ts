@@ -50,8 +50,8 @@ export function inferYear(month: number, day: number): number {
 export function parseDateStringToISO(raw: string): string {
   const cleaned = raw.trim();
 
-  // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD
-  const fullMatch = cleaned.match(/^(\d{4})[.\-\/\s](\d{1,2})[.\-\/\s](\d{1,2})/);
+  // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD (with optional spaces around delimiters)
+  const fullMatch = cleaned.match(/^(\d{4})[\s]*[.\-\/][\s]*(\d{1,2})[\s]*[.\-\/][\s]*(\d{1,2})/);
   if (fullMatch) {
     const year = parseInt(fullMatch[1]!, 10);
     const month = parseInt(fullMatch[2]!, 10);

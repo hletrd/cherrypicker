@@ -6,7 +6,7 @@
 import type { BankAdapter, BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
 import { detectBank } from '../detect.js';
-import { parseDateStringToISO } from '../date-utils.js';
+import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
 import { splitCSVLine, parseCSVAmount, parseCSVInstallments } from './shared.js';
 import {
   findColumn,
@@ -125,8 +125,16 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
         }
         if (amount <= 0) continue;
 
+        const parsedDate = parseDateStringToISO(dateRaw);
+        // Report unparseable dates as parse errors so users can see which
+        // transactions have malformed dates, matching the generic CSV parser
+        // behavior in csv/generic.ts (C12-01/C12-06).
+        if (!isValidISODate(parsedDate) && dateRaw.trim()) {
+          errors.push({ line: i + 1, message: `날짜를 해석할 수 없습니다: ${dateRaw.trim()}` });
+        }
+
         const tx: RawTransaction = {
-          date: parseDateStringToISO(dateRaw),
+          date: parsedDate,
           merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
           amount,
         };

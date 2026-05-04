@@ -118,12 +118,12 @@ function parseInstallments(raw: string | undefined): number | undefined {
 // date formats handled by parseDateStringToISO() in date-utils.ts. If a new
 // date format is added there, add a corresponding pattern here.
 const DATE_PATTERNS = [
-  /^\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/,      // 2024-01-15
-  /^\d{2}[.\-\/]\d{2}[.\-\/]\d{2}$/,           // 24-01-15 (YY-MM-DD)
-  /^\d{1,2}[.\-\/]\d{1,2}$/,                   // 01/15 (MM/DD)
-  /^\d{4}\d{2}\d{2}$/,                          // 20240115
-  /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,         // 2024년 1월 15일
-  /^\d{1,2}월\s*\d{1,2}일$/,                   // 1월 15일
+  /^\d{4}[\s]*[.\-\/][\s]*\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/,  // 2024-01-15, "2024 - 01 - 15"
+  /^\d{2}[\s]*[.\-\/][\s]*\d{2}[\s]*[.\-\/][\s]*\d{2}$/,       // 24-01-15 (YY-MM-DD)
+  /^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/,                          // 01/15, "1 / 5" (MM/DD)
+  /^\d{4}\d{2}\d{2}$/,                                           // 20240115
+  /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,                          // 2024년 1월 15일
+  /^\d{1,2}월\s*\d{1,2}일$/,                                    // 1월 15일
 ];
 
 // Korean amount patterns — must recognize all formats that parseAmount

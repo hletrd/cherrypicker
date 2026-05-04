@@ -3,6 +3,7 @@ import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js
 import { detectBank } from './detect.js';
 import {
   normalizeHeader,
+  findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
   AMOUNT_COLUMN_PATTERN,
@@ -417,24 +418,15 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   // Get column config for this bank (or auto-detect from headers)
   const config = resolvedBank ? getBankColumnConfig(resolvedBank) : null;
 
-  // Try bank-specific config name first; if not found, fall back to regex
-  // pattern from the shared ColumnMatcher module. Uses normalizeHeader() to
-  // tolerate whitespace and parenthetical suffixes in column names.
-  const findCol = (configName: string | undefined, pattern: RegExp): number => {
-    if (configName) {
-      const normalizedConfig = normalizeHeader(configName);
-      const idx = headers.findIndex((h) => normalizeHeader(h) === normalizedConfig);
-      if (idx !== -1) return idx;
-    }
-    return headers.findIndex((h) => pattern.test(normalizeHeader(h)));
-  };
-
-  const dateCol = findCol(config?.date, DATE_COLUMN_PATTERN);
-  const merchantCol = findCol(config?.merchant, MERCHANT_COLUMN_PATTERN);
-  const amountCol = findCol(config?.amount, AMOUNT_COLUMN_PATTERN);
-  const installCol = findCol(config?.installments, INSTALLMENTS_COLUMN_PATTERN);
-  const categoryCol = findCol(config?.category, CATEGORY_COLUMN_PATTERN);
-  const memoCol = findCol(config?.memo, MEMO_COLUMN_PATTERN);
+  // Use shared findColumn from column-matcher for consistent column
+  // matching across all parsers. Tries bank-specific config name first,
+  // then falls back to regex pattern (C12-02).
+  const dateCol = findColumn(headers, config?.date, DATE_COLUMN_PATTERN);
+  const merchantCol = findColumn(headers, config?.merchant, MERCHANT_COLUMN_PATTERN);
+  const amountCol = findColumn(headers, config?.amount, AMOUNT_COLUMN_PATTERN);
+  const installCol = findColumn(headers, config?.installments, INSTALLMENTS_COLUMN_PATTERN);
+  const categoryCol = findColumn(headers, config?.category, CATEGORY_COLUMN_PATTERN);
+  const memoCol = findColumn(headers, config?.memo, MEMO_COLUMN_PATTERN);
 
   const transactions: RawTransaction[] = [];
   const errors: ParseError[] = [];

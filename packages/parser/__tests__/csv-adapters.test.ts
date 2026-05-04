@@ -545,3 +545,63 @@ describe('parenthesized negative amount inference', () => {
     expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Adapter-factory date error reporting (C12-01/C12-06)
+// ---------------------------------------------------------------------------
+
+describe('adapter-factory date error reporting', () => {
+  test('reports malformed date as parse error (C12-01)', () => {
+    // Samsung adapter uses '이용일' as date header.
+    // A malformed date should produce a parse error.
+    const content = [
+      '삼성카드 이용내역',
+      '이용일,가맹점명,이용금액,할부,업종',
+      'INVALID_DATE,스타벅스,5500,0,카페',
+    ].join('\n');
+    const result = parseCSV(content, 'samsung');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
+  });
+
+  test('reports short date that fails validation as error (C12-06)', () => {
+    // A date like "13/45" (invalid month/day) should produce an error
+    const content = [
+      '삼성카드 이용내역',
+      '이용일,가맹점명,이용금액,할부,업종',
+      '13/45,스타벅스,5500,0,카페',
+    ].join('\n');
+    const result = parseCSV(content, 'samsung');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
+  });
+
+  test('does not report error for valid dates', () => {
+    const content = [
+      '삼성카드 이용내역',
+      '이용일,가맹점명,이용금액,할부,업종',
+      '2024-01-15,스타벅스,5500,0,카페',
+    ].join('\n');
+    const result = parseCSV(content, 'samsung');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.errors.filter((e) => e.message.includes('날짜'))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Spaced date format detection (C12-04)
+// ---------------------------------------------------------------------------
+
+describe('spaced date format detection (C12-04)', () => {
+  test('isDateLike matches dates with spaces around delimiters', () => {
+    // The generic parser should detect "2024 - 01 - 15" as a date column
+    const content = [
+      '기타,가맹점명,이용금액',
+      '2024 - 01 - 15,스타벅스,5500',
+      '2024 - 01 - 20,이마트,125000',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+  });
+});
