@@ -1710,4 +1710,89 @@ describe('Cycle 73: New column header patterns (C73-03)', () => {
     const headers = ['date', 'merchant', 'debit'];
     expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
   });
+
+  // C76-01: New date column patterns for cancel/settlement/refund dates
+  it('DATE_COLUMN_PATTERN matches 취소일 (cancel date)', () => {
+    expect(DATE_COLUMN_PATTERN.test('취소일')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 정산일 (settlement date)', () => {
+    expect(DATE_COLUMN_PATTERN.test('정산일')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 환불일 (refund date)', () => {
+    expect(DATE_COLUMN_PATTERN.test('환불일')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 반품일 (return date)', () => {
+    expect(DATE_COLUMN_PATTERN.test('반품일')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 교환일 (exchange date)', () => {
+    expect(DATE_COLUMN_PATTERN.test('교환일')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches cancel_date (English)', () => {
+    expect(DATE_COLUMN_PATTERN.test('cancel_date')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches refund_date (English)', () => {
+    expect(DATE_COLUMN_PATTERN.test('refund_date')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches settlement_date (English)', () => {
+    expect(DATE_COLUMN_PATTERN.test('settlement_date')).toBe(true);
+  });
+
+  // C76-01: New date terms in HEADER_KEYWORDS
+  it('HEADER_KEYWORDS contains 취소일', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('취소일')).toBe(true);
+  });
+  it('HEADER_KEYWORDS contains 정산일', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('정산일')).toBe(true);
+  });
+  it('HEADER_KEYWORDS contains 환불일', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('환불일')).toBe(true);
+  });
+
+  // C76-01: New date terms in DATE_KEYWORDS
+  it('DATE_KEYWORDS contains 취소일', () => {
+    expect(DATE_KEYWORDS.has('취소일')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains 정산일', () => {
+    expect(DATE_KEYWORDS.has('정산일')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains 환불일', () => {
+    expect(DATE_KEYWORDS.has('환불일')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains cancel_date (English)', () => {
+    expect(DATE_KEYWORDS.has('cancel_date')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains refund_date (English)', () => {
+    expect(DATE_KEYWORDS.has('refund_date')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains settlement_date (English)', () => {
+    expect(DATE_KEYWORDS.has('settlement_date')).toBe(true);
+  });
+
+  // C76-01: findColumn detects new date columns
+  it('findColumn detects 취소일 column', () => {
+    const headers = ['이용일', '이용처', '이용금액', '취소일'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+    expect(findColumn(headers, '취소일', DATE_COLUMN_PATTERN)).toBe(3);
+  });
+  it('findColumn detects 정산일 column', () => {
+    const headers = ['정산일', '가맹점', '금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  // C76-01: Summary row patterns for installment fees and late fees
+  it('SUMMARY_ROW_PATTERN matches 할부수수료합계', () => {
+    expect(SUMMARY_ROW_PATTERN.test('할부수수료합계 5,000')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN matches 수수료합계', () => {
+    expect(SUMMARY_ROW_PATTERN.test('수수료합계 3,000')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN matches 연체료합계', () => {
+    expect(SUMMARY_ROW_PATTERN.test('연체료합계 10,000')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN matches 연체 이자', () => {
+    expect(SUMMARY_ROW_PATTERN.test('연체 이자 2,000')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN does not match 수수료 inside merchant name', () => {
+    expect(SUMMARY_ROW_PATTERN.test('수수료마트')).toBe(false);
+  });
 });
