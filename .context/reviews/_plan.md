@@ -1,47 +1,37 @@
-# Cycle 78 Implementation Plan
+# Cycle 79 Implementation Plan
 
-## Fix 1: Expand Column Pattern Coverage (C78-01)
-**Priority**: HIGH (format diversity)
+## Fix 1: Add missing terms to HEADER_KEYWORDS and create CATEGORY/MEMO keyword Sets (C79-01)
+**Priority**: HIGH (header detection / format diversity)
 **Files**:
 - `packages/parser/src/csv/column-matcher.ts`
 - `apps/web/src/lib/parser/column-matcher.ts`
 
 **Changes**:
-1. DATE_COLUMN_PATTERN: Add 결제일시, 주문시간, 승인완료, 조회시간, 처리일시 + English statementdate, paymentdate, invoicedate, timestamp
-2. MERCHANT_COLUMN_PATTERN: Add 상점, 판매점, 이용매장명, 구매내용 + English supplier, brand, location
-3. AMOUNT_COLUMN_PATTERN: Add 이용대금, 실결제액, 청구액, 사용액, 할인금액, 포인트할인 + English transactionamount, paymentamount, billedamount, netamount, gross
-4. CATEGORY_COLUMN_PATTERN: Add 결제구분, 매장유형 + English payment_type
-5. MEMO_COLUMN_PATTERN: Add 메모사항, 기타
+1. Add missing CATEGORY_COLUMN_PATTERN terms to HEADER_KEYWORDS: 거래유형, 결제유형, 결제구분, 이용구분, 구분, 가맹점유형, 매장유형, 카드종류, 카드구분
+2. Add missing MERCHANT_COLUMN_PATTERN term `가게` to HEADER_KEYWORDS and MERCHANT_KEYWORDS
+3. Add missing MEMO_COLUMN_PATTERN term `기타` to HEADER_KEYWORDS
+4. Create CATEGORY_KEYWORDS Set with all terms from CATEGORY_COLUMN_PATTERN (Korean + English)
+5. Create MEMO_KEYWORDS Set with all terms from MEMO_COLUMN_PATTERN (Korean + English)
+6. Update isValidHeaderRow() to check DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS, CATEGORY_KEYWORDS, MEMO_KEYWORDS (5 categories, require 2+)
 
-## Fix 2: Expand Summary Row Patterns (C78-02)
-**Priority**: HIGH (false positive prevention)
+## Fix 2: Expand English date abbreviations in DATE_COLUMN_PATTERN (C79-02)
+**Priority**: MEDIUM (format diversity)
 **Files**: Same as Fix 1
 
 **Changes**:
-1. Add 포인트합계 and 승인취소합계 to SUMMARY_ROW_PATTERN
+1. Add English abbreviation patterns to DATE_COLUMN_PATTERN: `txn[\s_-]?d(?:ate|t)`, `trans(?:action)?[\s_-]?d(?:ate|t)`, `purchase[\s_-]?d(?:ate|t)`
+2. Add `txn`, `txn_dt`, `txndate`, `trans_dt`, `transdate`, `purchasedt`, `purchase_dt` to DATE_KEYWORDS
 
-## Fix 3: Sync HEADER_KEYWORDS and Keyword Category Sets (C78-03)
-**Priority**: HIGH (header detection)
-**Files**: Same as Fix 1
-
-**Changes**:
-1. Add all new terms to HEADER_KEYWORDS array
-2. Add all new terms to DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS Sets
-
-## Fix 4: Add Test Coverage (C78-04)
+## Fix 3: Add tests for new patterns (C79-03)
 **Priority**: MEDIUM (robustness)
 **Files**:
 - `packages/parser/__tests__/column-matcher.test.ts`
-- `packages/parser/__tests__/xlsx-parity.test.ts`
 
 **Changes**:
-1. Tests for new column pattern terms (date, merchant, amount, category, memo)
-2. Tests for new summary row patterns (포인트합계, 승인취소합계)
-3. Tests for combined headers with + delimiter
-4. Tests for 3-part combined headers
-5. Tests for English-only header detection
-6. Parity tests for CATEGORY_COLUMN_PATTERN, MEMO_COLUMN_PATTERN, INSTALLMENTS_COLUMN_PATTERN
-7. Parity tests for DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS Sets
+1. Tests for CATEGORY_KEYWORDS and MEMO_KEYWORDS in isValidHeaderRow()
+2. Tests for category-only headers (거래유형 + 결제구분)
+3. Tests for English date abbreviations (txn_date, trans_dt, purchase_dt)
+4. Tests for `가게` merchant and `기타` memo matching
 
 ## Deferred Items (STRICT)
 - PDF multi-line header support

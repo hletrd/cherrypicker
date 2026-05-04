@@ -1,43 +1,40 @@
-# Cycle 78 Aggregate Review
+# Cycle 79 Aggregate Review
 
 ## Review Summary
 
-After 77 cycles of intensive parser improvements, the parser is highly mature with 24 bank adapters and extensive column patterns. This cycle expanded format diversity by adding 50+ new column header terms (Korean and English) across all column patterns, 2 new summary row patterns, and 34 new tests covering parity, combined headers, and English-only header detection.
+After 78 cycles, the parser is highly mature. Server/web column-matcher strings have zero diff (confirmed). This cycle identifies 3 actionable findings in the keyword coverage gap between COLUMN_PATTERNS and HEADER_KEYWORDS/keyword Sets, plus English date abbreviation coverage.
 
 ## Findings
 
-### 1. Missing Korean Column Header Terms [FIXED C78-01]
-- **Severity**: HIGH (format diversity)
-- **Details**: 15 new Korean terms added across DATE (결제일시, 주문시간, 승인완료, 조회시간, 처리일시), MERCHANT (상점, 판매점, 이용매장명, 구매내용), AMOUNT (이용대금, 실결제액, 청구액, 사용액, 할인금액, 포인트할인), CATEGORY (결제구분, 매장유형), MEMO (메모사항, 기타)
+### F79-01: CATEGORY_COLUMN_PATTERN terms missing from HEADER_KEYWORDS and keyword Sets [HIGH]
+**Files**: `packages/parser/src/csv/column-matcher.ts`, `apps/web/src/lib/parser/column-matcher.ts`
+**Issue**: 9 terms in CATEGORY_COLUMN_PATTERN are NOT in HEADER_KEYWORDS or any keyword category Set:
+- `거래유형`, `결제유형`, `결제구분`, `이용구분`, `구분`, `가맹점유형`, `매장유형`, `카드종류`, `카드구분`
+Also: `가게` (MERCHANT_COLUMN_PATTERN) missing from MERCHANT_KEYWORDS/HEADER_KEYWORDS.
+Also: `기타` (MEMO_COLUMN_PATTERN) missing from HEADER_KEYWORDS.
+**Impact**: `isValidHeaderRow()` cannot count these terms toward category matching. Headers containing only these category/memo terms fail the 2-category minimum check, even though findColumn() correctly identifies the column via regex. CSV/XLSX files with category-heavy headers get "헤더 행을 찾을 수 없습니다" error.
+**Fix**: Add all missing terms to HEADER_KEYWORDS. Create CATEGORY_KEYWORDS and MEMO_KEYWORDS Sets. Include them in the isValidHeaderRow() 2-category check.
 
-### 2. Missing English Column Header Terms [FIXED C78-01]
-- **Severity**: HIGH (format diversity)
-- **Details**: 13 new English terms added: statementdate, paymentdate, invoicedate, timestamp, supplier, brand, location, transactionamount, paymentamount, billedamount, netamount, gross, payment_type
+### F79-02: English date pattern abbreviation gap [MEDIUM]
+**Files**: Same as F79-01
+**Issue**: DATE_COLUMN_PATTERN uses anchored `^trans(?:action)?[\s_-]?date$`. After normalizeHeader() strips spaces/underscores/hyphens: "txn_date" -> "txndate", "trans_dt" -> "transdt", "purchase_dt" -> "purchasedt". None match existing patterns.
+**Fix**: Add `txn`, `trans`, `purch`, `inv` abbreviation variants to DATE_COLUMN_PATTERN and DATE_KEYWORDS.
 
-### 3. Missing Summary Row Patterns [FIXED C78-02]
-- **Severity**: MEDIUM (false positive prevention)
-- **Details**: Added 포인트합계 and 승인취소합계 to SUMMARY_ROW_PATTERN
+### F79-03: Test coverage gaps [MEDIUM]
+No tests for:
+- Category-only headers (거래유형 + 결제구분 but no date/merchant/amount)
+- Memo keyword `기타` matching
+- English date abbreviations (txn_date, trans_dt)
+- CATEGORY_KEYWORDS / MEMO_KEYWORDS Sets in isValidHeaderRow()
 
-### 4. HEADER_KEYWORDS and Keyword Sets Synced [FIXED C78-03]
-- **Severity**: HIGH (header detection)
-- **Details**: All new terms added to HEADER_KEYWORDS, DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS
+## Server/Web Parity
+CONFIRMED: Zero diff on all column-matcher string constants. Both sides share identical COLUMN_PATTERNS, SUMMARY_ROW_PATTERN, HEADER_KEYWORDS, and keyword Sets. Fixes must be applied to both files.
 
-### 5. Test Coverage Expanded [FIXED C78-04]
-- **Severity**: MEDIUM (robustness)
-- **Details**: 34 new tests for new patterns, summary rows, combined headers (+ delimiter, 3-part), English-only headers, and full server-web parity (INSTALLMENTS, CATEGORY, MEMO patterns + all keyword Sets)
-- **Location**: `packages/parser/src/csv/column-matcher.ts` line 100, `apps/web/src/lib/parser/column-matcher.ts` line 84
-- **Issue**: `DATE_KEYWORDS` ReadonlySet missing: `취소일`, `정산일`, `환불일`, `반품일`, `교환일`. These ARE in `DATE_COLUMN_PATTERN` regex and `HEADER_KEYWORDS` array but were never added to the keyword Set.
-- **Impact**: `isValidHeaderRow()` may reject valid header rows where the date column exclusively uses one of these terms.
-- **Fix**: Add 5 missing terms to `DATE_KEYWORDS` in both server and web column-matcher files.
-
-## Server/Web Parity Status
-All parser parity items remain resolved. Both server and web use identical column patterns, date utilities, amount parsing, and summary row detection. The only discrepancy is Finding 1 — both sides have the same missing terms.
-
-## Deferred Items (unchanged from cycle 76)
+## Deferred Items (unchanged)
 - PDF multi-line header support
 - Historical amount display format
 - Card name suffixes
 - Global config integration
 - Generic parser fallback behavior
-- CSS dark mode complete migration
-- D-01 shared module refactor (web CSV duplication)
+- CSS dark mode
+- D-01 shared module refactor

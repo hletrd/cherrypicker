@@ -14,6 +14,8 @@ import {
   DATE_KEYWORDS,
   MERCHANT_KEYWORDS,
   AMOUNT_KEYWORDS,
+  CATEGORY_KEYWORDS,
+  MEMO_KEYWORDS,
 } from '../src/csv/column-matcher';
 
 // ---------------------------------------------------------------------------
@@ -179,7 +181,9 @@ describe('isValidHeaderRow', () => {
     // Only date + merchant = 2 categories (should pass)
     expect(isValidHeaderRow(['이용일', '이용처'])).toBe(true);
     // Only date = 1 category (should fail)
-    expect(isValidHeaderRow(['이용일', '비고', '메모'])).toBe(false);
+    expect(isValidHeaderRow(['이용일', '거래일', '날짜'])).toBe(false);
+    // Date + memo = 2 categories (should pass with expanded memo keywords)
+    expect(isValidHeaderRow(['이용일', '비고', '메모'])).toBe(true);
   });
 
   it('handles empty row', () => {
@@ -1899,5 +1903,214 @@ describe('Cycle 73: New column header patterns (C73-03)', () => {
   });
   it('isValidHeaderRow rejects single-category English headers', () => {
     expect(isValidHeaderRow(['amount', 'total', 'price'])).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cycle 79: CATEGORY/MEMO keyword Sets, English date abbreviations, 가게/기타
+// ---------------------------------------------------------------------------
+
+describe('Cycle 79: CATEGORY_KEYWORDS and MEMO_KEYWORDS Sets', () => {
+  it('CATEGORY_KEYWORDS contains Korean category terms', () => {
+    expect(CATEGORY_KEYWORDS.has('업종')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('카테고리')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('분류')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('거래유형')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('결제유형')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('결제구분')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('이용구분')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('구분')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('가맹점유형')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('매장유형')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('카드종류')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('카드구분')).toBe(true);
+  });
+
+  it('CATEGORY_KEYWORDS contains English category terms', () => {
+    expect(CATEGORY_KEYWORDS.has('category')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('type')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('paymenttype')).toBe(true);
+  });
+
+  it('MEMO_KEYWORDS contains Korean memo terms', () => {
+    expect(MEMO_KEYWORDS.has('비고')).toBe(true);
+    expect(MEMO_KEYWORDS.has('적요')).toBe(true);
+    expect(MEMO_KEYWORDS.has('메모')).toBe(true);
+    expect(MEMO_KEYWORDS.has('기타')).toBe(true);
+    expect(MEMO_KEYWORDS.has('승인번호')).toBe(true);
+    expect(MEMO_KEYWORDS.has('카드번호')).toBe(true);
+  });
+
+  it('MEMO_KEYWORDS contains English memo terms', () => {
+    expect(MEMO_KEYWORDS.has('memo')).toBe(true);
+    expect(MEMO_KEYWORDS.has('note')).toBe(true);
+    expect(MEMO_KEYWORDS.has('remarks')).toBe(true);
+    expect(MEMO_KEYWORDS.has('approvalno')).toBe(true);
+  });
+});
+
+describe('Cycle 79: isValidHeaderRow with category+memo 2-category check', () => {
+  it('accepts header with category + memo keywords (2 categories)', () => {
+    // 거래유형 (CATEGORY) + 비고 (MEMO) = 2 categories
+    expect(isValidHeaderRow(['거래유형', '비고'])).toBe(true);
+  });
+
+  it('accepts header with category + date keywords (2 categories)', () => {
+    expect(isValidHeaderRow(['결제유형', '이용일'])).toBe(true);
+  });
+
+  it('accepts header with memo + amount keywords (2 categories)', () => {
+    expect(isValidHeaderRow(['메모', '이용금액'])).toBe(true);
+  });
+
+  it('accepts header with 거래유형 + 결제구분 + 메모 (category + memo)', () => {
+    expect(isValidHeaderRow(['거래유형', '결제구분', '메모'])).toBe(true);
+  });
+
+  it('accepts header with English category + memo terms', () => {
+    expect(isValidHeaderRow(['category', 'memo'])).toBe(true);
+    expect(isValidHeaderRow(['type', 'note'])).toBe(true);
+  });
+
+  it('rejects header with only single-category terms', () => {
+    // Only category keywords (1 category)
+    expect(isValidHeaderRow(['거래유형', '결제유형', '카드종류'])).toBe(false);
+  });
+});
+
+describe('Cycle 79: English date abbreviations', () => {
+  it('DATE_COLUMN_PATTERN matches txn_date', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('txn_date'))).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches txn_dt', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('txn_dt'))).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches txn date', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('txn date'))).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches trans_date', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('trans_date'))).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches trans_dt', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('trans_dt'))).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches transaction_date (existing)', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('transaction_date'))).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches transaction_dt', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('transaction_dt'))).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches purchase_date (existing)', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('purchase_date'))).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches purchase_dt', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('purchase_dt'))).toBe(true);
+  });
+
+  it('DATE_KEYWORDS contains English date abbreviations', () => {
+    expect(DATE_KEYWORDS.has('txndate')).toBe(true);
+    expect(DATE_KEYWORDS.has('txndt')).toBe(true);
+    expect(DATE_KEYWORDS.has('transdate')).toBe(true);
+    expect(DATE_KEYWORDS.has('transdt')).toBe(true);
+    expect(DATE_KEYWORDS.has('transactiondt')).toBe(true);
+    expect(DATE_KEYWORDS.has('purchasedt')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains English date abbreviations', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('txn')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('txndate')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('txndt')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('transdate')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('transdt')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('purchasedt')).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts txn_dt + merchant + amount', () => {
+    expect(isValidHeaderRow(['txn_dt', 'merchant', 'amount'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts trans_date + shop + total', () => {
+    expect(isValidHeaderRow(['trans_date', 'shop', 'total'])).toBe(true);
+  });
+
+  it('findColumn detects txn_date as date column', () => {
+    const headers = ['txn_date', 'merchant', 'amount'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('findColumn detects trans_dt as date column', () => {
+    const headers = ['trans_dt', 'vendor', 'total'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('findColumn detects purchase_dt as date column', () => {
+    const headers = ['purchase_dt', 'shop', 'price'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+});
+
+describe('Cycle 79: 가게 merchant and 기타 memo in HEADER_KEYWORDS', () => {
+  it('MERCHANT_COLUMN_PATTERN matches 가게', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('가게')).toBe(true);
+  });
+
+  it('MERCHANT_KEYWORDS contains 가게', () => {
+    expect(MERCHANT_KEYWORDS.has('가게')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains 가게', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('가게')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains 기타', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('기타')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains category terms', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('업종')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('카테고리')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('거래유형')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('결제유형')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('결제구분')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('이용구분')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('구분')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('가맹점유형')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('매장유형')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('카드종류')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('카드구분')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains English category/memo terms', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('category')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('type')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('paymenttype')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('desc')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('amt')).toBe(true);
+  });
+
+  it('findColumn detects 가게 as merchant column', () => {
+    const headers = ['이용일', '가게', '금액'];
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
+  });
+
+  it('findColumn detects 기타 as memo column', () => {
+    const headers = ['이용일', '가맹점', '금액', '기타'];
+    expect(findColumn(headers, undefined, MEMO_COLUMN_PATTERN)).toBe(3);
+  });
+
+  it('isValidHeaderRow accepts 가게 + 이용금액 header', () => {
+    expect(isValidHeaderRow(['이용일', '가게', '이용금액'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts 거래유형 + 이용일 header', () => {
+    expect(isValidHeaderRow(['거래유형', '이용일'])).toBe(true);
   });
 });
