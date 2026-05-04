@@ -65,6 +65,7 @@ function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): s
  *  (C37-01) hid the risk of NaN propagation — the `number` return type could
  *  not enforce null checks at the call site. */
 function parseAmount(raw: string): number | null {
+  if (!raw.trim()) return null; // Early return for empty/whitespace-only input (parity with server-side C56-04)
   let cleaned = raw.trim()
     .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
     .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII

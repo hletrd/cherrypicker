@@ -1137,3 +1137,36 @@ describe('Cycle 62: KRW prefix in PDF STRICT_AMOUNT_PATTERN', () => {
     expect(STRICT_AMOUNT_PATTERN.test('KRW')).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 64: PDF multi-word merchant names in column-boundary parsed tables
+// ---------------------------------------------------------------------------
+
+describe('Cycle 64: PDF multi-word merchant names', () => {
+  test('parseTable preserves multi-word merchant names across column boundaries', () => {
+    const text = [
+      '날짜            가맹점                  금액',
+      '2024-01-15      스타벅스 강남점         6,500원',
+      '2024-01-16      이마트 서초점           45,000원',
+      '2024-01-17      GS25 강남역점           3,200원',
+    ].join('\n');
+    const rows = parseTable(text);
+    // Header row has no date/amount pattern, so parseTable picks up only the 3 data rows
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    // Merchant column should preserve multi-word names
+    const dataRows = filterTransactionRows(rows);
+    expect(dataRows).toHaveLength(3);
+    expect(dataRows[0]?.[1]?.trim()).toBe('스타벅스 강남점');
+    expect(dataRows[1]?.[1]?.trim()).toBe('이마트 서초점');
+  });
+
+  test('parseTable handles columns with varying content widths', () => {
+    const text = [
+      '2024-01-15  Starbucks Gangnam Branch  ₩6,500',
+      '2024-01-16  E-Mart Seocho  ₩45,000',
+      '2024-01-17  CU  ₩3,200',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+  });
+});
