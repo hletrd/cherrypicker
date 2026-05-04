@@ -69,6 +69,36 @@ describe('splitCSVLine', () => {
     // RFC 4180 behavior for malformed input.
     expect(splitCSVLine('"unclosed,rest', ',')).toEqual(['unclosed,rest']);
   });
+
+  // C13-01: Quoted fields for non-comma delimiters
+
+  test('handles quoted fields with tab delimiter', () => {
+    expect(splitCSVLine('"hello\tworld"\tb\tc', '\t')).toEqual(['hello\tworld', 'b', 'c']);
+  });
+
+  test('handles quoted fields with pipe delimiter', () => {
+    expect(splitCSVLine('"hello|world"|b|c', '|')).toEqual(['hello|world', 'b', 'c']);
+  });
+
+  test('handles quoted fields with semicolon delimiter', () => {
+    expect(splitCSVLine('"hello;world";b;c', ';')).toEqual(['hello;world', 'b', 'c']);
+  });
+
+  test('handles doubled-quote escapes with tab delimiter', () => {
+    expect(splitCSVLine('"say ""hello"""\tb', '\t')).toEqual(['say "hello"', 'b']);
+  });
+
+  test('handles Korean merchant with tab in quoted field', () => {
+    expect(splitCSVLine('"스타벅스\t강남점"\t5500', '\t')).toEqual(['스타벅스\t강남점', '5500']);
+  });
+
+  test('handles pipe in quoted field for pipe-delimited file', () => {
+    expect(splitCSVLine('"A|B"|C|D', '|')).toEqual(['A|B', 'C', 'D']);
+  });
+
+  test('handles mixed quoted and unquoted fields with tab delimiter', () => {
+    expect(splitCSVLine('plain\t"quoted\tfield"\t12345', '\t')).toEqual(['plain', 'quoted\tfield', '12345']);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -258,6 +288,27 @@ describe('normalizeHeader', () => {
 
   test('isValidHeaderRow accepts headers with zero-width spaces', () => {
     const cells = ['이​용​일', '가맹점​명', '이​용​금​액'];
+    expect(isValidHeaderRow(cells)).toBe(true);
+  });
+
+  // C13-03: Fullwidth space (U+3000) handling
+
+  test('strips fullwidth space U+3000', () => {
+    expect(normalizeHeader('이용　일')).toBe('이용일');
+  });
+
+  test('strips fullwidth space and still removes parenthetical suffix', () => {
+    expect(normalizeHeader('이용　금액(원)')).toBe('이용금액');
+  });
+
+  test('findColumn finds header with fullwidth spaces', () => {
+    const headers = ['이용　일', '가맹점명', '이용　금액'];
+    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
+    expect(dateIdx).toBe(0);
+  });
+
+  test('isValidHeaderRow accepts headers with fullwidth spaces', () => {
+    const cells = ['이용　일', '가맹점　명', '이용　금액'];
     expect(isValidHeaderRow(cells)).toBe(true);
   });
 });

@@ -16,8 +16,12 @@ import {
 // Shared helpers (used by all adapters)
 // ---------------------------------------------------------------------------
 
+/** RFC 4180-style CSV line splitter. Handles quoted fields and doubled-quote
+ *  escapes for any delimiter (comma, tab, pipe, semicolon). Previously only
+ *  comma-delimited content used proper quote handling — other delimiters
+ *  fell back to naive split, which broke when fields contained the delimiter
+ *  character inside quotes. Parity with server-side splitCSVLine (C13-01). */
 function splitLine(line: string, delimiter: string): string[] {
-  if (delimiter !== ',') return line.split(delimiter).map((v) => v.trim());
   const result: string[] = [];
   let inQuotes = false;
   let current = '';
@@ -26,7 +30,7 @@ function splitLine(line: string, delimiter: string): string[] {
     if (char === '"') {
       if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
       else { inQuotes = !inQuotes; }
-    } else if (char === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+    } else if (char === delimiter && !inQuotes) { result.push(current.trim()); current = ''; }
     else { current += char; }
   }
   result.push(current.trim());
