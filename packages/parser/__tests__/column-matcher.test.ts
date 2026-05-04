@@ -1795,4 +1795,109 @@ describe('Cycle 73: New column header patterns (C73-03)', () => {
   it('SUMMARY_ROW_PATTERN does not match 수수료 inside merchant name', () => {
     expect(SUMMARY_ROW_PATTERN.test('수수료마트')).toBe(false);
   });
+
+  // C78-01: New date terms
+  it('DATE_COLUMN_PATTERN matches 결제일시', () => {
+    expect(DATE_COLUMN_PATTERN.test('결제일시')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 주문시간', () => {
+    expect(DATE_COLUMN_PATTERN.test('주문시간')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 승인완료', () => {
+    expect(DATE_COLUMN_PATTERN.test('승인완료')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches statementdate (English)', () => {
+    expect(DATE_COLUMN_PATTERN.test('statementdate')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches payment_date (English)', () => {
+    expect(DATE_COLUMN_PATTERN.test('paymentdate')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches timestamp (English)', () => {
+    expect(DATE_COLUMN_PATTERN.test('timestamp')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains 결제일시', () => {
+    expect(DATE_KEYWORDS.has('결제일시')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains statementdate', () => {
+    expect(DATE_KEYWORDS.has('statementdate')).toBe(true);
+  });
+
+  // C78-01: New merchant terms
+  it('MERCHANT_COLUMN_PATTERN matches 상점', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('상점')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches 판매점', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('판매점')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches supplier (English)', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('supplier')).toBe(true);
+  });
+  it('MERCHANT_KEYWORDS contains 상점', () => {
+    expect(MERCHANT_KEYWORDS.has('상점')).toBe(true);
+  });
+
+  // C78-01: New amount terms
+  it('AMOUNT_COLUMN_PATTERN matches 이용대금', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('이용대금')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches 실결제액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('실결제액')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches 청구액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('청구액')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches transactionamount (English)', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('transactionamount')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches gross (English)', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('gross')).toBe(true);
+  });
+  it('AMOUNT_KEYWORDS contains 이용대금', () => {
+    expect(AMOUNT_KEYWORDS.has('이용대금')).toBe(true);
+  });
+
+  // C78-01: New category terms
+  it('CATEGORY_COLUMN_PATTERN matches 결제구분', () => {
+    expect(CATEGORY_COLUMN_PATTERN.test('결제구분')).toBe(true);
+  });
+
+  // C78-01: New memo terms
+  it('MEMO_COLUMN_PATTERN matches 기타', () => {
+    expect(MEMO_COLUMN_PATTERN.test('기타')).toBe(true);
+  });
+
+  // C78-02: New summary row patterns
+  it('SUMMARY_ROW_PATTERN matches 포인트합계', () => {
+    expect(SUMMARY_ROW_PATTERN.test('포인트합계 5,000')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN matches 승인취소합계', () => {
+    expect(SUMMARY_ROW_PATTERN.test('승인취소합계 3,000')).toBe(true);
+  });
+
+  // C78-05: findColumn with + delimiter in combined headers
+  it('findColumn splits combined headers on + delimiter', () => {
+    const headers = ['이용일+승인일', '가맹점', '금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+  it('findColumn splits combined headers on fullwidth + delimiter', () => {
+    const headers = ['이용일＋승인일', '가맹점', '금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  // C78-05: findColumn with 3-part combined headers
+  it('findColumn splits 3-part combined headers', () => {
+    const headers = ['이용일/승인일/매출일', '가맹점', '금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  // C78-05: English-only header detection
+  it('isValidHeaderRow accepts English-only headers', () => {
+    expect(isValidHeaderRow(['date', 'merchant', 'amount'])).toBe(true);
+  });
+  it('isValidHeaderRow accepts English headers with underscores', () => {
+    expect(isValidHeaderRow(['transaction_date', 'vendor_name', 'total_amount'])).toBe(true);
+  });
+  it('isValidHeaderRow rejects single-category English headers', () => {
+    expect(isValidHeaderRow(['amount', 'total', 'price'])).toBe(false);
+  });
 });

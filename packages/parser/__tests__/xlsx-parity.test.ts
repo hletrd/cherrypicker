@@ -7,6 +7,12 @@ import {
   DATE_COLUMN_PATTERN as serverDatePattern,
   MERCHANT_COLUMN_PATTERN as serverMerchantPattern,
   AMOUNT_COLUMN_PATTERN as serverAmountPattern,
+  INSTALLMENTS_COLUMN_PATTERN as serverInstallmentsPattern,
+  CATEGORY_COLUMN_PATTERN as serverCategoryPattern,
+  MEMO_COLUMN_PATTERN as serverMemoPattern,
+  DATE_KEYWORDS as serverDateKeywords,
+  MERCHANT_KEYWORDS as serverMerchantKeywords,
+  AMOUNT_KEYWORDS as serverAmountKeywords,
   isValidHeaderRow as serverIsValidHeaderRow,
 } from '../src/csv/column-matcher.js';
 import {
@@ -15,6 +21,12 @@ import {
   DATE_COLUMN_PATTERN as webDatePattern,
   MERCHANT_COLUMN_PATTERN as webMerchantPattern,
   AMOUNT_COLUMN_PATTERN as webAmountPattern,
+  INSTALLMENTS_COLUMN_PATTERN as webInstallmentsPattern,
+  CATEGORY_COLUMN_PATTERN as webCategoryPattern,
+  MEMO_COLUMN_PATTERN as webMemoPattern,
+  DATE_KEYWORDS as webDateKeywords,
+  MERCHANT_KEYWORDS as webMerchantKeywords,
+  AMOUNT_KEYWORDS as webAmountKeywords,
   isValidHeaderRow as webIsValidHeaderRow,
 } from '../../../apps/web/src/lib/parser/column-matcher.ts';
 
@@ -61,5 +73,30 @@ describe('XLSX parser parity', () => {
     const englishHeader = ['date', 'merchant', 'amount'];
     expect(serverIsValidHeaderRow(englishHeader)).toBe(true);
     expect(webIsValidHeaderRow(englishHeader)).toBe(true);
+  });
+
+  // C78: Verify new patterns are in sync between server and web
+  test('INSTALLMENTS_COLUMN_PATTERN source is identical between server and web', () => {
+    expect(serverInstallmentsPattern.source).toBe(webInstallmentsPattern.source);
+  });
+
+  test('CATEGORY_COLUMN_PATTERN source is identical between server and web', () => {
+    expect(serverCategoryPattern.source).toBe(webCategoryPattern.source);
+  });
+
+  test('MEMO_COLUMN_PATTERN source is identical between server and web', () => {
+    expect(serverMemoPattern.source).toBe(webMemoPattern.source);
+  });
+
+  test('DATE_KEYWORDS sets are identical between server and web', () => {
+    expect([...serverDateKeywords].sort()).toEqual([...webDateKeywords].sort());
+  });
+
+  test('MERCHANT_KEYWORDS sets are identical between server and web', () => {
+    expect([...serverMerchantKeywords].sort()).toEqual([...webMerchantKeywords].sort());
+  });
+
+  test('AMOUNT_KEYWORDS sets are identical between server and web', () => {
+    expect([...serverAmountKeywords].sort()).toEqual([...webAmountKeywords].sort());
   });
 });
