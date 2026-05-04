@@ -113,6 +113,17 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       const categoryCol = findColumn(headers, categoryHeader, CATEGORY_COLUMN_PATTERN);
       const memoCol = findColumn(headers, memoHeader, MEMO_COLUMN_PATTERN);
 
+      // Report when required columns were not found — prevents silent empty
+      // results when column detection fails. Parity with web-side
+      // createBankAdapter() in apps/web/src/lib/parser/csv.ts and the
+      // generic CSV parser in csv/generic.ts (C70-01).
+      if (dateCol === -1 || amountCol === -1) {
+        const missing: string[] = [];
+        if (dateCol === -1) missing.push('날짜');
+        if (amountCol === -1) missing.push('금액');
+        errors.push({ message: `필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}` });
+      }
+
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i] ?? '';
         if (!line.trim()) continue;

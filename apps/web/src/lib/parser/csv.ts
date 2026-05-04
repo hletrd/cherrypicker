@@ -198,7 +198,7 @@ function parseInstallments(raw: string | undefined): number | undefined {
 // separately by isDateLikeShort() with month/day range checks (F20-02).
 const DATE_PATTERNS = [
   /^\d{4}[\s]*[.\-\/．。][\s]*\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}$/,  // 2024-01-15, 2024．01．15 (C22-01)
-  /^\d{4}[\s]*[.\-\/．。][\s]*\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}\s+\d/,  // datetime: 2024-01-15 10:30:00 (C28-01)
+  /^\d{4}[\s]*[.\-\/．。][\s]*\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}[\sT]\d/,  // datetime: 2024-01-15 10:30:00 or 2024-01-15T10:30:00 (C28-01/C70-02)
   /^\d{2}[\s]*[.\-\/．。][\s]*\d{2}[\s]*[.\-\/．。][\s]*\d{2}$/,       // 24-01-15, 24．01．15 (C22-01)
   /^\d{4}\d{2}\d{2}$/,                                           // 20240115
   // YYMMDD (6-digit) is NOT included here because /^\d{6}$/ matches any

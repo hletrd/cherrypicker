@@ -2,7 +2,7 @@ import { describe, test, expect } from 'bun:test';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { parseCSV } from '../src/csv/index.js';
-import { normalizeHeader, findColumn, DATE_COLUMN_PATTERN, AMOUNT_COLUMN_PATTERN, HEADER_KEYWORDS, DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS, isValidHeaderRow } from '../src/csv/column-matcher.js';
+import { normalizeHeader, findColumn, DATE_COLUMN_PATTERN, AMOUNT_COLUMN_PATTERN, MEMO_COLUMN_PATTERN, HEADER_KEYWORDS, DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS, isValidHeaderRow } from '../src/csv/column-matcher.js';
 import { parseGenericCSV } from '../src/csv/generic.js';
 
 const fixturesDir = join(import.meta.dir, 'fixtures');
@@ -867,5 +867,89 @@ describe('C37-02: additional bank adapters', () => {
     ].join('\n');
     const result = parseCSV(content, 'jb');
     expect(result.transactions).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Server adapter-factory missing-column error reporting (C70-01)
+// ---------------------------------------------------------------------------
+
+describe('adapter-factory missing-column error reporting (C70-01)', () => {
+  test('reports error when date column not found', () => {
+    // Use samsung adapter which expects '이용일' as date header.
+    // Provide headers with NO date keyword, but enough to trigger
+    // header detection via amount keyword + merchant keyword.
+    const content = [
+      '삼성카드 이용내역',
+      '가맹점명,이용금액,비고',
+      '스타벅스,5500,커피',
+    ].join('\n');
+    const result = parseCSV(content, 'samsung');
+    // The adapter still parses data rows but reports the missing column error.
+    // Transactions may have empty dates since dateCol is -1.
+    expect(result.errors.some((e) => e.message.includes('필수 컬럼'))).toBe(true);
+    expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
+  });
+
+  test('reports error when amount column not found', () => {
+    const content = [
+      '삼성카드 이용내역',
+      '이용일,가맹점명,비고',
+      '2024-01-15,스타벅스,커피',
+    ].join('\n');
+    const result = parseCSV(content, 'samsung');
+    expect(result.transactions).toHaveLength(0);
+    expect(result.errors.some((e) => e.message.includes('필수 컬럼'))).toBe(true);
+    expect(result.errors.some((e) => e.message.includes('금액'))).toBe(true);
+  });
+
+  test('no missing-column error when all columns found', () => {
+    const content = [
+      '삼성카드 이용내역',
+      '이용일,가맹점명,이용금액,할부,업종',
+      '2024-01-15,스타벅스,5500,0,카페',
+    ].join('\n');
+    const result = parseCSV(content, 'samsung');
+    expect(result.transactions).toHaveLength(1);
+    expect(result.errors.filter((e) => e.message.includes('필수 컬럼'))).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ISO 8601 T-separator datetime detection (C70-02)
+// ---------------------------------------------------------------------------
+
+describe('ISO 8601 T-separator datetime detection (C70-02)', () => {
+  test('generic CSV parser detects T-separator datetime as date column', () => {
+    const content = [
+      '기타,가맹점명,이용금액',
+      '2024-01-15T10:30:00,스타벅스,5500',
+      '2024-01-20T14:00:00,이마트,125000',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+    expect(result.transactions[1]?.date).toBe('2024-01-20');
+  });
+
+  test('generic CSV parser still handles space-separated datetime', () => {
+    const content = [
+      '기타,가맹점명,이용금액',
+      '2024-01-15 10:30:00,스타벅스,5500',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Memo column pattern coverage (C70-03)
+// ---------------------------------------------------------------------------
+
+describe('memo column pattern coverage (C70-03)', () => {
+  test('findColumn matches "비고내역" header for memo', () => {
+    const headers = ['이용일', '이용처', '이용금액', '비고내역'];
+    expect(findColumn(headers, undefined, MEMO_COLUMN_PATTERN)).toBe(3);
   });
 });
