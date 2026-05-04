@@ -9,6 +9,8 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
+  HEADER_KEYWORDS,
+  isValidHeaderRow,
 } from './column-matcher.js';
 
 // ---------------------------------------------------------------------------
@@ -184,9 +186,7 @@ function getBankColumnConfig(bankId: BankId): ColumnConfig {
 
 // Keyword categories for header detection — hoisted to module scope to avoid
 // recreating Sets on every parse call. Matches server-side XLSX parser.
-const XLSX_DATE_KW: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
-const XLSX_MERCHANT_KW: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
-const XLSX_AMOUNT_KW: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+// Keyword category Sets removed — now imported from column-matcher.ts (C4-07).
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -372,31 +372,16 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   let headerRowIdx = -1;
   let headers: string[] = [];
 
-  const allHeaderKeywords = [
-    '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일',
-    '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
-    '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
-  ];
-  // Keyword categories for header detection — hoisted to module scope.
-  const xlsxDateKeywords = XLSX_DATE_KW;
-  const xlsxMerchantKeywords = XLSX_MERCHANT_KW;
-  const xlsxAmountKeywords = XLSX_AMOUNT_KW;
+  // Uses shared isValidHeaderRow from column-matcher (C4-07) which requires
+  // keywords from at least 2 distinct categories.
 
   for (let i = 0; i < Math.min(30, rows.length); i++) {
     const row = rows[i] ?? [];
     const rowStrings = row.map((c) => String(c ?? '').trim());
-    const matchCount = rowStrings.filter((c) => allHeaderKeywords.includes(c)).length;
-    // Require matchCount >= 2 AND keywords from at least 2 distinct categories
-    // to avoid matching summary rows with only amount keywords (C86-05).
-    if (matchCount >= 2) {
-      const matchedCategories = [xlsxDateKeywords, xlsxMerchantKeywords, xlsxAmountKeywords]
-        .filter(catSet => rowStrings.some((c) => catSet.has(c)))
-        .length;
-      if (matchedCategories >= 2) {
-        headerRowIdx = i;
-        headers = rowStrings;
-        break;
-      }
+    if (isValidHeaderRow(rowStrings)) {
+      headerRowIdx = i;
+      headers = rowStrings;
+      break;
     }
   }
 

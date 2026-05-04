@@ -9,6 +9,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
+  isValidHeaderRow,
 } from './column-matcher.js';
 
 // ---------------------------------------------------------------------------
@@ -138,11 +139,7 @@ function isAmountLike(value: string): boolean {
   return AMOUNT_PATTERNS.some((p) => p.test(value.trim()));
 }
 
-// Keyword categories for header detection — hoisted to module scope to avoid
-// recreating Sets on every parse call. Matches server-side generic CSV parser.
-const DATE_KW: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
-const MERCHANT_KW: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
-const AMOUNT_KW: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+// Keyword category Sets removed — now imported from column-matcher.ts (C4-07).
 
 function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   // BOM stripping is the responsibility of parseCSV() (the public entry
@@ -158,46 +155,15 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     return { bank, format: 'csv', transactions: [], errors: [{ message: 'Empty file' }] };
   }
 
-  // Find header row — search for the first row with Korean/alpha text that
-  // also contains at least one known header keyword. Rows with Korean text
-  // but no header keywords are likely metadata (bank name, statement period)
-  // rather than the actual column header row (C77-03).
-  const HEADER_KEYWORDS = [
-    '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일',
-    '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
-    '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
-  ];
-  // Keyword categories for header detection — a valid header row should contain
-  // keywords from at least 2 distinct categories (date, merchant, amount) to
-  // avoid matching summary table rows that only have amount keywords (C86-03).
-  // Hoisted to module scope to avoid recreating on every parse call.
-  const DATE_KEYWORDS = DATE_KW;
-  const MERCHANT_KEYWORDS = MERCHANT_KW;
-  const AMOUNT_KEYWORDS = AMOUNT_KW;
-  // Default to -1 so we can detect when no valid header row was found.
-  // Previously defaulted to 0, which would treat the first line as the
-  // header even when it's a metadata row with no known header keywords (C78-03).
+  // Find header row — uses shared isValidHeaderRow from column-matcher
+  // (C4-01/C4-07) which requires keywords from at least 2 distinct categories.
   let headerIdx = -1;
   for (let i = 0; i < Math.min(30, lines.length); i++) {
     const cells = splitLine(lines[i] ?? '', delimiter);
-    const hasNonNumeric = cells.some((c) => /[가-힣a-zA-Z]/.test(c));
-    if (hasNonNumeric) {
-      // Validate that this row contains at least one known header keyword.
-      // Without this check, metadata rows (bank name, statement period) that
-      // contain Korean text would be misidentified as the header row (C77-03).
-      const hasHeaderKeyword = cells.some((c) => HEADER_KEYWORDS.includes(c.trim()));
-      // Additionally require keywords from at least 2 distinct categories
-      // (date, merchant, amount) to avoid matching summary table rows that
-      // only contain amount keywords like "이용금액, 승인금액" (C86-03).
-      if (hasHeaderKeyword) {
-        const matchedCategories = [DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS]
-          .filter(catSet => cells.some((c) => catSet.has(c.trim())))
-          .length;
-        if (matchedCategories >= 2) {
-          headerIdx = i;
-          break;
-        }
-      }
+    const hasNonNumeric = cells.some((c) => /[\uac00-\ud7afa-zA-Z]/.test(c));
+    if (hasNonNumeric && isValidHeaderRow(cells.map((c) => c.trim()))) {
+      headerIdx = i;
+      break;
     }
   }
 
@@ -325,7 +291,7 @@ const samsungAdapter: BankAdapter = {
       const cells = splitLine(lines[i] ?? '', delimiter);
       const hasDate = cells.includes('이용일');
       const hasMerchant = cells.includes('가맹점명');
-      if (hasDate && hasMerchant) {
+      if (hasDate && hasMerchant && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
@@ -390,7 +356,7 @@ const shinhanAdapter: BankAdapter = {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
-      if (cells.includes('이용일') && cells.includes('이용처')) {
+      if (cells.includes('이용일') && cells.includes('이용처') && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
@@ -456,7 +422,7 @@ const kbAdapter: BankAdapter = {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
-      if (cells.some((c) => KB_HEADERS.includes(c))) {
+      if (cells.some((c) => KB_HEADERS.includes(c)) && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
@@ -522,7 +488,7 @@ const hyundaiAdapter: BankAdapter = {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
-      if (cells.some((c) => HYUNDAI_HEADERS.includes(c))) {
+      if (cells.some((c) => HYUNDAI_HEADERS.includes(c)) && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
@@ -587,7 +553,7 @@ const lotteAdapter: BankAdapter = {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
-      if (cells.includes('거래일') && cells.includes('이용가맹점')) {
+      if (cells.includes('거래일') && cells.includes('이용가맹점') && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
@@ -652,7 +618,7 @@ const hanaAdapter: BankAdapter = {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
-      if (cells.includes('이용일자') && cells.includes('가맹점명')) {
+      if (cells.includes('이용일자') && cells.includes('가맹점명') && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
@@ -718,7 +684,7 @@ const wooriAdapter: BankAdapter = {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
-      if (cells.some((c) => WOORI_HEADERS.includes(c))) {
+      if (cells.some((c) => WOORI_HEADERS.includes(c)) && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
@@ -783,7 +749,7 @@ const nhAdapter: BankAdapter = {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
-      if (cells.includes('거래일') && cells.includes('이용처') && cells.includes('거래금액')) {
+      if (cells.includes('거래일') && cells.includes('이용처') && cells.includes('거래금액') && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
@@ -849,7 +815,7 @@ const ibkAdapter: BankAdapter = {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
-      if (cells.some((c) => IBK_HEADERS.includes(c))) {
+      if (cells.some((c) => IBK_HEADERS.includes(c)) && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
@@ -914,7 +880,7 @@ const bcAdapter: BankAdapter = {
     let headerIdx = -1;
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
-      if (cells.includes('이용일') && cells.includes('가맹점') && cells.includes('이용금액')) {
+      if (cells.includes('이용일') && cells.includes('가맹점') && cells.includes('이용금액') && isValidHeaderRow(cells)) {
         headerIdx = i;
         break;
       }
