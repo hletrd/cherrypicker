@@ -743,3 +743,44 @@ describe('Cycle 36: New column pattern terms integration', () => {
     expect(result.transactions[1]?.amount).toBe(1200);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 47: Summary row pattern additions
+// ---------------------------------------------------------------------------
+
+describe('Cycle 47: Summary row pattern additions', () => {
+  test('skips "합산" summary row (C47-01)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,스타벅스,6000',
+      '합산,,6000',
+      '2026-02-02,이마트,45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    expect(result.transactions[1]?.merchant).toBe('이마트');
+  });
+
+  test('skips "합 산" with space summary row (C47-01)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,스타벅스,6000',
+      '합 산,,6000',
+      '2026-02-02,이마트,45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+  });
+
+  test('does NOT skip "합산마트" merchant name (boundary guard)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,합산마트,15000',
+      '2026-02-02,이마트,45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toBe('합산마트');
+  });
+});

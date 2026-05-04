@@ -206,6 +206,54 @@ describe('parseCSVAmount', () => {
   test('returns null for "마이너스" alone (no digits)', () => {
     expect(parseCSVAmount('마이너스')).toBeNull();
   });
+
+  // Cycle 47: Additional edge cases
+  test('returns null for single dash "-"', () => {
+    expect(parseCSVAmount('-')).toBeNull();
+  });
+
+  test('parses "0원" as zero', () => {
+    expect(parseCSVAmount('0원')).toBe(0);
+  });
+
+  test('parses "-0" as -0 (JavaScript -0 semantics, filtered by isValidCSVAmount)', () => {
+    // parseFloat('-0') returns -0 in JS. This is filtered out by isValidCSVAmount
+    // which checks amount <= 0 (and -0 <= 0 is true).
+    const amount = parseCSVAmount('-0');
+    expect(Object.is(amount, -0)).toBe(true);
+  });
+
+  test('parses Won sign with spaces "₩ 6,500"', () => {
+    expect(parseCSVAmount('₩ 6,500')).toBe(6500);
+  });
+
+  test('parses Won sign with spaces and 원 "₩ 6,500 원"', () => {
+    expect(parseCSVAmount('₩ 6,500 원')).toBe(6500);
+  });
+
+  test('returns null for just "원"', () => {
+    expect(parseCSVAmount('원')).toBeNull();
+  });
+
+  test('returns null for just Won sign "₩"', () => {
+    expect(parseCSVAmount('₩')).toBeNull();
+  });
+
+  test('parses negative with Won sign "-₩5,000"', () => {
+    expect(parseCSVAmount('-₩5,000')).toBe(-5000);
+  });
+
+  test('parses parenthesized negative with Won sign "(₩5,000)"', () => {
+    expect(parseCSVAmount('(₩5,000)')).toBe(-5000);
+  });
+
+  test('parses "0" as zero', () => {
+    expect(parseCSVAmount('0')).toBe(0);
+  });
+
+  test('handles "( 5,000 )" with spaces inside parens', () => {
+    expect(parseCSVAmount('( 5,000 )')).toBe(-5000);
+  });
 });
 
 // ---------------------------------------------------------------------------

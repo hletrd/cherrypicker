@@ -1,12 +1,24 @@
-# Aggregate Review -- Cycle 46
+# Aggregate Review -- Cycle 47
 
 ## New Findings: 4 actionable
 
 ### Actionable (implement this cycle)
 
-**F1. PDF Merchant Extraction Fails for Adjacent Date/Amount Columns [HIGH]**
-- `packages/parser/src/pdf/index.ts`, `apps/web/src/lib/parser/pdf.ts`
-- Fix: add fallback scanning non-date/amount cells for Korean text
+**F1. Summary row pattern missing "합산" [MEDIUM]**
+- `packages/parser/src/csv/column-matcher.ts`
+- Fix: add 합산 to SUMMARY_ROW_PATTERN
+
+**F2. Stale .omc state file in source tree [LOW]**
+- `packages/parser/src/csv/.omc/state/last-tool-error.json`
+- Fix: remove
+
+**F3. Amount parsing edge cases lack test coverage [MEDIUM]**
+- `packages/parser/__tests__/csv-shared.test.ts`
+- Fix: add tests for `-`, `0원`, `-0`, spaces-only, Won+spaces
+
+**F4. XLSX forward-fill does not validate against summary pattern [LOW]**
+- `packages/parser/src/xlsx/index.ts`
+- Fix: skip forward-fill for summary row values
 
 **F2. Column Pattern Coverage Gaps [MEDIUM]**
 - `packages/parser/src/csv/column-matcher.ts`

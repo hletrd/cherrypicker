@@ -1,12 +1,24 @@
-# Implementation Plan -- Cycle 46
+# Implementation Plan -- Cycle 47
 
-## P1. PDF Merchant Extraction Fallback [HIGH]
-**Files**: `packages/parser/src/pdf/index.ts`, `apps/web/src/lib/parser/pdf.ts`
-**What**: When "between date and amount" extraction yields empty, add fallback that scans non-date/amount cells for longest Korean-text cell.
-
-## P2. Expand Column Patterns [MEDIUM]
+## P1. Add "합산" to SUMMARY_ROW_PATTERN [MEDIUM]
 **File**: `packages/parser/src/csv/column-matcher.ts`
-**What**: Add missing terms: 사용일|사용일자, 사용처|payee, 매입금액, 할부회수|install, 상세내역 + HEADER_KEYWORDS
+**What**: Add `(?<![가-힣])합\s*산(?![가-힣])` to SUMMARY_ROW_PATTERN for bank exports that use 합산 instead of 합계.
+
+## P2. Remove stale .omc state file [LOW]
+**File**: `packages/parser/src/csv/.omc/state/last-tool-error.json`
+**What**: Delete the OMC state file from the source tree.
+
+## P3. Add amount parsing edge case tests [MEDIUM]
+**File**: `packages/parser/__tests__/csv-shared.test.ts`
+**What**: Add tests for `-`, `0원`, `-0`, spaces-only, Won-sign with spaces.
+
+## P4. XLSX forward-fill summary row guard [LOW]
+**File**: `packages/parser/src/xlsx/index.ts`
+**What**: Skip forward-fill of date/merchant values that match SUMMARY_ROW_PATTERN.
+
+## Deferred
+- PDF table parser code duplication (D-01)
+- CSV/web adapter duplication (D-01)
 
 ## P3. Summary Row Pattern [MEDIUM]
 **File**: `packages/parser/src/csv/column-matcher.ts`
