@@ -440,6 +440,34 @@ describe('parseCSV - edge cases', () => {
     expect(result.errors.some((e) => e.message.includes('헤더'))).toBe(true);
   });
 
+  // C57-01: Trailing delimiter dates — Korean bank exports may append a period
+  // to dates like "2024. 1. 15." which previously broke column detection.
+  test('generic parser handles dates with trailing period (C57-01)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2024. 1. 15.,카페,5000',
+      '2024. 2. 20.,식당,12000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+    expect(result.transactions[0]?.amount).toBe(5000);
+    expect(result.transactions[1]?.date).toBe('2024-02-20');
+    expect(result.transactions[1]?.amount).toBe(12000);
+  });
+
+  test('generic parser handles short dates with trailing delimiter (C57-01)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '1.15.,카페,5000',
+      '2.20.,식당,12000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toMatch(/^\d{4}-01-15$/);
+    expect(result.transactions[0]?.amount).toBe(5000);
+  });
+
   test('isDateLike rejects "3.5" as a date but accepts "1/15" (F20-02)', () => {
     // Test the isDateLike logic indirectly through parseCSV.
     // A file with recognized headers but decimal amounts should still parse

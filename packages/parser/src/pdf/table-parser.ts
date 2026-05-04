@@ -173,7 +173,9 @@ function isValidYYMMDD(value: string): boolean {
  *  Non-6-digit cells that match DATE_PATTERN are accepted as-is
  *  (C50-01). */
 function isValidDateCell(cell: string): boolean {
-  const trimmed = cell.trim();
+  // Strip trailing delimiters before matching — Korean bank exports may
+  // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
+  const trimmed = cell.trim().replace(/[.\-\/．。]\s*$/, '');
   if (/^\d{6}$/.test(trimmed)) return isValidYYMMDD(trimmed);
   return DATE_PATTERN.test(trimmed);
 }

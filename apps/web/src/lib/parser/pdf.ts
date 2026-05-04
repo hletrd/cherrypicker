@@ -55,9 +55,12 @@ const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
  *  leap year handling (C44-01), matching the CSV parser's
  *  isDateLikeShort() approach which also uses daysInMonth(). */
 function isValidShortDate(cell: string): boolean {
-  const match = cell.match(SHORT_MD_DATE_PATTERN);
+  // Strip trailing delimiters before matching — Korean bank exports may
+  // append a period or slash to dates (e.g., "1.15." or "1/15/") (C57-01).
+  const stripped = cell.replace(/[.\-\/．。]\s*$/, '');
+  const match = stripped.match(SHORT_MD_DATE_PATTERN);
   if (!match) return false;
-  const parts = cell.split(/[.\-\/．。]/);
+  const parts = stripped.split(/[.\-\/．。]/);
   const month = parseInt(parts[0] ?? '', 10);
   const day = parseInt(parts[1] ?? '', 10);
   if (month < 1 || month > 12) return false;
@@ -188,7 +191,9 @@ function isValidYYMMDD(value: string): boolean {
 /** Validate that a cell contains a plausible date. 6-digit strings
  *  must pass YYMMDD validation (C50-01). */
 function isValidDateCell(cell: string): boolean {
-  const trimmed = cell.trim();
+  // Strip trailing delimiters before matching — Korean bank exports may
+  // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
+  const trimmed = cell.trim().replace(/[.\-\/．。]\s*$/, '');
   if (/^\d{6}$/.test(trimmed)) return isValidYYMMDD(trimmed);
   return DATE_PATTERN.test(trimmed);
 }
@@ -294,14 +299,16 @@ function parseAmount(raw: string): number | null {
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
   for (let i = 0; i < row.length; i++) {
-    const cell = row[i] ?? '';
+    // Strip trailing delimiters before matching — Korean bank exports may
+    // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
+    const cell = (row[i] ?? '').replace(/[.\-\/．。]\s*$/, '');
     if (
       STRICT_DATE_PATTERN.test(cell) ||
       SHORT_YEAR_DATE_PATTERN.test(cell) ||
       KOREAN_FULL_DATE_PATTERN.test(cell) ||
       KOREAN_SHORT_DATE_PATTERN.test(cell) ||
       isValidShortDate(cell)
-    ) return { idx: i, value: cell };
+    ) return { idx: i, value: row[i] ?? '' };
   }
   return null;
 }

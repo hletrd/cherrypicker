@@ -48,7 +48,13 @@ export function inferYear(month: number, day: number): number {
  *  have their own parseDateToISO that additionally handle Excel serial
  *  date numbers before delegating string values here. */
 export function parseDateStringToISO(raw: string): string {
-  const cleaned = raw.trim();
+  // Strip trailing delimiter characters (. - / ． 。) that Korean bank exports
+  // commonly append to dates (e.g., "2024. 1. 15." → "2024. 1. 15"). These
+  // trailing delimiters are formatting punctuation, not part of the date value.
+  // Without stripping, the fullMatch regex's implicit end-match would still
+  // succeed (it's not $-anchored), but detection patterns in isDateLike() and
+  // isValidDateCell() use $-anchored regexes and would fail (C57-01).
+  const cleaned = raw.trim().replace(/[.\-\/．。]\s*$/, '');
 
   // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD (with optional spaces around delimiters).
   // Also accepts full-width dot (U+FF0E) and ideographic full stop (U+3002) which

@@ -44,9 +44,12 @@ const DATE_PATTERNS = [
  *  (F21-01). Also rejects decimal amounts like "3.5" (month 3, day 5
  *  passes daysInMonth) and "12.34" (month 12, day 34 fails). */
 function isDateLikeShort(value: string): boolean {
-  const match = value.match(/^\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}$/);
+  // Strip trailing delimiters before matching — Korean bank exports may
+  // append a period or slash to dates (e.g., "1/15/" or "1.15.") (C57-01).
+  const stripped = value.replace(/[.\-\/．。]\s*$/, '');
+  const match = stripped.match(/^\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}$/);
   if (!match) return false;
-  const parts = value.trim().split(/[.\-\/．。]/);
+  const parts = stripped.trim().split(/[.\-\/．。]/);
   const month = parseInt(parts[0] ?? '', 10);
   const day = parseInt(parts[1] ?? '', 10);
   if (month < 1 || month > 12) return false;
@@ -91,7 +94,10 @@ function isDateLike(value: string): boolean {
   // Check isYYMMDDLike first for 6-digit strings to prevent DATE_PATTERNS'
   // /^\d{6}$/ from matching without month/day validation (C45-01).
   if (isYYMMDDLike(trimmed)) return true;
-  return DATE_PATTERNS.some((p) => p.test(trimmed)) || isDateLikeShort(trimmed);
+  // Strip trailing delimiters before matching — Korean bank exports may
+  // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
+  const stripped = trimmed.replace(/[.\-\/．。]\s*$/, '');
+  return DATE_PATTERNS.some((p) => p.test(stripped)) || isDateLikeShort(trimmed);
 }
 
 function isAmountLike(value: string): boolean {

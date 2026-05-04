@@ -223,6 +223,42 @@ describe('parseDateStringToISO', () => {
   test('parses datetime with single-digit month/day', () => {
     expect(parseDateStringToISO('2024-1-5 08:00')).toBe('2024-01-05');
   });
+
+  // C57-01: Trailing delimiter stripping — Korean bank exports commonly
+  // append a period to dates like "2024. 1. 15." or a slash like "1/15/".
+  test('parses YYYY.MM.DD with trailing period (C57-01)', () => {
+    expect(parseDateStringToISO('2024. 1. 15.')).toBe('2024-01-15');
+  });
+
+  test('parses YYYY.MM.DD with trailing dot (no space)', () => {
+    expect(parseDateStringToISO('2024.01.15.')).toBe('2024-01-15');
+  });
+
+  test('parses YYYY/MM/DD with trailing slash', () => {
+    expect(parseDateStringToISO('2024/01/15/')).toBe('2024-01-15');
+  });
+
+  test('parses YYYY-MM-DD with trailing hyphen', () => {
+    expect(parseDateStringToISO('2024-01-15-')).toBe('2024-01-15');
+  });
+
+  test('parses YY.MM.DD with trailing period', () => {
+    expect(parseDateStringToISO('24.01.15.')).toBe('2024-01-15');
+  });
+
+  test('parses MM/DD with trailing slash (year inferred)', () => {
+    const result = parseDateStringToISO('1/15/');
+    expect(result).toMatch(/^\d{4}-01-15$/);
+  });
+
+  test('parses MM.DD with trailing period (year inferred)', () => {
+    const result = parseDateStringToISO('1.15.');
+    expect(result).toMatch(/^\d{4}-01-15$/);
+  });
+
+  test('parses full-width dot date with trailing full-width dot', () => {
+    expect(parseDateStringToISO('2024．01．15．')).toBe('2024-01-15');
+  });
 });
 
 // ---------------------------------------------------------------------------
