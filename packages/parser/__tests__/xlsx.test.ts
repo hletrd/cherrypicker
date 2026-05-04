@@ -872,4 +872,19 @@ describe('XLSX parenthesized negative amounts', () => {
       cleanup(filePath);
     }
   });
+
+  test('handles "마이너스" prefix in amount (C34-03)', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '환불', '마이너스5000'],
+      ['2026-02-02', '환불2', '마이너스1,234'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // 마이너스 amounts are negative, so filtered out
+      expect(result.transactions).toHaveLength(0);
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });

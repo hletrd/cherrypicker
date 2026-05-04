@@ -652,4 +652,30 @@ describe('C27-01: AMOUNT_PATTERN rejects year values', () => {
     const result = filterTransactionRows(rows);
     expect(result).toHaveLength(0);
   });
+
+  test('matches Won-sign prefixed amounts like "₩500" (C34-01)', () => {
+    const rows = [
+      ['2024-01-15', '스타벅스', '₩500'],
+      ['2024-01-16', '이마트', '₩1,234'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+  });
+
+  test('matches fullwidth Won-sign amounts like "￦500" (C34-01)', () => {
+    const rows = [
+      ['2024-01-15', '스타벅스', '￦500'],
+      ['2024-01-16', '이마트', '￦1,234'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+  });
+
+  test('matches Won-sign amounts with 원 suffix like "₩6,500원"', () => {
+    const rows = [
+      ['2024-01-15', '테스트', '₩6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
 });

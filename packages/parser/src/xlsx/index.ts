@@ -124,9 +124,13 @@ function parseAmount(raw: unknown): number | null {
   }
   if (typeof raw === 'string') {
     let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-    // Handle parenthesized negatives: (1234) → -1234
-    const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
-    if (isNeg) cleaned = cleaned.slice(1, -1);
+    // Handle "마이너스" prefix — some Korean bank exports use this instead of
+    // a negative sign or parentheses. Parity with server-side parseCSVAmount
+    // in packages/parser/src/csv/shared.ts and web-side parsers.
+    const isManeuners = /^마이너스/.test(cleaned);
+    if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
+    const isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners;
+    if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
     if (!cleaned) return null;
     // Use Math.round(parseFloat(...)) to match the numeric path's rounding
     // behavior and the web-side parser (C21-03/C34-02). parseInt truncates
