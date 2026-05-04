@@ -83,6 +83,43 @@ describe('parseDateStringToISO', () => {
     expect(parseDateStringToISO('20240115')).toBe('2024-01-15');
   });
 
+  // C32-02: YYMMDD compact date format (6 digits without delimiters)
+  test('parses YYMMDD compact format (240115 → 2024-01-15)', () => {
+    expect(parseDateStringToISO('240115')).toBe('2024-01-15');
+  });
+
+  test('parses YYMMDD with pre-50 year as 2000s', () => {
+    expect(parseDateStringToISO('240115')).toBe('2024-01-15');
+    expect(parseDateStringToISO('010315')).toBe('2001-03-15');
+  });
+
+  test('parses YYMMDD with post-50 year as 1900s', () => {
+    expect(parseDateStringToISO('990115')).toBe('1999-01-15');
+    expect(parseDateStringToISO('780630')).toBe('1978-06-30');
+  });
+
+  test('rejects YYMMDD with invalid month', () => {
+    // Month 13 is invalid — should return raw string
+    expect(parseDateStringToISO('241301')).toBe('241301');
+  });
+
+  test('rejects YYMMDD with invalid day', () => {
+    // Feb 30 is invalid
+    expect(parseDateStringToISO('240230')).toBe('240230');
+  });
+
+  test('rejects YYMMDD with Apr 31', () => {
+    expect(parseDateStringToISO('240431')).toBe('240431');
+  });
+
+  test('YYMMDD does not collide with YYYYMM (first 6 of 8-digit)', () => {
+    // 202401 is NOT YYMMDD (would be year 20, month 24, day 01 — invalid month)
+    // But 240115 IS valid YYMMDD (year 2024, month 01, day 15)
+    // The 8-digit check runs first, so 8-digit dates won't fall through
+    expect(parseDateStringToISO('20240115')).toBe('2024-01-15'); // 8-digit wins
+    expect(parseDateStringToISO('240115')).toBe('2024-01-15'); // 6-digit
+  });
+
   test('parses YY-MM-DD (2-digit year)', () => {
     expect(parseDateStringToISO('24-01-15')).toBe('2024-01-15');
   });

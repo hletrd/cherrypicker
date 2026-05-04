@@ -73,6 +73,19 @@ export function parseDateStringToISO(raw: string): string {
     }
   }
 
+  // YYMMDD — 6-digit compact date without delimiters (C32-02). Some Korean
+  // bank exports use this format. Parsed as 2-digit year: >=50 → 1900s,
+  // <50 → 2000s (matching YY-MM-DD handling).
+  if (/^\d{6}$/.test(cleaned)) {
+    const yy = parseInt(cleaned.slice(0, 2), 10);
+    const fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
+    const month = parseInt(cleaned.slice(2, 4), 10);
+    const day = parseInt(cleaned.slice(4, 6), 10);
+    if (month >= 1 && month <= 12 && isValidDayForMonth(fullYear, month, day)) {
+      return `${fullYear}-${cleaned.slice(2, 4)}-${cleaned.slice(4, 6)}`;
+    }
+  }
+
   // YY-MM-DD or YY.MM.DD (also accepts full-width dot variants C22-01)
   const shortYearMatch = cleaned.match(/^(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})$/);
   if (shortYearMatch) {

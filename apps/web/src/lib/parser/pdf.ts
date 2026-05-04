@@ -37,6 +37,8 @@ const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-
 // C27-01: Bare integers without a comma or Won sign must be 5+ digits to
 // avoid matching 4-digit year values like "2024" as amounts. Amounts with
 // commas (e.g., "1,234") or Won signs (e.g., "₩500") always match.
+// C32-01: Won-sign-prefixed amounts (₩/￦) match regardless of digit count,
+// so small amounts like "₩500" are correctly detected as transaction amounts.
 const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])₩\d[\d,]*원?(?![a-zA-Z\d-])|(?<![a-zA-Z\d-])￦\d[\d,]*원?(?![a-zA-Z\d-])|(?<![a-zA-Z\d-])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d-])|\([\d,]+\)/;
 const STRICT_DATE_PATTERN = /(\d{4})[.\-\/．。](\d{1,2})[.\-\/．。](\d{1,2})/;
 const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})/;

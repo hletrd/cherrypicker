@@ -171,6 +171,27 @@ describe('parseCSVAmount', () => {
   test('parses amount without thousands separator', () => {
     expect(parseCSVAmount('125000')).toBe(125000);
   });
+
+  // C32-05: "마이너스" prefix handling
+  test('parses "마이너스 5000" as negative amount', () => {
+    expect(parseCSVAmount('마이너스5000')).toBe(-5000);
+  });
+
+  test('parses "마이너스 1,234" with comma separator', () => {
+    expect(parseCSVAmount('마이너스1,234')).toBe(-1234);
+  });
+
+  test('parses "마이너스 6,500원" with Won suffix', () => {
+    expect(parseCSVAmount('마이너스6,500원')).toBe(-6500);
+  });
+
+  test('parses "마이너스₩3,000" with Won sign', () => {
+    expect(parseCSVAmount('마이너스₩3,000')).toBe(-3000);
+  });
+
+  test('returns null for "마이너스" alone (no digits)', () => {
+    expect(parseCSVAmount('마이너스')).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -309,6 +330,38 @@ describe('normalizeHeader', () => {
 
   test('isValidHeaderRow accepts headers with fullwidth spaces', () => {
     const cells = ['이용　일', '가맹점　명', '이용　금액'];
+    expect(isValidHeaderRow(cells)).toBe(true);
+  });
+
+  // C32-04: Directional formatting characters
+  test('strips LEFT-TO-RIGHT MARK U+200E', () => {
+    expect(normalizeHeader('‎이용일‎')).toBe('이용일');
+  });
+
+  test('strips RIGHT-TO-LEFT MARK U+200F', () => {
+    expect(normalizeHeader('‏이용일‏')).toBe('이용일');
+  });
+
+  test('strips LEFT-TO-RIGHT EMBEDDING U+202A', () => {
+    expect(normalizeHeader('‪이용일‬')).toBe('이용일');
+  });
+
+  test('strips RIGHT-TO-LEFT OVERRIDE U+202E', () => {
+    expect(normalizeHeader('‮이용일‬')).toBe('이용일');
+  });
+
+  test('strips BOM U+FEFF mid-string', () => {
+    expect(normalizeHeader('이용﻿일')).toBe('이용일');
+  });
+
+  test('findColumn finds header with directional chars', () => {
+    const headers = ['‎이용일‏', '가맹점명', '이용금액'];
+    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
+    expect(dateIdx).toBe(0);
+  });
+
+  test('isValidHeaderRow accepts headers with directional chars', () => {
+    const cells = ['‎이용일', '가맹점명', '‪이용금액'];
     expect(isValidHeaderRow(cells)).toBe(true);
   });
 });

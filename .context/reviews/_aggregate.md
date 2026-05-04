@@ -1,45 +1,33 @@
-# Cycle 31 Aggregate Review
+# Cycle 32 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 31
-**Tests:** 554 bun, 243 vitest
+**Cycles completed:** 32
+**Tests:** 574 bun, 243 vitest (817 total)
 
 ## Summary
-3 actionable findings: AMOUNT_COLUMN_PATTERN missing common bank amount keywords, CATEGORY_COLUMN_PATTERN too narrow, and no tests for expanded patterns. 2 deferred architecture items.
+5 actionable findings: PDF AMOUNT_PATTERN missing Won sign prefix, YYMMDD date format not supported, normalizeHeader missing directional Unicode chars, "마이너스" amount prefix not handled, and test coverage gaps. 1 deferred architecture item.
 
 ## Findings
 
-### F1: AMOUNT_COLUMN_PATTERN missing common bank amount keywords (HIGH)
+### F-01: PDF AMOUNT_PATTERN missing Won sign prefix (MEDIUM)
+PDF table row detection regex does not match small Won-sign-prefixed amounts like "₩500" without commas. Server and web PDF parsers both affected.
 
-**Impact:** CSVs with headers like "취소금액", "환불금액", "결제액" are not recognized as amount columns. Server-side and web-side both affected.
+### F-02: YYMMDD date format not supported (LOW)
+6-digit compact date format (e.g., "240115" for 2024-01-15) not handled by parseDateStringToISO in server or web date-utils.
 
-**Files:**
-- `packages/parser/src/csv/column-matcher.ts` line 46
-- `apps/web/src/lib/parser/column-matcher.ts` line 42
+### F-04: normalizeHeader missing directional Unicode (LOW)
+Directional formatting characters (U+200E, U+200F, U+202A-202E, U+FEFF) not stripped, could break header matching.
 
-**Keywords to add:** 취소금액, 환불금액, 입금액, 결제액
+### F-05: "마이너스" amount prefix not handled (LOW)
+Korean bank exports may prefix amounts with "마이너스" instead of minus sign. parseCSVAmount would return null.
 
-### F2: CATEGORY_COLUMN_PATTERN missing bank-variant category keywords (MEDIUM)
-
-**Impact:** CSVs with headers like "거래유형", "결제유형", "이용구분", "구분" miss category column detection.
-
-**Files:**
-- `packages/parser/src/csv/column-matcher.ts` line 48
-- `apps/web/src/lib/parser/column-matcher.ts` line 44
-
-**Keywords to add:** 거래유형, 결제유형, 이용구분, 구분, 가맹점유형
-
-### F3: No tests for expanded column pattern keywords (MEDIUM)
-
-**Files:**
-- `packages/parser/__tests__/column-matcher.test.ts`
+### F-06: Test coverage gaps for new format support (MEDIUM)
+Missing tests for YYMMDD, Won sign PDF amounts, 마이너스 prefix, directional Unicode normalization.
 
 ## Deferred Items
-
 | ID | Item | Reason |
 |----|------|--------|
-| D-01 | Server/web CSV parser duplication | Requires shared module architecture refactor |
-| D-02 | Full-width digit date parsing | Extremely rare in Korean bank exports |
+| F-03 | Web CSV factory refactor | Requires shared module architecture (D-01) |
 
 ## Regressions
-None. All 797 tests passing.
+None. All 817 tests passing.

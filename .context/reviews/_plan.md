@@ -1,44 +1,67 @@
-# Cycle 31 Implementation Plan
+# Cycle 32 Implementation Plan
 
-**Source:** `_aggregate.md` (3 findings)
+**Source:** `2026-05-05-cycle32-comprehensive.md` (5 findings, 1 deferred)
 
 ## Fixes
 
-### F1: Expand AMOUNT_COLUMN_PATTERN with missing bank amount keywords (HIGH)
+### F-01: PDF AMOUNT_PATTERN missing Won sign prefix (MEDIUM)
 
 **Files:**
-- `packages/parser/src/csv/column-matcher.ts` line 46
-- `apps/web/src/lib/parser/column-matcher.ts` line 42
+- `packages/parser/src/pdf/table-parser.ts` line 12
+- `apps/web/src/lib/parser/pdf.ts` line 40
 
 **Changes:**
-1. Add `취소금액|환불금액|입금액|결제액` to AMOUNT_COLUMN_PATTERN regex
-2. Add `취소금액`, `환불금액`, `입금액`, `결제액` to AMOUNT_KEYWORDS Set
-3. Add same keywords to HEADER_KEYWORDS array
+1. Add `₩\d[\d,]*원?` and `￦\d[\d,]*원?` alternatives to AMOUNT_PATTERN regex in both server and web PDF table parsers
+2. This ensures PDF lines with small Won-sign-prefixed amounts (e.g., "₩500") are correctly detected as transaction rows
 
-**Rationale:** Many Korean banks use alternative amount column names. "취소금액" (cancel amount) and "환불금액" (refund amount) appear in detailed statement exports. "결제액" is a shorter form used by some banks. These are critical for parsing diverse file formats.
-
-### F2: Expand CATEGORY_COLUMN_PATTERN with bank-variant keywords (MEDIUM)
+### F-02: YYMMDD date format support (LOW)
 
 **Files:**
-- `packages/parser/src/csv/column-matcher.ts` line 48
-- `apps/web/src/lib/parser/column-matcher.ts` line 44
+- `packages/parser/src/date-utils.ts`
+- `apps/web/src/lib/parser/date-utils.ts`
 
 **Changes:**
-1. Add `거래유형|결제유형|이용구분|구분|가맹점유형` to CATEGORY_COLUMN_PATTERN regex
-2. Add `구분` to HEADER_KEYWORDS (needed for isValidHeaderRow keyword matching)
+1. Add 6-digit YYMMDD pattern after YYYYMMDD (8-digit) check
+2. Parse YY (>=50 → 1900s, <50 → 2000s), MM, DD
+3. Validate month/day ranges with isValidDayForMonth
 
-**Rationale:** Some banks categorize transactions by "type" rather than "category". "거래유형" and "결제유형" are common in bank statement exports. "이용구분" differentiates online/offline usage. These keywords help detect category columns in diverse CSV formats.
-
-### F3: Add tests for expanded column patterns (MEDIUM)
+### F-04: normalizeHeader directional characters (LOW)
 
 **Files:**
+- `packages/parser/src/csv/column-matcher.ts` line 12
+- `apps/web/src/lib/parser/column-matcher.ts` line 16
+
+**Changes:**
+1. Add U+200E (LRM), U+200F (RLM), U+202A-202E (directional), U+FEFF (BOM) to the strip regex
+
+### F-05: "마이너스" amount prefix support (LOW)
+
+**Files:**
+- `packages/parser/src/csv/shared.ts`
+
+**Changes:**
+1. Strip "마이너스" prefix from amount string in parseCSVAmount before other cleaning
+
+### F-06: Test coverage (MEDIUM)
+
+**Files:**
+- `packages/parser/__tests__/date-utils.test.ts`
+- `packages/parser/__tests__/table-parser.test.ts`
+- `packages/parser/__tests__/csv-shared.test.ts`
 - `packages/parser/__tests__/column-matcher.test.ts`
 
 **Test cases:**
-- AMOUNT_COLUMN_PATTERN matches: 취소금액, 환불금액, 입금액, 결제액
-- CATEGORY_COLUMN_PATTERN matches: 거래유형, 결제유형, 이용구분, 구분, 가맹점유형
-- isValidHeaderRow with new keywords
-- findColumn with new keywords
+- YYMMDD date format parsing
+- Won sign amounts in PDF context
+- "마이너스" amount prefix
+- normalizeHeader with directional Unicode
+- PDF AMOUNT_PATTERN with ₩ prefix for small amounts
+
+## Deferred
+
+| ID | Item | Reason |
+|----|------|--------|
+| F-03 | Web CSV factory refactor | Requires shared module architecture (D-01) |
 
 ## Quality Gates
 - `bun test packages/parser/__tests__/`

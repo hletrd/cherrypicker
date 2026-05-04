@@ -35,8 +35,12 @@ export function splitCSVLine(line: string, delimiter: string): string[] {
  *  (C70-04 — matches the web CSV parser's behavior). */
 export function parseCSVAmount(raw: string): number | null {
   let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-  const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
-  if (isNeg) cleaned = cleaned.slice(1, -1);
+  // Handle "마이너스" prefix — some Korean bank exports use this instead of
+  // a negative sign or parentheses (C32-05). Must be checked before stripping.
+  const isManeuners = /^마이너스/.test(cleaned);
+  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
+  const isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners;
+  if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
   if (!cleaned) return null;
   const n = Math.round(parseFloat(cleaned));
   if (Number.isNaN(n)) return null;

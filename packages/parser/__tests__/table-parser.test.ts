@@ -603,6 +603,40 @@ describe('C27-01: AMOUNT_PATTERN rejects year values', () => {
     expect(result).toHaveLength(1);
   });
 
+  // C32-01: Won-sign-prefixed small amounts (no comma, < 5 digits)
+  test('matches small Won-prefixed amounts like "₩500" (C32-01)', () => {
+    const rows = [
+      ['2024-01-15', '편의점', '₩500'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('matches small fullwidth Won amounts like "￦300" (C32-01)', () => {
+    const rows = [
+      ['2024-01-15', '카페', '￦300'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('matches Won-prefixed amount with Won suffix "₩100원" (C32-01)', () => {
+    const rows = [
+      ['2024-01-15', '자판기', '₩100원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('parseTable detects small Won-sign amounts in text (C32-01)', () => {
+    const text = [
+      '2024-01-15 편의점    ₩500',
+      '2024-01-16 카페      ￦300원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
+
   test('still matches parenthesized amounts like "(1,234)"', () => {
     const rows = [
       ['2024-01-15', '환불', '(1,234)'],
