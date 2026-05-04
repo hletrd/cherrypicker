@@ -2,7 +2,7 @@
 // matching the web-side implementation in apps/web/src/lib/parser/pdf.ts.
 // Also accepts full-width dot (U+FF0E) and ideographic full stop (U+3002)
 // which Korean bank PDFs occasionally use (C23-02, parity with web-side).
-const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|(?<![.\d．。])\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。]))/;
+const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|(?<![.\d．。])\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。])|(?<!\d)\d{6}(?!\d))/;
 // Korean amount pattern — excludes digit sequences adjacent to hyphens
 // to prevent false positives from card numbers (1234-5678-9012-3456) and
 // phone numbers (010-1234-5678) being matched as amounts (F5-01).

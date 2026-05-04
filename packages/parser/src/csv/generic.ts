@@ -31,6 +31,10 @@ const DATE_PATTERNS = [
   // column detection. Validated separately by isYYMMDDLike() (C45-01).
   /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,                          // 2024년 1월 15일
   /^\d{1,2}월\s*\d{1,2}일$/,                                    // 1월 15일
+  // YYMMDD is validated by isYYMMDDLike() to prevent false positives on
+  // 6-digit transaction IDs (C45-01). Listed here for completeness — the
+  // isDateLike() function delegates to isYYMMDDLike() for this pattern.
+  /^\d{6}$/,                                                      // 240115 (validated by isYYMMDDLike)
 ];
 
 /** Validate short-date format (MM/DD or MM.DD) with month-aware day range
@@ -77,11 +81,15 @@ const AMOUNT_PATTERNS = [
   /^-[\d,]+원?$/,        // -1,234 or -1,234원 (negative with comma)
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
+  /^\d{5,}원?$/,         // Bare 5+ digit integers: 50000 or 50000원 (C49-01)
 ];
 
 function isDateLike(value: string): boolean {
   const trimmed = value.trim();
-  return DATE_PATTERNS.some((p) => p.test(trimmed)) || isDateLikeShort(trimmed) || isYYMMDDLike(trimmed);
+  // Check isYYMMDDLike first for 6-digit strings to prevent DATE_PATTERNS'
+  // /^\d{6}$/ from matching without month/day validation (C45-01).
+  if (isYYMMDDLike(trimmed)) return true;
+  return DATE_PATTERNS.some((p) => p.test(trimmed)) || isDateLikeShort(trimmed);
 }
 
 function isAmountLike(value: string): boolean {

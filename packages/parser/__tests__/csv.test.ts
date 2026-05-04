@@ -784,3 +784,82 @@ describe('Cycle 47: Summary row pattern additions', () => {
     expect(result.transactions[0]?.merchant).toBe('합산마트');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 49: Edge-case format diversity tests
+// ---------------------------------------------------------------------------
+describe('parseCSV - Cycle 49 format diversity', () => {
+  test('parenthesized amount with Won suffix: (1,234원) is negative', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,환불,-5000',
+      '2026-02-02,스타벅스,6000',
+    ].join('\n');
+    const result = parseCSV(content);
+    // Negative amounts are skipped (not contributing to spending)
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(6000);
+  });
+
+  test('full-width Won sign ￦1,234 is parsed correctly', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,스타벅스,"￦6,000"',
+      '2026-02-02,이마트,"￦45,000"',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(6000);
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+
+  test('마이너스 prefix amount is parsed as negative and skipped', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,환불,마이너스3000',
+      '2026-02-02,스타벅스,6000',
+    ].join('\n');
+    const result = parseCSV(content);
+    // 마이너스3000 is negative, skipped
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(6000);
+  });
+
+  test('YYMMDD date format (240115) is detected and parsed', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '260201,스타벅스,6000',
+      '260202,이마트,45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2026-02-01');
+    expect(result.transactions[1]?.date).toBe('2026-02-02');
+  });
+
+  test('bare 5+ digit integer amounts are detected in column detection', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,스타벅스,6000',
+      '2026-02-02,이마트,45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(6000);
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+
+  test('pipe-delimited CSV file is parsed correctly', () => {
+    const content = [
+      '이용일|이용처|이용금액',
+      '2026-02-01|스타벅스|6000',
+      '2026-02-02|이마트|45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    expect(result.transactions[0]?.amount).toBe(6000);
+    expect(result.transactions[1]?.merchant).toBe('이마트');
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+});

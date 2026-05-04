@@ -1046,3 +1046,42 @@ describe('Cycle 46: isValidHeaderRow with new terms', () => {
     expect(isValidHeaderRow(['사용일', '이용내용', '매입금액', '할부회수'])).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 49: "|" combined headers and new format patterns
+// ---------------------------------------------------------------------------
+describe('Cycle 49: findColumn with pipe-delimited combined headers', () => {
+  it('splits "이용일|승인일" and matches date pattern', () => {
+    const headers = ['이용일|승인일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('splits "가맹점|이용처" and matches merchant pattern', () => {
+    const headers = ['이용일', '가맹점|이용처', '이용금액'];
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
+  });
+
+  it('exact match works with pipe-delimited header', () => {
+    const headers = ['이용일|승인일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, '이용일', DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('exact match works with pipe-delimited header (second part)', () => {
+    const headers = ['승인일|이용일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, '이용일', DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('isValidHeaderRow splits pipe-delimited headers for keyword matching', () => {
+    expect(isValidHeaderRow(['이용일|승인일', '가맹점명', '이용금액'])).toBe(true);
+  });
+});
+
+describe('Cycle 49: SUMMARY_ROW_PATTERN pipe-delimited edge cases', () => {
+  it('matches 합산 summary row', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합산')).toBe(true);
+  });
+
+  it('does not false-positive on 합산 inside merchant name', () => {
+    expect(SUMMARY_ROW_PATTERN.test('합산마트')).toBe(false);
+  });
+});

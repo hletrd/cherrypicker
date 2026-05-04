@@ -34,20 +34,20 @@ export function findColumn(headers: string[], exactName: string | undefined, pat
     for (let i = 0; i < headers.length; i++) {
       const normalized = normalizeHeader(headers[i] ?? '');
       if (normalized === normalizedExact) return i;
-      // Split combined headers on "/" and test each part (C43-01)
-      if (normalized.includes('/')) {
-        if (normalized.split('/').some((part) => part === normalizedExact)) return i;
+      // Split combined headers on "/" or "|" and test each part (C43-01/C49-03)
+      if (normalized.includes('/') || normalized.includes('|')) {
+        if (normalized.split(/[/|]/).some((part) => part === normalizedExact)) return i;
       }
     }
   }
   // Second pass: regex match on normalized headers, with combined-header
-  // splitting for headers like "이용일/승인일" (C33-04).
+  // splitting for headers like "이용일/승인일" (C33-04) and "이용일|승인일" (C49-03).
   for (let i = 0; i < headers.length; i++) {
     const normalized = normalizeHeader(headers[i] ?? '');
     if (pattern.test(normalized)) return i;
-    // Split combined headers on "/" and test each part
-    if (normalized.includes('/')) {
-      const parts = normalized.split('/');
+    // Split combined headers on "/" or "|" and test each part
+    if (normalized.includes('/') || normalized.includes('|')) {
+      const parts = normalized.split(/[/|]/);
       if (parts.some((part) => pattern.test(part))) return i;
     }
   }
@@ -115,8 +115,8 @@ export function isValidHeaderRow(cells: string[]): boolean {
   for (const c of cells) {
     const normalized = normalizeHeader(c).toLowerCase();
     terms.push(normalized);
-    if (normalized.includes('/')) {
-      terms.push(...normalized.split('/'));
+    if (normalized.includes('/') || normalized.includes('|')) {
+      terms.push(...normalized.split(/[/|]/));
     }
   }
   const hasHeaderKeyword = terms.some((c) => (HEADER_KEYWORDS as string[]).includes(c));

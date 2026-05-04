@@ -65,16 +65,16 @@ function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): s
  *  (C37-01) hid the risk of NaN propagation — the `number` return type could
  *  not enforce null checks at the call site. */
 function parseAmount(raw: string): number | null {
-  let cleaned = raw.trim();
+  let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Handle "마이너스" prefix — some Korean bank exports use this instead of
   // a negative sign or parentheses (parity with server-side parseCSVAmount
-  // in packages/parser/src/csv/shared.ts C33-03).
+  // in packages/parser/src/csv/shared.ts C33-03). Must be checked after
+  // stripping 원/₩ so that inputs like "마이너스1,234원" are correctly
+  // detected, and parenthesized amounts like "(1,234원)" work correctly.
   const isManeuners = /^마이너스/.test(cleaned);
   if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
-  // Handle (1,234) format for negative amounts
   const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners;
   if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
-  cleaned = cleaned.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   // Use Math.round(parseFloat(...)) to match the xlsx parser's rounding behavior
   // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
   // cells may contain decimal remainders; rounding is more correct than truncation.
@@ -140,6 +140,10 @@ const DATE_PATTERNS = [
   // column detection. Validated separately by isYYMMDDLike() (C45-01).
   /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,                          // 2024년 1월 15일
   /^\d{1,2}월\s*\d{1,2}일$/,                                    // 1월 15일
+  // YYMMDD is validated by isYYMMDDLike() to prevent false positives on
+  // 6-digit transaction IDs (C45-01). Listed here for completeness — the
+  // isDateLike() function delegates to isYYMMDDLike() for this pattern.
+  /^\d{6}$/,                                                      // 240115 (validated by isYYMMDDLike)
 ];
 
 /** Validate short-date format (MM/DD or MM.DD) with month-aware day range
@@ -187,11 +191,15 @@ const AMOUNT_PATTERNS = [
   /^-[\d,]+원?$/,        // -1,234 or -1,234원 (negative with comma)
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
+  /^\d{5,}원?$/,         // Bare 5+ digit integers: 50000 or 50000원 (C49-01)
 ];
 
 function isDateLike(value: string): boolean {
   const trimmed = value.trim();
-  return DATE_PATTERNS.some((p) => p.test(trimmed)) || isDateLikeShort(trimmed) || isYYMMDDLike(trimmed);
+  // Check isYYMMDDLike first for 6-digit strings to prevent DATE_PATTERNS'
+  // /^\d{6}$/ from matching without month/day validation (C45-01).
+  if (isYYMMDDLike(trimmed)) return true;
+  return DATE_PATTERNS.some((p) => p.test(trimmed)) || isDateLikeShort(trimmed);
 }
 
 function isAmountLike(value: string): boolean {
