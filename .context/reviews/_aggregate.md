@@ -1,27 +1,38 @@
-# Cycle 30 Aggregate Review
+# Cycle 31 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 30
-**Tests:** 551 bun, 243 vitest
+**Cycles completed:** 31
+**Tests:** 554 bun, 243 vitest
 
 ## Summary
-2 actionable findings from deep code review of all parser source files with focus on false-positive summary row matching and test coverage gaps.
+3 actionable findings: AMOUNT_COLUMN_PATTERN missing common bank amount keywords, CATEGORY_COLUMN_PATTERN too narrow, and no tests for expanded patterns. 2 deferred architecture items.
 
 ## Findings
 
-### F1: SUMMARY_ROW_PATTERN false-positive on merchant names (HIGH)
+### F1: AMOUNT_COLUMN_PATTERN missing common bank amount keywords (HIGH)
 
-**Impact:** All 6 parsers test SUMMARY_ROW_PATTERN against full-line or joined-row text. Merchant names containing summary keywords (e.g., "합계마트", "소비마트") are silently dropped.
+**Impact:** CSVs with headers like "취소금액", "환불금액", "결제액" are not recognized as amount columns. Server-side and web-side both affected.
 
 **Files:**
-- `packages/parser/src/csv/column-matcher.ts` (server-side source of truth)
-- `apps/web/src/lib/parser/column-matcher.ts` (web-side copy, must stay in sync)
+- `packages/parser/src/csv/column-matcher.ts` line 46
+- `apps/web/src/lib/parser/column-matcher.ts` line 42
 
-**Root cause:** The regex matches keywords as substrings without boundary constraints. "합계" matches inside "합계마트". Also includes overly broad terms "소비" and "이월" that can match merchant names.
+**Keywords to add:** 취소금액, 환불금액, 입금액, 결제액
 
-### F2: Test gap for summary-row false-positive (MEDIUM)
+### F2: CATEGORY_COLUMN_PATTERN missing bank-variant category keywords (MEDIUM)
 
-No tests verify that merchant names containing summary keywords are preserved rather than incorrectly filtered.
+**Impact:** CSVs with headers like "거래유형", "결제유형", "이용구분", "구분" miss category column detection.
+
+**Files:**
+- `packages/parser/src/csv/column-matcher.ts` line 48
+- `apps/web/src/lib/parser/column-matcher.ts` line 44
+
+**Keywords to add:** 거래유형, 결제유형, 이용구분, 구분, 가맹점유형
+
+### F3: No tests for expanded column pattern keywords (MEDIUM)
+
+**Files:**
+- `packages/parser/__tests__/column-matcher.test.ts`
 
 ## Deferred Items
 
@@ -29,7 +40,6 @@ No tests verify that merchant names containing summary keywords are preserved ra
 |----|------|--------|
 | D-01 | Server/web CSV parser duplication | Requires shared module architecture refactor |
 | D-02 | Full-width digit date parsing | Extremely rare in Korean bank exports |
-| D-03 | Date regex end-anchoring | Correct for actual use case (clean cells from splitLine/sheet_to_json) |
 
 ## Regressions
-None. All 794 tests passing.
+None. All 797 tests passing.

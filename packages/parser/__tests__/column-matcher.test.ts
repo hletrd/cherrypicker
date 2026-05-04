@@ -501,3 +501,89 @@ describe('Keyword Set completeness (C24)', () => {
     expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Expanded amount keywords (C31)
+// ---------------------------------------------------------------------------
+describe('AMOUNT_COLUMN_PATTERN expanded keywords (C31)', () => {
+  const shouldMatch = ['취소금액', '환불금액', '입금액', '결제액'];
+
+  for (const name of shouldMatch) {
+    it(`matches "${name}"`, () => {
+      expect(AMOUNT_COLUMN_PATTERN.test(name)).toBe(true);
+    });
+  }
+
+  it('findColumn detects 취소금액 as amount column', () => {
+    const headers = ['이용일', '이용처', '취소금액'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('findColumn detects 환불금액 as amount column', () => {
+    const headers = ['거래일', '가맹점', '환불금액', '비고'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('findColumn detects 결제액 as amount column', () => {
+    const headers = ['이용일', '이용처', '결제액'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('AMOUNT_KEYWORDS contains new keywords', () => {
+    expect(AMOUNT_KEYWORDS.has('취소금액')).toBe(true);
+    expect(AMOUNT_KEYWORDS.has('환불금액')).toBe(true);
+    expect(AMOUNT_KEYWORDS.has('입금액')).toBe(true);
+    expect(AMOUNT_KEYWORDS.has('결제액')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains new amount keywords', () => {
+    expect(HEADER_KEYWORDS).toContain('취소금액');
+    expect(HEADER_KEYWORDS).toContain('환불금액');
+    expect(HEADER_KEYWORDS).toContain('입금액');
+    expect(HEADER_KEYWORDS).toContain('결제액');
+  });
+
+  it('isValidHeaderRow accepts headers with new amount keywords', () => {
+    expect(isValidHeaderRow(['이용일', '이용처', '취소금액'])).toBe(true);
+    expect(isValidHeaderRow(['거래일', '가맹점', '환불금액'])).toBe(true);
+    expect(isValidHeaderRow(['이용일', '이용처', '결제액'])).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Expanded category keywords (C31)
+// ---------------------------------------------------------------------------
+describe('CATEGORY_COLUMN_PATTERN expanded keywords (C31)', () => {
+  const shouldMatch = ['거래유형', '결제유형', '이용구분', '구분', '가맹점유형'];
+
+  for (const name of shouldMatch) {
+    it(`matches "${name}"`, () => {
+      expect(CATEGORY_COLUMN_PATTERN.test(name)).toBe(true);
+    });
+  }
+
+  it('findColumn detects 거래유형 as category column', () => {
+    const headers = ['이용일', '이용처', '이용금액', '거래유형'];
+    expect(findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN)).toBe(3);
+  });
+
+  it('findColumn detects 결제유형 as category column', () => {
+    const headers = ['이용일', '이용처', '결제유형', '이용금액'];
+    expect(findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('findColumn detects 이용구분 as category column', () => {
+    const headers = ['거래일', '가맹점', '금액', '이용구분'];
+    expect(findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN)).toBe(3);
+  });
+
+  it('findColumn detects 구분 as category column', () => {
+    const headers = ['이용일', '구분', '이용처', '금액'];
+    expect(findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN)).toBe(1);
+  });
+
+  it('findColumn detects 가맹점유형 as category column', () => {
+    const headers = ['거래일', '가맹점유형', '가맹점', '금액'];
+    expect(findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN)).toBe(1);
+  });
+});
