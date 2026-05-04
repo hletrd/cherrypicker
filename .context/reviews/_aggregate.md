@@ -1,8 +1,31 @@
-# Cycle 82 Aggregate Review
+# Cycle 83 Aggregate Review
 
-## Review Summary
+## Summary
+After 82 cycles, the parser is highly mature with 1222 bun + 287 vitest tests passing.
+This cycle identifies **6 actionable findings** focused on test coverage gaps for
+format diversity features that already exist in code but lack test coverage.
 
-After 81 cycles, the parser is highly mature with 1072+ tests passing. Cycle 81 added YYYYMMDD support to `findDateCell()`, `isValidDateCell()`, `isValidYYYYMMDD()`, and `fallbackDatePattern`. This cycle identifies 2 actionable findings: one format diversity gap in the PDF table detection regex and one API completeness issue.
+## Findings by Priority
+
+### HIGH (implement this cycle)
+| ID | Area | Finding |
+|----|------|---------|
+| F1 | CSV | Datetime strings in column detection untested |
+| F2 | CSV | Tab/pipe/semicolon-delimited CSV full parse untested |
+
+### MEDIUM (implement this cycle)
+| ID | Area | Finding |
+|----|------|---------|
+| F4 | Column Matcher | normalizeHeader fullwidth alphanumeric untested |
+| F5 | Column Matcher | findColumn "+" / "＋" delimiter splitting untested |
+
+### LOW (implement if time permits)
+| ID | Area | Finding |
+|----|------|---------|
+| F6 | CSV | Amount column with 원 suffix detection untested |
+
+## No Regressions
+All 1222 bun tests and 287 vitest tests passing.
 
 ## Findings
 

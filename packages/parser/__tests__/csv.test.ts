@@ -1224,3 +1224,149 @@ describe('C65-02: Data-inference column detection failure error message', () => 
     expect(result.transactions[1]?.amount).toBe(30000);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 83: CSV datetime with space separator (C83-01)
+// ---------------------------------------------------------------------------
+describe('Cycle 83: CSV datetime with space separator (C83-01)', () => {
+  test('datetime with space separator "2024-01-15 10:30:00" detected as date column', () => {
+    const content = [
+      '이용일시,이용처,이용금액',
+      '2024-01-15 10:30:00,스타벅스 강남점,6500',
+      '2024-01-16 14:20:30,이마트 서초점,30000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+    expect(result.transactions[0]?.merchant).toBe('스타벅스 강남점');
+    expect(result.transactions[0]?.amount).toBe(6500);
+    expect(result.transactions[1]?.date).toBe('2024-01-16');
+    expect(result.transactions[1]?.amount).toBe(30000);
+  });
+
+  test('datetime with space separator in generic CSV data-inference path', () => {
+    // Unrecognized headers force data-inference for date column
+    const content = [
+      'timestamp,shop,cost',
+      '2024-01-15 10:30:00,스타벅스,6500',
+      '2024-01-16 14:20:30,이마트,30000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions.length).toBeGreaterThanOrEqual(2);
+    if (result.transactions.length >= 2) {
+      expect(result.transactions[0]?.date).toBe('2024-01-15');
+      expect(result.transactions[0]?.amount).toBe(6500);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cycle 83: Tab-delimited CSV end-to-end (C83-02)
+// ---------------------------------------------------------------------------
+describe('Cycle 83: Tab-delimited CSV end-to-end (C83-02)', () => {
+  test('tab-delimited CSV with Korean headers parses correctly', () => {
+    const content = [
+      '이용일\t이용처\t이용금액',
+      '2026-02-01\t스타벅스\t6000',
+      '2026-02-02\t이마트\t45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2026-02-01');
+    expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    expect(result.transactions[0]?.amount).toBe(6000);
+    expect(result.transactions[1]?.date).toBe('2026-02-02');
+    expect(result.transactions[1]?.merchant).toBe('이마트');
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+
+  test('tab-delimited CSV with English headers parses correctly', () => {
+    const content = [
+      'date\tmerchant\tamount',
+      '2026-02-01\tStarbucks\t6000',
+      '2026-02-02\tE-Mart\t45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(6000);
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+
+  test('tab-delimited CSV with installments column', () => {
+    const content = [
+      '이용일\t이용처\t이용금액\t할부',
+      '2026-02-01\t스타벅스\t6000\t일시불',
+      '2026-02-02\t롯데백화점\t120000\t3',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.installments).toBeUndefined();
+    expect(result.transactions[1]?.installments).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cycle 83: Semicolon-delimited CSV end-to-end (C83-03)
+// ---------------------------------------------------------------------------
+describe('Cycle 83: Semicolon-delimited CSV end-to-end (C83-03)', () => {
+  test('semicolon-delimited CSV with Korean headers parses correctly', () => {
+    const content = [
+      '이용일;이용처;이용금액',
+      '2026-02-01;스타벅스;6000',
+      '2026-02-02;이마트;45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2026-02-01');
+    expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    expect(result.transactions[0]?.amount).toBe(6000);
+    expect(result.transactions[1]?.date).toBe('2026-02-02');
+    expect(result.transactions[1]?.merchant).toBe('이마트');
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+
+  test('semicolon-delimited CSV with amount in quotes', () => {
+    const content = [
+      '이용일;이용처;이용금액',
+      '2026-02-01;스타벅스;"6,500"',
+      '2026-02-02;이마트;"45,000"',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(6500);
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cycle 83: Amount column with 원 suffix detection (C83-04)
+// ---------------------------------------------------------------------------
+describe('Cycle 83: Amount column with 원 suffix detection (C83-04)', () => {
+  test('generic CSV infers amount column from data with 원 suffix', () => {
+    // Unrecognized headers force data-inference; amounts have 원 suffix
+    const content = [
+      '날짜,가게,값',
+      '2026-01-15,스타벅스,"6,500원"',
+      '2026-01-16,이마트,"45,000원"',
+      '2026-01-17,편의점,"3,200원"',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions.length).toBeGreaterThanOrEqual(2);
+    if (result.transactions.length >= 2) {
+      expect(result.transactions[0]?.amount).toBe(6500);
+      expect(result.transactions[1]?.amount).toBe(45000);
+    }
+  });
+
+  test('CSV amount with Won sign and 원 suffix parses correctly', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-01-15,스타벅스,"₩6,500원"',
+      '2026-01-16,이마트,"₩45,000원"',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(6500);
+    expect(result.transactions[1]?.amount).toBe(45000);
+  });
+});
