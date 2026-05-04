@@ -203,11 +203,11 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   for (let i = 0; i < headers.length; i++) {
     const h = headers[i] ?? '';
     // Date columns
-    if (/이용일|거래일|날짜|일시|이용일자|거래일시|결제일|승인일|매출일/.test(h) && dateCol === -1) dateCol = i;
+    if (/이용일|거래일|날짜|일시|이용일자|거래일시|결제일|승인일|승인일자|매출일/.test(h) && dateCol === -1) dateCol = i;
     // Merchant columns
     else if (/이용처|가맹점|상호|이용가맹점|가맹점명|거래처|매출처|사용처|결제처/.test(h) && merchantCol === -1) merchantCol = i;
     // Amount columns
-    else if (/이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액|합계/.test(h) && amountCol === -1) amountCol = i;
+    else if (/이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액/.test(h) && amountCol === -1) amountCol = i;
     // Installments
     else if (/할부|할부개월|할부기간|할부월/.test(h) && installmentsCol === -1) installmentsCol = i;
     // Category

@@ -177,15 +177,18 @@ export function detectCSVDelimiter(content: string): string {
   let totalComma = 0;
   let totalTab = 0;
   let totalPipe = 0;
+  let totalSemicolon = 0;
 
   for (const line of lines) {
     totalComma += (line.match(/,/g) ?? []).length;
     totalTab += (line.match(/\t/g) ?? []).length;
     totalPipe += (line.match(/\|/g) ?? []).length;
+    totalSemicolon += (line.match(/;/g) ?? []).length;
   }
 
-  if (totalComma === 0 && totalTab === 0 && totalPipe === 0) return ',';
-  if (totalTab > totalComma && totalTab >= totalPipe) return '\t';
-  if (totalPipe > totalComma) return '|';
+  if (totalComma === 0 && totalTab === 0 && totalPipe === 0 && totalSemicolon === 0) return ',';
+  if (totalTab > totalComma && totalTab >= totalPipe && totalTab >= totalSemicolon) return '\t';
+  if (totalPipe > totalComma && totalPipe >= totalSemicolon) return '|';
+  if (totalSemicolon > totalComma) return ';';
   return ',';
 }
