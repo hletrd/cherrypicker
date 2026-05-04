@@ -1,3 +1,3 @@
-# Performance Reviewer -- Cycle 43
+# Performance Reviewer -- Cycle 50
 
-No performance concerns in the current codebase. The regex-based column matching and header detection are O(n*m) where n = rows and m = columns, which is expected. The web CSV factory refactor (A1) would marginally improve startup by reducing the number of adapter objects created.
+No performance concerns. Regex-based column matching and header detection are O(n*m) where n = rows and m = columns. The PDF column boundary detection is O(n*w) where w = max line width. All within expected bounds for file parsing.

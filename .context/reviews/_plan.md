@@ -1,31 +1,38 @@
-# Implementation Plan -- Cycle 49
+# Implementation Plan -- Cycle 50
 
-## P1. Fix web CSV parseAmount parenthesized negative + Won sign [MEDIUM]
-**File**: `apps/web/src/lib/parser/csv.ts`
-**What**: Move 마이너스 prefix detection and parenthesized negative check BEFORE stripping 원/₩. Match server-side order of operations.
+## P1. PDF YYMMDD date validation in filterTransactionRows [MEDIUM]
 
-## P2. Add bare 5+ digit integer pattern to CSV AMOUNT_PATTERNS [LOW]
-**Files**: `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
-**What**: Add `/^\d{5,}원?$/` to AMOUNT_PATTERNS arrays so column-detection heuristics recognize bare 5+ digit amounts like `50000`.
+**Files:** `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
 
-## P3. Add "|" splitting to findColumn [LOW]
-**File**: `packages/parser/src/csv/column-matcher.ts`
-**What**: Split combined headers on "|" in addition to "/" in both exact-match and regex-match passes.
+Add a validation helper that checks date cells after filterTransactionRows:
+- Import or replicate isYYMMDDLike logic
+- In the server-side PDF index.ts tryStructuredParse, validate txRows date cells
+- In the web-side pdf.ts tryStructuredParse, do the same
+- Reject rows where the date cell is a 6-digit string that fails YYMMDD validation
 
-## P4. Add YYMMDD to PDF DATE_PATTERN [LOW]
-**Files**: `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
-**What**: Add bounded 6-digit pattern `(?<!\d)\d{6}(?!\d)` to DATE_PATTERN for YYMMDD detection in PDF table rows.
+**Tests:** Add test in table-parser.test.ts with YYMMDD dates ("240115") and transaction ID false positives ("123456").
 
-## P5. Add YYMMDD to CSV DATE_PATTERNS [LOW]
-**Files**: `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
-**What**: Add YYMMDD entry with isYYMMDDLike validator guard to DATE_PATTERNS arrays.
+## P2. PDF getHeaderColumns use findColumn [MEDIUM]
 
-## P6. Add comprehensive edge-case tests [LOW]
-**Files**: `packages/parser/__tests__/csv.test.ts`, `packages/parser/__tests__/column-matcher.test.ts`
-**What**: Tests for parenthesized Won amounts, full-width Won sign, 마이너스 prefix, pipe delimiters, YYMMDD detection, bare 5+ digit amounts, "|" combined headers.
+**Files:** `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
+
+Refactor getHeaderColumns() to use findColumn() from column-matcher.ts:
+- Import findColumn in table-parser.ts
+- Replace manual pattern.test() loop with findColumn() calls
+- This automatically handles combined-header splitting on "/" and "|"
+
+**Tests:** Add test for combined headers like "이용일/승인일", "비고/적요".
+
+## P3. Summary row pattern "합 계" variant [LOW]
+
+**File:** `packages/parser/src/csv/column-matcher.ts`
+
+Add standalone `(?<![가-힣])합\s*계(?![가-힣])(?=[\s,;]|$)` to SUMMARY_ROW_PATTERN.
+
+**Tests:** Add test for "합 계" detection in column-matcher.test.ts.
 
 ## Deferred
-- D-01: Server/web shared module (architectural refactor)
-- D-02: PDF multi-line headers (edge case)
-- D-03: Web CSV hand-rolled adapters -> factory pattern
-- D-04: normalizeHeader unicode character class readability
+
+- D-01: Server/web shared module (architectural)
+- D-02: PDF multi-line headers
+- D-03: Web CSV factory refactor

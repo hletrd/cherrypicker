@@ -1,46 +1,41 @@
-# Code Review -- Cycle 47
+# Code Review -- Cycle 50
 
-## Findings: 4 actionable
+## Summary
 
-### F1. Summary row pattern missing "합산" [MEDIUM]
-- `packages/parser/src/csv/column-matcher.ts` line 83
-- SUMMARY_ROW_PATTERN covers 합계/소계/총계/누계 but not "합산" (another common Korean word for "aggregate/total")
-- Some bank exports use 합산 instead of 합계
-- Fix: add `합\s*산` with Korean boundary guards
+After 49 cycles the parser handles 24 bank CSV/XLSX adapters, flexible column matching with extensive Unicode normalization, multi-format support (CSV/TSV/XLSX/PDF/HTML-as-XLS), and 772 bun + 265 vitest tests. Remaining findings focus on PDF date validation gaps, PDF combined-header splitting, and test coverage.
 
-### F2. Stale .omc state file in source tree [LOW]
-- `packages/parser/src/csv/.omc/state/last-tool-error.json`
-- OMC state file landed inside the parser source directory
-- Fix: remove and ensure .omc is in .gitignore
+## Findings
 
-### F3. Amount parsing edge cases lack test coverage [MEDIUM]
-- `packages/parser/src/csv/shared.ts`, `packages/parser/__tests__/csv-shared.test.ts`
-- Single dash `-`, zero-amount with 원 suffix `"0원"`, `-0`, spaces-only, Won-sign with spaces untested
-- Fix: add tests for these edge cases
+### F1. PDF filterTransactionRows accepts any 6-digit string as date [MEDIUM]
 
-### F4. XLSX forward-fill does not validate against summary row pattern [LOW]
-- `packages/parser/src/xlsx/index.ts`
-- Forward-filled date/merchant values are not re-validated against SUMMARY_ROW_PATTERN
-- A forward-filled value from a summary row could contaminate subsequent rows
-- Fix: validate forward-filled values before using them
+**Files:** `packages/parser/src/pdf/table-parser.ts:5,156-162`, `apps/web/src/lib/parser/pdf.ts:33,174-180`
 
-### F2. Column Pattern Coverage Gaps [MEDIUM]
-- `packages/parser/src/csv/column-matcher.ts` lines 64-69
-- Missing common Korean bank column name variations:
-  - Date: "사용일", "사용일자" (some banks use "사용" instead of "이용")
-  - Merchant: "사용처", "payee"
-  - Amount: "매입금액" (purchase amount used by merchant acquirers)
-  - Installments: "할부회수", "install" (common English short form)
-  - Memo: "상세내역"
-- Fix: add missing terms to column pattern regexes and HEADER_KEYWORDS
+The `DATE_PATTERN` includes `(?<!\d)\d{6}(?!\d)` which matches any 6-digit string. The CSV parser validates these via `isYYMMDDLike()` (rejecting "123456", "999999"), but `filterTransactionRows()` has no such validation. A row with a 6-digit transaction ID and an amount is falsely detected as a transaction row.
 
-### F3. Summary Row Pattern Missing Common Terms [MEDIUM]
-- `packages/parser/src/csv/column-matcher.ts` line 83
-- Missing "이월잔액", "전월이월", "이월금액" which appear in Korean bank statement footers
-- Fix: add these terms with boundary guards
+**Fix:** Add post-filter validation checking date cells against actual date patterns + YYMMDD validation. Apply in both server and web PDF parsers.
 
-### F4. Test Coverage Gaps [LOW]
-- No tests for PDF merchant extraction with adjacent date/amount columns
-- No tests for summary row pattern matching "합계" inside longer text
-- No tests for generic CSV merchant inference from Korean text columns
-- Fix: add targeted tests for these scenarios
+### F2. PDF getHeaderColumns doesn't split combined headers [MEDIUM]
+
+**Files:** `packages/parser/src/pdf/table-parser.ts:204-229`, `apps/web/src/lib/parser/pdf.ts:214-235`
+
+`getHeaderColumns()` tests normalized cells directly against patterns. Combined headers like "비고/적요" or "취소금액|환불금액" tested as whole strings may not match. `findColumn()` from column-matcher.ts already splits on "/" and "|". Refactor to use shared `findColumn()`.
+
+### F3. Summary row pattern missing standalone "합 계" variant [LOW]
+
+**File:** `packages/parser/src/csv/column-matcher.ts:83`
+
+The pattern has `총\s*합\s*계` but no standalone `합\s*계`. Some exports use "합 계" as a subtotal marker without "총" prefix.
+
+**Fix:** Add standalone `(?<![가-힣])합\s*계(?![가-힣])(?=[\s,;]|$)`.
+
+## Confirmed Fixed (from cycle 49)
+
+- F3 (cycle 49): CSV AMOUNT_PATTERNS bare 5+ digit integers -- already present
+- F4 (cycle 49): findColumn pipe splitting -- already present
+- F5 (cycle 49): PDF DATE_PATTERN YYMMDD -- pattern present, but validation missing (F1 above)
+
+## Test Gaps
+
+### T1. No YYMMDD date test in PDF table parsing [MEDIUM]
+### T2. No combined-header test in PDF column detection [MEDIUM]
+### T3. No "합계" spacing variant test in summary row pattern [LOW]
