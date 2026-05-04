@@ -1,58 +1,28 @@
-# Code Review -- Cycle 56
+# Code Review -- Cycle 59
 
 ## Reviewer: code-reviewer
-## Focus: Format diversity edge cases, "KRW" prefix, test coverage gaps
+## Focus: KRW format gap, YYMMDD dedup, PDF pattern completeness
 
-### C56-01: "KRW" currency prefix not handled by amount parsers (ACTIONABLE)
-**Severity:** Medium | **Kind:** Format diversity gap
+### C59-01: PDF AMOUNT_PATTERN missing KRW prefix (BUG - Medium)
+Files: `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
 
-Korean bank CSV/XLSX exports sometimes prefix amounts with "KRW" (ISO 4217 currency code), e.g., "KRW 10,000" or "KRW10,000". Six `parseAmount` implementations across server and web strip `₩`, `￦`, `원` but NOT "KRW". A cell containing "KRW 10,000" normalizes to "KRW10000" which `parseFloat` returns as `NaN`, silently dropping the transaction.
+The `AMOUNT_PATTERN` regex used by `filterTransactionRows()` does NOT match amounts with the KRW ISO 4217 prefix (e.g., "KRW10,000"). The pattern covers ₩, ￦, 마이너스, comma/5+digit, fullwidth-minus, and parenthesized — but NOT KRW. Both server-side and web-side have this gap.
 
-Additionally, AMOUNT_PATTERNS in the generic CSV parser's `isAmountLike()` column-detection don't recognize "KRW" prefixed values, so columns with KRW amounts won't be detected during data-inference.
+Impact: PDFs using KRW prefix notation will not have their transaction rows detected by the structured parser. They will fall through to the less-accurate fallback line scanner.
 
-**Affected files (amount parsing):**
-- `packages/parser/src/csv/shared.ts` (parseCSVAmount, line ~37)
-- `packages/parser/src/xlsx/index.ts` (parseAmount, line ~119)
-- `packages/parser/src/pdf/index.ts` (parseAmount, line ~48)
-- `apps/web/src/lib/parser/csv.ts` (parseAmount, line ~67)
-- `apps/web/src/lib/parser/xlsx.ts` (parseAmount, line ~274)
-- `apps/web/src/lib/parser/pdf.ts` (parseAmount, line ~270)
+Note: `parseAmount()` itself correctly strips KRW prefix, so the issue is purely in the detection pattern.
 
-**Affected files (column detection):**
-- `packages/parser/src/csv/generic.ts` (AMOUNT_PATTERNS, line ~77)
-- `apps/web/src/lib/parser/csv.ts` (AMOUNT_PATTERNS, line ~191)
+### C59-02: PDF fallback amount pattern missing KRW group (BUG - Medium)
+Files: `packages/parser/src/pdf/index.ts`, `apps/web/src/lib/parser/pdf.ts`
 
-**Fix:** Add `.replace(/^KRW\s*/i, '')` to amount cleaning chains. Add KRW pattern to AMOUNT_PATTERNS.
+The `fallbackAmountPattern` regex (Tier 2.5 line scanner) has 5 capture groups but none for KRW-prefixed amounts. Lines like "2024-01-15 Starbucks KRW10,000" will not be correctly captured — the "10,000" part might match group 5 if the regex engine finds it, but the KRW prefix disrupts clean capture.
 
-### C56-02: XLSX parity test only checks column configs (ACTIONABLE - test)
-**Severity:** Low | **Kind:** Test coverage gap
-**File:** `packages/parser/__tests__/xlsx-parity.test.ts`
+### C59-03: Duplicate isYYMMDDLike across PDF files (TECH DEBT - Low)
+Files: `packages/parser/src/pdf/index.ts` (line 35-43), `packages/parser/src/pdf/table-parser.ts` (line 160-168)
 
-The xlsx-parity test only verifies `BANK_COLUMN_CONFIGS` alignment. It should also verify SUMMARY_ROW_PATTERN, HEADER_KEYWORDS, column pattern regexes, and isValidHeaderRow behavior consistency between server and web.
+Both files define nearly identical YYMMDD validation functions. Should be extracted to `date-utils.ts` alongside `daysInMonth` and `isValidDayForMonth`.
 
-### C56-03: No test for CSV generic parser with numeric-only headers (ACTIONABLE - test)
-**Severity:** Low | **Kind:** Test coverage gap
-**File:** `packages/parser/__tests__/csv.test.ts`
+### C59-04: Web-side CSV missing raw row text in amount errors (PARITY - Low)
+File: `apps/web/src/lib/parser/csv.ts`
 
-Some CSV exports have purely numeric column headers (e.g., "1", "2", "3"). The `hasNonNumeric` guard in the generic parser correctly rejects these, but there's no test documenting this behavior.
-
-### C56-04: parseCSVAmount missing early return for empty string (ACTIONABLE - minor)
-**Severity:** Very low | **Kind:** Robustness
-**File:** `packages/parser/src/csv/shared.ts`
-
-`parseCSVAmount('')` processes the empty string through all normalization steps (regex replacements, prefix detection, parseFloat) before returning null. An early return for empty/whitespace-only input would be cleaner.
-
-### Parity Check (all pass)
-- Server/web column-matcher: PARITY
-- Server/web date-utils: PARITY
-- Server/web SUMMARY_ROW_PATTERN: PARITY
-- Server/web HEADER_KEYWORDS: PARITY
-- Server/web AMOUNT_PATTERNS: PARITY
-- Server/web XLSX column configs: PARITY (24 banks each)
-- No regressions detected
-
-### Test Coverage
-- 826 bun + 265 vitest = 1091 total tests passing
-- Fullwidth amount tests present in csv-shared.test.ts
-- Combined header tests cover "/" "|" "," "+" "＋" delimiters
-- SUMMARY_ROW_PATTERN has boundary guard tests
+The web-side `isValidAmount()` does not include `raw` row text in error entries, unlike the server-side `isValidCSVAmount()` which enriches errors for debugging.

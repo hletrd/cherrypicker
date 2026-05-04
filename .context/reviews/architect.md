@@ -1,12 +1,15 @@
-# Architect Review -- Cycle 52
+# Architect Review -- Cycle 59
 
 ## Architecture Status
-Server-side and web-side parsers are well-structured with clear separation. The factory pattern (adapter-factory.ts) and shared column-matcher eliminate per-bank duplication on the server side. The web-side still has individual bank adapter objects alongside a factory, but this is a known deferred item (D-01).
+Factory pattern and shared column-matcher continue to work well. Server/web duplication is a known deferred item (D-01).
 
-## Findings
-- All C52 findings (01-07) are column-matcher pattern additions that apply symmetrically to both server and web sides.
-- No architectural changes needed for this cycle's fixes.
-- The D-01 refactor (shared module between Bun and browser) remains deferred -- different build systems prevent direct imports.
+## A59-01: KRW prefix gap in PDF patterns (Medium)
+The PDF `AMOUNT_PATTERN` is the row-detection gatekeeper. Missing KRW means PDFs with KRW notation fall through entirely. This is a format diversity bug, not just a parity issue.
 
-## Verdict
-Low-risk cycle focused on pattern expansion. No architectural debt changes.
+## A59-02: YYMMDD validation consolidation (Low)
+`isYYMMDDLike()` / `isValidYYMMDD()` is duplicated in 3 PDF files plus the CSV generic parser. Should live in `date-utils.ts`. Extract once, import everywhere.
+
+## Deferred (unchanged)
+- D-01: Web/server shared module architecture
+- D-02: Web-side CSV parser duplication (10 manual adapters)
+- D-03: PDF multi-line header support

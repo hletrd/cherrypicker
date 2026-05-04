@@ -1,19 +1,14 @@
-# Test Engineer Review -- Cycle 52
+# Test Engineer Review -- Cycle 59
 
-## Current Coverage
-- 770+ bun tests, 252+ vitest tests passing
-- column-matcher.test.ts: 1101 lines
-- csv.test.ts: 865 lines
-- csv-adapters.test.ts: 852 lines
-- xlsx.test.ts: 908 lines
-- table-parser.test.ts: 936 lines
+## Coverage Status
+- 879+ bun tests, 131+ vitest tests passing
+- column-matcher.test.ts, csv.test.ts, csv-shared.test.ts, csv-adapters.test.ts, date-utils.test.ts, detect.test.ts, table-parser.test.ts, xlsx.test.ts, xlsx-parity.test.ts all exist
 
-## Test Gaps for C52 Fixes
-1. **Comma/plus delimiter splitting** -- Add tests to column-matcher.test.ts for findColumn and isValidHeaderRow with combined headers like "이용일,승인일" and "포인트+할인"
-2. **New merchant keywords** -- Add tests for "이용업소", "승인점", "매장명", "이용매장" matching in findColumn
-3. **New memo keywords** -- Add tests for "비고란", "메모란", "상세", "비고내용", "메모내용" matching
-4. **New summary patterns** -- Add tests for "사용합계", "이용합계", "총결제금액", "총액" matching in SUMMARY_ROW_PATTERN
-5. **XLSX summary guard on forward-fill** -- Add test for category/installments/memo forward-fill not being contaminated by summary values
+## T59-01: No test for KRW-prefixed amounts in PDF AMOUNT_PATTERN
+The `filterTransactionRows()` function is tested via `table-parser.test.ts`, but no test verifies that KRW-prefixed amounts like "KRW10,000" are detected as transaction amounts. Add tests after fixing C59-01.
 
-## Verdict
-Test additions are straightforward pattern-match tests. No complex test infrastructure changes needed.
+## T59-02: No test for KRW in PDF fallback scanner
+The fallback line scanner path in `packages/parser/src/pdf/index.ts` is not tested for KRW amounts. Add test after fixing C59-02.
+
+## T59-03: isYYMMDDLike consolidation needs test update
+After extracting to `date-utils.ts`, existing tests in `date-utils.test.ts` should cover the new function. The existing `isYYMMDDLike` tests in `csv.test.ts` and `table-parser.test.ts` should continue to pass since they test the behavior, not the import path.
