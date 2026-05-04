@@ -30,9 +30,10 @@ const ADAPTERS: BankAdapter[] = [
 export function parseCSV(content: string, bank?: BankId): ParseResult {
   // Strip UTF-8 BOM if present — Windows-generated CSV exports commonly
   // include a BOM character (U+FEFF) that causes header detection to fail
-  // because indexOf('이용일') won't match '﻿이용일'. Matches the
+  // because indexOf('이용일') won't match '﻿이용일'. Uses explicit unicode
+  // escape for robustness against source file encoding changes. Matches the
   // web-side BOM stripping in apps/web/src/lib/parser/csv.ts (C1-05).
-  const cleanContent = content.replace(/^﻿/, '');
+  const cleanContent = content.replace(/^\uFEFF/, '');
 
   // Determine bank
   let resolvedBank: BankId | null = bank ?? null;
