@@ -158,6 +158,129 @@ describe('parseCSV - explicit bank override', () => {
   });
 });
 
+describe('parseCSV - Hyundai', () => {
+  const content = loadFixture('sample-hyundai.csv');
+
+  test('detects bank as hyundai', () => {
+    const result = parseCSV(content);
+    expect(result.bank).toBe('hyundai');
+  });
+
+  test('parses correct number of transactions', () => {
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(3);
+  });
+
+  test('has no errors on valid input', () => {
+    const result = parseCSV(content);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  test('first transaction is correct', () => {
+    const result = parseCSV(content);
+    expect(result.transactions[0]?.date).toBe('2024-01-05');
+    expect(result.transactions[0]?.merchant).toBe('스타벅스 강남점');
+    expect(result.transactions[0]?.amount).toBe(5500);
+  });
+
+  test('memo field parsed', () => {
+    const result = parseCSV(content);
+    const emart = result.transactions.find((t) => t.merchant.includes('이마트'));
+    expect(emart?.memo).toBe('장보기');
+  });
+
+  test('skips summary row', () => {
+    const result = parseCSV(content);
+    // The 합계 row should be skipped
+    expect(result.transactions.every((t) => !t.merchant.includes('합계'))).toBe(true);
+  });
+});
+
+describe('parseCSV - IBK', () => {
+  const content = loadFixture('sample-ibk.csv');
+
+  test('detects bank as ibk', () => {
+    const result = parseCSV(content);
+    expect(result.bank).toBe('ibk');
+  });
+
+  test('parses correct number of transactions', () => {
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(3);
+  });
+
+  test('first transaction is correct', () => {
+    const result = parseCSV(content);
+    expect(result.transactions[0]?.date).toBe('2024-02-03');
+    expect(result.transactions[0]?.merchant).toBe('편의점GS25');
+    expect(result.transactions[0]?.amount).toBe(3500);
+  });
+
+  test('memo field parsed', () => {
+    const result = parseCSV(content);
+    expect(result.transactions[0]?.memo).toBe('즉시출금');
+  });
+});
+
+describe('parseCSV - Woori', () => {
+  const content = loadFixture('sample-woori.csv');
+
+  test('detects bank as woori', () => {
+    const result = parseCSV(content);
+    expect(result.bank).toBe('woori');
+  });
+
+  test('parses correct number of transactions', () => {
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(3);
+  });
+
+  test('first transaction is correct', () => {
+    const result = parseCSV(content);
+    expect(result.transactions[0]?.date).toBe('2024-03-01');
+    expect(result.transactions[0]?.merchant).toBe('배달의민족');
+    expect(result.transactions[0]?.amount).toBe(18000);
+  });
+});
+
+describe('parseCSV - generic CSV with column variations', () => {
+  test('handles column names with parenthetical suffixes', () => {
+    const content = [
+      '이용일,이용처,이용금액(원),할부',
+      '2026-02-01,스타벅스,6500,0',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(6500);
+  });
+
+  test('handles tab-delimited content', () => {
+    const content = '거래일시\t가맹점명\t이용금액\n2026-01-01\t테스트\t1000';
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+  });
+
+  test('handles semicolon-delimited content', () => {
+    const content = '거래일시;가맹점명;이용금액\n2026-01-01;테스트;1000';
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+  });
+
+  test('generic parser handles metadata-heavy preamble', () => {
+    const content = loadFixture('sample-metadata-heavy.csv');
+    const result = parseCSV(content);
+    // Should find the header row despite metadata preamble
+    expect(result.transactions.length).toBeGreaterThan(0);
+  });
+
+  test('generic parser handles BOM-prefixed content', () => {
+    const content = loadFixture('sample-bom.csv');
+    const result = parseCSV(content);
+    // Should parse despite BOM
+    expect(result.transactions.length).toBeGreaterThan(0);
+  });
+});
+
 describe('parseCSV - edge cases', () => {
   test('handles empty content gracefully', () => {
     const result = parseCSV('');
