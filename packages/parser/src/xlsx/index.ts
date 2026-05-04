@@ -111,7 +111,8 @@ export async function parseXLSX(filePath: string, bank?: BankId): Promise<ParseR
     return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트를 찾을 수 없습니다.' }] };
   }
 
-  // Try all sheets, return the first one that yields transactions
+  // Try all sheets, select the one with the most transactions (matches
+  // web-side behavior in apps/web/src/lib/parser/xlsx.ts C50-07).
   let bestResult: ParseResult | null = null;
 
   for (const sheetName of workbook.SheetNames) {
@@ -119,8 +120,13 @@ export async function parseXLSX(filePath: string, bank?: BankId): Promise<ParseR
     if (!sheet) continue;
 
     const result = parseXLSXSheet(sheet, bank, htmlBankHint);
-    if (result.transactions.length > 0) return result;
-    if (!bestResult) bestResult = result;
+    if (result.transactions.length > 0) {
+      if (!bestResult || result.transactions.length > bestResult.transactions.length) {
+        bestResult = result;
+      }
+    } else if (!bestResult) {
+      bestResult = result;
+    }
   }
 
   return bestResult ?? { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트 데이터를 읽을 수 없습니다.' }] };
@@ -135,6 +141,12 @@ const HEADER_KEYWORDS = [
   '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
   '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
 ];
+
+// Keyword categories for header detection — hoisted to module scope to avoid
+// recreating Sets on every parse call. Matches the generic CSV parser.
+const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
+const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
+const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
 
 function parseXLSXSheet(
   sheet: xlsx.WorkSheet,
@@ -170,9 +182,11 @@ function parseXLSXSheet(
   let headerRowIdx = -1;
   let headers: string[] = [];
 
-  const xlsxDateKeywords = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
-  const xlsxMerchantKeywords = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
-  const xlsxAmountKeywords = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+  // Module-level keyword Sets (hoisted above parseXLSXSheet) avoid
+  // recreating on every call.
+  const xlsxDateKeywords = DATE_KEYWORDS;
+  const xlsxMerchantKeywords = MERCHANT_KEYWORDS;
+  const xlsxAmountKeywords = AMOUNT_KEYWORDS;
 
   for (let i = 0; i < Math.min(30, rows.length); i++) {
     const row = rows[i] ?? [];
