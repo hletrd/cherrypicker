@@ -757,6 +757,53 @@ describe('Cycle 35: PDF fallback amount pattern 마이너스 and group extractio
 // Cycle 36: PDF AMOUNT_PATTERN explicit 마이너스 support
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Cycle 41: PDF AMOUNT_PATTERN Won sign character class cleanup
+// ---------------------------------------------------------------------------
+
+describe('Cycle 41: AMOUNT_PATTERN Won sign character class', () => {
+  test('matches half-width Won sign ₩500 as amount', () => {
+    const rows = [
+      ['2024-01-15', '편의점', '₩500'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('matches fullwidth Won sign ￦500 as amount', () => {
+    const rows = [
+      ['2024-01-15', '편의점', '￦500'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('matches Won sign with 원 suffix ₩1,000원', () => {
+    const rows = [
+      ['2024-01-15', '카페', '₩1,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('matches Won sign with comma separator ₩10,000', () => {
+    const rows = [
+      ['2024-01-15', '마트', '₩10,000'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('parseTable detects Won-sign amounts in plain text', () => {
+    const text = [
+      '2024-01-15 편의점    ₩500',
+      '2024-01-16 카페      ￦300원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('Cycle 36: PDF AMOUNT_PATTERN explicit 마이너스 matching', () => {
   test('parseTable detects 마이너스 amounts in PDF text', () => {
     const text = [

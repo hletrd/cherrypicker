@@ -1,21 +1,25 @@
-# Aggregate Review -- Cycle 40
+# Aggregate Review -- Cycle 41
 
-## New Findings: 3 actionable, 3 deferred
+## New Findings: 1 actionable, 1 deferred
 
 ### Actionable
-1. **[HIGH]** Web-side CSV parser missing 14 bank adapters (kakao, toss, kbank, etc.)
-2. **[MEDIUM]** No tests for the 14 additional bank CSV adapters
-3. **[LOW]** normalizeHeader regex misses variation selectors (U+FE00-FE0F)
+1. **[LOW]** Server PDF fallback amount pattern uses `[₩]` character class instead of plain `₩` - inconsistent with web-side pattern
 
 ### Deferred
-- D-01: Web/server CSV parser shared module (large architecture refactor)
-- D-02: Bank column config triplication (depends on D-01)
-- D-03: Server/web PDF parser duplication (depends on D-01)
+- D-01: Web/server CSV parser shared module refactor (architecture)
+- D-02: Headerless CSV fallback (low ROI, edge case)
 
 ## No Regressions
-All 942 tests (692 bun + 250 vitest) passing.
+All 806 tests (696 bun + 110 vitest) passing.
+
+## Format Diversity Status
+- CSV: 24 bank adapters (server + web), generic fallback, column inference, BOM stripping, encoding detection
+- XLSX: HTML-as-XLS detection, multi-sheet selection, merged cell forward-fill, formula error detection
+- PDF: Structured table parsing, header-aware column detection, fallback line scanner, LLM fallback
+- Date: 8+ format variants including full-width dots, Korean dates, short dates with year inference
+- Amount: Won signs, parenthesized negatives, 마이너스 prefix, whitespace stripping
+- Unicode: NBSP, zero-width chars, directional markers, variation selectors all stripped
 
 ## Plan for This Cycle
-1. Add 14 missing bank adapters to web-side CSV parser
-2. Add tests for the 14 new CSV adapters
-3. Add variation selectors to normalizeHeader regex (server + web)
+1. Fix server PDF fallback amount pattern `[₩]` → `₩`
+2. Add test coverage for the fix
