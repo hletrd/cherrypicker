@@ -40,7 +40,7 @@ function splitLine(line: string, delimiter: string): string[] {
 
 /** Shared date-parsing — delegates to the canonical implementation in
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
-import { parseDateStringToISO, isValidISODate } from './date-utils.js';
+import { parseDateStringToISO, isValidISODate, daysInMonth } from './date-utils.js';
 
 // NOTE(C70-04): The helpers below (splitLine, parseAmount, parseInstallments,
 // isValidAmount) duplicate logic from packages/parser/src/csv/shared.ts.
@@ -133,18 +133,20 @@ const DATE_PATTERNS = [
   /^\d{1,2}월\s*\d{1,2}일$/,                                    // 1월 15일
 ];
 
-/** Validate short-date format (MM/DD or MM.DD) with month/day range checks.
- *  This rejects decimal amounts like "12.34" (month 12, day 34 fails) while
- *  accepting valid short dates like "1/15" (month 1, day 15). Matches the
- *  PDF parser's isValidShortDate approach and the server-side generic CSV
- *  parser's isDateLikeShort() (F20-02). */
+/** Validate short-date format (MM/DD or MM.DD) with month-aware day range
+ *  checks. Uses daysInMonth() from date-utils.ts for correct validation
+ *  of impossible dates like "2/31" (Feb 31), "4/31" (Apr 31), matching
+ *  the PDF parser's isValidShortDate approach which uses MAX_DAYS_PER_MONTH
+ *  (F21-01). Also rejects decimal amounts like "12.34" (month 12, day 34
+ *  fails daysInMonth) while accepting valid short dates like "1/15". */
 function isDateLikeShort(value: string): boolean {
   const match = value.match(/^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/);
   if (!match) return false;
   const parts = value.trim().split(/[.\-\/]/);
   const month = parseInt(parts[0] ?? '', 10);
   const day = parseInt(parts[1] ?? '', 10);
-  return month >= 1 && month <= 12 && day >= 1 && day <= 31;
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
 }
 
 // Korean amount patterns — must recognize all formats that parseAmount

@@ -1,78 +1,71 @@
-# Cycle 20 Implementation Plan
+# Cycle 21 Implementation Plan
 
 ## Fixes (ordered by priority)
 
-### 1. F20-01: Server PDF fallback parenthesized amount bug (HIGH)
+### 1. F21-01: CSV generic isDateLikeShort month-aware validation (MEDIUM)
 
-**File:** `packages/parser/src/pdf/index.ts` lines 284, 306
+**Files:** `packages/parser/src/csv/generic.ts:37-44`, `apps/web/src/lib/parser/csv.ts:141-148`
 
-**Problem:** The fallback scanner regex `/\([\d,]+\)|([\d,]+)원?/g` produces `undefined` for capture group 1 when matching parenthesized amounts like `(1,234)`. At line 306, `amountMatch[1]!` is `undefined`, causing `.replace()` to throw a TypeError.
+**Problem:** `isDateLikeShort()` uses `day <= 31` instead of month-aware validation. Impossible dates like "2/31", "4/31", "6/31", "9/31", "11/31" pass validation, inconsistent with PDF parsers which use `MAX_DAYS_PER_MONTH`.
 
-**Fix:** Change the regex to capture the digits inside parentheses:
+**Fix:** Import `daysInMonth` from `date-utils.ts` and replace `day <= 31` with `day <= daysInMonth(new Date().getFullYear(), month)`. The `daysInMonth` function uses the Date constructor which correctly handles leap years. Since this is for column detection heuristics (not date parsing), using the current year is acceptable -- the important thing is rejecting impossible month/day combinations.
+
+For the server side:
 ```typescript
-const fallbackAmountPattern = /\(([\d,]+)\)|([\d,]+)원?/g;
-```
-Then at the usage site:
-```typescript
-const amountRaw = (amountMatch[1] ?? amountMatch[2])!;
-```
-Group 1 captures digits inside `()` for parenthesized amounts. Group 2 captures normal amounts. `parseAmount()` already handles the parenthesized format.
-
-**Tests:** Add test in `packages/parser/__tests__/table-parser.test.ts` for parenthesized amounts in PDF fallback.
-
-### 2. F20-02: CSV isDateLike decimal false-positive (MEDIUM)
-
-**Files:** `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
-
-**Problem:** The short date pattern `/^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/` matches decimal numbers like `3.5` or `12.34`. When header detection fails, this can cause `isDateLike()` to misidentify an amount column as a date column, preventing `amountCol` from being set.
-
-**Fix:** Add month/day range validation to `isDateLike` for the short-date pattern. After the short-date pattern matches, validate that month is 1-12 and day is 1-31. This matches the PDF parser's `isValidShortDate` approach.
-
-```typescript
-function isDateLike(value: string): boolean {
-  const trimmed = value.trim();
-  if (DATE_PATTERNS.slice(0, 3).some((p) => p.test(trimmed))) {
-    // Short date pattern (index 2) needs month/day validation
-    if (DATE_PATTERNS[2]!.test(trimmed)) {
-      const parts = trimmed.split(/[.\-\/]/);
-      const month = parseInt(parts[0] ?? '', 10);
-      const day = parseInt(parts[1] ?? '', 10);
-      return month >= 1 && month <= 12 && day >= 1 && day <= 31;
-    }
-    return true;
-  }
-  return DATE_PATTERNS.slice(3).some((p) => p.test(trimmed));
-}
-```
-
-Actually, simpler: just add validation inline for the MM/DD pattern only:
-
-```typescript
-const DATE_PATTERNS = [
-  /^\d{4}[\s]*[.\-\/][\s]*\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/,
-  /^\d{2}[\s]*[.\-\/][\s]*\d{2}[\s]*[.\-\/][\s]*\d{2}$/,
-  // Note: short dates validated by isDateLikeShort() to reject decimals
-  /^\d{4}\d{2}\d{2}$/,
-  /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,
-  /^\d{1,2}월\s*\d{1,2}일$/,
-];
+import { daysInMonth } from '../date-utils.js';
 
 function isDateLikeShort(value: string): boolean {
   const match = value.match(/^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/);
   if (!match) return false;
-  const parts = value.split(/[.\-\/]/);
+  const parts = value.trim().split(/[.\-\/]/);
   const month = parseInt(parts[0] ?? '', 10);
   const day = parseInt(parts[1] ?? '', 10);
-  return month >= 1 && month <= 12 && day >= 1 && day <= 31;
-}
-
-function isDateLike(value: string): boolean {
-  const trimmed = value.trim();
-  return DATE_PATTERNS.some((p) => p.test(trimmed)) || isDateLikeShort(trimmed);
+  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
 }
 ```
 
-**Tests:** Add test in `packages/parser/__tests__/csv.test.ts` for decimal amounts not misidentified as dates.
+For the web side (web has its own date-utils.ts):
+```typescript
+import { daysInMonth } from './date-utils.js';
+
+function isDateLikeShort(value: string): boolean {
+  const match = value.match(/^\d{1,2}[\s]*[.\-\/][\s]*\d{1,2}$/);
+  if (!match) return false;
+  const parts = value.trim().split(/[.\-\/]/);
+  const month = parseInt(parts[0] ?? '', 10);
+  const day = parseInt(parts[1] ?? '', 10);
+  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
+}
+```
+
+**Tests:** Add tests in `packages/parser/__tests__/csv.test.ts`:
+- "2/31" should NOT be detected as a date column
+- "4/31" should NOT be detected as a date column
+- "2/28" should be detected as a valid date
+- "1/31" should be detected as a valid date
+
+### 2. F21-02: Web XLSX parseAmount whitespace stripping (LOW)
+
+**File:** `apps/web/src/lib/parser/xlsx.ts:281`
+
+**Fix:** Add `.replace(/\s/g, '')` after the comma removal:
+```typescript
+let cleaned = raw.trim().replace(/원$/, '').replace(/[₩𝐖]/g, '').replace(/,/g, '').replace(/\s/g, '');
+```
+
+**Tests:** Add test in existing XLSX parity test for whitespace amounts.
+
+### 3. F21-03: Server CSV parseCSVAmount whitespace strip order (LOW)
+
+**File:** `packages/parser/src/csv/shared.ts:37`
+
+**Fix:** Move whitespace stripping before parenthesized negative check for consistency:
+```typescript
+let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+```
+(Currently `.replace(/\s/g, '')` is last, move it to same position as other parsers.)
+
+**Tests:** Existing tests should continue to pass.
 
 ## Deferred
-- D-01 through D-08: Same as cycle 19
+- D-01 through D-09: Same as cycle 20 (architecture, build system, UI concerns)

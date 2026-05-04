@@ -471,4 +471,61 @@ describe('parseCSV - edge cases', () => {
     expect(result.transactions[0]?.date).toMatch(/^\d{4}-01-15$/);
     expect(result.transactions[1]?.date).toMatch(/^\d{4}-02-28$/);
   });
+
+  // F21-01: isDateLikeShort must use month-aware day validation to reject
+  // impossible dates like "2/31" (Feb 31), "4/31" (Apr 31). Previously used
+  // day <= 31 which accepted these impossible dates.
+
+  test('isDateLike rejects impossible short dates "2/31" as dates (F21-01)', () => {
+    // Headerless CSV with impossible dates forces data-inference fallback.
+    // "2/31" should NOT be recognized as a date column.
+    const content = [
+      'code,item,cost',
+      'A01,coffee,2/31',
+      'A02,sandwich,4/31',
+      'A03,juice,6/31',
+    ].join('\n');
+    const result = parseCSV(content);
+    // Since no real dates or amounts are found, parser returns error (no header)
+    expect(result.transactions).toHaveLength(0);
+  });
+
+  test('isDateLike accepts valid short dates with month-aware limits (F21-01)', () => {
+    // Valid short dates with recognized headers should still parse correctly.
+    const content = [
+      '이용일,이용처,이용금액',
+      '1/31,스타벅스,6500',
+      '2/28,이마트,30000',
+      '4/30,쿠팡,15000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(3);
+    expect(result.transactions[0]?.date).toMatch(/^\d{4}-01-31$/);
+    expect(result.transactions[1]?.date).toMatch(/^\d{4}-02-28$/);
+    expect(result.transactions[2]?.date).toMatch(/^\d{4}-04-30$/);
+  });
+
+  test('parseDateStringToISO reports error for impossible dates like "4/31" (F21-01)', () => {
+    // With recognized headers, parseDateStringToISO validates dates.
+    // "4/31" is impossible (Apr has 30 days) — parseDateStringToISO returns
+    // the raw string and the parser reports a date parse error.
+    // "4/30" and "2/28" are valid and parse to ISO format.
+    const content = [
+      '이용일,이용처,이용금액',
+      '4/30,스타벅스,6500',
+      '4/31,이마트,3000',
+      '2/28,쿠팡,15000',
+    ].join('\n');
+    const result = parseCSV(content);
+    // All 3 transactions are added (amounts are valid), but "4/31" gets
+    // a date parse error and its date field remains as raw "4/31".
+    expect(result.transactions).toHaveLength(3);
+    // Valid dates parse to ISO format
+    expect(result.transactions[0]?.date).toMatch(/^\d{4}-04-30$/);
+    expect(result.transactions[2]?.date).toMatch(/^\d{4}-02-28$/);
+    // "4/31" stays as raw string (unparseable)
+    expect(result.transactions[1]?.date).toBe('4/31');
+    // Error reported for the impossible date
+    expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
+  });
 });

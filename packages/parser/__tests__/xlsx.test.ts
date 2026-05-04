@@ -459,6 +459,24 @@ describe('XLSX invalid serial date error reporting', () => {
     }
   });
 
+  test('parses string amounts with embedded whitespace (F21-02)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2026-02-01', '스타벅스', '1,234 원'],
+      ['2026-02-02', '이마트', '₩ 120,000'],
+      ['2026-02-03', '쿠팡', ' 15,000 '],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(3);
+      expect(result.transactions[0]?.amount).toBe(1234);
+      expect(result.transactions[1]?.amount).toBe(120000);
+      expect(result.transactions[2]?.amount).toBe(15000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
   test('forward-fills date in merged cells', async () => {
     const filePath = createTempXLSX([
       ['이용일', '이용처', '이용금액', '할부'],

@@ -1,15 +1,16 @@
-# Cycle 20 Aggregate Review
+# Cycle 21 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 20
-**Tests:** 489 bun + 233 vitest = 722 total
+**Cycles completed:** 21
+**Tests:** 495 bun + 236 vitest = 731 total
 
-## Actionable Findings (2)
+## Actionable Findings (3)
 
 | ID | Severity | Description | File |
 |---|---|---|---|
-| F20-01 | HIGH | Server PDF fallback scanner parenthesized amount regex bug: capture group 1 undefined for `(1,234)`, causes TypeError crash | `packages/parser/src/pdf/index.ts` |
-| F20-02 | MEDIUM | CSV isDateLike false-positive on decimal amounts (e.g., `3.5` matches MM/DD pattern), can misidentify amount column as date column when header detection fails | `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts` |
+| F21-01 | MEDIUM | CSV generic `isDateLikeShort` uses `day <= 31` instead of month-aware validation; impossible dates like "2/31" pass, inconsistent with PDF parsers which use `MAX_DAYS_PER_MONTH` | `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts` |
+| F21-02 | LOW | Web XLSX `parseAmount` missing whitespace stripping (`.replace(/\s/g, '')`); server XLSX and both CSV parsers have it | `apps/web/src/lib/parser/xlsx.ts` |
+| F21-03 | LOW | Server CSV `parseCSVAmount` strips whitespace after parenthesized negative check; should strip before for consistency with all other parsers | `packages/parser/src/csv/shared.ts` |
 
 ## Deferred Items (carried from prior cycles)
 
@@ -23,8 +24,9 @@
 | D-06 | Global config integration | Feature work |
 | D-07 | Generic parser fallback behavior | Behavior change risk |
 | D-08 | CSS dark mode complete migration | UI concern |
+| D-09 | XLSX forward-fill code duplication | Requires shared module (D-01) |
 
 ## Test Baseline
-- 489 bun tests passing
-- 233 vitest tests passing
+- 495 bun tests passing
+- 236 vitest tests passing
 - 0 failures

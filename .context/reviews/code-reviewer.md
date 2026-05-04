@@ -1,42 +1,44 @@
-# Code Review -- Cycle 19
+# Code Review -- Cycle 21
 
-## Focus: Remaining format diversity, parity, test coverage gaps
+## Focus: Format diversity, server/web parity, CSV column detection edge cases
 
-### Finding 1: PDF parsers missing category/memo column extraction (MEDIUM)
+### Finding 1: CSV generic isDateLikeShort uses day <= 31 instead of month-aware validation (MEDIUM)
 
-Both server (`packages/parser/src/pdf/table-parser.ts:193-214`) and web (`apps/web/src/lib/parser/pdf.ts:208-225`) PDF `getHeaderColumns()` only detect date, merchant, amount, and installments columns. Category and memo columns are NOT extracted from PDF headers, even though `CATEGORY_COLUMN_PATTERN` and `MEMO_COLUMN_PATTERN` exist in column-matcher.ts and are imported by the server PDF table-parser.
+**Files:** `packages/parser/src/csv/generic.ts:37-44`, `apps/web/src/lib/parser/csv.ts:141-148`
 
-The `PDFColumnLayout` interface only has 4 fields. When PDFs contain category (업종) or memo (비고/적요) columns, those values are silently dropped.
+Both server-side and web-side generic CSV parsers have `isDateLikeShort()` for column detection heuristics. These validate short dates (MM/DD) using only `day <= 31`, which means impossible dates like "2/31" (Feb 31), "4/31" (Apr 31), "6/31" (Jun 31), "9/31" (Sep 31), "11/31" (Nov 31) would pass validation.
 
-**Fix:** Add `categoryCol` and `memoCol` to `PDFColumnLayout` and `getHeaderColumns()`. Add category/memo extraction in `tryStructuredParse()`.
+The PDF parsers (both server `packages/parser/src/pdf/index.ts:38-44` and web `apps/web/src/lib/parser/pdf.ts:59-66`) correctly use month-aware `MAX_DAYS_PER_MONTH` validation. The `date-utils.ts` module already exports `daysInMonth()` and `isValidDayForMonth()` for this purpose.
 
-### Finding 2: CSV generic parser uses manual regex loop instead of findColumn() (LOW)
+**Impact:** When a headerless CSV is parsed with data-based column inference, an impossible date value like "2/31" in a data cell could cause the parser to misidentify that column as the date column instead of an amount column. While unlikely in real data, the inconsistency with the PDF parsers creates unnecessary divergence.
 
-Server generic CSV (`packages/parser/src/csv/generic.ts:95-103`) and web generic CSV (`apps/web/src/lib/parser/csv.ts:198-212`) manually iterate headers and test patterns with `if (PATTERN.test(h))`. The bank-specific adapters all use `findColumn(headers, exactName, pattern)`. While functionally equivalent (generic has no exactName), using `findColumn()` would make the code more consistent.
+**Fix:** Replace `day <= 31` with proper month-aware validation using `daysInMonth()` from `date-utils.ts`, matching the PDF parser approach.
 
-**Fix:** Use `findColumn(headers, undefined, PATTERN)` in generic parsers for consistency.
+### Finding 2: Web XLSX parseAmount missing whitespace stripping (LOW)
 
-### Finding 3: XLSX forward-fill code is heavily duplicated between server and web (LOW)
+**File:** `apps/web/src/lib/parser/xlsx.ts:281`
 
-Server XLSX (`packages/parser/src/xlsx/index.ts:269-333`) and web XLSX (`apps/web/src/lib/parser/xlsx.ts:448-509`) have nearly identical forward-fill logic for 5 columns (date, merchant, category, installments, memo). Each column has ~8 lines of identical forward-fill pattern. This is 40+ lines of pure duplication per side.
+The web-side XLSX `parseAmount()` strips Won sign and commas but does NOT strip internal whitespace, while:
+- Server-side XLSX `parseAmount()` at line 126 DOES strip whitespace (`.replace(/\s/g, '')`)
+- Both shared `parseCSVAmount()` DO strip whitespace
 
-**Deferred:** Requires shared module between Bun and browser builds (D-01).
+**Impact:** Values like "1,234 원" (space before Won suffix) or "1 234" (non-breaking space as thousands separator) would fail to parse on the web side but succeed on the server side. Low severity since SheetJS typically returns clean numeric or string values without embedded whitespace.
 
-### Finding 4: Server PDF tryStructuredParse has stricter error handling than web (LOW)
+**Fix:** Add `.replace(/\s/g, '')` to match server-side behavior.
 
-Server PDF (`packages/parser/src/pdf/index.ts:218-228`) re-throws unexpected error types (non-SyntaxError/TypeError/RangeError), while web PDF (`apps/web/src/lib/parser/pdf.ts:413-417`) catches all errors and returns null. This means the server may crash on unexpected errors while the web gracefully degrades.
+### Finding 3: Server CSV parseCSVAmount strips whitespace AFTER parenthesized negative check order (LOW)
 
-**Fix:** Align server PDF error handling to match web -- catch all errors in tryStructuredParse.
+**File:** `packages/parser/src/csv/shared.ts:37`
 
-### Finding 5: Summary row pattern duplicated 6 times across parsers (LOW)
+Server-side `parseCSVAmount()` strips whitespace after the Won/comma removal, while the parenthesized negative check happens before whitespace stripping. The web-side CSV `parseAmount()` does parenthesized check after all cleaning. Not a real bug (no Korean bank puts spaces inside parentheses), but inconsistent ordering.
 
-The regex `/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i` is duplicated in:
-- Server CSV adapter-factory.ts (line 118)
-- Server CSV generic.ts (line 153)
-- Server XLSX index.ts (line 285)
-- Server PDF index.ts (line 106)
-- Web CSV csv.ts (line 259)
-- Web XLSX xlsx.ts (line 465)
-- Web PDF pdf.ts (line 305)
+**Fix:** Reorder to match other parsers for consistency.
 
-**Fix:** Extract to a shared constant in column-matcher.ts (server) and column-matcher.ts (web).
+## No Regressions Found
+
+After 20 cycles of improvements, the parser codebase shows consistent behavior across all 6 parsers. Column matching, date parsing, amount parsing, summary row detection, header detection, forward-fill, and bank detection all work correctly and consistently.
+
+## Test Coverage Gaps
+
+- No tests for impossible short dates ("2/31", "4/31") in CSV column detection heuristics
+- No tests for whitespace-stripped amounts in XLSX web parser
