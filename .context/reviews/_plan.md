@@ -1,32 +1,40 @@
-# Cycle 73 Plan
+# Cycle 76 Implementation Plan
 
-## Fix 1: XLSX amount column forward-fill with whitespace guard (C73-01)
-Add amount column forward-fill to both server and web XLSX parsers.
-Limit forward-fill to whitespace-only cells only (not truly empty cells) to prevent
-contamination from legitimately empty amount cells.
+## Fix 1: Add Missing Date Column Header Terms (C76-01)
+**Priority**: Medium (format diversity)
+**Files**:
+- `packages/parser/src/csv/column-matcher.ts`
+- `apps/web/src/lib/parser/column-matcher.ts`
 
-## Fix 2: XLSX whitespace-only cell forward-fill guard (C73-02)
-Update forward-fill condition for all columns (date, merchant, category, installments, memo)
-to treat whitespace-only cells as empty by checking `.trim() === ''` in addition to `!== ''`.
-This prevents whitespace artifacts from contaminating forward-fill state.
+**Changes**:
+1. Add "취소일", "정산일", "환불일", "반품일", "교환일" to `DATE_COLUMN_PATTERN`
+2. Add same terms to `HEADER_KEYWORDS` array
+3. Add same terms to `DATE_KEYWORDS` Set
 
-## Fix 3: Add missing column header keywords (C73-03)
-Add to column-matcher.ts:
-- Amount pattern: "환급금액", "입금금액"
-- Memo pattern: "카드명", "이용카드"
-- Date pattern: "이용시간"
-- English: "debit", "credit", "net", "recipient", "outlet", "trans_date", "book_date"
+## Fix 2: Add Missing Summary Row Patterns (C76-01)
+**Priority**: Low
+**Files**:
+- `packages/parser/src/csv/column-matcher.ts`
+- `apps/web/src/lib/parser/column-matcher.ts`
 
-## Fix 4: XLSX parseAmount Excel error detection (C73-04)
-Add EXCEL_ERROR_PATTERN check to parseAmount in both server and web XLSX parsers
-for specific error messages matching the parseDateToISO pattern.
+**Changes**:
+1. Add "할부수수료" and "연체료" summary row patterns with Korean boundary constraints to `SUMMARY_ROW_PATTERN`
 
-## Fix 5: Tests for all new features
-Add tests for amount forward-fill, whitespace guard, new column patterns, Excel error in amount.
+## Fix 3: Add Tests for New Patterns (C76-01)
+**Priority**: Medium (test coverage)
+**Files**:
+- `packages/parser/__tests__/column-matcher.test.ts`
 
-## Deferred (explicitly not this cycle)
-- PDF multi-line headers (architectural complexity)
+**Changes**:
+1. Test that "취소일", "정산일", "환불일" match DATE_COLUMN_PATTERN
+2. Test that "할부수수료" and "연체료" summary rows match SUMMARY_ROW_PATTERN
+3. Test that the new date terms are recognized in isValidHeaderRow
+
+## Deferred Items (STRICT)
+- PDF multi-line header support
 - Historical amount display format
 - Card name suffixes
 - Global config integration
+- Generic parser fallback behavior
 - CSS dark mode
+- D-01 shared module refactor (web CSV duplication)
