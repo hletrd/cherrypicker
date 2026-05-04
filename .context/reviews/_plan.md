@@ -1,39 +1,22 @@
-# Cycle 66 Implementation Plan
+# Cycle 67 Implementation Plan
 
-## Priority 1: CSV multi-line quoted field support (F1)
-**File**: `packages/parser/src/csv/shared.ts`
-- Add `splitCSVContent(content: string, delimiter: string): string[]` that tracks quote state across line breaks
-- Normalize CRLF to LF before processing (F7)
-- Then split logical lines respecting quoted fields
+## Priority 1: Add splitCSVContent to web-side CSV parser (F1)
+**File**: `apps/web/src/lib/parser/csv.ts`
+- Add a local `splitCSVContent()` function matching the server-side implementation from `packages/parser/src/csv/shared.ts`
+- Replace `content.split('\n').filter(l => l.trim())` in `parseGenericCSV` (line 216) with `splitCSVContent(content, delimiter)`
+- Replace `content.split('\n').filter(l => l.trim())` in `createBankAdapter.parseCSV` (line 406) with `splitCSVContent(content, delimiter)`
 
-**File**: `packages/parser/src/csv/index.ts`
-- Replace `content.split('\n').filter(l => l.trim())` with `splitCSVContent(cleanContent, delimiter)`
+## Priority 2: Fix web-side adapter skip condition (F2)
+**File**: `apps/web/src/lib/parser/csv.ts` line 441
+- Change `if (!dateRaw && !merchantRaw) continue;` to `if (!dateRaw && !merchantRaw && !amountRaw) continue;`
 
-**File**: `packages/parser/src/csv/adapter-factory.ts`
-- Replace `content.split('\n').filter(l => l.trim())` with `splitCSVContent(content, delimiter)`
+## Priority 3: Add console.warn to web-side adapter detect loop (F3)
+**File**: `apps/web/src/lib/parser/csv.ts`
+- Add `console.warn` in the signature-detect catch block, matching server-side
 
-## Priority 2: Strip leading `+` sign in amount parsing (F2)
-**File**: `packages/parser/src/csv/shared.ts`
-**File**: `packages/parser/src/xlsx/index.ts`
-**File**: `packages/parser/src/pdf/index.ts`
-- Add `.replace(/^\+/, '')` to amount cleaning after Won/currency stripping
-
-## Priority 3: Adapter-factory skip condition parity (F4)
-**File**: `packages/parser/src/csv/adapter-factory.ts`
-- Change `if (!dateRaw && !merchantRaw)` to `if (!dateRaw && !merchantRaw && !amountRaw)`
-
-## Priority 4: Add English "subtotal" to SUMMARY_ROW_PATTERN (F8)
-**File**: `packages/parser/src/csv/column-matcher.ts`
-**File**: `apps/web/src/lib/parser/column-matcher.ts`
-- Add `\bsubtotal\b` to SUMMARY_ROW_PATTERN
-
-## Priority 5: Tests
-**File**: `packages/parser/__tests__/csv-shared.test.ts`
-- Multi-line quoted CSV fields via splitCSVContent
-- Leading `+` in amounts via parseCSVAmount
-- CRLF line endings via splitCSVContent
+## Priority 4: Add column detection failure error to web-side generic CSV (F4)
+**File**: `apps/web/src/lib/parser/csv.ts` in `parseGenericCSV`
+- Add error reporting when `dateCol === -1 || amountCol === -1` after data-inference, matching server-side
 
 ## Deferred
-- F3 (delimiter detection inside quotes) - low impact
-- F5 (PDF multi-line headers) - high complexity, low occurrence
-- D-01 (shared module) - architectural refactor
+None.

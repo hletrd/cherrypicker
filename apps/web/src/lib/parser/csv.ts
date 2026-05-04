@@ -38,6 +38,61 @@ function splitLine(line: string, delimiter: string): string[] {
   return result;
 }
 
+/** Split CSV content into logical lines, handling multi-line quoted fields.
+ *  RFC 4180 allows fields enclosed in double quotes to contain newline
+ *  characters. Korean bank CSVs exported from Excel may include such fields
+ *  (e.g., merchant names or memo fields with embedded line breaks). This
+ *  function normalizes CRLF to LF, then reassembles lines that fall within
+ *  quoted fields before splitting into logical lines.
+ *
+ *  Empty/whitespace-only logical lines are filtered out to match the
+ *  behavior of the previous `content.split('\n').filter(l => l.trim())`
+ *  pattern used throughout the CSV parsers. Parity with server-side
+ *  splitCSVContent in packages/parser/src/csv/shared.ts (C67-01). */
+function splitCSVContent(content: string, delimiter: string): string[] {
+  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const rawLines = normalized.split('\n');
+
+  const logicalLines: string[] = [];
+  let pending = '';
+  let inQuotes = false;
+
+  for (const rawLine of rawLines) {
+    if (inQuotes) {
+      pending += '\n' + rawLine;
+      let quoteCount = 0;
+      for (let i = 0; i < rawLine.length; i++) {
+        if (rawLine[i] === '"') {
+          if (i + 1 < rawLine.length && rawLine[i + 1] === '"') { i++; }
+          else { quoteCount++; }
+        }
+      }
+      if (quoteCount % 2 === 1) {
+        inQuotes = false;
+        if (pending.trim()) logicalLines.push(pending);
+        pending = '';
+      }
+    } else {
+      let quoteCount = 0;
+      for (let i = 0; i < rawLine.length; i++) {
+        if (rawLine[i] === '"') {
+          if (i + 1 < rawLine.length && rawLine[i + 1] === '"') { i++; }
+          else { quoteCount++; }
+        }
+      }
+      if (quoteCount % 2 === 1) {
+        inQuotes = true;
+        pending = rawLine;
+      } else {
+        if (rawLine.trim()) logicalLines.push(rawLine);
+      }
+    }
+  }
+  if (pending.trim()) logicalLines.push(pending);
+
+  return logicalLines;
+}
+
 /** Shared date-parsing — delegates to the canonical implementation in
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
 import { parseDateStringToISO, isValidISODate, isValidYYMMDD, daysInMonth } from './date-utils.js';
@@ -213,7 +268,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   // always strips BOM before delegating to bank adapters or this function
   // (C73-04).
   const delimiter = detectCSVDelimiter(content);
-  const lines = content.split('\n').filter((l) => l.trim());
+  const lines = splitCSVContent(content, delimiter);
   const errors: ParseError[] = [];
   const transactions: RawTransaction[] = [];
 
@@ -403,7 +458,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
     parseCSV(content: string): ParseResult {
       const delimiter = detectCSVDelimiter(content);
-      const lines = content.split('\n').filter((l) => l.trim());
+      const lines = splitCSVContent(content, delimiter);
       const errors: ParseError[] = [];
       const transactions: RawTransaction[] = [];
 
@@ -438,7 +493,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
         const merchantRaw = merchantCol !== -1 ? (cells[merchantCol] ?? '') : '';
         const amountRaw = amountCol !== -1 ? (cells[amountCol] ?? '') : '';
 
-        if (!dateRaw && !merchantRaw) continue;
+        if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
         const amount = parseAmount(amountRaw);
         if (!isValidAmount(amount, amountRaw, i, errors)) continue;
