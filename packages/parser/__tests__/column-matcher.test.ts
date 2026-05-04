@@ -1423,3 +1423,165 @@ describe('Cycle 60: isValidHeaderRow with new terms', () => {
     expect(isValidHeaderRow(['조회일', '이용처', '금액', '참고사항'])).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 69: Expanded column patterns for broader bank format coverage
+// ---------------------------------------------------------------------------
+describe('Cycle 69: expanded column patterns', () => {
+  // New date terms
+  it('DATE_COLUMN_PATTERN matches 입금일', () => {
+    expect(DATE_COLUMN_PATTERN.test('입금일')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 주문일', () => {
+    expect(DATE_COLUMN_PATTERN.test('주문일')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 결제예정일', () => {
+    expect(DATE_COLUMN_PATTERN.test('결제예정일')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 작성일시', () => {
+    expect(DATE_COLUMN_PATTERN.test('작성일시')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches 승인시간', () => {
+    expect(DATE_COLUMN_PATTERN.test('승인시간')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches purchase_date', () => {
+    expect(DATE_COLUMN_PATTERN.test('purchase_date')).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches order_date', () => {
+    expect(DATE_COLUMN_PATTERN.test('order_date')).toBe(true);
+  });
+
+  // New merchant terms
+  it('MERCHANT_COLUMN_PATTERN matches 상호명', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('상호명')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches 업체명', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('업체명')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches 판매자', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('판매자')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches 가맹점상호', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('가맹점상호')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches seller', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('seller')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches company', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('company')).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches business', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('business')).toBe(true);
+  });
+
+  // New amount terms
+  it('AMOUNT_COLUMN_PATTERN matches 실청구금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('실청구금액')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches 실결제금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('실결제금액')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches 결제예정금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('결제예정금액')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches total_amount', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('total_amount')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches paid', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('paid')).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches spent', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('spent')).toBe(true);
+  });
+
+  // New memo terms
+  it('MEMO_COLUMN_PATTERN matches 승인번호', () => {
+    expect(MEMO_COLUMN_PATTERN.test('승인번호')).toBe(true);
+  });
+  it('MEMO_COLUMN_PATTERN matches 카드번호', () => {
+    expect(MEMO_COLUMN_PATTERN.test('카드번호')).toBe(true);
+  });
+  it('MEMO_COLUMN_PATTERN matches 승인내역', () => {
+    expect(MEMO_COLUMN_PATTERN.test('승인내역')).toBe(true);
+  });
+  it('MEMO_COLUMN_PATTERN matches 비고사항', () => {
+    expect(MEMO_COLUMN_PATTERN.test('비고사항')).toBe(true);
+  });
+  it('MEMO_COLUMN_PATTERN matches approval_no', () => {
+    expect(MEMO_COLUMN_PATTERN.test('approval_no')).toBe(true);
+  });
+
+  // New summary row patterns
+  it('SUMMARY_ROW_PATTERN matches 당월청구금액', () => {
+    expect(SUMMARY_ROW_PATTERN.test('당월청구금액')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN matches 이전잔액', () => {
+    expect(SUMMARY_ROW_PATTERN.test('이전잔액')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN matches 결제완료', () => {
+    expect(SUMMARY_ROW_PATTERN.test('결제완료')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN matches 할인합계', () => {
+    expect(SUMMARY_ROW_PATTERN.test('할인합계')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN matches 포인트사용', () => {
+    expect(SUMMARY_ROW_PATTERN.test('포인트사용')).toBe(true);
+  });
+  it('SUMMARY_ROW_PATTERN matches 포인트적립', () => {
+    expect(SUMMARY_ROW_PATTERN.test('포인트적립')).toBe(true);
+  });
+
+  // isValidHeaderRow with new terms
+  it('accepts header row with 입금일 + 상호명 + 실청구금액', () => {
+    expect(isValidHeaderRow(['입금일', '상호명', '실청구금액'])).toBe(true);
+  });
+  it('accepts header row with 주문일 + 판매자 + 결제예정금액', () => {
+    expect(isValidHeaderRow(['주문일', '판매자', '결제예정금액'])).toBe(true);
+  });
+  it('accepts header row with purchase_date + seller + total_amount', () => {
+    expect(isValidHeaderRow(['purchase_date', 'seller', 'total_amount'])).toBe(true);
+  });
+  it('accepts header row with 결제예정일 + 가맹점상호 + 금액 + 승인번호', () => {
+    expect(isValidHeaderRow(['결제예정일', '가맹점상호', '금액', '승인번호'])).toBe(true);
+  });
+
+  // findColumn with new terms
+  it('findColumn detects 입금일 as date column', () => {
+    const headers = ['입금일', '업체명', '실청구금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+  it('findColumn detects 상호명 as merchant column', () => {
+    const headers = ['거래일', '상호명', '거래금액'];
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
+  });
+  it('findColumn detects 실청구금액 as amount column', () => {
+    const headers = ['이용일', '이용처', '실청구금액'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+  it('findColumn detects 승인번호 as memo column', () => {
+    const headers = ['이용일', '가맹점', '금액', '승인번호'];
+    expect(findColumn(headers, undefined, MEMO_COLUMN_PATTERN)).toBe(3);
+  });
+
+  // HEADER_KEYWORDS contains new terms
+  it('HEADER_KEYWORDS contains new date terms', () => {
+    expect(HEADER_KEYWORDS).toContain('입금일');
+    expect(HEADER_KEYWORDS).toContain('주문일');
+    expect(HEADER_KEYWORDS).toContain('결제예정일');
+  });
+  it('HEADER_KEYWORDS contains new merchant terms', () => {
+    expect(HEADER_KEYWORDS).toContain('상호명');
+    expect(HEADER_KEYWORDS).toContain('업체명');
+    expect(HEADER_KEYWORDS).toContain('판매자');
+  });
+  it('HEADER_KEYWORDS contains new amount terms', () => {
+    expect(HEADER_KEYWORDS).toContain('실청구금액');
+    expect(HEADER_KEYWORDS).toContain('실결제금액');
+    expect(HEADER_KEYWORDS).toContain('결제예정금액');
+  });
+  it('HEADER_KEYWORDS contains new memo terms', () => {
+    expect(HEADER_KEYWORDS).toContain('승인번호');
+    expect(HEADER_KEYWORDS).toContain('카드번호');
+    expect(HEADER_KEYWORDS).toContain('승인내역');
+  });
+});

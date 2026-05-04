@@ -1,22 +1,28 @@
-# Cycle 67 Aggregate Review
+# Cycle 69 Aggregate Review
 
-## Findings (4 actionable)
+## Findings (6 actionable)
 
-### F1: Web-side CSV parser missing splitCSVContent (FORMAT DIVERSITY - HIGH)
-**Files**: `apps/web/src/lib/parser/csv.ts` lines 216, 406
-Server-side uses `splitCSVContent()` for multi-line quoted fields. Web-side uses naive split. Causes data loss on CSVs with quoted fields containing newlines.
+### F1: Additional column header terms for broader bank format coverage (FORMAT DIVERSITY - MEDIUM)
+**Files**: Both column-matcher.ts files
+Missing Korean bank column header terms for date, merchant, amount, and memo columns.
 
-### F2: Web-side adapter skip condition missing amountRaw (SERVER/WEB PARITY - LOW)
-**File**: `apps/web/src/lib/parser/csv.ts` line 441
-Web-side: `if (!dateRaw && !merchantRaw) continue;` vs server: `if (!dateRaw && !merchantRaw && !amountRaw) continue;`
+### F2: Additional summary row patterns (FORMAT DIVERSITY - MEDIUM)
+**Files**: Both column-matcher.ts files
+Missing summary/total row patterns for "당월청구금액", "이전잔액", "결제완료", "할인합계", "포인트사용".
 
-### F3: Web-side missing console.warn on adapter detect failure (OBSERVABILITY - LOW)
-**File**: `apps/web/src/lib/parser/csv.ts`
-Server logs adapter detection failures; web-side does not.
+### F3: Web-side CSV bank adapter missing amount error raw text enrichment (SERVER/WEB PARITY - LOW)
+**File**: apps/web/src/lib/parser/csv.ts createBankAdapter
 
-### F4: Web-side missing column detection failure error (UX - LOW)
-**File**: `apps/web/src/lib/parser/csv.ts`
-Server reports `필수 컬럼을 찾을 수 없습니다` when columns not found; web-side silently returns empty.
+### F4: Web-side CSV bank adapter missing column detection failure error (UX - LOW)
+**File**: apps/web/src/lib/parser/csv.ts createBankAdapter
+
+### F5: Web-side CSV missing console.warn on adapter detect failure (OBSERVABILITY - LOW)
+**File**: apps/web/src/lib/parser/csv.ts line 822
+
+### F6: Additional English column header terms (FORMAT DIVERSITY - LOW)
+**Files**: Both column-matcher.ts files
 
 ## Deferred
-None.
+- D1: PDF multi-line header support
+- D2: D-01 architectural refactor
+- D3: Historical amount display format

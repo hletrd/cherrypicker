@@ -425,7 +425,7 @@ describe('parseCSV - edge cases', () => {
     // The "amounts" column contains decimal values like 3.5 that previously
     // matched the MM/DD date pattern.
     const content = [
-      'code,item,cost',
+      'code,item,val',
       'A01,coffee,3.5',
       'A02,sandwich,12.99',
       'A03,juice,5.75',
@@ -507,7 +507,7 @@ describe('parseCSV - edge cases', () => {
     // Headerless CSV with impossible dates forces data-inference fallback.
     // "2/31" should NOT be recognized as a date column.
     const content = [
-      'code,item,cost',
+      'code,item,val',
       'A01,coffee,2/31',
       'A02,sandwich,4/31',
       'A03,juice,6/31',
@@ -974,7 +974,7 @@ describe('Cycle 60: isAmountLike does not false-positive on bare small numbers',
 
   test('comma-separated amounts like "1,234" still match as amounts (C60-01)', () => {
     const content = [
-      'code,item,cost',
+      'code,item,val',
       '2026-01-15,coffee,"1,234"',
       '2026-01-16,sandwich,"12,000"',
       '2026-01-17,juice,"5,678"',

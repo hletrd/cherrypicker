@@ -488,6 +488,14 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
       const categoryCol = findColumn(headers, categoryHeader, CATEGORY_COLUMN_PATTERN);
       const memoCol = findColumn(headers, memoHeader, MEMO_COLUMN_PATTERN);
 
+      // Report when required columns were not found (F4 — parity with generic parser)
+      if (dateCol === -1 || amountCol === -1) {
+        const missing: string[] = [];
+        if (dateCol === -1) missing.push('날짜');
+        if (amountCol === -1) missing.push('금액');
+        errors.push({ message: `필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}` });
+      }
+
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i] ?? '';
         if (!line.trim()) continue;
@@ -501,7 +509,13 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
         if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
         const amount = parseAmount(amountRaw);
-        if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+        if (!isValidAmount(amount, amountRaw, i, errors)) {
+          // Enrich amount error with raw row text for easier debugging (F3)
+          if (errors.length > 0 && errors[errors.length - 1]!.line === i + 1) {
+            errors[errors.length - 1]!.raw = line;
+          }
+          continue;
+        }
 
         const tx: RawTransaction = {
           date: parseDateToISO(dateRaw, errors, i),
