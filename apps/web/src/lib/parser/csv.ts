@@ -9,6 +9,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
+  SUMMARY_ROW_PATTERN,
   isValidHeaderRow,
 } from './column-matcher.js';
 
@@ -192,24 +193,15 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   let categoryCol = -1;
   let memoCol = -1;
 
-  // Use shared ColumnMatcher patterns for consistent column detection
-  // across all parsers. Uses normalizeHeader() to tolerate whitespace and
-  // parenthetical suffixes in column names.
-  for (let i = 0; i < headers.length; i++) {
-    const h = normalizeHeader(headers[i] ?? '');
-    // Date columns
-    if (DATE_COLUMN_PATTERN.test(h) && dateCol === -1) dateCol = i;
-    // Merchant columns
-    else if (MERCHANT_COLUMN_PATTERN.test(h) && merchantCol === -1) merchantCol = i;
-    // Amount columns
-    else if (AMOUNT_COLUMN_PATTERN.test(h) && amountCol === -1) amountCol = i;
-    // Installments
-    else if (INSTALLMENTS_COLUMN_PATTERN.test(h) && installmentsCol === -1) installmentsCol = i;
-    // Category
-    else if (CATEGORY_COLUMN_PATTERN.test(h) && categoryCol === -1) categoryCol = i;
-    // Memo
-    else if (MEMO_COLUMN_PATTERN.test(h) && memoCol === -1) memoCol = i;
-  }
+  // Use shared findColumn() from ColumnMatcher for consistent column detection
+  // across all parsers. No exactName is available for generic parsing, so pass
+  // undefined to skip the exact-match pass and go straight to regex matching.
+  dateCol = findColumn(headers, undefined, DATE_COLUMN_PATTERN);
+  merchantCol = findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN);
+  amountCol = findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN);
+  installmentsCol = findColumn(headers, undefined, INSTALLMENTS_COLUMN_PATTERN);
+  categoryCol = findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN);
+  memoCol = findColumn(headers, undefined, MEMO_COLUMN_PATTERN);
 
   if (dateCol === -1 || merchantCol === -1 || amountCol === -1) {
     const sampleRows = lines.slice(headerIdx + 1, headerIdx + 5);
@@ -256,7 +248,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     if (!line.trim()) continue;
 
     // Skip summary/total rows
-    if (/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i.test(line)) continue;
+    if (SUMMARY_ROW_PATTERN.test(line)) continue;
 
     const cells = splitLine(line, delimiter);
 

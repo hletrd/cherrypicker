@@ -17,6 +17,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
+  SUMMARY_ROW_PATTERN,
   DATE_KEYWORDS,
   MERCHANT_KEYWORDS,
   AMOUNT_KEYWORDS,
@@ -115,7 +116,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i] ?? '';
         if (!line.trim()) continue;
-        if (/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i.test(line)) continue;
+        if (SUMMARY_ROW_PATTERN.test(line)) continue;
         const cells = splitCSVLine(line, delimiter);
 
         const dateRaw = dateCol !== -1 ? (cells[dateCol] ?? '') : '';
