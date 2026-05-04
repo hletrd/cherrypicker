@@ -55,6 +55,20 @@ describe('normalizeHeader', () => {
   it('handles combination of issues', () => {
     expect(normalizeHeader('  이​용  금액(원)  ')).toBe('이용금액');
   });
+
+  it('strips tab characters (U+0009)', () => {
+    expect(normalizeHeader('이용\t일')).toBe('이용일');
+    expect(normalizeHeader('\t이용금액\t')).toBe('이용금액');
+  });
+
+  it('strips newline characters (U+000A, U+000D)', () => {
+    expect(normalizeHeader('이용\n일')).toBe('이용일');
+    expect(normalizeHeader('이용\r\n금액')).toBe('이용금액');
+  });
+
+  it('strips mixed invisible and whitespace characters', () => {
+    expect(normalizeHeader('  이\t용\n 금액(원)  ')).toBe('이용금액');
+  });
 });
 
 // ---------------------------------------------------------------------------

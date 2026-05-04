@@ -256,7 +256,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     if (!line.trim()) continue;
 
     // Skip summary/total rows
-    if (/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|total|sum/i.test(line)) continue;
+    if (/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i.test(line)) continue;
 
     const cells = splitLine(line, delimiter);
 

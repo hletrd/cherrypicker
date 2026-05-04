@@ -376,3 +376,20 @@ describe('getHeaderColumns', () => {
     expect(layout!.amountCol).toBe(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// filterTransactionRows with summary row content
+// ---------------------------------------------------------------------------
+describe('filterTransactionRows with summary-like content', () => {
+  test('rows with dates and amounts from summary text are still filtered in', () => {
+    // filterTransactionRows only checks for date+amount patterns, not
+    // summary text. Summary row skipping is done by the caller (parsePDF).
+    // This test documents the current behavior.
+    const rows = [
+      ['2024-01-15', '스타벅스', '6,500원'],
+      ['2024-01-16', '총 합계', '45,000원'],
+    ];
+    const filtered = filterTransactionRows(rows);
+    expect(filtered).toHaveLength(2);
+  });
+});

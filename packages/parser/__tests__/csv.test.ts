@@ -380,6 +380,27 @@ describe('parseCSV - edge cases', () => {
     expect(result.transactions[0]?.amount).toBe(6500);
   });
 
+  test('skips summary rows with expanded Korean variants (C17-01)', () => {
+    // Summary rows like 누계 (cumulative), 잔액 (balance), 이월 (carryover),
+    // 소비 (spending total), 당월 (current month), 명세 (statement) should
+    // be skipped by the CSV parser.
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,스타벅스,6000',
+      '2026-02-02,이마트,45000',
+      '누계,,51000',
+      '잔액,,100000',
+      '이월,,50000',
+      '소비,,51000',
+      '당월,,51000',
+      '명세,,51000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    expect(result.transactions[1]?.merchant).toBe('이마트');
+  });
+
   test('generic parser prefers Korean-text column for merchant (C5-04)', () => {
     // Columns: card_number(date-like), merchant(Korean), amount, id(number)
     // The heuristic should pick the Korean-text column as merchant, not the

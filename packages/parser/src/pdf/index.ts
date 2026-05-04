@@ -50,7 +50,7 @@ function isValidShortDate(cell: string): boolean {
  *  so callers can distinguish between genuinely zero amounts and parse failures,
  *  matching the CSV parser's isValidAmount() pattern (C33-03/C34-01). */
 function parseAmount(raw: string): number | null {
-  let cleaned = raw.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '');
+  let cleaned = raw.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNeg) cleaned = cleaned.slice(1, -1);
   if (!cleaned.trim()) return null;
@@ -100,7 +100,16 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
 
     const transactions: RawTransaction[] = [];
 
+    // Summary/total row pattern — matches CSV/XLSX parser behavior to skip
+    // footer rows like "총 합계", "누계", "잔액" that happen to contain
+    // date and amount patterns (C17-01).
+    const summaryPattern = /총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i;
+
     for (const row of txRows) {
+      // Skip summary/total rows that happen to have date+amount patterns
+      const rowText = row.join(' ');
+      if (summaryPattern.test(rowText)) continue;
+
       // Use header-aware column positions when available, falling back
       // to positional heuristics for PDFs without recognizable headers.
       let dateIdx: number;
@@ -263,7 +272,10 @@ export async function parsePDF(
   // The 'g' flag is required for matchAll() below. Do NOT hoist this regex
   // to module scope — the global flag's lastIndex mutation would break
   // .test()/.exec() calls if the regex were shared across invocations.
-  const fallbackAmountPattern = /([\d,]+)원?/g;
+  // Match normal amounts and parenthesized negatives like (1,234).
+  // Parenthesized negatives are common in Korean bank statements for refunds
+  // and should be treated as negative amounts by parseAmount() (C17-02).
+  const fallbackAmountPattern = /\([\d,]+\)|([\d,]+)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);

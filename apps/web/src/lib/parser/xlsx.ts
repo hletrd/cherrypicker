@@ -462,7 +462,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
 
     // Skip summary/total rows
     const rowText = row.map((c) => String(c ?? '')).join(' ');
-    if (/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|total|sum/i.test(rowText)) continue;
+    if (/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i.test(rowText)) continue;
 
     // Forward-fill date column for merged cells
     const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
