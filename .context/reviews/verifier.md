@@ -1,11 +1,14 @@
-# Verifier -- Cycle 33
+# Verifier -- Cycle 34
 
 **Date:** 2026-05-05
 
 ## Status
-All 1094 tests passing (851 bun + 243 vitest). No regressions detected.
+Pending implementation of 5 findings.
 
-## Confirmed Findings
-- F-01 through F-06 confirmed by code inspection
-- Server/web parity gaps are real: "마이너스" handling only server-side, Won-sign PDF pattern only web-side
-- Combined header column matching is a genuine gap in findColumn
+## Pre-verification Checklist
+- [ ] F-01: Server PDF AMOUNT_PATTERN has ╋ alternation
+- [ ] F-02: Both server and web PDF fallback regex have Won-sign alternations
+- [ ] F-03: Server XLSX parseAmount handles "마이너스" prefix
+- [ ] F-04: Web PDF parseAmount handles "마이너스" prefix
+- [ ] F-05: All new tests pass
+- [ ] All existing tests still pass (no regressions)

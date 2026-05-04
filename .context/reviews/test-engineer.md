@@ -1,26 +1,11 @@
-# Test Engineer -- Cycle 33
+# Test Engineer -- Cycle 34
 
 **Date:** 2026-05-05
 
 ## New Test Cases Needed
 
-### 1. Server-side PDF Won-sign amount parsing (F-01)
-- `findAmountCell(["₩500"])` should match (currently rejected by STRICT_AMOUNT_PATTERN)
-- `findAmountCell(["₩1,234"])` should match
-- `findAmountCell(["₩123"])` should match
-
-### 2. Server-side PDF fallback Won-sign amounts (F-02)
-- Fallback line scanner should pick up "₩500" amounts from lines like "2024-01-15 스타벅스 ₩500"
-
-### 3. Web-side "마이너스" prefix (F-03)
-- `parseAmount("마이너스 1,234")` should return -1234
-- `parseAmount("마이너스1234")` should return -1234
-
-### 4. Combined column header matching (F-04)
-- `findColumn(["이용일/승인일"], undefined, DATE_COLUMN_PATTERN)` should return 0
-- `findColumn(["이용금액-원"], undefined, AMOUNT_COLUMN_PATTERN)` should return 0
-- `isValidHeaderRow(["이용일/승인일", "가맹점명", "이용금액"])` should return true
-
-## Current Test Counts
-- Bun: 851 pass, 0 fail
-- Vitest: 243 pass, 0 fail
+1. **Server PDF AMOUNT_PATTERN Won-sign** — Test that "₩500" and "￦500" match the server PDF AMOUNT_PATTERN (F-01)
+2. **Server PDF fallback Won-sign** — Test fallbackAmountPattern catches "₩1,234" and "￦6,500" (F-02)
+3. **Server XLSX 마이너스 prefix** — Test parseAmount("마이너스5000") returns -5000 (F-03)
+4. **Web PDF 마이너스 prefix** — Test web parseAmount("마이너스6,500") returns -6500 (F-04)
+5. **Won-sign column inference in PDF** — Verify Won-sign amounts in PDF text trigger correct amount column detection

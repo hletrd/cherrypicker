@@ -1,53 +1,34 @@
-# Code Reviewer -- Cycle 33
+# Code Reviewer -- Cycle 34
 
 **Date:** 2026-05-05
 **Tests:** 851 bun, 243 vitest (1094 total)
 
+## Focus Areas
+- Server/web parity: Won-sign (₩/╋) amount handling across all parsers
+- "마이너스" prefix handling parity
+- PDF fallback line scanner Won-sign support
+- Test coverage gaps
+
 ## Findings
 
-### F-01: Server-side PDF AMOUNT_PATTERN rejects Won-sign-prefixed small amounts [HIGH]
+### F-01: Server-side PDF AMOUNT_PATTERN missing ╋ alternation (MEDIUM)
+**File:** `packages/parser/src/pdf/index.ts:23`
+The server-side AMOUNT_PATTERN has `₩\d[\d,]*` but NOT `￩\d[\d,]*`. Small Won-sign amounts with fullwidth ╋ (like "￩500", 3 digits, no comma) fail to match. The web-side version and table-parser.ts already have both alternations.
 
-**Location:** `packages/parser/src/pdf/index.ts` line 23 and `packages/parser/src/pdf/table-parser.ts` line 75
+### F-02: Server+Web PDF fallbackAmountPattern missing Won-sign alternations (MEDIUM)
+**Files:** `packages/parser/src/pdf/index.ts:293`, `apps/web/src/lib/parser/pdf.ts:534`
+Both fallback line-scanner regexes are missing Won-sign alternations. Won-sign amounts like "₩500" or "￩1,234" on PDF lines without structured table data would be silently dropped.
 
-Server-side STRICT pattern:
-```
-/^[₩￦]?-?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/
-```
+### F-03: Server-side XLSX parseAmount missing "마이너스" prefix (MEDIUM)
+**File:** `packages/parser/src/xlsx/index.ts` parseAmount
+The server XLSX parseAmount handles parenthesized negatives but NOT "마이너스" prefix. The CSV shared parseCSVAmount and all web-side parsers handle it.
 
-This requires either a comma or 5+ digits. "₩500" has no comma and only 3 digits, so it fails. The web-side pattern correctly handles this with separate Won-sign alternations. The same issue exists in `STRICT_AMOUNT_PATTERN` in `table-parser.ts`.
+### F-04: Web-side PDF parseAmount missing "마이너스" prefix (MEDIUM)
+**File:** `apps/web/src/lib/parser/pdf.ts:265-283`
+The web PDF parseAmount is missing "마이너스" prefix handling that the web CSV and XLSX parsers have.
 
-**Impact:** PDF transactions with small Won-sign amounts (under 10,000 won) are silently dropped in the server-side PDF parser.
+### F-05: Test coverage gaps (MEDIUM)
+Missing tests for Won-sign PDF amounts, 마이너스 web PDF, 마이너스 server XLSX, and Won-sign PDF fallback amounts.
 
-### F-02: Server-side PDF fallback regex missing Won-sign amount support [MEDIUM]
-
-**Location:** `packages/parser/src/pdf/index.ts` line 293
-
-Server:
-```
-const fallbackAmountPattern = /\(([\d,]+)\)|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
-```
-
-Web (pdf.ts line 531) includes Won-sign alternations. Server fallback line scanner misses small Won-sign amounts.
-
-### F-03: Web-side parseAmount missing "마이너스" prefix handling [MEDIUM]
-
-Server-side `parseCSVAmount` in `shared.ts` (line 38-41) handles "마이너스" prefix. Web-side `parseAmount` in `csv.ts`, `xlsx.ts`, and `pdf.ts` do NOT. Amounts like "마이너스 1,234" would be parsed as positive values on the web side.
-
-### F-04: findColumn fails on combined/delimited column headers [MEDIUM]
-
-**Location:** `packages/parser/src/csv/column-matcher.ts`
-
-Korean bank exports sometimes use combined headers like "이용일/승인일", "이용금액-원". `normalizeHeader` strips whitespace and parentheticals but "/" and "-" remain. "이용일/승인일" normalizes to "이용일승인일" which doesn't match keyword "이용일". Similarly, `isValidHeaderRow` keyword matching fails on combined headers.
-
-**Fix:** `findColumn` should split normalized headers on "/" and "-" delimiters and test each part.
-
-### F-05: Web-side PDF local amount patterns duplicate column-matcher [LOW]
-
-`apps/web/src/lib/parser/pdf.ts` defines local `AMOUNT_PATTERN` and `STRICT_AMOUNT_PATTERN` instead of importing from column-matcher. Maintenance burden and divergence risk.
-
-### F-06: Test coverage gaps [MEDIUM]
-
-Missing tests for:
-- Server-side PDF parsing of Won-sign-prefixed amounts like "₩500"
-- Web-side "마이너스" prefix handling
-- Combined column header matching in findColumn
+## No Regressions
+All existing code paths unchanged. Only additive regex alternations and prefix handling insertions.
