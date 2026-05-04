@@ -1,24 +1,23 @@
-# Cycle 71 Plan
+# Cycle 72 Plan
 
-## Fix 1: Add leading-plus pattern to CSV AMOUNT_PATTERNS (C71-01)
-**Files:**
-- `packages/parser/src/csv/generic.ts` - add `^\+[\d,]+원?$` to AMOUNT_PATTERNS
-- `apps/web/src/lib/parser/csv.ts` - same
+## Fix 1: Space-before-원 in amount parsing (C72-01)
+Change `원$` to `\s*원$` in all 6 parseAmount functions.
+Change `원?` to `\s*원?` in 2 AMOUNT_PATTERNS arrays (server+web generic CSV).
 
-## Fix 2: Add leading-plus pattern to PDF amount patterns (C71-01)
-**Files:**
-- `packages/parser/src/pdf/table-parser.ts` - add `(?<![a-zA-Z\d])\+[\d,]+원?` to AMOUNT_PATTERN
-- `packages/parser/src/pdf/index.ts` - add leading-plus to STRICT_AMOUNT_PATTERN
-- `apps/web/src/lib/parser/pdf.ts` - same for both AMOUNT_PATTERN and STRICT_AMOUNT_PATTERN
+## Fix 2: Server XLSX isHTMLContent BOM strip (C72-02)
+Add `.replace(/^﻿/, '')` before toLowerCase() in server isHTMLContent.
 
-## Fix 3: Add test for leading-plus column detection (C71-02)
-**Files:**
-- `packages/parser/__tests__/csv.test.ts` - add test for generic CSV with leading-plus amounts
+## Fix 3: Add missing column header patterns (C72-03)
+Add to column-matcher.ts: "사용금액", "매입일", "전표일", "거래내역", "이용가맹점명"
+Update HEADER_KEYWORDS and category Sets accordingly.
+
+## Fix 4: Tests for all new patterns
+Add tests for space-before-원 parsing, new column patterns, BOM handling.
 
 ## Deferred (explicitly not this cycle)
-- PDF multi-line headers: architecturally complex, marginal benefit
-- Historical amount display format: not a parser concern
-- Card name suffixes: not a parser concern
-- Global config integration: not blocking
-- CSS dark mode: not a parser concern
-- Generic parser fallback behavior: already well-handled
+- PDF multi-line headers
+- Historical amount display format
+- Card name suffixes
+- Global config integration
+- CSS dark mode
+- Generic parser fallback behavior
