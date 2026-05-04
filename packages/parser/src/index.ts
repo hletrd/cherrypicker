@@ -10,6 +10,9 @@ export { detectFormat, detectBank, detectCSVDelimiter } from './detect.js';
 export { parseCSV } from './csv/index.js';
 export { parseXLSX } from './xlsx/index.js';
 export { parsePDF } from './pdf/index.js';
+export { parseGenericCSV } from './csv/generic.js';
+export { findColumn, normalizeHeader, DATE_COLUMN_PATTERN, MERCHANT_COLUMN_PATTERN, AMOUNT_COLUMN_PATTERN, INSTALLMENTS_COLUMN_PATTERN, CATEGORY_COLUMN_PATTERN, MEMO_COLUMN_PATTERN } from './csv/column-matcher.js';
+export { createBankAdapter } from './csv/adapter-factory.js';
 
 export interface ParseOptions {
   bank?: BankId;

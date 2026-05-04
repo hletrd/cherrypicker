@@ -3,17 +3,21 @@ import { detectCSVDelimiter } from '../detect.js';
 import { parseDateStringToISO } from '../date-utils.js';
 import { splitCSVLine, parseCSVAmount, parseCSVInstallments } from './shared.js';
 
-// Korean date patterns
+// Korean date patterns — must cover all formats that parseDateStringToISO
+// handles. Kept in sync with the web-side DATE_PATTERNS (C1-01).
 const DATE_PATTERNS = [
-  /^\d{4}[.\-\/]\d{2}[.\-\/]\d{2}$/,  // YYYY.MM.DD or YYYY-MM-DD or YYYY/MM/DD
-  /^\d{2}[.\-\/]\d{2}$/,               // MM/DD or MM.DD
-  /^\d{4}\d{2}\d{2}$/,                  // YYYYMMDD
+  /^\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/,      // 2024-01-15, 2024.1.5
+  /^\d{2}[.\-\/]\d{2}[.\-\/]\d{2}$/,           // 24-01-15 (YY-MM-DD)
+  /^\d{1,2}[.\-\/]\d{1,2}$/,                   // 01/15, 1.5 (MM/DD)
+  /^\d{4}\d{2}\d{2}$/,                          // 20240115
+  /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,         // 2024년 1월 15일
+  /^\d{1,2}월\s*\d{1,2}일$/,                   // 1월 15일
 ];
 
 // Korean amount patterns
 const AMOUNT_PATTERNS = [
   /^-?[\d,]+원?$/,     // 1,234원 or 1,234 or -1,234
-  /^-?[\d,]+\.?\d*$/,  // decimal amounts
+  /^-?[\d,]+$/,        // Integer amounts only — Korean Won has no subunits
 ];
 
 function isDateLike(value: string): boolean {
@@ -28,6 +32,22 @@ function isAmountLike(value: string): boolean {
 // The local parseDateToISO was removed in favor of the centralized
 // implementation to avoid divergence (C35-03).
 
+// Header keyword vocabulary — matches the XLSX parser and web-side CSV parser.
+// Used to validate that a candidate header row actually contains column names
+// rather than metadata text (C1-01).
+const HEADER_KEYWORDS = [
+  '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일',
+  '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
+  '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
+];
+
+// Keyword categories for header detection — a valid header row should contain
+// keywords from at least 2 distinct categories (date, merchant, amount) to
+// avoid matching summary table rows that only have amount keywords (C1-01).
+const DATE_KEYWORDS = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
+const MERCHANT_KEYWORDS = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
+const AMOUNT_KEYWORDS = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+
 export function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   const delimiter = detectCSVDelimiter(content);
   const lines = content.split('\n').filter((l) => l.trim());
@@ -38,15 +58,32 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     return { bank, format: 'csv', transactions: [], errors: [{ message: 'Empty file' }] };
   }
 
-  // Find header row — first line that isn't all numbers
-  let headerIdx = 0;
-  for (let i = 0; i < Math.min(5, lines.length); i++) {
+  // Find header row — scan up to 30 rows for Korean bank exports that have
+  // long metadata preambles (bank name, statement period, card number).
+  // A valid header row must contain at least one known header keyword AND
+  // keywords from at least 2 distinct categories (date, merchant, amount)
+  // to avoid matching summary rows that only have amount keywords (C1-01).
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(30, lines.length); i++) {
     const cells = splitCSVLine(lines[i] ?? '', delimiter);
     const hasNonNumeric = cells.some((c) => /[가-힣a-zA-Z]/.test(c));
     if (hasNonNumeric) {
-      headerIdx = i;
-      break;
+      const hasHeaderKeyword = cells.some((c) => HEADER_KEYWORDS.includes(c.trim()));
+      if (hasHeaderKeyword) {
+        const matchedCategories = [DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS]
+          .filter(catSet => cells.some((c) => catSet.has(c.trim())))
+          .length;
+        if (matchedCategories >= 2) {
+          headerIdx = i;
+          break;
+        }
+      }
     }
+  }
+
+  // No valid header row found — return error instead of defaulting to row 0
+  if (headerIdx === -1) {
+    return { bank, format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
   }
 
   const headers = splitCSVLine(lines[headerIdx] ?? '', delimiter);
@@ -59,15 +96,16 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   let categoryCol = -1;
   let memoCol = -1;
 
-  // First pass: look for header keywords
+  // First pass: look for header keywords — use regex patterns matching the
+  // XLSX parser's findCol approach for maximum flexibility (C1-02).
   for (let i = 0; i < headers.length; i++) {
     const h = headers[i] ?? '';
-    if (/이용일|거래일|날짜|일시/.test(h) && dateCol === -1) dateCol = i;
-    else if (/이용처|가맹점|상호|이용가맹점/.test(h) && merchantCol === -1) merchantCol = i;
-    else if (/이용금액|거래금액|금액/.test(h) && amountCol === -1) amountCol = i;
-    else if (/할부/.test(h) && installmentsCol === -1) installmentsCol = i;
-    else if (/업종|카테고리|분류/.test(h) && categoryCol === -1) categoryCol = i;
-    else if (/비고|적요|메모/.test(h) && memoCol === -1) memoCol = i;
+    if (/이용일|이용일자|거래일|거래일시|날짜|일시|결제일|승인일|매출일/.test(h) && dateCol === -1) dateCol = i;
+    else if (/이용처|가맹점|상호|이용가맹점|가맹점명|거래처|매출처|사용처|결제처/.test(h) && merchantCol === -1) merchantCol = i;
+    else if (/이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액/.test(h) && amountCol === -1) amountCol = i;
+    else if (/할부|할부개월|할부기간|할부월/.test(h) && installmentsCol === -1) installmentsCol = i;
+    else if (/업종|카테고리|분류|업종분류|업종명/.test(h) && categoryCol === -1) categoryCol = i;
+    else if (/비고|적요|메모|내용|설명|참고/.test(h) && memoCol === -1) memoCol = i;
   }
 
   // Second pass: infer from data if headers didn't match
@@ -81,10 +119,11 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
         else if (amountCol === -1 && isAmountLike(cell) && !isDateLike(cell)) amountCol = i;
       }
     }
-    // Merchant is likely the column between date and amount
+    // Merchant is likely the column between date and amount — prefer a
+    // text-heavy column (Korean characters) over a numeric one.
     if (dateCol !== -1 && amountCol !== -1 && merchantCol === -1) {
       for (let i = 0; i < headers.length; i++) {
-        if (i !== dateCol && i !== amountCol) {
+        if (i !== dateCol && i !== amountCol && i !== installmentsCol && i !== categoryCol && i !== memoCol) {
           merchantCol = i;
           break;
         }
