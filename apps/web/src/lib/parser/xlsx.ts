@@ -199,9 +199,30 @@ function getBankColumnConfig(bankId: BankId): ColumnConfig {
 import { parseDateStringToISO, isValidDayForMonth, isValidISODate } from './date-utils.js';
 
 function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): string {
+  // Handle Date objects — SheetJS may return these when cellDates is enabled
+  // or in certain edge cases. Matches server-side XLSX parser behavior (C10-01).
+  if (raw instanceof Date) {
+    if (!Number.isNaN(raw.getTime())) {
+      const y = raw.getFullYear().toString().padStart(4, '0');
+      const m = (raw.getMonth() + 1).toString().padStart(2, '0');
+      const d = raw.getDate().toString().padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    if (errors && lineIdx !== undefined) {
+      errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${String(raw)}` });
+    }
+    return String(raw);
+  }
   if (typeof raw === 'number') {
-    // Guard against NaN, Infinity, and numbers that are clearly NOT dates
-    if (!Number.isFinite(raw) || raw < 1 || raw > 100000) return String(raw);
+    // Guard against NaN, Infinity, and numbers that are clearly NOT dates.
+    // Report error for out-of-range values (except 0 which is a common empty
+    // cell default), matching server-side XLSX parser behavior (C11-02).
+    if (!Number.isFinite(raw) || raw < 1 || raw > 100000) {
+      if (errors && lineIdx !== undefined && raw !== 0) {
+        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });
+      }
+      return String(raw);
+    }
     // Excel serial date number
     const date = XLSX.SSF.parse_date_code(raw);
     if (date) {
@@ -426,6 +447,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   let lastDate: unknown = '';
   let lastMerchant: unknown = '';
   let lastCategory: unknown = '';
+  let lastInstallments: unknown = '';
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -460,6 +482,15 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       ? (rawCategoryValue !== '' && rawCategoryValue != null ? rawCategoryValue : lastCategory)
       : '';
 
+    // Forward-fill installments column for merged cells (C10-03)
+    const rawInstallValue = installCol !== -1 ? row[installCol] : '';
+    if (installCol !== -1 && rawInstallValue !== '' && rawInstallValue != null) {
+      lastInstallments = rawInstallValue;
+    }
+    const installRaw = installCol !== -1
+      ? (rawInstallValue !== '' && rawInstallValue != null ? rawInstallValue : lastInstallments)
+      : '';
+
     const amountRaw = amountCol !== -1 ? row[amountCol] : '';
 
     if (!dateRaw && !merchantRaw) continue;
@@ -484,8 +515,8 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       date: parseDateToISO(dateRaw, errors, i),
       merchant: String(merchantRaw ?? '').replace(/^"(.*)"$/, '$1').trim(),
       amount,
-      ...(installCol !== -1 && row[installCol]
-        ? { installments: parseInstallments(row[installCol]) }
+      ...(installCol !== -1 && installRaw
+        ? { installments: parseInstallments(String(installRaw)) }
         : {}),
       ...(categoryCol !== -1 && categoryRaw
         ? { category: String(categoryRaw).trim() }

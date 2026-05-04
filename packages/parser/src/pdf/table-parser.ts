@@ -1,10 +1,10 @@
 // Korean date pattern — must cover all formats that parseDateToISO handles,
 // matching the web-side implementation in apps/web/src/lib/parser/pdf.ts.
-const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일)/;
+const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|(?<![.\d])\d{1,2}[.\-\/]\d{1,2}(?![.\-\/\d]))/;
 // Korean amount pattern — excludes digit sequences adjacent to hyphens
 // to prevent false positives from card numbers (1234-5678-9012-3456) and
 // phone numbers (010-1234-5678) being matched as amounts (F5-01).
-const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])[\d,]+원?(?![a-zA-Z\d-])/;
+const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])[₩￦]?[\d,]+원?(?![a-zA-Z\d-])|\([\d,]+\)/;
 
 interface Column {
   start: number;

@@ -526,4 +526,122 @@ describe('XLSX invalid serial date error reporting', () => {
       cleanup(filePath);
     }
   });
+
+  test('handles Date objects in cells (C10-02)', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      [new Date(2026, 1, 1), '스타벅스', 6000],
+      [new Date(2026, 1, 2), '이마트', 45000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.date).toBe('2026-02-01');
+      expect(result.transactions[1]?.date).toBe('2026-02-02');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('forward-fills installments in merged cells (C10-03)', async () => {
+    // Simulates a Korean bank XLSX where installment value is only in the
+    // first row of a merged group, with subsequent rows having empty cells.
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액', '할부개월', '업종'],
+      ['2026-02-01', '이마트', 30000, 3, '마트'],
+      ['', '', 10000, '', ''],
+      ['', '', 10000, '', ''],
+      ['2026-02-05', '스타벅스', 6000, 0, '카페'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // All 3 rows of the merged group should be parsed
+      expect(result.transactions).toHaveLength(4);
+      // First row has explicit installments
+      expect(result.transactions[0]?.installments).toBe(3);
+      // Second and third rows inherit installments from forward-fill
+      expect(result.transactions[1]?.installments).toBe(3);
+      expect(result.transactions[2]?.installments).toBe(3);
+      // Fourth row has no installments (0 parsed as undefined)
+      expect(result.transactions[3]?.installments).toBeUndefined();
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('forward-fills merchant name in merged cells (C10-03b)', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액', '할부개월'],
+      ['2026-02-01', '이마트', 30000, 3],
+      ['', '', 10000, ''],
+      ['2026-02-05', '스타벅스', 6000, 0],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(3);
+      expect(result.transactions[0]?.merchant).toBe('이마트');
+      expect(result.transactions[1]?.merchant).toBe('이마트');
+      expect(result.transactions[2]?.merchant).toBe('스타벅스');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Formula error cells — C11-04
+  // ---------------------------------------------------------------------------
+
+  test('handles formula error cells gracefully (C11-04)', async () => {
+    // Create an XLSX with a string that looks like a formula error (#REF!, etc.)
+    // SheetJS with raw:true returns error strings as-is for string-type cells.
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '스타벅스', '#REF!'],
+      ['2026-02-02', '이마트', 45000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // The #REF! cell should be unparseable → error reported, row skipped
+      expect(result.errors.length).toBeGreaterThanOrEqual(1);
+      expect(result.errors.some((e) => e.message.includes('금액'))).toBe(true);
+      // Valid row should still parse
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.amount).toBe(45000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('handles string formula results with decimal amounts (C11-04)', async () => {
+    // Some formula cells render as strings like "6500.50" — should round
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '스타벅스', '6500.50'],
+      ['2026-02-02', '이마트', '45000.3'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.amount).toBe(6501); // rounded
+      expect(result.transactions[1]?.amount).toBe(45000); // rounded
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('handles negative numeric amounts (refunds) (C11-04)', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '환불', -5000],
+      ['2026-02-02', '이마트', 45000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Negative amounts should be filtered out (amount <= 0)
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.amount).toBe(45000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });

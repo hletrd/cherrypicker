@@ -18,11 +18,11 @@ type PdfTextMarkedContent = { type: string; id: string };
 // handled by parseDateStringToISO() in date-utils.ts. If a new date format is
 // added there, update the DATE_PATTERN, STRICT_DATE_PATTERN, and related
 // constants accordingly.
-const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일)/;
+const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|(?<![.\d])\d{1,2}[.\-\/]\d{1,2}(?![.\-\/\d]))/;
 // Korean amount pattern — excludes digit sequences adjacent to hyphens
 // to prevent false positives from card numbers (1234-5678-9012-3456) and
 // phone numbers (010-1234-5678) being matched as amounts (F5-01).
-const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])[\d,]+원?(?![a-zA-Z\d-])/;
+const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])[₩￦]?[\d,]+원?(?![a-zA-Z\d-])|\([\d,]+\)/;
 const STRICT_DATE_PATTERN = /(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/;
 const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/](\d{2})[.\-\/](\d{2})/;
 const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
@@ -52,7 +52,7 @@ function isValidShortDate(cell: string): boolean {
   const day = parseInt(parts[1] ?? '', 10);
   return month >= 1 && month <= 12 && day >= 1 && day <= (MAX_DAYS_PER_MONTH[month] ?? 0);
 }
-const STRICT_AMOUNT_PATTERN = /^-?[\d,]+원?$/;
+const STRICT_AMOUNT_PATTERN = /^[₩￦]?-?[\d,]+원?$|^\([\d,]+\)$/;
 
 interface Column {
   start: number;

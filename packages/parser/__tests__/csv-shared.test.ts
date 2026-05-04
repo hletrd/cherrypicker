@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import { splitCSVLine, parseCSVAmount, isValidCSVAmount, parseCSVInstallments } from '../src/csv/shared.js';
+import { normalizeHeader, findColumn, DATE_COLUMN_PATTERN, isValidHeaderRow, HEADER_KEYWORDS } from '../src/csv/column-matcher.js';
 
 // ---------------------------------------------------------------------------
 // splitCSVLine — RFC 4180 compliant CSV line splitter
@@ -215,5 +216,48 @@ describe('parseCSVInstallments', () => {
 
   test('parses numeric value from string with suffix', () => {
     expect(parseCSVInstallments('3개월')).toBe(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// normalizeHeader — header string normalization (C11-03)
+// ---------------------------------------------------------------------------
+
+describe('normalizeHeader', () => {
+  test('strips zero-width space U+200B', () => {
+    // "이​용​일" should normalize to "이용일"
+    expect(normalizeHeader('이​용​일')).toBe('이용일');
+  });
+
+  test('strips zero-width non-joiner U+200C', () => {
+    expect(normalizeHeader('이‌용‌일')).toBe('이용일');
+  });
+
+  test('strips zero-width joiner U+200D', () => {
+    expect(normalizeHeader('이‍용‍일')).toBe('이용일');
+  });
+
+  test('strips soft hyphen U+00AD', () => {
+    expect(normalizeHeader('이­용­일')).toBe('이용일');
+  });
+
+  test('strips zero-width space and still removes parenthetical suffix', () => {
+    expect(normalizeHeader('이​용​금​액(원)')).toBe('이용금액');
+  });
+
+  test('matches column pattern after zero-width space removal', () => {
+    const normalized = normalizeHeader('이​용​일');
+    expect(DATE_COLUMN_PATTERN.test(normalized)).toBe(true);
+  });
+
+  test('findColumn finds header with zero-width spaces', () => {
+    const headers = ['이​용​일', '가맹점명', '이​용​금​액'];
+    const dateIdx = findColumn(headers, '이용일', DATE_COLUMN_PATTERN);
+    expect(dateIdx).toBe(0);
+  });
+
+  test('isValidHeaderRow accepts headers with zero-width spaces', () => {
+    const cells = ['이​용​일', '가맹점​명', '이​용​금​액'];
+    expect(isValidHeaderRow(cells)).toBe(true);
   });
 });

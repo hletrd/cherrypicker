@@ -8,10 +8,12 @@
  *  web app cannot import from packages/parser (different build systems).
  *  Keep patterns in sync with the server-side column-matcher.ts. */
 
-/** Normalize a header string for matching: trim whitespace, collapse
- *  internal whitespace, remove parenthetical suffixes like "이용금액(원)". */
+/** Normalize a header string for matching: strip invisible Unicode characters
+ *  (zero-width spaces U+200B, zero-width non-joiners U+200C, zero-width
+ *  joiners U+200D, soft hyphens U+00AD), trim whitespace, collapse internal
+ *  whitespace, and remove parenthetical suffixes like "이용금액(원)" (C11-03). */
 export function normalizeHeader(h: string): string {
-  return h.trim().replace(/\s+/g, '').replace(/\([^)]*\)/g, '');
+  return h.replace(/[​‌‍­]/g, '').trim().replace(/\s+/g, '').replace(/\([^)]*\)/g, '');
 }
 
 /** Find a column index by exact name (normalized) first, then by regex pattern.
