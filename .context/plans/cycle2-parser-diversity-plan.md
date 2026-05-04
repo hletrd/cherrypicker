@@ -1,6 +1,6 @@
 # Cycle 2 Plan: Parser Format Diversity — Propagate ColumnMatcher, Fix XLSX Header Detection
 
-## Status: IN PROGRESS
+## Status: DONE (Tasks 1-8 complete, Tasks 9-10 deferred)
 
 ## Goal
 Propagate the cycle 1 ColumnMatcher improvements to all parsers (XLSX, generic CSV), fix the critical XLSX header detection gap, and add key test coverage.
@@ -13,7 +13,7 @@ Propagate the cycle 1 ColumnMatcher improvements to all parsers (XLSX, generic C
 
 Server-side XLSX only checks `matchCount >= 2`. Must add category-based check (date+merchant+amount keyword sets, require 2+ categories). Port from web-side xlsx.ts lines 378-387.
 
-**Status**: TODO
+**Status**: DONE
 
 ---
 
@@ -23,7 +23,7 @@ Server-side XLSX only checks `matchCount >= 2`. Must add category-based check (d
 
 Replace inline regexes with shared `DATE_COLUMN_PATTERN`, `MERCHANT_COLUMN_PATTERN`, etc. from `../csv/column-matcher.js`. Use `normalizeHeader()` for matching.
 
-**Status**: TODO
+**Status**: DONE
 
 ---
 
@@ -33,7 +33,7 @@ Replace inline regexes with shared `DATE_COLUMN_PATTERN`, `MERCHANT_COLUMN_PATTE
 
 Replace inline regexes with shared column-matcher pattern constants.
 
-**Status**: TODO
+**Status**: DONE
 
 ---
 
@@ -43,7 +43,7 @@ Replace inline regexes with shared column-matcher pattern constants.
 
 After finding a row with headerKeywords match, additionally verify keywords from 2+ categories. Matches generic parser behavior.
 
-**Status**: TODO
+**Status**: DONE
 
 ---
 
@@ -53,7 +53,7 @@ After finding a row with headerKeywords match, additionally verify keywords from
 
 Create `apps/web/src/lib/parser/column-matcher.ts` mirroring the server-side version. Replace inline regexes in xlsx.ts.
 
-**Status**: TODO
+**Status**: DONE
 
 ---
 
@@ -63,7 +63,7 @@ Create `apps/web/src/lib/parser/column-matcher.ts` mirroring the server-side ver
 
 Replace literal BOM character with explicit unicode escape for robustness.
 
-**Status**: TODO
+**Status**: DONE
 
 ---
 
@@ -73,7 +73,7 @@ Replace literal BOM character with explicit unicode escape for robustness.
 
 Replace inline regexes with shared column-matcher patterns.
 
-**Status**: TODO
+**Status**: DONE
 
 ---
 
@@ -83,7 +83,7 @@ Replace inline regexes with shared column-matcher patterns.
 
 Test all date format branches, invalid dates, year inference, leap year handling.
 
-**Status**: TODO
+**Status**: DONE
 
 ---
 
