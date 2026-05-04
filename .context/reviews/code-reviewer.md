@@ -1,36 +1,37 @@
-# Code Review -- Cycle 25
+# Code Review -- Cycle 26
 
-## Finding 1: Web-side column-matcher.ts missing cycle 24 keyword and pattern updates [HIGH]
+## Finding 1: Web CSV adapters missing memo extraction for 5 banks [HIGH]
 
-**Location:** `apps/web/src/lib/parser/column-matcher.ts`
+**Location:** `apps/web/src/lib/parser/csv.ts`
 
-**Problem:** Cycle 24 updated the server-side `packages/parser/src/csv/column-matcher.ts` with new keyword Set entries and expanded SUMMARY_ROW_PATTERN, but the corresponding web-side file was NOT updated. This creates a server/web parity regression.
+The web-side bank adapters for Hyundai, IBK, Woori, Hana, and NH all declare `memoIdx` via `findColumn()` but NEVER extract memo into the transaction object.
 
-**Missing from web-side:**
+Server-side adapter-factory.ts (line 156): `if (memoCol !== -1 && cells[memoCol]) tx.memo = cells[memoCol];`
 
-| Item | Server-side (current) | Web-side (stale) |
-|------|----------------------|------------------|
-| `SUMMARY_ROW_PATTERN` | includes `승인\s*합계\|결제\s*합계\|총\s*(?:사용\|이용)` | missing these 3 variants |
-| `HEADER_KEYWORDS` | includes `'shop'`, `'price'`, `'won'` | missing these 3 |
-| `AMOUNT_KEYWORDS` Set | includes `'price'`, `'won'` | missing these 2 |
-| `MERCHANT_KEYWORDS` Set | includes `'shop'` | missing this 1 |
+Web-side adapters skip this entirely. Users parsing these banks through the web app lose memo/비고/적요 data.
 
-**Impact:**
-- Web-side CSV/XLSX parsers accept summary rows like "승인합계 100,000원" as data (false-positive transactions)
-- Web-side generic CSV rejects English-only headers like `['Date', 'Shop', 'Price']` (isValidHeaderRow fails)
+Affected adapters:
+- hyundaiAdapter: memoIdx via '비고' (line 560), no extraction (line 588)
+- ibkAdapter: memoIdx via '적요' (line 907), no extraction (line 935)
+- wooriAdapter: memoIdx via '비고' (line 768), no extraction (line 796)
+- hanaAdapter: memoIdx via '적요' (line 698), no extraction (line 726)
+- nhAdapter: memoIdx via '비고' (line 836), no extraction (line 865)
 
-**Fix:** Sync web-side column-matcher.ts with server-side.
+## Finding 2: PDF merchant extraction fails with reversed column order [MEDIUM]
 
-## Finding 2: Missing test coverage for cycle 24 summary and keyword additions [MEDIUM]
+**Location:** `packages/parser/src/pdf/index.ts` (line 158), `apps/web/src/lib/parser/pdf.ts` (line 357)
+
+Both PDF parsers use:
+```typescript
+if (!merchant && dateIdx < amountIdx) {
+  // scan between date and amount
+}
+```
+
+When dateIdx >= amountIdx (amount column before date), merchant scan is skipped entirely. Some PDF formats have non-standard column order.
+
+## Finding 3: Test coverage gap for summary rows with date context [LOW]
 
 **Location:** `packages/parser/__tests__/column-matcher.test.ts`
 
-**Problem:** Cycle 24 added tests for `승인합계`/`결제합계`/`총사용`/`총이용` summary variants (lines 361-374) and English keyword Set completeness (lines 380-409). However, the server-side tests pass while the web-side column-matcher has the drift. No test validates that isValidHeaderRow rejects the new summary variants as headers (only as summary row content).
-
-**Fix:** Add test verifying `isValidHeaderRow(['승인합계', '100,000'])` returns false.
-
-## Previous Cycle Status
-
-Cycle 24 F1 (keyword Set alignment): CONFIRMED FIXED on server-side, but web-side was missed.
-Cycle 24 F2 (SUMMARY_ROW_PATTERN expansion): CONFIRMED FIXED on server-side, but web-side was missed.
-Cycle 24 F3 (Set completeness tests): CONFIRMED FIXED on server-side.
+No test verifies that `isValidHeaderRow` rejects rows like `['2024-01-15', '합계', '50000']` (summary row with a date-like string that contains a recognized date keyword format).
