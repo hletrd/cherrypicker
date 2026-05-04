@@ -1,50 +1,73 @@
-# Code Review — Cycle 11
+# Code Review — Cycle 13
 
-## Focus: Format diversity, regressions, consistency after 10 cycles
+## Focus: Format diversity edge cases, CSV quoting, PDF text extraction, parity
 
-### Finding 1 (HIGH): PDF DATE_PATTERN missing short dates (MM.DD)
-**Files**: `packages/parser/src/pdf/table-parser.ts:3`, `apps/web/src/lib/parser/pdf.ts:21`
+**Test Baseline**: 435 bun + 231 vitest = 666 tests passing
 
-The `DATE_PATTERN` regex used by `parseTable()` and `filterTransactionRows()` does NOT include `MM.DD` short dates:
-```
-const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-\/]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일)/;
-```
+---
 
-But `findDateCell()` in both PDF parsers DOES check `isValidShortDate(cell)` as a fallback. This means:
-- Table boundary detection (`parseTable`) won't start collecting lines for PDFs with only short dates
-- `filterTransactionRows` won't match rows with short dates
-- The structured parse fails silently and falls through to the less reliable line scanner
+## Finding 1 (MEDIUM): CSV splitCSVLine ignores quoted fields for non-comma delimiters
 
-**Impact**: Korean bank PDFs that use "1.15" or "01/15" format skip structured parsing entirely.
+**File**: `packages/parser/src/csv/shared.ts` line 10
+**File**: `apps/web/src/lib/parser/csv.ts` line 20
 
-**Fix**: Add short date alternative to `DATE_PATTERN`. Use a bounded pattern that avoids matching decimal numbers like "3.14" by requiring month 1-12 via lookahead, or use the simpler approach of adding the SHORT_MD_DATE_PATTERN with proper negative lookahead to avoid matching decimal numbers with >2 digits after the dot.
+When delimiter is not `,`, the function uses `line.split(delimiter).map(v => v.trim())`. This fails if a field contains the delimiter character inside quotes (e.g., a merchant name containing a literal tab or pipe in a tab/pipe-delimited export). Some Korean bank exports use tab delimiters with quoted fields containing special characters.
 
-### Finding 2 (MEDIUM): Web XLSX missing serial date error reporting
-**File**: `apps/web/src/lib/parser/xlsx.ts:218`
+**Impact**: Transaction data corruption for tab/pipe/semicolon delimited files with quoted fields. Merchant names or memos containing the delimiter character would be split incorrectly, producing wrong column alignment.
 
-Server XLSX parser reports errors for out-of-range serial dates:
-```ts
-if (errors && lineIdx !== undefined && raw !== 0) {
-  errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });
-}
-```
+**Fix**: Apply RFC 4180 parsing logic for all delimiters, not just commas.
 
-Web XLSX parser silently returns `String(raw)` without error. Parity fix.
+---
 
-### Finding 3 (MEDIUM): normalizeHeader doesn't strip zero-width spaces
-**Files**: `packages/parser/src/csv/column-matcher.ts:10`, `apps/web/src/lib/parser/column-matcher.ts:13`
+## Finding 2 (LOW-MEDIUM): PDF extractor joins text items without space
 
-`normalizeHeader` uses `h.trim().replace(/\s+/g, '')` but JavaScript `\s` does NOT match zero-width space (U+200B), zero-width non-joiner (U+200C), or zero-width joiner (U+200D). Korean bank exports occasionally include these Unicode format characters in cell values, causing header matching to fail.
+**File**: `packages/parser/src/pdf/extractor.ts` line 22
 
-**Fix**: Add explicit removal of common invisible Unicode characters in `normalizeHeader`.
+`text += item.str` concatenates adjacent text items without any separator. When pdfjs-dist produces separate items for adjacent text spans (e.g., date cell and merchant name), they merge into one token like `"2024-01-15카드결제"`. The structured table parser handles this via column-boundary detection, but the fallback line scanner in `index.ts` tries to find a date pattern and an amount pattern in the same line, and the merged text could cause the date to consume part of the merchant text.
 
-### Finding 4 (LOW): Web CSV splitLine doesn't handle quoted fields for non-comma delimiters
-**File**: `apps/web/src/lib/parser/csv.ts:21`
+**Impact**: Low for structured parsing (column boundaries handle it), but can cause missed transactions in the fallback scanner when items on the same line merge without whitespace.
 
-Same issue in server `packages/parser/src/csv/shared.ts:10`. Tab-separated files with quoted fields won't parse correctly. Very rare for Korean credit card exports.
+**Fix**: Add a space between items when the horizontal gap suggests they are separate text elements.
 
-## Regression Check
-No regressions detected from cycle 10 refactoring.
+---
 
-## Summary
-1 HIGH, 2 MEDIUM, 1 LOW. Most impactful fix: PDF short date support.
+## Finding 3 (LOW): normalizeHeader missing fullwidth space (U+3000)
+
+**File**: `packages/parser/src/csv/column-matcher.ts` line 12
+**File**: `apps/web/src/lib/parser/column-matcher.ts` line 16
+
+`normalizeHeader` strips zero-width Unicode characters but does not strip fullwidth spaces (U+3000), which are common in East Asian text processing and could appear in user-reformatted CSV exports.
+
+**Impact**: Very low — fullwidth spaces are rare in Korean credit card exports. But if present, they would cause header detection to fail.
+
+**Fix**: Add U+3000 to the stripping pattern.
+
+---
+
+## Finding 4 (NONE): XLSX error cells
+
+SheetJS returns error values as strings (`#REF!`, `#VALUE!`). Current code handles these correctly: `parseAmount` returns null for strings it can't parse, `parseDateStringToISO` returns the raw string which is then flagged as an error. No action needed.
+
+## Finding 5 (NONE): PDF multi-line headers
+
+PDF table parsing uses positional column detection (date found by pattern, amount found by scanning from right), not header-based column matching. Multi-line headers in PDFs are automatically excluded by `filterTransactionRows` because header rows don't contain date/amount patterns. The deferred "PDF multi-line header support" item is not actually a bug.
+
+## Finding 6 (DEFERRED): Web CSV inline adapters
+
+Web-side bank adapters duplicate detection logic instead of using shared `detectBank()`. This is architectural tech debt (D-01) requiring a shared module refactor between Bun and browser environments. Behavioral parity is maintained through identical patterns.
+
+---
+
+## Parity Check
+| Component | Server | Web | Status |
+|-----------|--------|-----|--------|
+| ColumnMatcher patterns | column-matcher.ts | column-matcher.ts | Synced |
+| Date parsing | date-utils.ts | date-utils.ts | Synced |
+| Amount parsing | shared.ts / xlsx/index.ts | csv.ts / xlsx.ts | Synced |
+| XLSX forward-fill | xlsx/index.ts | xlsx.ts | Synced |
+| PDF table-parser | pdf/table-parser.ts | pdf.ts (inline) | Synced |
+| Bank detection | detect.ts | detect.ts | Synced |
+| CSV splitCSVLine | shared.ts | csv.ts | **Desync: F1** |
+
+## Verdict
+Three actionable findings (F1, F2, F3). F1 is the highest priority as it affects data correctness for tab-delimited CSV files with quoted fields.

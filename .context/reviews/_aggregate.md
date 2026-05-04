@@ -1,32 +1,30 @@
-# Cycle 12 Aggregate Review
+# Cycle 13 Aggregate Review
 
 **Date:** 2026-05-05
-**Test Status:** 313 bun + 231 vitest = 544 tests passing
+**Test Status:** 435 bun + 231 vitest = 666 tests passing
 
-## New Findings (6)
+## Actionable Findings
 
-### HIGH Priority
-1. **C12-01** (code-reviewer): Server CSV adapter-factory silently swallows unparseable dates — `parseDateStringToISO(dateRaw)` called without error reporting params, unlike generic parser
-2. **C12-06** (code-reviewer): Server CSV adapter-factory does not validate parsed dates with `isValidISODate()`
+| # | Severity | Finding | Files |
+|---|----------|---------|-------|
+| F1 | MEDIUM | CSV splitCSVLine ignores quoted fields for non-comma delimiters | packages/parser/src/csv/shared.ts, apps/web/src/lib/parser/csv.ts |
+| F2 | LOW-MEDIUM | PDF extractor joins text items without space | packages/parser/src/pdf/extractor.ts |
+| F3 | LOW | normalizeHeader missing fullwidth space U+3000 | packages/parser/src/csv/column-matcher.ts, apps/web/src/lib/parser/column-matcher.ts |
 
-### MEDIUM Priority
-3. **C12-02** (code-reviewer): Web XLSX parser uses local `findCol()` closure instead of shared `findColumn` from column-matcher.ts
-4. **C12-03** (test-engineer): Column-matcher module has zero dedicated test coverage — `normalizeHeader`, `findColumn`, `isValidHeaderRow`, all pattern constants untested
+## Non-Issues (Verified)
+- XLSX error cells: handled correctly by existing parseAmount/parseDateToISO
+- PDF multi-line headers: not needed — PDF uses positional column detection
+- PDF compact numbers: regex already handles commaless digits
 
-### LOW Priority
-5. **C12-04** (code-reviewer): CSV `isDateLike()` patterns don't allow spaces around date delimiters, breaking inference for "2024 - 01 - 15" format
-6. **C12-05** (code-reviewer): Web XLSX `BANK_COLUMN_CONFIGS` is 153-line duplication of server config
+## Deferred
+- Web CSV inline adapters (D-01 architectural refactor)
+- CSS dark mode migration
+- Historical amount display format
+- Global config integration
 
-## Reviewer Consensus
-- **code-reviewer**: 6 findings (2 high, 2 medium, 2 low)
-- **test-engineer**: 4 findings — column-matcher tests is top priority
-- **verifier**: Server/web parity gaps confirmed for date error reporting and findColumn usage
-- **architect**: Column-matcher pattern solid; adapter factory should be adopted by web side
-- **perf-reviewer**: No performance issues
-- **security-reviewer**: No security issues
-
-## Agreed Action Items
-1. Fix C12-01+C12-06: Add date error reporting + validation to adapter-factory (HIGH)
-2. Fix C12-02: Use shared findColumn in web XLSX parser (MEDIUM)
-3. Fix C12-03: Add comprehensive column-matcher tests (MEDIUM)
-4. Fix C12-04: Add whitespace tolerance to isDateLike patterns (LOW)
+## Implementation Plan
+1. Fix F1: Refactor splitCSVLine to handle quoted fields for all delimiters
+2. Fix F2: Add space between adjacent text items in PDF extractor
+3. Fix F3: Add fullwidth space to normalizeHeader stripping
+4. Add tests for F1 (tab/pipe/semicolon quoted fields)
+5. Verify parity between server and web parsers
