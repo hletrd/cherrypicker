@@ -18,6 +18,13 @@ import {
   MEMO_COLUMN_PATTERN,
 } from './column-matcher.js';
 
+// Keyword categories for header detection — hoisted to module scope to avoid
+// recreating Sets on every parse call. Matches the generic CSV parser and
+// XLSX parser keyword sets.
+const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일']);
+const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
+const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+
 export interface BankCSVConfig {
   bankId: BankId;
   /** Exact header names used for header row detection. At least one must
@@ -76,9 +83,11 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       // Additionally require keywords from at least 2 distinct categories
       // (date, merchant, amount) to avoid matching summary rows that only
       // contain amount keywords. Matches the generic CSV parser behavior.
-      const adapterDateKeywords = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일']);
-      const adapterMerchantKeywords = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
-      const adapterAmountKeywords = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+      // Hoisted to module scope via the constants below to avoid
+      // recreating Sets on every parse call.
+      const adapterDateKeywords = DATE_KEYWORDS;
+      const adapterMerchantKeywords = MERCHANT_KEYWORDS;
+      const adapterAmountKeywords = AMOUNT_KEYWORDS;
 
       let headerIdx = -1;
       for (let i = 0; i < Math.min(maxHeaderScan, lines.length); i++) {

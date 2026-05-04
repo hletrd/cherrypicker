@@ -182,6 +182,12 @@ function getBankColumnConfig(bankId: BankId): ColumnConfig {
   return BANK_COLUMN_CONFIGS[bankId];
 }
 
+// Keyword categories for header detection — hoisted to module scope to avoid
+// recreating Sets on every parse call. Matches server-side XLSX parser.
+const XLSX_DATE_KW: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
+const XLSX_MERCHANT_KW: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
+const XLSX_AMOUNT_KW: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -371,12 +377,10 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호',
     '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
   ];
-  // Keyword categories for header detection — a valid header row should contain
-  // keywords from at least 2 distinct categories (date, merchant, amount) to
-  // avoid matching summary table rows that only have amount keywords (C86-05).
-  const xlsxDateKeywords = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
-  const xlsxMerchantKeywords = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
-  const xlsxAmountKeywords = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
+  // Keyword categories for header detection — hoisted to module scope.
+  const xlsxDateKeywords = XLSX_DATE_KW;
+  const xlsxMerchantKeywords = XLSX_MERCHANT_KW;
+  const xlsxAmountKeywords = XLSX_AMOUNT_KW;
 
   for (let i = 0; i < Math.min(30, rows.length); i++) {
     const row = rows[i] ?? [];
