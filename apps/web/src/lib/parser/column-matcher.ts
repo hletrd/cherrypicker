@@ -56,12 +56,12 @@ export function findColumn(headers: string[], exactName: string | undefined, pat
 // Column patterns include English alternatives for user-reformatted CSVs
 // and international card companies (C7-07). Must stay in sync with
 // packages/parser/src/csv/column-matcher.ts.
-export const DATE_COLUMN_PATTERN = /이용일|이용일자|거래일|거래일시|날짜|일시|결제일|승인일|승인일자|승인일시|매출일|작성일|접수일|발행일|사용일|사용일자|^date$|^trans(?:action)?[\s_-]?date$|^posted$|^billing$/i;
+export const DATE_COLUMN_PATTERN = /이용일|이용일자|거래일|거래일시|날짜|일시|결제일|승인일|승인일자|승인일시|매출일|작성일|접수일|발행일|사용일|사용일자|조회일|처리일|승인완료일|^date$|^trans(?:action)?[\s_-]?date$|^posted$|^billing$/i;
 export const MERCHANT_COLUMN_PATTERN = /이용처|가맹점|가맹점명|이용가맹점|승인가맹점|거래처|매출처|사용처|결제처|상호|판매처|구매처|매장|취급처|이용내용|거래내용|이용업소|승인점|매장명|이용매장|^merchant$|^store$|^shop$|^vendor$|^description$|^item$|^name$|^payee$|^가게/i;
 export const AMOUNT_COLUMN_PATTERN = /이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액|취소금액|환불금액|입금액|결제액|청구금액|출금액|결제대금|승인취소금액|매입금액|^amount$|^total$|^price$|^won$|^charge$|^payment$/i;
-export const INSTALLMENTS_COLUMN_PATTERN = /할부|할부개월|할부기간|할부월|할부개월수|할부횟수|할부회수|^installments?$|^install$/i;
+export const INSTALLMENTS_COLUMN_PATTERN = /할부|할부개월|할부기간|할부월|할부개월수|할부횟수|할부회수|할부회차|^installments?$|^install$/i;
 export const CATEGORY_COLUMN_PATTERN = /업종|카테고리|분류|업종분류|업종명|거래유형|결제유형|이용구분|구분|가맹점유형|카드종류|카드구분|^category$|^type$/i;
-export const MEMO_COLUMN_PATTERN = /비고|적요|메모|내용|설명|참고|상세내역|비고란|메모란|상세|비고내용|메모내용|^memo$|^note$|^remarks?$/i;
+export const MEMO_COLUMN_PATTERN = /비고|적요|메모|내용|설명|참고|참고사항|상세내역|비고란|메모란|상세|비고내용|메모내용|^memo$|^note$|^remarks?$/i;
 
 // Summary/total row pattern — shared across all parsers. Matches Korean bank
 // statement footer rows like "총 합계", "누계", "잔액" that should be skipped.
@@ -73,15 +73,15 @@ export const SUMMARY_ROW_PATTERN = /총\s*합\s*계(?![가-힣])(?=[\s,;]|$)|(?<
 // Header keyword vocabulary — must stay in sync with
 // packages/parser/src/csv/column-matcher.ts (C4-07/C7-07).
 export const HEADER_KEYWORDS: readonly string[] = [
-  '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '승인일시', '매출일', '작성일', '접수일', '발행일', '사용일', '사용일자',
+  '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '승인일시', '매출일', '작성일', '접수일', '발행일', '사용일', '사용일자', '조회일', '처리일', '승인완료일',
   '이용처', '가맹점', '가맹점명', '이용가맹점', '승인가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처', '이용내용', '거래내용', '이용업소', '승인점', '매장명', '이용매장',
   '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액', '청구금액', '출금액', '결제대금', '승인취소금액', '매입금액',
-  '비고', '적요', '메모', '내용', '설명', '참고', '상세내역', '비고란', '메모란', '비고내용', '메모내용', '상세',
+  '비고', '적요', '메모', '내용', '설명', '참고', '참고사항', '상세내역', '비고란', '메모란', '비고내용', '메모내용', '상세',
   'date', 'merchant', 'amount', 'total', 'store', 'shop', 'price', 'won', 'description', 'vendor', 'item', 'name', 'charge', 'payment', 'posted', 'billing', 'payee', 'memo', 'note', 'remarks',
 ];
 
 // Keyword category Sets for multi-category header detection.
-export const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '승인일시', '매출일', '작성일', '접수일', '발행일', '사용일', '사용일자', 'date', 'posted', 'billing']);
+export const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '승인일시', '매출일', '작성일', '접수일', '발행일', '사용일', '사용일자', '조회일', '처리일', '승인완료일', 'date', 'posted', 'billing']);
 export const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '승인가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처', '이용내용', '거래내용', '이용업소', '승인점', '매장명', '이용매장', 'merchant', 'store', 'shop', 'description', 'vendor', 'item', 'name', 'payee']);
 export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액', '청구금액', '출금액', '결제대금', '승인취소금액', '매입금액', 'amount', 'total', 'price', 'won', 'charge', 'payment']);
 

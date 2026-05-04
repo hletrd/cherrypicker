@@ -369,37 +369,45 @@ export async function parsePDF(
     const amountMatches = [...line.matchAll(fallbackAmountPattern)];
     const amountMatch = amountMatches.length > 0 ? amountMatches[amountMatches.length - 1] : null;
     if (dateMatch && amountMatch) {
-      // Extract merchant: everything between date and amount
-      const dateEnd = line.indexOf(dateMatch[0]) + dateMatch[0].length;
+      // Extract merchant: everything between date and amount.
+      // Handle both normal (date before amount) and reversed (amount before
+      // date) column orderings in PDF tables (C60-02).
+      const dateStart = line.indexOf(dateMatch[0]);
+      const dateEnd = dateStart + dateMatch[0].length;
       const amountStart = line.lastIndexOf(amountMatch[0]);
+      const amountEnd = amountStart + amountMatch[0].length;
+      let between = '';
       if (amountStart > dateEnd) {
-        const between = line.slice(dateEnd, amountStart).trim();
-        if (between) {
-          const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6])!;
-          const amount = parseAmount(amountRaw);
-          // parseAmount returns null for unparseable inputs — skip the row
-          // rather than silently treating it as 0 (C34-01).
-          if (amount === null) {
-            const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
-            if (cleaned && !/^0+$/.test(cleaned)) {
-              errors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
-            }
-          } else if (amount > 0) {
-            // Only include positive-amount transactions (C42-01).
-            // Negative amounts (refunds) and zero amounts (balance inquiries)
-            // don't contribute to spending optimization.
-            const fallbackDate = parseDateStringToISO(dateMatch[1]!);
-            // Report unparseable dates as parse errors, matching web-side
-            // fallback scanner behavior (C39-01).
-            if (!isValidISODate(fallbackDate) && dateMatch[1]!.trim()) {
-              errors.push({ message: `날짜를 해석할 수 없습니다: ${dateMatch[1]!.trim()}` });
-            }
-            fallbackTransactions.push({
-              date: fallbackDate,
-              merchant: between.replace(/\s+/g, ' ').trim(),
-              amount,
-            });
+        between = line.slice(dateEnd, amountStart).trim();
+      } else if (dateStart > amountEnd) {
+        // Reversed column order: amount before date (C60-02)
+        between = line.slice(amountEnd, dateStart).trim();
+      }
+      if (between) {
+        const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6])!;
+        const amount = parseAmount(amountRaw);
+        // parseAmount returns null for unparseable inputs — skip the row
+        // rather than silently treating it as 0 (C34-01).
+        if (amount === null) {
+          const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
+          if (cleaned && !/^0+$/.test(cleaned)) {
+            errors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
           }
+        } else if (amount > 0) {
+          // Only include positive-amount transactions (C42-01).
+          // Negative amounts (refunds) and zero amounts (balance inquiries)
+          // don't contribute to spending optimization.
+          const fallbackDate = parseDateStringToISO(dateMatch[1]!);
+          // Report unparseable dates as parse errors, matching web-side
+          // fallback scanner behavior (C39-01).
+          if (!isValidISODate(fallbackDate) && dateMatch[1]!.trim()) {
+            errors.push({ message: `날짜를 해석할 수 없습니다: ${dateMatch[1]!.trim()}` });
+          }
+          fallbackTransactions.push({
+            date: fallbackDate,
+            merchant: between.replace(/\s+/g, ' ').trim(),
+            amount,
+          });
         }
       }
     }

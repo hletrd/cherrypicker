@@ -1,28 +1,35 @@
-# Code Review -- Cycle 59
+# Code Review -- Cycle 60
 
 ## Reviewer: code-reviewer
-## Focus: KRW format gap, YYMMDD dedup, PDF pattern completeness
+## Focus: isAmountLike false positives, PDF reversed columns, column pattern gaps, web-side parity
 
-### C59-01: PDF AMOUNT_PATTERN missing KRW prefix (BUG - Medium)
-Files: `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
+### C60-01: isAmountLike false positive on bare small numbers (BUG - Medium)
+Files: `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
+The third entry in `AMOUNT_PATTERNS` (`/^₩?\d[\d,]*원?$/`) matches bare numbers like "12" or "3" without requiring a comma or Won sign prefix. During data inference when headers fail, this can cause false-positive amount column detection on columns containing installment counts, card suffixes, or other small numbers.
+The comment says "requires comma or Won sign" but the regex does not enforce either -- the `₩?` makes Won optional and `[\d,]*` allows zero commas.
+Fix: change pattern to require at least one comma for amounts without Won sign prefix.
 
-The `AMOUNT_PATTERN` regex used by `filterTransactionRows()` does NOT match amounts with the KRW ISO 4217 prefix (e.g., "KRW10,000"). The pattern covers ₩, ￦, 마이너스, comma/5+digit, fullwidth-minus, and parenthesized — but NOT KRW. Both server-side and web-side have this gap.
-
-Impact: PDFs using KRW prefix notation will not have their transaction rows detected by the structured parser. They will fall through to the less-accurate fallback line scanner.
-
-Note: `parseAmount()` itself correctly strips KRW prefix, so the issue is purely in the detection pattern.
-
-### C59-02: PDF fallback amount pattern missing KRW group (BUG - Medium)
+### C60-02: PDF fallback scanner skips reversed-column-order lines (FORMAT GAP - Medium)
 Files: `packages/parser/src/pdf/index.ts`, `apps/web/src/lib/parser/pdf.ts`
+The PDF fallback line scanner assumes date appears before amount (`if (amountStart > dateEnd)`). Lines where amount precedes date are silently skipped, even though the structured parser handles both orderings via `Math.min/max(dateIdx, amountIdx)`.
+Fix: add a reversed-order extraction path that checks `amountStart < dateStart` and extracts merchant between them.
 
-The `fallbackAmountPattern` regex (Tier 2.5 line scanner) has 5 capture groups but none for KRW-prefixed amounts. Lines like "2024-01-15 Starbucks KRW10,000" will not be correctly captured — the "10,000" part might match group 5 if the regex engine finds it, but the KRW prefix disrupts clean capture.
+### C60-03: Missing "할부회차" in INSTALLMENTS_COLUMN_PATTERN (COVERAGE - Low)
+Files: `packages/parser/src/csv/column-matcher.ts`
+Some bank exports use "할부회차" (installment round/number) which is not in the pattern. Existing terms include "할부횟수" and "할부회수" but not "할부회차".
+Fix: add "할부회차" to the pattern.
 
-### C59-03: Duplicate isYYMMDDLike across PDF files (TECH DEBT - Low)
-Files: `packages/parser/src/pdf/index.ts` (line 35-43), `packages/parser/src/pdf/table-parser.ts` (line 160-168)
+### C60-04: Missing date terms in DATE_COLUMN_PATTERN (COVERAGE - Low)
+File: `packages/parser/src/csv/column-matcher.ts`
+Bank portal exports occasionally use "조회일" (inquiry date), "처리일" (processing date), or "승인완료일" (approval completion date) as date column headers.
+Fix: add these terms to DATE_COLUMN_PATTERN and DATE_KEYWORDS.
 
-Both files define nearly identical YYMMDD validation functions. Should be extracted to `date-utils.ts` alongside `daysInMonth` and `isValidDayForMonth`.
+### C60-05: Web-side csv.ts/pdf.ts define YYMMDD validation locally (TECH DEBT - Low)
+Files: `apps/web/src/lib/parser/csv.ts`, `apps/web/src/lib/parser/pdf.ts`, `apps/web/src/lib/parser/date-utils.ts`
+The web-side date-utils.ts does not export `isValidYYMMDD`. Instead, csv.ts defines its own `isYYMMDDLike` (lines 179-187) and pdf.ts defines its own `isValidYYMMDD` (lines 181-189) with identical logic. The server-side date-utils.ts already exports `isValidYYMMDD`.
+Fix: add `isValidYYMMDD` export to web-side date-utils.ts, then import it in csv.ts and pdf.ts, removing local duplicates.
 
-### C59-04: Web-side CSV missing raw row text in amount errors (PARITY - Low)
-File: `apps/web/src/lib/parser/csv.ts`
-
-The web-side `isValidAmount()` does not include `raw` row text in error entries, unlike the server-side `isValidCSVAmount()` which enriches errors for debugging.
+### C60-06: Missing "참고사항" in MEMO_COLUMN_PATTERN (COVERAGE - Low)
+File: `packages/parser/src/csv/column-matcher.ts`
+Some banks use "참고사항" (reference notes) as a memo column header. Not currently in the pattern.
+Fix: add "참고사항" to MEMO_COLUMN_PATTERN and HEADER_KEYWORDS.

@@ -40,7 +40,7 @@ function splitLine(line: string, delimiter: string): string[] {
 
 /** Shared date-parsing — delegates to the canonical implementation in
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
-import { parseDateStringToISO, isValidISODate, daysInMonth } from './date-utils.js';
+import { parseDateStringToISO, isValidISODate, isValidYYMMDD, daysInMonth } from './date-utils.js';
 
 // NOTE(C70-04): The helpers below (splitLine, parseAmount, parseInstallments,
 // isValidAmount) duplicate logic from packages/parser/src/csv/shared.ts.
@@ -170,22 +170,6 @@ function isDateLikeShort(value: string): boolean {
   return day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
 }
 
-/** Validate YYMMDD format (6-digit compact date) with month/day range
- *  checks. Prevents false-positive column detection when a CSV column
- *  contains 6-digit transaction IDs (e.g., "123456", "999999") that
- *  would otherwise match /^\d{6}$/ and steal the date column assignment
- *  from the real date column (C45-01). Parity with server-side
- *  packages/parser/src/csv/generic.ts. */
-function isYYMMDDLike(value: string): boolean {
-  if (!/^\d{6}$/.test(value)) return false;
-  const yy = parseInt(value.slice(0, 2), 10);
-  const fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
-  const month = parseInt(value.slice(2, 4), 10);
-  const day = parseInt(value.slice(4, 6), 10);
-  if (month < 1 || month > 12) return false;
-  return day >= 1 && day <= daysInMonth(fullYear, month);
-}
-
 // Korean amount patterns — must recognize all formats that parseAmount
 // handles, including Won sign prefixes (C7-06).
 // C45-02: Patterns require at least one comma (thousand separator) or Won
@@ -195,7 +179,7 @@ function isYYMMDDLike(value: string): boolean {
 const AMOUNT_PATTERNS = [
   /^₩-?[\d,]+원?$/,     // ₩1,234 or ₩1,234원 (Won sign prefix)
   /^￦-?[\d,]+원?$/,     // ￦1,234 (fullwidth Won sign)
-  /^₩?\d[\d,]*원?$/,     // ₩500 or 1,234원 — requires comma or Won sign
+  /^\d[\d,]*,\d[\d,]*원?$/, // 1,234 or 1,234,567 — requires comma separator (C60-01)
   /^-[\d,]+원?$/,        // -1,234 or -1,234원 (negative with comma)
   /^－[\d,]+원?$/,       // －1,234 — fullwidth-minus negative (C54-01)
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
@@ -208,7 +192,7 @@ function isDateLike(value: string): boolean {
   const trimmed = value.trim();
   // Check isYYMMDDLike first for 6-digit strings to prevent DATE_PATTERNS'
   // /^\d{6}$/ from matching without month/day validation (C45-01).
-  if (isYYMMDDLike(trimmed)) return true;
+  if (isValidYYMMDD(trimmed)) return true;
   // Strip trailing delimiters before matching — Korean bank exports may
   // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
   const stripped = trimmed.replace(/[.\-\/．。]\s*$/, '');

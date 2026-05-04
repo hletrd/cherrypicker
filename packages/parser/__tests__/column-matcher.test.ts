@@ -1340,3 +1340,86 @@ describe('Cycle 55: SUMMARY_ROW_PATTERN boundary guard consistency', () => {
     expect(SUMMARY_ROW_PATTERN.test('총이용금액')).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 60: New column pattern terms for broader format diversity
+// ---------------------------------------------------------------------------
+describe('Cycle 60: New DATE_COLUMN_PATTERN terms', () => {
+  const shouldMatch = ['조회일', '처리일', '승인완료일'];
+  for (const name of shouldMatch) {
+    it(`matches "${name}"`, () => {
+      expect(DATE_COLUMN_PATTERN.test(name)).toBe(true);
+    });
+  }
+
+  it('findColumn detects 조회일 as date column', () => {
+    const headers = ['조회일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('findColumn detects 처리일 as date column', () => {
+    const headers = ['처리일', '이용처', '금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('findColumn detects 승인완료일 as date column', () => {
+    const headers = ['승인완료일', '상호', '결제금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('DATE_KEYWORDS contains new terms', () => {
+    expect(DATE_KEYWORDS.has('조회일')).toBe(true);
+    expect(DATE_KEYWORDS.has('처리일')).toBe(true);
+    expect(DATE_KEYWORDS.has('승인완료일')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains new date terms', () => {
+    expect(HEADER_KEYWORDS).toContain('조회일');
+    expect(HEADER_KEYWORDS).toContain('처리일');
+    expect(HEADER_KEYWORDS).toContain('승인완료일');
+  });
+});
+
+describe('Cycle 60: New INSTALLMENTS_COLUMN_PATTERN terms', () => {
+  it('matches 할부회차', () => {
+    expect(INSTALLMENTS_COLUMN_PATTERN.test('할부회차')).toBe(true);
+  });
+
+  it('findColumn detects 할부회차 as installments column', () => {
+    const headers = ['이용일', '이용처', '금액', '할부회차'];
+    expect(findColumn(headers, undefined, INSTALLMENTS_COLUMN_PATTERN)).toBe(3);
+  });
+});
+
+describe('Cycle 60: New MEMO_COLUMN_PATTERN terms', () => {
+  it('matches 참고사항', () => {
+    expect(MEMO_COLUMN_PATTERN.test('참고사항')).toBe(true);
+  });
+
+  it('findColumn detects 참고사항 as memo column', () => {
+    const headers = ['이용일', '이용처', '금액', '참고사항'];
+    expect(findColumn(headers, undefined, MEMO_COLUMN_PATTERN)).toBe(3);
+  });
+
+  it('HEADER_KEYWORDS contains 참고사항', () => {
+    expect(HEADER_KEYWORDS).toContain('참고사항');
+  });
+});
+
+describe('Cycle 60: isValidHeaderRow with new terms', () => {
+  it('accepts header row with 조회일 + 가맹점 + 이용금액', () => {
+    expect(isValidHeaderRow(['조회일', '가맹점', '이용금액'])).toBe(true);
+  });
+
+  it('accepts header row with 처리일 + 이용처 + 거래금액', () => {
+    expect(isValidHeaderRow(['처리일', '이용처', '거래금액'])).toBe(true);
+  });
+
+  it('accepts header row with 승인완료일 + 가맹점명 + 청구금액 + 할부회차', () => {
+    expect(isValidHeaderRow(['승인완료일', '가맹점명', '청구금액', '할부회차'])).toBe(true);
+  });
+
+  it('accepts header row with 조회일 + 이용처 + 금액 + 참고사항', () => {
+    expect(isValidHeaderRow(['조회일', '이용처', '금액', '참고사항'])).toBe(true);
+  });
+});

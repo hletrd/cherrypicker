@@ -65,7 +65,7 @@ function isDateLikeShort(value: string): boolean {
 const AMOUNT_PATTERNS = [
   /^₩-?[\d,]+원?$/,     // ₩1,234 or ₩1,234원 (Won sign prefix)
   /^￦-?[\d,]+원?$/,     // ￦1,234 (fullwidth Won sign)
-  /^₩?\d[\d,]*원?$/,     // ₩500 or 1,234원 — requires comma or Won sign
+  /^\d[\d,]*,\d[\d,]*원?$/, // 1,234 or 1,234,567 — requires comma separator (C60-01)
   /^-[\d,]+원?$/,        // -1,234 or -1,234원 (negative with comma)
   /^－[\d,]+원?$/,       // －1,234 — fullwidth-minus negative (C54-01)
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234

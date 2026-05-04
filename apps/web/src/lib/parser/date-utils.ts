@@ -161,6 +161,22 @@ export function parseDateStringToISO(raw: string): string {
   return cleaned;
 }
 
+/** Validate that a 6-digit string is a plausible YYMMDD date with valid
+ *  month/day ranges. Prevents false-positive date detection when a column
+ *  contains 6-digit transaction IDs (e.g., "123456", "999999") that would
+ *  otherwise match /^\d{6}$/ and steal the date column assignment (C45-01).
+ *  Shared across CSV, XLSX, and PDF parsers. Parity with server-side
+ *  packages/parser/src/date-utils.ts (C60-05). */
+export function isValidYYMMDD(value: string): boolean {
+  if (!/^\d{6}$/.test(value)) return false;
+  const yy = parseInt(value.slice(0, 2), 10);
+  const fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
+  const month = parseInt(value.slice(2, 4), 10);
+  const day = parseInt(value.slice(4, 6), 10);
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= daysInMonth(fullYear, month);
+}
+
 /** Check if a string is a valid ISO 8601 date (YYYY-MM-DD).
  *  Used by parsers to detect unparseable dates returned by
  *  parseDateStringToISO() and report them as parse errors (C71-04). */
