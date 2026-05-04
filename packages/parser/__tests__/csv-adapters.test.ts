@@ -403,3 +403,111 @@ describe('generic CSV merchant inference', () => {
     expect(result).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// English column header tests (C7-07)
+// ---------------------------------------------------------------------------
+
+describe('English column header detection (C7-07)', () => {
+  test('findColumn matches English "Date" header', () => {
+    const headers = ['Date', 'Store', 'Amount'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  test('findColumn matches English "Amount" header', () => {
+    const headers = ['Date', 'Store', 'Amount'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  test('isValidHeaderRow accepts English headers with 2 categories', () => {
+    expect(isValidHeaderRow(['Date', 'Merchant', 'Amount'])).toBe(true);
+  });
+
+  test('isValidHeaderRow accepts mixed Korean and English headers', () => {
+    expect(isValidHeaderRow(['Date', '가맹점명', 'Amount'])).toBe(true);
+  });
+
+  test('generic CSV parser handles fully English headers', () => {
+    const content = [
+      'Date,Merchant,Amount',
+      '2024-01-15,Starbucks,5500',
+      '2024-01-20,Emart,125000',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+    expect(result.transactions[0]?.merchant).toBe('Starbucks');
+    expect(result.transactions[0]?.amount).toBe(5500);
+  });
+
+  test('generic CSV parser handles "Transaction Date" header', () => {
+    const content = [
+      'Transaction Date,Description,Total',
+      '2024-01-15,Coffee Shop,5500',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(5500);
+  });
+
+  test('HEADER_KEYWORDS includes English terms', () => {
+    for (const kw of ['date', 'merchant', 'amount', 'total', 'store', 'description']) {
+      expect((HEADER_KEYWORDS as string[]).includes(kw)).toBe(true);
+    }
+  });
+
+  test('DATE_KEYWORDS includes "date"', () => {
+    expect(DATE_KEYWORDS.has('date')).toBe(true);
+  });
+
+  test('MERCHANT_KEYWORDS includes "merchant" and "store"', () => {
+    expect(MERCHANT_KEYWORDS.has('merchant')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('store')).toBe(true);
+  });
+
+  test('AMOUNT_KEYWORDS includes "amount" and "total"', () => {
+    expect(AMOUNT_KEYWORDS.has('amount')).toBe(true);
+    expect(AMOUNT_KEYWORDS.has('total')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Won sign amount patterns (C7-06)
+// ---------------------------------------------------------------------------
+
+describe('Won sign amount column inference (C7-06)', () => {
+  test('generic CSV parser handles Won sign prefixed amounts', () => {
+    // Use tab delimiter to avoid comma ambiguity with thousands separator
+    const content = [
+      '거래일시\t가맹점명\t이용금액',
+      '2024-01-15\t스타벅스\t₩5,500',
+      '2024-01-20\t이마트\t₩125,000',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(5500);
+    expect(result.transactions[1]?.amount).toBe(125000);
+  });
+
+  test('generic CSV parser handles fullwidth Won sign (￦)', () => {
+    const content = [
+      '거래일시\t가맹점명\t이용금액',
+      '2024-01-15\t스타벅스\t￦5500',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(5500);
+  });
+
+  test('generic CSV parser handles Won sign without thousands separator', () => {
+    const content = [
+      '거래일시,가맹점명,이용금액',
+      '2024-01-15,스타벅스,₩5500',
+      '2024-01-20,이마트,₩125000',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(5500);
+    expect(result.transactions[1]?.amount).toBe(125000);
+  });
+});

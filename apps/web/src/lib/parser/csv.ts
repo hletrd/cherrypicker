@@ -126,9 +126,13 @@ const DATE_PATTERNS = [
   /^\d{1,2}월\s*\d{1,2}일$/,                   // 1월 15일
 ];
 
+// Korean amount patterns — must recognize all formats that parseAmount
+// handles, including Won sign prefixes (C7-06).
 const AMOUNT_PATTERNS = [
-  /^-?[\d,]+원?$/,
-  /^-?[\d,]+$/,       // Integer amounts only — Korean Won has no subunits
+  /^₩?-?[\d,]+원?$/,    // ₩1,234 or 1,234원 or ₩1,234원
+  /^￦-?[\d,]+원?$/,     // ￦1,234 (fullwidth Won sign)
+  /^-?[\d,]+원?$/,      // 1,234원 or 1,234 or -1,234
+  /^-?[\d,]+$/,         // Integer amounts only — Korean Won has no subunits
 ];
 
 function isDateLike(value: string): boolean {
