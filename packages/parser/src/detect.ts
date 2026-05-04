@@ -2,6 +2,68 @@ import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import type { BankId, DetectionResult, FileFormat } from './types.js';
 
+/** Detect text encoding from raw bytes using BOM and byte-pattern heuristics.
+ *  Returns the detected encoding string suitable for TextDecoder.
+ *  Order: UTF-16 LE BOM (FF FE) > UTF-16 BE BOM (FE FF) > UTF-8 BOM (EF BB BF)
+ *  > CP949 byte-pattern heuristic > default UTF-8 (C7-02). */
+export function detectEncoding(buffer: Buffer): string {
+  if (buffer.length >= 2) {
+    // UTF-16 LE BOM: FF FE
+    if (buffer[0] === 0xFF && buffer[1] === 0xFE) return 'utf-16le';
+    // UTF-16 BE BOM: FE FF
+    if (buffer[0] === 0xFE && buffer[1] === 0xFF) return 'utf-16be';
+  }
+  // UTF-8 BOM: EF BB BF (handled by TextDecoder automatically, but we
+  // explicitly return utf-8 for clarity)
+  if (buffer.length >= 3 && buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+    return 'utf-8';
+  }
+  // Byte-pattern heuristic for CP949: scan first 4KB for bytes in the
+  // CP949 lead-byte range (0x80-0xFE) that are NOT valid UTF-8 multi-byte
+  // lead bytes. In UTF-8, lead bytes 0xC0-0xDF start 2-byte sequences,
+  // 0xE0-0xEF start 3-byte sequences, 0xF0-0xF7 start 4-byte sequences.
+  // CP949 lead bytes 0x80-0xBF are NOT valid UTF-8 lead bytes, so their
+  // presence (outside of UTF-8 continuation byte context) signals CP949.
+  const scanLen = Math.min(buffer.length, 4096);
+  let cp949SignalBytes = 0;
+  for (let i = 0; i < scanLen; i++) {
+    const b = buffer[i]!;
+    // Bytes 0x80-0xBF that are NOT UTF-8 continuation bytes in context
+    // (i.e., they follow an ASCII byte or another 0x80-0xBF byte)
+    if (b >= 0x80 && b <= 0xBF) {
+      const prev = i > 0 ? buffer[i - 1]! : 0;
+      // If previous byte is ASCII (< 0x80), this 0x80-0xBF byte cannot be
+      // a UTF-8 continuation byte (which requires a lead byte 0xC0+)
+      if (prev < 0x80) {
+        cp949SignalBytes++;
+      }
+    }
+  }
+  // If more than 5 non-continuation high-bytes per KB, likely CP949
+  if (cp949SignalBytes > 0 && (cp949SignalBytes / (scanLen / 1024)) > 5) {
+    return 'cp949';
+  }
+  return 'utf-8';
+}
+
+/** Decode a buffer using detected or specified encoding, stripping BOM.
+ *  Handles UTF-16 LE/BE BOMs, UTF-8 BOM, and falls back to CP949 (C7-02). */
+export function decodeBuffer(buffer: Buffer, encoding?: string): string {
+  const enc = encoding ?? detectEncoding(buffer);
+  let decoder: TextDecoder;
+  // UTF-16 decoders should ignore BOM (fatal:false is default)
+  if (enc === 'utf-16le' || enc === 'utf-16be') {
+    decoder = new TextDecoder(enc);
+  } else if (enc === 'cp949') {
+    decoder = new TextDecoder('cp949');
+  } else {
+    decoder = new TextDecoder('utf-8');
+  }
+  const decoded = decoder.decode(buffer);
+  // Strip BOM if present (covers UTF-8 BOM and any residual UTF-16 BOM)
+  return decoded.replace(/^﻿/, '');
+}
+
 interface BankSignature {
   bankId: BankId;
   patterns: RegExp[];
@@ -207,13 +269,16 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
 
   // For CSV, detect bank from content. Reuse the already-read buffer when
   // available (from the unknown-extension sniff path) to avoid reading the
-  // file a second time (C5-02). Strip BOM before bank detection so that
+  // file a second time (C5-02). Detect encoding and decode accordingly
+  // before bank detection so that CP949/UTF-16 Korean text is correctly
+  // interpreted (C7-02/C7-03). Strip BOM before bank detection so that
   // patterns anchored to content start match correctly (C6-02).
   if (format === 'csv') {
     const csvBuffer = sniffBuffer ?? await readFile(filePath);
-    const content = csvBuffer.toString('utf-8').replace(/^﻿/, '');
+    const encoding = detectEncoding(csvBuffer);
+    const content = decodeBuffer(csvBuffer, encoding);
     const { bank, confidence } = detectBank(content);
-    return { format, bank, confidence, encoding: 'utf-8' };
+    return { format, bank, confidence, encoding };
   }
 
   return { format, bank: null, confidence: 0 };

@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import { join } from 'path';
-import { detectBank, detectCSVDelimiter, detectFormat } from '../src/detect.js';
+import { detectBank, detectCSVDelimiter, detectFormat, detectEncoding, decodeBuffer } from '../src/detect.js';
 
 describe('detectBank', () => {
   test('detects KB from content', () => {
@@ -161,5 +161,94 @@ describe('detectFormat', () => {
     // The BOM fixture has no bank-specific text, so bank is expected to be null.
     // The key assertion is that format detection succeeds despite the BOM.
     expect(result.encoding).toBe('utf-8');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Encoding detection tests (C7-02/C7-03)
+// ---------------------------------------------------------------------------
+
+describe('detectEncoding', () => {
+  test('detects UTF-16 LE from BOM', () => {
+    // UTF-16 LE BOM: FF FE
+    const buffer = Buffer.from([0xFF, 0xFE, 0x48, 0x00, 0x69, 0x00]);
+    expect(detectEncoding(buffer)).toBe('utf-16le');
+  });
+
+  test('detects UTF-16 BE from BOM', () => {
+    // UTF-16 BE BOM: FE FF
+    const buffer = Buffer.from([0xFE, 0xFF, 0x00, 0x48, 0x00, 0x69]);
+    expect(detectEncoding(buffer)).toBe('utf-16be');
+  });
+
+  test('detects UTF-8 from BOM', () => {
+    const buffer = Buffer.from([0xEF, 0xBB, 0xBF, 0x48, 0x65, 0x6C, 0x6C, 0x6F]);
+    expect(detectEncoding(buffer)).toBe('utf-8');
+  });
+
+  test('detects UTF-8 for pure ASCII', () => {
+    const buffer = Buffer.from('Hello,World,123', 'utf-8');
+    expect(detectEncoding(buffer)).toBe('utf-8');
+  });
+
+  test('detects UTF-8 for valid UTF-8 Korean text', () => {
+    const buffer = Buffer.from('거래일시,가맹점명,이용금액', 'utf-8');
+    expect(detectEncoding(buffer)).toBe('utf-8');
+  });
+
+  test('detects CP949 for CP949-encoded Korean text', () => {
+    // CP949 encoding of "거래일시,가맹점명,이용금액"
+    // CP949 lead bytes are in 0x80-0xBF range (not valid UTF-8 lead bytes)
+    const cp949Text = Buffer.from([
+      0xB0, 0xA1, 0xC0, 0xDA, 0xC0, 0xCF, 0xBD, 0xC3, // 거래일시
+      0x2C, // comma
+      0xB0, 0xCB, 0xB8, 0xAE, 0xC1, 0xF6, 0xB8, 0xDE, // 가맹점명
+      0x2C, // comma
+      0xC0, 0xCF, 0xBB, 0xF3, 0xB0, 0xE8, 0xB9, 0xE2, // 이용금액
+    ]);
+    expect(detectEncoding(cp949Text)).toBe('cp949');
+  });
+
+  test('returns utf-8 for empty buffer', () => {
+    expect(detectEncoding(Buffer.alloc(0))).toBe('utf-8');
+  });
+
+  test('returns utf-8 for single-byte buffer', () => {
+    expect(detectEncoding(Buffer.from([0x41]))).toBe('utf-8');
+  });
+});
+
+describe('decodeBuffer', () => {
+  test('decodes UTF-8 with BOM', () => {
+    const bomUtf8 = Buffer.from([0xEF, 0xBB, 0xBF, ...Buffer.from('Hello')]);
+    expect(decodeBuffer(bomUtf8, 'utf-8')).toBe('Hello');
+  });
+
+  test('decodes UTF-16 LE with BOM', () => {
+    // "Hi" in UTF-16 LE with BOM
+    const utf16le = Buffer.from([0xFF, 0xFE, 0x48, 0x00, 0x69, 0x00]);
+    const result = decodeBuffer(utf16le, 'utf-16le');
+    expect(result).toBe('Hi');
+  });
+
+  test('decodes UTF-16 LE Korean text', () => {
+    // "이용일" in UTF-16 LE with BOM
+    // 이 = U+C774 → LE: 74 C7, 용 = U+C6A9 → LE: A9 C6, 일 = U+C77C → LE: 7C C7
+    const utf16le = Buffer.from([
+      0xFF, 0xFE, // BOM
+      0x74, 0xC7, 0xA9, 0xC6, 0x7C, 0xC7, // 이용일 in UTF-16 LE
+    ]);
+    const result = decodeBuffer(utf16le, 'utf-16le');
+    expect(result).toContain('이용');
+  });
+
+  test('auto-detects and decodes UTF-16 LE', () => {
+    const utf16le = Buffer.from([0xFF, 0xFE, 0x48, 0x00, 0x69, 0x00]);
+    expect(decodeBuffer(utf16le)).toBe('Hi');
+  });
+
+  test('auto-detects and decodes UTF-8', () => {
+    const utf8 = Buffer.from('거래일시,가맹점명', 'utf-8');
+    expect(decodeBuffer(utf8)).toBe('거래일시,가맹점명');
   });
 });

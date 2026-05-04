@@ -1,12 +1,12 @@
 import { readFile } from 'fs/promises';
 import type { BankId, ParseResult } from './types.js';
-import { detectFormat } from './detect.js';
+import { detectFormat, detectEncoding, decodeBuffer } from './detect.js';
 import { parseCSV } from './csv/index.js';
 import { parseXLSX } from './xlsx/index.js';
 import { parsePDF } from './pdf/index.js';
 
 export type { FileFormat, BankId, DetectionResult, RawTransaction, ParseResult, ParseError, BankAdapter } from './types.js';
-export { detectFormat, detectBank, detectCSVDelimiter } from './detect.js';
+export { detectFormat, detectBank, detectCSVDelimiter, detectEncoding, decodeBuffer } from './detect.js';
 export { parseCSV } from './csv/index.js';
 export { parseXLSX } from './xlsx/index.js';
 export { parsePDF } from './pdf/index.js';
@@ -35,21 +35,10 @@ export async function parseStatement(filePath: string, options?: ParseOptions): 
   switch (detection.format) {
     case 'csv': {
       const buffer = await readFile(filePath);
-      // Try UTF-8 first, then CP949 fallback via TextDecoder
-      let content: string;
-      try {
-        content = buffer.toString('utf-8');
-        // Sanity check: if too many replacement chars per KB, try CP949
-        const replacementCount = (content.match(/\uFFFD/g) ?? []).length;
-        const ratio = replacementCount / (content.length / 1024);
-        if (ratio > 1) {
-          const decoder = new TextDecoder('cp949');
-          content = decoder.decode(buffer);
-        }
-      } catch {
-        const decoder = new TextDecoder('cp949');
-        content = decoder.decode(buffer);
-      }
+      // Use encoding detection from detect module which handles UTF-16,
+      // CP949 byte-pattern analysis, and BOM detection (C7-02/C7-03).
+      const encoding = detection.encoding ?? detectEncoding(buffer);
+      const content = decodeBuffer(buffer, encoding);
       return parseCSV(content, bank);
     }
 
