@@ -1,24 +1,35 @@
-# Aggregate Review -- Cycle 16
+# Cycle 17 Aggregate Review
 
-## Findings (4 total)
+## Summary
+10 findings identified. 3 are actionable this cycle, 4 are low-severity and
+should be fixed for consistency, and 3 are test coverage gaps.
 
-### HIGH Priority
-1. **Web CSV Bank Adapters Don't Normalize Header Detection** -- All 10 web-side bank adapters use exact `cells.includes()` for header detection instead of `normalizeHeader()` (architect, code-reviewer). Headers with extra whitespace, parenthetical suffixes, or zero-width spaces fail on web but succeed on server. Format diversity bug. Affects: `apps/web/src/lib/parser/csv.ts`.
+## Prioritized Findings
 
-### MEDIUM Priority
-2. **PDF detectHeaderRow Lacks Multi-Category Validation** -- Uses single-keyword check instead of `isValidHeaderRow()` requiring 2+ categories (code-reviewer). Summary rows with only amount keywords could be misidentified as headers. Affects: `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`.
+### Must Fix (P1)
+| ID | Finding | Files |
+|----|---------|-------|
+| F17-01 | `normalizeHeader()` misses tab/newline chars | column-matcher.ts (server+web) |
+| F17-02 | PDF summary row pattern missing `누계`, `잔액`, `이월`, `소비`, `당월`, `명세` | pdf/index.ts (server+web) |
+| F17-04 | XLSX summary row pattern same gap | xlsx/index.ts (server+web) |
+| F17-05 | CSV summary row pattern same gap | csv/adapter-factory.ts, csv/generic.ts (server+web) |
 
-### LOW Priority
-3. **Summary Row Skip Missing Spaced Variants** -- `합계|총계|소계` doesn't match `총 합계`, `소 계` (architect). Affects: all parsers.
-4. **Server adapter-factory headerKeywords Not Normalized** -- Defensive: normalize both sides of comparison (code-reviewer). Affects: `packages/parser/src/csv/adapter-factory.ts`.
+### Should Fix (P2)
+| ID | Finding | Files |
+|----|---------|-------|
+| F17-06 | PDF `parseAmount()` missing whitespace stripping | pdf/index.ts (server+web) |
+| F17-10 | PDF fallback scanner missing parenthesized negatives | pdf/index.ts (server+web) |
 
-## Test Coverage Gaps
-- Web CSV bank adapter normalized header detection: untested
-- PDF detectHeaderRow with summary-only rows: untested
-- Summary rows with spaces: untested
+### Test Coverage (P3)
+| ID | Finding | Files |
+|----|---------|-------|
+| F17-08 | No test for tabs in headers | column-matcher.test.ts |
+| F17-09 | No test for summary row variants | csv/xlsx/pdf tests |
+| F17-10 | No test for parenthesized negatives in PDF fallback | table-parser.test.ts |
 
-## Security
-- No new security issues.
-
-## Performance
-- No performance regressions.
+### Deferred
+| ID | Finding | Reason |
+|----|---------|--------|
+| F17-03 | PDF fallback false-match on card numbers | Low risk; date+amount co-occurrence makes this unlikely |
+| F17-07 | PDF error line tracking | UX improvement, not parser correctness |
+| D-01 | Web-side CSV factory refactor | Major refactor, out of scope for format diversity cycle |
