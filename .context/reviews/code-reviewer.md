@@ -1,36 +1,40 @@
-# Code Review -- Cycle 42
+# Code Review -- Cycle 43
 
 ## Scope
-Full parser package deep review after 41 cycles of improvements.
+Full parser package deep review after 42 cycles of improvements.
+703 bun tests + 252 vitest tests — all passing.
 
 ## Findings
 
-### F-42-01: Generic CSV `AMOUNT_PATTERNS` missing `마이너스` prefix pattern [MEDIUM]
-**Files**:
-- `packages/parser/src/csv/generic.ts` (AMOUNT_PATTERNS, lines 52-58)
-- `apps/web/src/lib/parser/csv.ts` (AMOUNT_PATTERNS, lines 161-167)
+### F1. findColumn exact-match path skips combined-header splitting [MEDIUM]
+**File:** `packages/parser/src/csv/column-matcher.ts:29-34`
+**File:** `apps/web/src/lib/parser/column-matcher.ts:26-30`
 
-**Issue**: The `AMOUNT_PATTERNS` arrays used by `isAmountLike()` for column inference in generic CSV parsers do not include a pattern for `마이너스`-prefixed amounts. While `parseCSVAmount()` in shared.ts correctly handles `마이너스` prefix, the column-inference heuristic `isAmountLike()` won't recognize these as amount values during headerless/generic parsing.
+When `exactName` is provided (e.g., `'이용일'`), the first pass does exact normalized match only. If the header is `"이용일/승인일"` (combined), `normalizeHeader("이용일/승인일")` = `"이용일/승인일"` which does NOT equal `"이용일"`. The regex fallback (second pass) catches this via the `/` split, but the exact-name path is wasted work and inconsistent with the regex path.
 
-When a CSV file has no recognizable header keywords AND uses `마이너스`-prefixed amounts as the dominant format, the generic parser's column inference will fail to detect the amount column.
+**Fix:** Also split on `/` in the exact-match path to test each part individually.
 
-**Impact**: Generic CSV parser column inference may fail when `마이너스`-prefixed amounts are the primary format. Only affects unknown-bank CSV files without recognizable headers.
+### F2. Web CSV: 10 hand-rolled adapters duplicate factory pattern [HIGH — technical debt]
+**File:** `apps/web/src/lib/parser/csv.ts:322-1019`
 
-### F-42-02: Cycle 41 `[₩]` finding was incorrect -- already resolved [NONE]
-**Files**: `packages/parser/src/pdf/index.ts`, `apps/web/src/lib/parser/pdf.ts`
-**Issue**: Both server and web PDF `AMOUNT_PATTERN` use `[₩￦]` character class (both Won sign characters). The cycle 41 aggregate incorrectly stated the server side uses `[₩]` alone. **No fix needed.**
+The web CSV file has 10 hand-rolled bank adapters (samsung, shinhan, kb, hyundai, lotte, hana, woori, nh, ibk, bc) that are essentially identical except for column names. Lines 1022-1243 already use a `createBankAdapter` factory for the remaining 14 banks. Refactoring the 10 adapters to use the factory would eliminate ~700 lines of duplication and bring parity with the server-side adapter-factory.ts pattern.
 
-### F-42-03: No format diversity issues remain unfixed [PASS]
-All major format diversity issues identified across 41 cycles have been resolved:
-- CSV: 24 bank adapters, generic fallback, encoding detection, BOM stripping, delimiter detection
-- XLSX: HTML-as-XLS, multi-sheet, merged cell forward-fill, formula errors
-- PDF: Structured table, header-aware columns, fallback line scanner, LLM fallback
-- Date: 8+ format variants
-- Amount: Won signs, parenthesized negatives, 마이너스, whitespace
-- Unicode: NBSP, zero-width, directional markers, variation selectors
+### F3. Server XLSX header detection lacks non-numeric guard [LOW]
+**File:** `packages/parser/src/xlsx/index.ts:239-247`
 
-### F-42-04: Server/web parity is strong [PASS]
-Column patterns, date parsing, amount parsing, header detection, summary row filtering all maintain parity between server and web implementations.
+The server XLSX parser calls `isValidHeaderRow(rowStrings)` directly. The CSV generic parser has an additional `hasNonNumeric` guard to prevent purely-numeric rows from passing. The XLSX parser lacks this guard. Low risk since `isValidHeaderRow` requires Korean/English keywords.
+
+### F4. PDF: AMOUNT_PATTERN inconsistency between table-parser and index.ts [LOW]
+**File:** `packages/parser/src/pdf/table-parser.ts:14`
+**File:** `packages/parser/src/pdf/index.ts:23`
+
+Two different regexes with slightly different behaviors. Table detection is permissive (allows bare amounts of any digit count after comma), while cell extraction is strict (requires Won sign or 5+ digits). Intentional but undocumented.
+
+### F5. CSV: No test for tab-separated files with quoted fields containing tabs [LOW]
+`splitCSVLine` handles this per RFC 4180 but no test exercises it.
+
+## Regressions
+None detected. All 703 + 252 tests pass.
 
 ## Summary
-1 actionable finding: `마이너스` pattern missing from generic CSV column inference on both server and web sides.
+The parser is in excellent shape. Most impactful remaining improvement is F2 (web CSV factory refactor, ~700 lines of elimination) and F1 (exact-match combined-header handling).

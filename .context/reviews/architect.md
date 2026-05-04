@@ -1,37 +1,36 @@
-# Cycle 39 Architect Review
+# Cycle 43 Architect Review
 
 **Reviewer:** architect
 **Focus:** Server/web parity, format diversity gaps, architecture
 
----
+## Server/Web Parity Status
 
-## Finding 1: Server-side PDF parseAmount missing whitespace stripping [BUG-FIX]
-- **Severity**: Medium
-- **File**: `packages/parser/src/pdf/index.ts:57`
-- **Detail**: The server-side PDF `parseAmount` does NOT strip internal whitespace (`\s`), unlike ALL other parseAmount implementations (CSV shared, XLSX, web CSV, web XLSX, web PDF). PDF text extraction can produce amounts with spaces (e.g., "12 345" from column-aligned tables).
-- **Impact**: Silent transaction loss for PDF files with whitespace in amounts.
+### Achieved
+- 24 bank adapters on both sides
+- Column matching: shared patterns and logic
+- Date parsing: identical logic (shared date-utils.ts)
+- Amount parsing: identical (Won sign, parenthesized negatives, 마이너스)
+- Summary row detection: identical regex
+- Header detection: identical isValidHeaderRow()
+- HTML-as-XLS: identical detection and normalization
+- Forward-fill for merged XLSX cells: identical
+- ParseError reporting: identical
 
-## Finding 2: Server-side PDF tryStructuredParse doesn't report amount parse errors [BUG-FIX]
-- **Severity**: Medium
-- **File**: `packages/parser/src/pdf/index.ts:190-195`
-- **Detail**: `tryStructuredParse` silently skips unparseable amounts without pushing ParseError. ALL other parsers (CSV, XLSX, web PDF, web CSV, web XLSX) report these errors with the message `금액을 해석할 수 없습니다`.
-- **Impact**: Silent data loss -- users cannot see which PDF rows had unparseable amounts.
+### Remaining Divergences
+1. **Web CSV: 10 hand-rolled adapters** vs server's factory pattern — ~700 lines duplication (A1)
+2. **Server PDF: LLM fallback** — web lacks this (by design; requires server API)
+3. **Import styles** — server uses CJS `import xlsx from 'xlsx'`, web uses ESM `import * as XLSX from 'xlsx'`
 
-## Finding 3: 7 bank adapters missing test coverage [TEST]
-- **Severity**: Low
-- **File**: `packages/parser/__tests__/csv-adapters.test.ts`
-- **Detail**: suhyup, jb, kwangju, jeju, mg, cu, kdb adapters have zero test coverage.
-- **Impact**: Regression risk.
+## Architecture Debt
 
----
+### A1. Web CSV duplication (~700 lines) [HIGH]
+10 hand-rolled adapters in `apps/web/src/lib/parser/csv.ts` duplicate the factory pattern. The factory is already defined at line 1037 for 14 other adapters. Migrating the 10 adapters to use it would eliminate ~700 lines.
 
-## Server/Web Parity Assessment
+### A2. Column-matcher duplication (server vs web) [MEDIUM — deferred]
+Web-side `column-matcher.ts` is a copy of server-side. Known architectural limitation requiring shared-module refactor.
 
-| Component | Server | Web | Parity |
-|-----------|--------|-----|--------|
-| Column patterns | 15+ terms/category | Same (synced C38) | OK |
-| CSV bank adapters | 24 (factory) | 10 (inline) | D-01 deferred |
-| XLSX bank configs | 24 | N/A (column-matcher) | OK |
-| PDF parseAmount | **Missing \s strip** | Has \s strip | **BROKEN** |
-| PDF error reporting | **Missing errors** | Has errors | **BROKEN** |
-| Date parsing | shared | shared | OK |
+### A3. ColumnMatcher location (csv/ for shared module) [LOW — deferred]
+Server-side column-matcher.ts lives in `csv/` but is used by CSV, XLSX, and PDF parsers. Moving to `packages/parser/src/column-matcher.ts` would be cleaner.
+
+## Summary
+Solid architecture. A1 (web CSV factory migration) is the single highest-impact improvement available.

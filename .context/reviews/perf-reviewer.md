@@ -1,3 +1,3 @@
-# Performance Reviewer -- Cycle 39
+# Performance Reviewer -- Cycle 43
 
-No performance concerns. The fixes involve adding `.replace(/\s/g, '')` to one function and error reporting to one code path, both negligible cost.
+No performance concerns in the current codebase. The regex-based column matching and header detection are O(n*m) where n = rows and m = columns, which is expected. The web CSV factory refactor (A1) would marginally improve startup by reducing the number of adapter objects created.
