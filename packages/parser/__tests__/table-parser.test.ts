@@ -100,8 +100,10 @@ describe('filterTransactionRows', () => {
   });
 
   test('handles amount without 원 suffix', () => {
+    // C27-01: Amounts without comma need 5+ digits or Won sign to avoid
+    // matching 4-digit years. Use comma-separated format for 4-digit amounts.
     const rows = [
-      ['2024-01-15', '스타벅스', '6500'],
+      ['2024-01-15', '스타벅스', '6,500'],
     ];
     const result = filterTransactionRows(rows);
     expect(result).toHaveLength(1);
@@ -132,7 +134,7 @@ describe('filterTransactionRows', () => {
     const rows = [
       ['2024-01-15', '스타벅스', '6,500'],
       ['2024-01-16', '이마트', '45,000원'],
-      ['2024-01-17', 'GS25', '100'],
+      ['2024-01-17', 'GS25', '5,000'],
     ];
     const result = filterTransactionRows(rows);
     expect(result).toHaveLength(3);
@@ -534,6 +536,84 @@ describe('DATE_PATTERN full-width dot support (C23-02)', () => {
   test('rejects decimal 3．14159 as short date with full-width dot', () => {
     const rows = [
       ['3．14159', '원주율', '100원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C27-01: AMOUNT_PATTERN must not match 4-digit year values as amounts
+// ---------------------------------------------------------------------------
+
+describe('C27-01: AMOUNT_PATTERN rejects year values', () => {
+  test('does NOT match bare 4-digit year "2024" as an amount', () => {
+    // A row with a year value and a date should not have the year treated
+    // as an amount. Only the real comma-separated amount should match.
+    const rows = [
+      ['2024-01-15', '2024', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    // The row has a date and amount ("6,500원") — should be a transaction row
+    expect(result).toHaveLength(1);
+  });
+
+  test('does NOT match bare 4-digit year "2025" in a date-only row', () => {
+    // A row with only a date and a year value (no real amount) should NOT
+    // be treated as a transaction row.
+    const rows = [
+      ['2024-01-15', '스타벅스', '2025'],
+    ];
+    const result = filterTransactionRows(rows);
+    // "2025" should not match as an amount → row has no amount → filtered out
+    expect(result).toHaveLength(0);
+  });
+
+  test('does NOT match bare 3-digit "100" as an amount (below 5-digit minimum)', () => {
+    // With the C27-01 fix, bare integers need 5+ digits or a comma separator.
+    // "100" (3 digits, no comma) won't match the table-parser AMOUNT_PATTERN.
+    const rows = [
+      ['2024-01-15', 'GS25', '100'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('still matches valid 5+ digit amounts like "12345"', () => {
+    const rows = [
+      ['2024-01-15', '이마트', '12345'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('still matches comma-separated amounts like "1,234"', () => {
+    const rows = [
+      ['2024-01-15', '스타벅스', '1,234'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('still matches Won-prefixed amounts like "₩6,500"', () => {
+    const rows = [
+      ['2024-01-15', '스타벅스', '₩6,500'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('still matches parenthesized amounts like "(1,234)"', () => {
+    const rows = [
+      ['2024-01-15', '환불', '(1,234)'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('does NOT match bare 2-digit number "12" as an amount', () => {
+    const rows = [
+      ['2024-01-15', '테스트', '12'],
     ];
     const result = filterTransactionRows(rows);
     expect(result).toHaveLength(0);

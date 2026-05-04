@@ -1,3 +1,3 @@
-# Performance Review -- Cycle 24
+# Performance Reviewer -- Cycle 27
 
-No performance concerns. Changes are limited to expanding keyword Sets (O(1) lookups) and regex alternation patterns (negligible impact). No new loops or allocations.
+No performance concerns. The fix adds a minimum-digit constraint to regex alternation in `AMOUNT_PATTERN` which is negligible cost. No new loops or allocations.

@@ -34,7 +34,10 @@ const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-
 // Korean amount pattern — excludes digit sequences adjacent to hyphens
 // to prevent false positives from card numbers (1234-5678-9012-3456) and
 // phone numbers (010-1234-5678) being matched as amounts (F5-01).
-const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])[₩￦]?[\d,]+원?(?![a-zA-Z\d-])|\([\d,]+\)/;
+// C27-01: Bare integers without a comma or Won sign must be 5+ digits to
+// avoid matching 4-digit year values like "2024" as amounts. Amounts with
+// commas (e.g., "1,234") or Won signs (e.g., "₩500") always match.
+const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])₩\d[\d,]*원?(?![a-zA-Z\d-])|(?<![a-zA-Z\d-])￦\d[\d,]*원?(?![a-zA-Z\d-])|(?<![a-zA-Z\d-])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d-])|\([\d,]+\)/;
 const STRICT_DATE_PATTERN = /(\d{4})[.\-\/．。](\d{1,2})[.\-\/．。](\d{1,2})/;
 const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})/;
 const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
@@ -64,7 +67,10 @@ function isValidShortDate(cell: string): boolean {
   const day = parseInt(parts[1] ?? '', 10);
   return month >= 1 && month <= 12 && day >= 1 && day <= (MAX_DAYS_PER_MONTH[month] ?? 0);
 }
-const STRICT_AMOUNT_PATTERN = /^[₩￦]?-?[\d,]+원?$|^\([\d,]+\)$/;
+// C27-01: Require either a comma (thousand separator) or minimum 5 digits
+// for bare integers. Prevents 4-digit year values like "2024" from matching
+// as amounts in findAmountCell and the fallback line scanner.
+const STRICT_AMOUNT_PATTERN = /^[₩￦]?-?(?:[\d,]*,|\d{5,})[\d,]*원?$|^\([\d,]+\)$/;
 
 interface Column {
   start: number;
@@ -518,7 +524,9 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   // Match normal amounts and parenthesized negatives like (1,234).
   // Parenthesized negatives are common in Korean bank statements for refunds
   // and should be treated as negative amounts by parseAmount() (C17-02).
-  const fallbackAmountPattern = /\(([\d,]+)\)|([\d,]+)원?/g;
+  // C27-01: Exclude 4-digit years by requiring either a comma or 5+ digits
+  // for bare integers. "2024" alone won't match; "1,234" and "10000" will.
+  const fallbackAmountPattern = /\(([\d,]+)\)|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);

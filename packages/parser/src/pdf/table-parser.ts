@@ -6,7 +6,10 @@ const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-
 // Korean amount pattern — excludes digit sequences adjacent to hyphens
 // to prevent false positives from card numbers (1234-5678-9012-3456) and
 // phone numbers (010-1234-5678) being matched as amounts (F5-01).
-const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])[₩￦]?[\d,]+원?(?![a-zA-Z\d-])|\([\d,]+\)/;
+// C27-01: Bare integers without a comma or Won sign must be 5+ digits to
+// avoid matching 4-digit year values like "2024" as amounts. Amounts with
+// commas (e.g., "1,234") or Won signs (e.g., "₩500") always match.
+const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])₩\d[\d,]*원?(?![a-zA-Z\d-])|(?<![a-zA-Z\d-])￦\d[\d,]*원?(?![a-zA-Z\d-])|(?<![a-zA-Z\d-])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d-])|\([\d,]+\)/;
 
 // Import shared column patterns from the column-matcher module for
 // header-aware column detection in PDF tables (C15-03).

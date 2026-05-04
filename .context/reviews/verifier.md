@@ -1,17 +1,13 @@
-# Verifier Review -- Cycle 24
+# Verifier -- Cycle 27
 
-## Verification Plan
+**Date:** 2026-05-05
 
-After implementation, verify:
-1. All existing 512 bun tests still pass
-2. New tests for keyword Set completeness pass
-3. New tests for expanded SUMMARY_ROW_PATTERN pass
-4. New tests for English-only header validation pass
-5. `bun run build` succeeds
-6. No regressions in CSV/XLSX/PDF parsing
+## Previous cycle verification
 
-## Previous Cycle Confirmations
+- Cycle 26 F1 (PDF reversed column order merchant extraction): **CONFIRMED FIXED** -- Math.min/Math.max scanning
+- Cycle 26 F2 (reversed column order tests): **CONFIRMED FIXED** -- tests in table-parser.test.ts
 
-- Cycle 23 F1 (web CSV summary row skip): FIXED -- verified all 10 web adapters include the check
-- Cycle 23 F2 (PDF full-width dot): FIXED -- verified server table-parser includes variants
-- No regressions detected
+## Current cycle findings
+
+- F1 (PDF AMOUNT_PATTERN year false-positive): **CONFIRMED** -- regex `[\d,]+` matches "2024"
+- F2 (missing year-value rejection tests): **CONFIRMED** -- no year-value amount tests exist

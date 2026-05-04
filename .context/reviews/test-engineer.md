@@ -1,30 +1,22 @@
-# Test Engineer Review -- Cycle 24
+# Test Engineer -- Cycle 27
 
-## New Test Cases Needed
+**Date:** 2026-05-05
 
-### 1. Keyword Set completeness against column regex patterns (F1)
+## New Test Cases Needed (F2)
 
-Add tests in `column-matcher.test.ts` that verify `isValidHeaderRow()` accepts headers using ONLY regex-matched entries (not just Set entries):
-- `['Date', 'Shop', 'Price']` should pass isValidHeaderRow (Date=date, Shop=merchant via regex, Price=amount via regex)
-- `['Date', 'Store', 'Won']` should pass
-- `['transaction_date', 'shop', 'price']` should pass
+### 1. PDF amount pattern rejects year values
 
-### 2. Expanded SUMMARY_ROW_PATTERN variants (F2)
+Add tests in `table-parser.test.ts`:
+- `findAmountCell(["2024", "1,234"])` should return index 1 (the amount), not 0 (the year)
+- The table-parser AMOUNT_PATTERN should NOT match "2024" when preceded by space
+- The table-parser AMOUNT_PATTERN should match "1,234", "100", "₩6,500"
 
-Add tests verifying new summary variants are matched:
-- `승인 합계 100,000원` should match
-- `결제 합계` should match
-- `총사용 50,000` should match
-- `총 이용 금액` should match
+### 2. Server PDF findAmountCell rejects year values
 
-### 3. English-only CSV parsing end-to-end
-
-Add a test in `csv.test.ts` that parses a full CSV with English-only headers:
-```
-Date,Shop,Amount
-2024-01-15,Starbucks,5000
-```
-This exercises the full pipeline: header detection, column matching, and parsing.
+Tests for the strict `AMOUNT_PATTERN` in `pdf/index.ts`:
+- `findAmountCell(["2024"])` should return null
+- `findAmountCell(["1,234"])` should return the cell
 
 ## Current Test Counts
-- Bun: 512 pass, 0 fail
+- Bun: 526 pass, 0 fail
+- Vitest: 242 pass, 0 fail

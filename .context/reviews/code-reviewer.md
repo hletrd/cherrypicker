@@ -1,37 +1,28 @@
-# Code Review -- Cycle 26
+# Code Reviewer -- Cycle 27
 
-## Finding 1: Web CSV adapters missing memo extraction for 5 banks [HIGH]
+**Date:** 2026-05-05
 
-**Location:** `apps/web/src/lib/parser/csv.ts`
+## Finding F1: PDF AMOUNT_PATTERN false-positive matches 4-digit years [MEDIUM]
 
-The web-side bank adapters for Hyundai, IBK, Woori, Hana, and NH all declare `memoIdx` via `findColumn()` but NEVER extract memo into the transaction object.
+**Location:** 4 files across server and web PDF parsers
 
-Server-side adapter-factory.ts (line 156): `if (memoCol !== -1 && cells[memoCol]) tx.memo = cells[memoCol];`
+The `AMOUNT_PATTERN` regexes in all PDF parsers can match standalone 4-digit integers like "2024" as amounts:
 
-Web-side adapters skip this entirely. Users parsing these banks through the web app lose memo/비고/적요 data.
+1. `packages/parser/src/pdf/index.ts` line 20:
+   `^[₩￦]?-?[\d,]+원?$|^\([\d,]+\)$` -- "2024" matches `[\d,]+`
 
-Affected adapters:
-- hyundaiAdapter: memoIdx via '비고' (line 560), no extraction (line 588)
-- ibkAdapter: memoIdx via '적요' (line 907), no extraction (line 935)
-- wooriAdapter: memoIdx via '비고' (line 768), no extraction (line 796)
-- hanaAdapter: memoIdx via '적요' (line 698), no extraction (line 726)
-- nhAdapter: memoIdx via '비고' (line 836), no extraction (line 865)
+2. `packages/parser/src/pdf/table-parser.ts` line 9:
+   `(?<![a-zA-Z\d-])[\d,]+원?(?![a-zA-Z\d-])|\([\d,]+\)` -- " 2024" matches when preceded by space
 
-## Finding 2: PDF merchant extraction fails with reversed column order [MEDIUM]
+3. `apps/web/src/lib/parser/pdf.ts` line 67 (STRICT_AMOUNT_PATTERN):
+   `^[₩🏬]?-?[\d,]+원?$|^\([\d,]+\)$` -- same as server index.ts
 
-**Location:** `packages/parser/src/pdf/index.ts` (line 158), `apps/web/src/lib/parser/pdf.ts` (line 357)
+4. `apps/web/src/lib/parser/pdf.ts` line 37 (AMOUNT_PATTERN):
+   Same as server table-parser.ts
 
-Both PDF parsers use:
-```typescript
-if (!merchant && dateIdx < amountIdx) {
-  // scan between date and amount
-}
-```
+**Fix:** Require either a comma (thousand separator) or minimum 3 digits for bare integers:
+- Change `[\d,]+` to `(?:[\d,]*,|\d{3,})[\d,]*` in all 4 patterns
 
-When dateIdx >= amountIdx (amount column before date), merchant scan is skipped entirely. Some PDF formats have non-standard column order.
+## Finding F2: No tests for year-value rejection in PDF amount patterns [LOW]
 
-## Finding 3: Test coverage gap for summary rows with date context [LOW]
-
-**Location:** `packages/parser/__tests__/column-matcher.test.ts`
-
-No test verifies that `isValidHeaderRow` rejects rows like `['2024-01-15', '합계', '50000']` (summary row with a date-like string that contains a recognized date keyword format).
+No test file covers `findAmountCell` or `AMOUNT_PATTERN` with year-value inputs.
