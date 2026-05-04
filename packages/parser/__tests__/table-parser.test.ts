@@ -470,3 +470,53 @@ describe('F20-01: fallback amount pattern captures parenthesized amounts', () =>
     expect(amountRaw).toBe('1,234');
   });
 });
+
+// ---------------------------------------------------------------------------
+// C23-02: Full-width dot and ideographic full stop in PDF table DATE_PATTERN
+// ---------------------------------------------------------------------------
+
+describe('DATE_PATTERN full-width dot support (C23-02)', () => {
+  test('matches YYYY．MM．DD full-width dot dates in table text', () => {
+    const text = [
+      '2024．01．15 스타벅스 강남점    6,500원',
+      '2024．01．16 이마트 서초점     45,000원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('matches YYYY。MM。DD ideographic full stop dates in table text', () => {
+    const text = [
+      '2024。01。15 스타벅스 강남점    6,500원',
+      '2024。01。16 이마트 서초점     45,000원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('matches short full-width dot date 1．15 in table text', () => {
+    const rows = [
+      ['1．15', '스타벅스', '6,500원'],
+      ['1．16', '이마트', '45,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+  });
+
+  test('matches short ideographic full stop date 1。15 in table text', () => {
+    const rows = [
+      ['1。15', '스타벅스', '6,500원'],
+      ['1。16', '이마트', '45,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+  });
+
+  test('rejects decimal 3．14159 as short date with full-width dot', () => {
+    const rows = [
+      ['3．14159', '원주율', '100원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+});

@@ -528,4 +528,35 @@ describe('parseCSV - edge cases', () => {
     // Error reported for the impossible date
     expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
   });
+
+  // C23-03: Full-width dot dates through CSV parser integration
+  test('parses full-width dot date YYYY．MM．DD through CSV (C23-03)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2024．01．15,스타벅스,6500',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+  });
+
+  test('parses ideographic full stop date YYYY。MM。DD through CSV (C23-03)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2024。01。15,이마트,30000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+  });
+
+  test('parses mixed delimiter date YYYY．.MM/DD through CSV (C23-03)', () => {
+    const content = [
+      '이용일,이용처,이용금액',
+      '2024．01/15,쿠팡,15000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+  });
 });

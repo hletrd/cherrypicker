@@ -353,6 +353,8 @@ const samsungAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
@@ -420,6 +422,8 @@ const shinhanAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
@@ -488,6 +492,8 @@ const kbAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
@@ -556,6 +562,8 @@ const hyundaiAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
@@ -623,6 +631,8 @@ const lotteAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
@@ -690,6 +700,8 @@ const hanaAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
@@ -758,6 +770,8 @@ const wooriAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
@@ -825,6 +839,8 @@ const nhAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
@@ -893,6 +909,8 @@ const ibkAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
@@ -960,6 +978,8 @@ const bcAdapter: BankAdapter = {
     for (let i = headerIdx + 1; i < lines.length; i++) {
       const line = lines[i] ?? '';
       if (!line.trim()) continue;
+      // Skip summary/total rows (parity with server-side adapter-factory C23-01)
+      if (SUMMARY_ROW_PATTERN.test(line)) continue;
       const cells = splitLine(line, delimiter);
 
       const dateRaw = dateIdx !== -1 ? (cells[dateIdx] ?? '') : '';
