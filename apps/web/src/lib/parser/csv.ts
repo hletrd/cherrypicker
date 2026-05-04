@@ -213,10 +213,30 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
       }
     }
     if (dateCol !== -1 && amountCol !== -1 && merchantCol === -1) {
+      // Prefer a text-heavy column containing Korean characters — avoids
+      // picking numeric columns like installments or card number suffixes.
+      // Aligns with the server-side logic in packages/parser/src/csv/generic.ts
+      // (C5-04).
+      const reservedCols = new Set([dateCol, amountCol, installmentsCol, categoryCol, memoCol]);
       for (let i = 0; i < headers.length; i++) {
-        if (i !== dateCol && i !== amountCol) {
-          merchantCol = i;
-          break;
+        if (!reservedCols.has(i)) {
+          const hasKorean = sampleRows.some((row) => {
+            const cells = splitLine(row, delimiter);
+            return /[가-힣]/.test(cells[i] ?? '');
+          });
+          if (hasKorean) {
+            merchantCol = i;
+            break;
+          }
+        }
+      }
+      // Fallback: pick the first non-reserved column even without Korean
+      if (merchantCol === -1) {
+        for (let i = 0; i < headers.length; i++) {
+          if (!reservedCols.has(i)) {
+            merchantCol = i;
+            break;
+          }
         }
       }
     }
