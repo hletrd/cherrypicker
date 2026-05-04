@@ -1354,4 +1354,37 @@ describe('C74-01: isValidDateCell short-date validation via isValidShortDate', (
     const rows = parseTable(text);
     expect(rows.length).toBeGreaterThanOrEqual(2);
   });
+
+  // --- YYYYMMDD date pattern in parseTable DATE_PATTERN (C82-01) ---
+
+  test('parseTable detects YYYYMMDD lines as table content via DATE_PATTERN (C82-01)', () => {
+    // Small amounts without comma (< 5 digits) rely on DATE_PATTERN alone
+    // to trigger hasDate. Before C82-01, DATE_PATTERN did not match \d{8}.
+    const text = [
+      '카드 이용내역',
+      '20240115 스타벅스 강남점    3500원',
+      '20240116 이마트 서초점     8000원',
+      '20240117 GS25 편의점       2500원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+  });
+
+  test('filterTransactionRows accepts YYYYMMDD rows with small amounts (C82-01)', () => {
+    const rows = [
+      ['20240115', '스타벅스', '3500원'],
+      ['20240116', '이마트', '8000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+  });
+
+  test('parseTable detects YYYYMMDD lines with bare 5-digit amounts (C82-01)', () => {
+    const text = [
+      '20240115 스타벅스 강남점    35000',
+      '20240116 이마트 서초점     12000',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
 });

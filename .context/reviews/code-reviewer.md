@@ -1,36 +1,33 @@
-# Cycle 81 Code Review
+# Cycle 82 Code Review
 
 ## Reviewer: code-reviewer
 
 ### Overview
-After 80 cycles of refinement, the parser is highly mature. Server/web column-matcher parity is confirmed (zero diff on all exported symbols and patterns). 287 vitest tests pass. This cycle identifies format diversity gaps that remain in the PDF parsing path.
+After 81 cycles (1072+ tests passing: 82 vitest + 990 bun + 147 vitest on other files), the parser is highly mature. Cycle 81 correctly added YYYYMMDD support to `findDateCell()`, `isValidDateCell()`, and `fallbackDatePattern`. However, the PDF `DATE_PATTERN` used by `parseTable()` was NOT updated to recognize YYYYMMDD as table content markers.
 
 ## Findings
 
-### F81-01: PDF findDateCell / isValidDateCell missing YYYYMMDD (8-digit) date support [HIGH]
-**Files**: `packages/parser/src/pdf/index.ts`, `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
-**Issue**: The shared `parseDateStringToISO()` in `date-utils.ts` handles YYYYMMDD format (e.g., "20240115"), and the CSV generic parser's `DATE_PATTERNS` array includes `/^\d{4}\d{2}\d{2}$/` for detection. However, the PDF parsers' `findDateCell()` and `isValidDateCell()` functions do NOT include YYYYMMDD detection.
+### F82-01: PDF DATE_PATTERN missing YYYYMMDD — parseTable() won't detect YYYYMMDD lines as table content [HIGH]
+**Files**: `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
+**Issue**: The `DATE_PATTERN` regex in `parseTable()` determines which lines are table content. It does NOT include `\d{8}` alternative. Verified by testing: `'20240115'.match(DATE_PATTERN)` returns null. Lines like "20240115 Starbucks 3500원" (amount < 5 digits, no comma) are completely missed by both `hasDate` and `hasAmount` checks in `parseTable()`.
+**Impact**: PDF tables using YYYYMMDD dates with small amounts (< 10,000 Won without comma) are silently dropped by the structured parser. The fallback line scanner handles this correctly (cycle 81 fix).
+**Fix**: Add `(?<!\d)\d{8}(?!\d)` alternative to both server and web `DATE_PATTERN` regexes. Add tests.
 
-The server-side PDF's `findDateCell()` checks: STRICT_DATE_PATTERN (YYYY.MM.DD), SHORT_YEAR_DATE_PATTERN (YY.MM.DD), KOREAN_FULL_DATE_PATTERN, KOREAN_SHORT_DATE_PATTERN, and isValidShortDate (MM.DD). No YYYYMMDD.
+### F82-02: Server CSV index.ts does not re-export SUMMARY_ROW_PATTERN [LOW]
+**Files**: `packages/parser/src/index.ts`
+**Issue**: The server-side package exports column patterns from column-matcher but does NOT export `SUMMARY_ROW_PATTERN`. External consumers must use internal paths.
+**Fix**: Add `SUMMARY_ROW_PATTERN` to the export list.
 
-The fallback line scanner's `fallbackDatePattern` also does NOT match YYYYMMDD (8-digit without separators).
-
-**Impact**: PDF transactions with YYYYMMDD dates (e.g., "20240115 Starbucks 15,000") will be silently dropped by both the structured table parser and the fallback line scanner. While uncommon, this is a format that the date parsing infrastructure already supports but the PDF detection path does not leverage.
-
-**Fix**:
-1. Add `/^\d{8}$/` check in `findDateCell()` (both server and web) with month/day range validation.
-2. Add `/^\d{8}$/` check in `isValidDateCell()` (both server-side table-parser.ts and web-side pdf.ts).
-3. Add 8-digit date alternative to `fallbackDatePattern` in both server and web PDF parsers.
-4. Add tests for all three paths.
-
-### F81-02: F80 findings confirmed as resolved [INFO]
-**Status**: The F80-01 (fullwidth alphanumeric normalization), F80-02 (missing column pattern terms), and F80-03 (missing summary row patterns) findings from cycle 80 are all confirmed as correctly implemented in the current codebase.
+## Format Diversity Assessment
+Comprehensive coverage after 81 cycles:
+- 24 bank CSV adapters with flexible column matching (90+ patterns)
+- All common Korean/English date formats
+- All amount formats (Won, KRW, 마이너스, parenthesized, trailing-minus, etc.)
+- RFC 4180 multi-line quoted CSV, HTML-as-XLS, multi-sheet XLSX
+- PDF structured + fallback parsing with header-aware column detection
 
 ## Server/Web Parity
-CONFIRMED: Zero diff on all column-matcher exported symbols and patterns. Both sides share identical COLUMN_PATTERNS, SUMMARY_ROW_PATTERN, HEADER_KEYWORDS, and all keyword category Sets. The PDF findDateCell/isValidDateCell gap (F81-01) affects both sides symmetrically.
+CONFIRMED: Identical column patterns, summary row pattern, header keywords, amount/date parsing algorithms. F82-01 affects both sides symmetrically.
 
-## Architecture Notes
-- 8154 lines of tests across 9 test files
-- 287 vitest tests passing
-- All column-matcher constants in sync between server and web
-- The `parseDateStringToISO()` shared function already handles YYYYMMDD, so the fix is only in the detection layer
+## Test Coverage
+1072+ tests. Gaps: No integration test for YYYYMMDD in full PDF parse with small amounts (the F82-01 scenario).

@@ -1,41 +1,41 @@
-# Cycle 81 Implementation Plan
+# Cycle 82 Implementation Plan
 
-## Priority 1: F81-01 — PDF YYYYMMDD Date Detection [HIGH]
+## Priority 1: F82-01 — PDF DATE_PATTERN missing YYYYMMDD in parseTable() [HIGH]
 
 ### Problem
-PDF parsers cannot detect YYYYMMDD (8-digit) dates in:
-1. `findDateCell()` — used by structured table parser
-2. `isValidDateCell()` — used by `filterTransactionRows()`
-3. `fallbackDatePattern` — used by fallback line scanner
-
-The shared `parseDateStringToISO()` already handles this format, but the detection layer doesn't recognize it.
+The `DATE_PATTERN` regex used by `parseTable()` does NOT include `\d{8}` alternative. Lines with YYYYMMDD dates (e.g., "20240115 Starbucks 3500원") are only recognized if the amount pattern alone matches. Small amounts without comma formatting are missed entirely.
 
 ### Implementation
 
-#### 1. Server-side `packages/parser/src/pdf/index.ts`
-- Add a `isValidYYYYMMDD()` helper (validate month 1-12, day 1-31, similar to `isValidYYMMDD` but 8-digit)
-- Add `isValidYYYYMMDD(cell)` check in `findDateCell()` after existing patterns
-- Add `(?<!\d)\d{8}(?!\d)` alternative to `fallbackDatePattern`
+#### 1. Server-side `packages/parser/src/pdf/table-parser.ts`
+- Add `(?<!\d)\d{8}(?!\d)` alternative to `DATE_PATTERN` regex (at module scope, line 5)
 
-#### 2. Server-side `packages/parser/src/pdf/table-parser.ts`
-- Add `isValidYYYYMMDD()` helper or reuse from date-utils.ts
-- Add `isValidYYYYMMDD(trimmed)` check in `isValidDateCell()` for 8-digit strings
+#### 2. Web-side `apps/web/src/lib/parser/pdf.ts`
+- Add same `(?<!\d)\d{8}(?!\d)` alternative to `DATE_PATTERN` regex
 
-#### 3. Web-side `apps/web/src/lib/parser/pdf.ts`
-- Mirror all server-side changes
-
-#### 4. Tests `packages/parser/__tests__/table-parser.test.ts`
-- Add test for `isValidDateCell("20240115")` returning true
-- Add test for `filterTransactionRows` accepting rows with YYYYMMDD dates
-- Add test for invalid YYYYMMDD dates (e.g., "20241315" with month 13) returning false
+#### 3. Tests `packages/parser/__tests__/table-parser.test.ts`
+- Add test: `parseTable()` recognizes YYYYMMDD line as table content
+- Add test: `filterTransactionRows()` accepts YYYYMMDD rows with small amounts
 
 ### Files to modify
-1. `packages/parser/src/pdf/index.ts`
-2. `packages/parser/src/pdf/table-parser.ts`
-3. `apps/web/src/lib/parser/pdf.ts`
-4. `packages/parser/__tests__/table-parser.test.ts`
+1. `packages/parser/src/pdf/table-parser.ts`
+2. `apps/web/src/lib/parser/pdf.ts`
+3. `packages/parser/__tests__/table-parser.test.ts`
 
-### Deferred Items (unchanged)
+## Priority 2: F82-02 — Add SUMMARY_ROW_PATTERN export [LOW]
+
+### Problem
+Server-side parser package exports column patterns but not `SUMMARY_ROW_PATTERN`.
+
+### Implementation
+
+#### 1. `packages/parser/src/index.ts`
+- Add `SUMMARY_ROW_PATTERN` to the export list from column-matcher
+
+### Files to modify
+1. `packages/parser/src/index.ts`
+
+## Deferred Items (unchanged)
 - PDF multi-line header support
 - Historical amount display format
 - Card name suffixes
