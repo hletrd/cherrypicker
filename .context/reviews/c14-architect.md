@@ -1,24 +1,23 @@
-# Cycle 14 — architect
+# Cycle 14 Architect Review
 
-**Date:** 2026-04-25
-**Scope:** Architectural risks, coupling, layering, module boundaries.
+## Architecture Assessment
 
-## Findings
+### Current State
+Well-structured parser package with shared column-matcher, adapter factory, 3-tier PDF fallback.
 
-No new architectural findings.
+### Findings
 
-## Carry-forward
+#### F-ARC-1: XLSX formula error cells produce confusing messages (Medium)
+When `raw: true` is used, formula cells with Excel errors (#VALUE!, #REF!) are returned as strings. `parseDateToISO` tries to parse "#VALUE!" as a date, producing "날짜를 해석할 수 없습니다: #VALUE!" -- confusing because the real issue is a formula error. Should detect Excel error strings and produce a clearer message.
 
-- **D-01:** Duplicate parser implementations (web vs packages). Major refactor — unchanged status.
-- **C7-01 / C7-02 / C8-01 / C9-01 cluster:** Hardcoded category taxonomy duplication across 4+ files. Single highest-signal architectural debt; repeatedly confirmed across 7+ cycles. Awaits build-time codegen step.
+#### F-ARC-2: `extractPages` function lacks space insertion (Medium)
+`extractor.ts` exports `extractPages` (line 52-76) which does NOT insert spaces between text items on the same line, unlike `extractPagesFromBuffer`. If any code path uses `extractPages`, text will merge incorrectly. Currently unused in main parse flow but exported.
 
-## Verified non-issues (cycle 14)
+#### F-ARC-3: Web PDF loses column alignment (Medium)
+Web `pdf.ts` joins text items with `.join(' ')` (line 322), losing all column alignment. Server-side uses Y-coordinate for line breaks and X-position for spacing. Web PDF relies entirely on fallback line-scanner rather than structured table parsing.
 
-- `packages/core` remains pure TypeScript with no runtime-specific imports (grep confirms).
-- `packages/rules` schemas use Zod consistently; YAML data files correctly typed.
-- `apps/web/src/lib/parser` boundary still parallel to `packages/parser/src/**` — no new drift.
-- Module boundaries between calculator/optimizer/categorizer remain clean.
+#### F-ARC-4: Server/web column-matcher duplication (Low, deferred)
+Still duplicated across packages/parser and apps/web. Previously acknowledged.
 
-## Summary
-
-Architectural posture unchanged. The taxonomy-codegen story remains the next high-value architectural move, but is already a tracked deferred item.
+#### F-ARC-5: `splitCSVLine` trims field values unconditionally (Low)
+In `shared.ts`, `splitCSVLine` always trims each field. This is correct for most cases but could remove intentional leading/trailing whitespace in merchant names. Acceptable for credit card data.

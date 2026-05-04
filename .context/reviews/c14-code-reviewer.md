@@ -1,42 +1,37 @@
-# Cycle 14 — code-reviewer
-
-**Date:** 2026-04-25
-**Scope:** Full repository review focused on code quality, logic, SOLID, maintainability.
-
-## Inventory & Method
-
-Reviewed:
-- `packages/core/src/{calculator,optimizer,categorizer}/**`
-- `packages/parser/src/**`
-- `packages/rules/src/**`, `packages/viz/src/**`
-- `apps/web/src/{lib,components,pages}/**`
-- `tools/cli/**`, `tools/scraper/**`
-- Test suites under `__tests__/`
-
-Cycles 7-13 converged on LOW-only findings. This pass examined the same surface plus the new commits between cycles 12-13 (formatSavingsValue + CategoryBreakdown comments).
+# Cycle 14 Code Review
 
 ## Findings
 
-### C14-CR01 — LOW (Low confidence) — Information
-- **File:** `packages/core/src/calculator/reward.ts:65-90` (`findRule`)
-- **Observation:** Sort comparator chains by specificity then by `rules.indexOf(a)` for determinism. `rules.indexOf` is O(n), making the sort O(n^2 log n) in the worst case for very large rule lists. For typical card rules (< 30 entries) this is fine. The deterministic-ordering rationale (C1-12) is well documented inline.
-- **Why it's a problem:** Not a real problem at current scale; flagged only as an observation for future consideration if a card ever defines hundreds of rules.
-- **Failure scenario:** None observable. Theoretical perf cliff far above realistic input sizes.
-- **Suggested fix:** No action. Consider precomputing an index map only if a card ever exceeds ~200 rules.
-- **Confidence:** Low. **Severity:** LOW (informational).
+### F-CR-1: XLSX formula error cells not explicitly handled (Medium)
+`packages/parser/src/xlsx/index.ts` line 193: `xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' })`
+With `raw: true`, formula cells producing Excel errors (#VALUE!, #REF!, #DIV/0!, #N/A) return as error strings. `parseAmount` handles these correctly (returns null), but `parseDateToISO` passes them to `parseDateStringToISO` which returns the error string as-is, then `isValidISODate` returns false, producing a generic "날짜를 해석할 수 없습니다" error.
 
-### C14-CR02 — LOW (Medium confidence) — Maintainability
-- **File:** `apps/web/src/lib/category-labels.ts:32-110` (`FALLBACK_CATEGORY_LABELS`)
-- **Observation:** Same hardcoded fallback re-flagged by every cycle. Already tracked as deferred (C7-02) with a clear exit criterion (build-time generation from `categories.yaml`). No new instance.
-- **Why it's a problem:** Drift risk — re-confirmed but no new manifestation.
-- **Failure scenario:** Same as C7-02.
-- **Suggested fix:** Same as C7-02 exit criterion.
-- **Confidence:** Medium. **Severity:** LOW (carry-forward).
+**Fix**: In `parseDateToISO`, detect Excel error strings before string parsing and produce a specific "셀 수식 오류" error message.
 
-### Final sweep
-- Re-checked `findRule` subcategory exclusion logic, calculator wildcard handling, scoreCardsForTransaction loop, parser AbortError paths, web store actions, format helpers. No new issues.
-- Tests: `npm run verify` PASS (FULL TURBO), all 96 core tests + 4 CLI + 1 viz + 1 scraper + parser + web tests green.
+### F-CR-2: Server CSV generic parser uses English error messages (Low)
+`packages/parser/src/csv/generic.ts` line 57: `errors: [{ message: 'Empty file' }]` and line 167: `message: \`Cannot parse amount: ${amountRaw}\``
+All other server-side parsers use Korean messages. These two English messages are inconsistent.
 
-## Summary
+**Fix**: Change to Korean: '빈 파일입니다' and `금액을 해석할 수 없습니다: ${amountRaw}`
 
-No net-new HIGH or MEDIUM findings. Cycle 14 is another convergence cycle — the codebase remains in a stable, well-documented state where all known issues are either addressed or properly tracked as deferred items.
+### F-CR-3: Web-side `splitLine` duplicates server `splitCSVLine` (Low, deferred)
+`apps/web/src/lib/parser/csv.ts` line 24-38: identical to `packages/parser/src/csv/shared.ts` lines 11-29. Already acknowledged in NOTE(C70-04) comment.
+
+### F-CR-4: PDF `extractPages` missing space insertion (Medium)
+`packages/parser/src/pdf/extractor.ts` lines 52-76: The `extractPages` function does NOT insert spaces between text items on the same line, unlike `extractPagesFromBuffer` (lines 14-50). This means exported `extractPages` would merge adjacent words.
+
+**Fix**: Add the same space-insertion logic (lastEndX tracking) to `extractPages`.
+
+### F-CR-5: Web PDF text extraction loses positional info (Medium)
+`apps/web/src/lib/parser/pdf.ts` line 322: `content.items.map(...).join(' ')`. This space-joins ALL items from a page regardless of their Y position, losing line break information. Unlike server-side which uses Y-coordinate changes for line breaks.
+
+**Fix**: Apply Y-coordinate-based line break detection in web PDF extraction, similar to server-side `extractor.ts`.
+
+### F-CR-6: XLSX `parseAmount` strips whitespace but CSV `parseCSVAmount` also strips (Very Low)
+Both handle whitespace correctly. No issue, just noting for completeness.
+
+### F-CR-7: No test coverage for Excel formula error cells (Medium)
+No test verifies behavior when an XLSX file contains formula errors. Should add a test with a mock sheet containing #VALUE! cells.
+
+### F-CR-8: PDF table-parser DATE_PATTERN lookahead edge case (Low)
+`table-parser.ts` line 3: The negative lookahead `(?![.\-\/\d])` on short date `\d{1,2}[.\-\/]\d{1,2}` prevents matching "3.5" as a date when followed by more digits. This is correct but doesn't prevent matching "3.5" when preceded by a digit (e.g., "123.5"). The lookbehind `(?<![.\d])` handles this.

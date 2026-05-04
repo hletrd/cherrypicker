@@ -1,25 +1,27 @@
-# Cycle 14 — test-engineer
+# Cycle 14 Test Engineer Review
 
-**Date:** 2026-04-25
-**Scope:** Test coverage gaps, flaky tests, TDD opportunities.
+## Test Coverage Assessment
 
-## Inventory of test files
+### Current: 446 bun + 231 vitest + 74 playwright tests
 
-Counted ~17 `__tests__` files spanning core (4), parser (3), rules (2), viz (1), cli (1), scraper (1), web (4). Plus Playwright e2e under `e2e/`.
+### Findings
 
-## Findings
+#### F-TEST-1: No test for XLSX formula error cells (Medium)
+No test verifies that XLSX cells containing Excel error strings (#VALUE!, #REF!, #DIV/0!) are handled gracefully. `parseAmount` returns null for these, but `parseDateToISO` produces confusing error messages. Should add a test case.
 
-### C14-TE01 — LOW (Medium confidence) — Test gap
-- **File:** `apps/web/src/components/dashboard/CategoryBreakdown.svelte:94-98` (`getCategoryColor`)
-- **Observation:** Same as C13-TE01. The 3-way fallback function still has no direct unit test. Repeated re-flagging confirms importance, but it remains a Svelte component-internal helper that would require export refactor to test in isolation.
-- **Suggested fix:** Either (a) extract `getCategoryColor` + `CATEGORY_COLORS` to `apps/web/src/lib/category-colors.ts` to enable unit testing, or (b) add a Playwright assertion that the cafe sub-bar uses a non-grey color. Same exit criterion as C9-08.
-- **Confidence:** Medium. **Severity:** LOW (carry-forward).
+#### F-TEST-2: No test for web PDF Y-coordinate line breaks (Medium)
+The web PDF parser's text extraction joins items with spaces but has no test verifying that column alignment is preserved or that multi-line table rows are handled.
 
-### Final sweep
+#### F-TEST-3: No test for `extractPages` missing space insertion (Medium)
+`extractor.ts` exports `extractPages` which lacks the space-insertion logic. No test exercises this function.
 
-- All test suites pass on FULL TURBO cache. No flakes observed in cycle 14.
-- No newly added uncovered branches in cycles 12-13 commits.
+#### F-TEST-4: CSV generic parser English error messages untested (Low)
+The English error messages 'Empty file' and 'Cannot parse amount: ...' are not specifically asserted in tests. Tests may pass by checking for partial matches.
 
-## Summary
+#### F-TEST-5: Good coverage for core paths
+Column matching, date parsing, amount parsing, header detection, and bank adapters all have thorough test coverage. The 118 column-matcher tests provide strong coverage for the shared module.
 
-No net-new test gaps. Existing C13-TE01 / C9-08 still apply.
+### Recommended Test Additions
+1. XLSX formula error cell handling test
+2. Web PDF text extraction test with positional items
+3. `extractPages` space-insertion parity test

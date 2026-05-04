@@ -1,37 +1,38 @@
-# Cycle 12 Implementation Plan
+# Cycle 14 Implementation Plan
 
-## Fix 1: Server CSV adapter-factory date error reporting (HIGH)
-- **Files**: `packages/parser/src/csv/adapter-factory.ts`
-- **Change**: After `parseDateStringToISO(dateRaw)`, add `isValidISODate()` check and push error to errors array when date is unparseable. Pass errors array and line index to match generic parser behavior.
-- **Tests**: Add test in `packages/parser/__tests__/csv-adapters.test.ts` for unparseable date error reporting
+## Priority 1: XLSX formula error cell detection (server + web)
+**Files**: `packages/parser/src/xlsx/index.ts`, `apps/web/src/lib/parser/xlsx.ts`
+- Add Excel error string detection (`#VALUE!`, `#REF!`, `#DIV/0!`, `#N/A`, `#NAME?`, `#NULL!`, `#NUM!`, `#CALC!`) in `parseDateToISO` and `parseAmount`
+- In `parseDateToISO`: detect error strings early, produce specific "셀 수식 오류: #VALUE!" message
+- In `parseAmount`: already returns null for non-numeric strings (correct), no change needed
+- Add bun test for formula error cell handling
 
-## Fix 2: Web XLSX parser use shared findColumn (MEDIUM)
-- **Files**: `apps/web/src/lib/parser/xlsx.ts`
-- **Change**: Import `findColumn` from `./column-matcher.js` and replace the local `findCol()` closure with calls to `findColumn()`. The local `findCol` function (lines 423-430) should be removed.
-- **Tests**: Existing XLSX parity tests should continue to pass
+## Priority 2: `extractPages` space insertion parity
+**File**: `packages/parser/src/pdf/extractor.ts`
+- Add the same `lastEndX` tracking and space insertion logic from `extractPagesFromBuffer` to `extractPages`
+- Add test for `extractPages` producing correct spacing
 
-## Fix 3: Column-matcher dedicated tests (MEDIUM)
-- **Files**: New `packages/parser/__tests__/column-matcher.test.ts`
-- **Change**: Add comprehensive tests for:
-  - `normalizeHeader()`: zero-width spaces, soft hyphens, parenthetical suffixes, internal whitespace
-  - `findColumn()`: exact match, regex fallback, no match (-1), precedence
-  - `isValidHeaderRow()`: 2+ category requirement, single-category rejection, English case-insensitive
-  - All `*_COLUMN_PATTERN` constants against expected column names
+## Priority 3: Web PDF text extraction Y-coordinate line breaks
+**File**: `apps/web/src/lib/parser/pdf.ts`
+- Replace simple `.join(' ')` with Y-coordinate-based line break detection
+- Track last Y position and insert `\n` when Y changes significantly (matching server-side threshold of 5 units)
+- This enables the web PDF structured table parser to work instead of relying solely on fallback
 
-## Fix 4: CSV isDateLike whitespace tolerance (LOW)
-- **Files**: `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
-- **Change**: Update DATE_PATTERNS to allow optional whitespace around delimiters: `[.\-\/\s]` instead of `[.\-\/]`
-- **Tests**: Add test for spaced date formats in generic CSV parsing
+## Priority 4: Server CSV generic parser English error messages
+**File**: `packages/parser/src/csv/generic.ts`
+- Change `'Empty file'` to `'빈 파일입니다.'`
+- Change `Cannot parse amount: ${amountRaw}` to `금액을 해석할 수 없습니다: ${amountRaw}`
 
-## Fix 5: Server CSV adapter-factory isValidISODate validation (HIGH)
-- **Files**: `packages/parser/src/csv/adapter-factory.ts`
-- **Change**: Import `isValidISODate` from date-utils and validate parsed dates, reporting errors for unparseable ones. Combined with Fix 1.
+## Priority 5: Tests
+**File**: `packages/parser/__tests__/xlsx.test.ts`
+- Add test for XLSX formula error cells (#VALUE!, #REF!)
+- Add test for `extractPages` space insertion
 
-## Deferred Items (explicitly not this cycle)
-- Server/web full parser deduplication (D-01)
-- PDF multi-line header support
-- Web-side BANK_COLUMN_CONFIGS deduplication
+## Deferred Items
+- Server/web column-matcher duplication (different build systems)
+- Web CSV parser duplication (acknowledged in NOTE)
+- PDF multi-line header support (complex, low real-world impact)
 - Historical amount display format
 - Card name suffixes
 - Global config integration
-- CSS dark mode migration
+- CSS dark mode
