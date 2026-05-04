@@ -739,3 +739,55 @@ describe('XLSX invalid serial date error reporting', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Spaced summary row skip (C16-03)
+// ---------------------------------------------------------------------------
+
+describe('XLSX spaced summary row skip', () => {
+  test('skips "총 합계" row with spaces (C16-03)', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '스타벅스', 6000],
+      ['총 합계', '', 6000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('skips "소 계" row with space (C16-03)', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '스타벅스', 6000],
+      ['소 계', '', 3000],
+      ['2026-02-02', '이마트', 45000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.merchant).toBe('스타벅스');
+      expect(result.transactions[1]?.merchant).toBe('이마트');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('skips "합 계" row with space (C16-03)', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '스타벅스', 6000],
+      ['합 계', '', 6000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+});

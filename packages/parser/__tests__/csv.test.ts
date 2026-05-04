@@ -353,6 +353,20 @@ describe('parseCSV - edge cases', () => {
     expect(result.errors.some((error) => error.message.includes('금액을 해석할 수 없습니다'))).toBe(true);
   });
 
+  test('generic parser skips spaced summary rows (C16-03)', () => {
+    const content = [
+      '거래일시,가맹점명,이용금액',
+      '2026-02-01,스타벅스,6000',
+      '총 합계,,6000',
+      '2026-02-02,이마트,45000',
+      '소 계,,45000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    expect(result.transactions[1]?.merchant).toBe('이마트');
+  });
+
   test('handles header columns with extra whitespace (C5-05)', () => {
     const content = [
       '  이용일 , 이용처 , 이용금액  , 할부  ',

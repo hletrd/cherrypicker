@@ -7,6 +7,7 @@ import {
   AMOUNT_COLUMN_PATTERN,
   INSTALLMENTS_COLUMN_PATTERN,
   HEADER_KEYWORDS,
+  isValidHeaderRow,
 } from './column-matcher.js';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
@@ -188,13 +189,13 @@ interface PDFColumnLayout {
 /**
  * Detect a header row in parsed PDF table rows using shared HEADER_KEYWORDS.
  * Scans the first `maxScan` rows for one containing a recognized header
- * keyword. Returns the row index, or -1 if none found (C15-03).
+ * keyword from at least 2 distinct categories (date, merchant, amount),
+ * matching CSV/XLSX header detection via isValidHeaderRow() (C16-02).
+ * Returns the row index, or -1 if none found.
  */
 function detectHeaderRow(rows: string[][], maxScan: number = 15): number {
   for (let i = 0; i < Math.min(maxScan, rows.length); i++) {
-    const normalized = rows[i]!.map((c) => normalizeHeader(c).toLowerCase());
-    const hasKeyword = normalized.some((c) => (HEADER_KEYWORDS as string[]).includes(c));
-    if (hasKeyword) return i;
+    if (isValidHeaderRow(rows[i]!.map((c) => c.trim()))) return i;
   }
   return -1;
 }

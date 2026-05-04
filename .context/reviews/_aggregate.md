@@ -1,25 +1,24 @@
-# Aggregate Review -- Cycle 15
+# Aggregate Review -- Cycle 16
 
-## Findings (6 total)
+## Findings (4 total)
 
 ### HIGH Priority
-1. **PDF Header Row Detection Missing** -- The PDF structured parser uses only positional heuristics (architect, code-reviewer). Adding header keyword detection would significantly improve column identification, especially for PDFs with non-standard column ordering. Affects: `packages/parser/src/pdf/index.ts`, `packages/parser/src/pdf/table-parser.ts`.
+1. **Web CSV Bank Adapters Don't Normalize Header Detection** -- All 10 web-side bank adapters use exact `cells.includes()` for header detection instead of `normalizeHeader()` (architect, code-reviewer). Headers with extra whitespace, parenthetical suffixes, or zero-width spaces fail on web but succeed on server. Format diversity bug. Affects: `apps/web/src/lib/parser/csv.ts`.
 
 ### MEDIUM Priority
-2. **Server extractor.ts Code Duplication** -- `extractPages()` duplicates buffer reading + pdfParse logic from `extractText()` (code-reviewer). Should call `extractPagesFromBuffer()` directly. Affects: `packages/parser/src/pdf/extractor.ts`.
-3. **XLSX Memo Column Forward-Fill Gap** -- All other optional columns have forward-fill for merged cells except memo (architect, code-reviewer). Affects: `packages/parser/src/xlsx/index.ts`.
-4. **PDF table-parser header-aware parsing** -- `parseTable()` should detect header rows using known keywords to anchor column boundaries (code-reviewer). Affects: `packages/parser/src/pdf/table-parser.ts`.
+2. **PDF detectHeaderRow Lacks Multi-Category Validation** -- Uses single-keyword check instead of `isValidHeaderRow()` requiring 2+ categories (code-reviewer). Summary rows with only amount keywords could be misidentified as headers. Affects: `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`.
 
 ### LOW Priority
-5. **CSV adapter-factory headerKeyword check doesn't normalize** -- Uses raw `trim()` instead of `normalizeHeader()` for keyword matching (code-reviewer). Affects: `packages/parser/src/csv/adapter-factory.ts`.
-6. **Web/Server PDF parser tryStructuredParse return shape mismatch** -- Server returns `RawTransaction[] | null`, web returns `{ transactions, errors } | null` (architect). Affects: `packages/parser/src/pdf/index.ts`.
+3. **Summary Row Skip Missing Spaced Variants** -- `합계|총계|소계` doesn't match `총 합계`, `소 계` (architect). Affects: all parsers.
+4. **Server adapter-factory headerKeywords Not Normalized** -- Defensive: normalize both sides of comparison (code-reviewer). Affects: `packages/parser/src/csv/adapter-factory.ts`.
 
 ## Test Coverage Gaps
-- PDF header detection: no tests (feature doesn't exist yet)
-- XLSX memo forward-fill: no tests for merged memo cells
+- Web CSV bank adapter normalized header detection: untested
+- PDF detectHeaderRow with summary-only rows: untested
+- Summary rows with spaces: untested
 
 ## Security
-- No new security issues found.
+- No new security issues.
 
 ## Performance
-- No performance regressions identified.
+- No performance regressions.

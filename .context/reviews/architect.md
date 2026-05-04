@@ -1,33 +1,28 @@
-# Architect Review -- Cycle 15
+# Architect Review -- Cycle 16
 
-## PDF Parser: Missing Header Row Detection (HIGH)
+## 1. Web CSV Bank Adapter Header Detection Doesn't Normalize (HIGH)
 
-The PDF parser (`table-parser.ts` + `index.ts`) has no header row detection. It uses purely positional heuristics:
-- `findDateCell()`: scan left-to-right for first date-looking cell
-- `findAmountCell()`: scan right-to-left for first amount-looking cell
-- Merchant: first non-empty cell between date and amount
+All 10 web-side bank adapters (`apps/web/src/lib/parser/csv.ts`) use exact string match for header detection:
+```ts
+const hasDate = cells.includes('이용일');  // samsung, line 321
+```
 
-This fails when PDFs have extra columns (category, card type, installment info) between date and merchant. The CSV and XLSX parsers both have sophisticated header detection using `isValidHeaderRow()` and `findColumn()`. The PDF parser should leverage the same shared header keyword vocabulary.
+But the server-side `createBankAdapter()` normalizes before comparison:
+```ts
+const normalizedCells = cells.map((c) => normalizeHeader(c));
+if (normalizedCells.some((c) => headerKeywords.includes(c)))  // adapter-factory, line 89
+```
 
-### Recommendation
-Add a header-aware column detection step to the PDF structured parser. Before falling back to positional heuristics, scan the parsed table rows for a header row using the shared `HEADER_KEYWORDS` vocabulary. If a header row is found, use column positions to determine which cells are date/merchant/amount.
+This means CSV headers with extra whitespace (`"이용 금액"`), parenthetical suffixes (`"이용금액(원)"`), or zero-width spaces fail header detection on the web side but succeed on the server side. Real format diversity bug.
 
-## Server extractor.ts Duplicated Code (MEDIUM)
+## 2. PDF Header Detection Lacks Multi-Category Validation (MEDIUM)
 
-`extractPages()` duplicates the exact same buffer reading and page-iteration logic as `extractText()`. Both functions:
-1. Read file to buffer
-2. Call `pdfParse` with identical `pagerender` callback
-3. Return pages
+The PDF `detectHeaderRow()` only checks for ANY keyword presence. The CSV/XLSX `isValidHeaderRow()` requires keywords from 2+ distinct categories. A summary row with only amount keywords could be misidentified as a header in PDF parsing.
 
-`extractPages()` should call `extractPagesFromBuffer()` directly like `extractText()` does.
+## 3. Summary Row Skip Patterns Missing Spaced Variants (LOW)
 
-## XLSX Memo Column Forward-Fill Gap (MEDIUM)
+All parsers skip `합계|총계|소계|total|sum`. Some Korean exports use spaced variants: `총 합계`, `소 계`. Since `normalizeHeader()` handles whitespace in headers, the summary skip should too.
 
-All other optional columns (date, merchant, category, installments) have forward-fill for merged cells. The memo column uses direct `row[memoCol]` access without forward-fill. When Korean bank XLSX exports merge memo cells across installment rows, the memo value is lost for sub-rows.
+## 4. Architecture: Web/Server Duplication Accepted (DEFERRED)
 
-## Web/Server PDF Parser Format Parity (LOW)
-
-- Server: `tryStructuredParse` returns `RawTransaction[] | null`
-- Web: `tryStructuredParse` returns `{ transactions, errors } | null`
-
-The web version reports per-transaction parse errors; the server version silently drops them.
+Full dedup of web/server parsers requires shared package extraction. Currently `column-matcher.ts` and `date-utils.ts` are manually synced. Acceptable for now.

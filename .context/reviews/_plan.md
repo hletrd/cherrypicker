@@ -1,53 +1,60 @@
-# Implementation Plan -- Cycle 15
+# Implementation Plan -- Cycle 16
 
-## P1: PDF Header Row Detection (HIGH)
-**Files:** `packages/parser/src/pdf/table-parser.ts`, `packages/parser/src/pdf/index.ts`
+## P1: Web CSV Bank Adapter Normalized Header Detection (HIGH)
+**File:** `apps/web/src/lib/parser/csv.ts`
 
-### Changes to table-parser.ts
-1. Export a `detectHeaderRow(tableLines: string[][]): number` function that scans the first ~15 rows for one containing header keywords (using the shared `HEADER_KEYWORDS` vocabulary from `../csv/column-matcher.js`).
-2. Export a `getHeaderColumns(headerRow: string[]): { dateCol: number; merchantCol: number; amountCol: number; installmentsCol: number }` function that uses the shared column patterns (`DATE_COLUMN_PATTERN`, `MERCHANT_COLUMN_PATTERN`, `AMOUNT_COLUMN_PATTERN`, `INSTALLMENTS_COLUMN_PATTERN`) to map column indices.
-3. Modify `parseTable()` to also return header row metadata (or export the detection separately so `index.ts` can use it).
+All 10 web-side bank adapters need normalized header detection. The most impactful fix: change header scan loops to normalize cells before comparing.
 
-### Changes to index.ts (server-side)
-4. In `tryStructuredParse()`, after getting parsed table rows, detect the header row.
-5. If a header row is found, use the detected column positions for date/merchant/amount extraction instead of positional heuristics.
-6. If no header found, fall back to existing positional heuristics.
-7. Export `tryStructuredParse` errors collection to match web-side behavior.
+### Strategy
+For each bank adapter, change the header detection from exact `cells.includes()` to normalize cells first. Specifically:
+- For adapters using `cells.includes('X')` exact matches, wrap cells with `normalizeHeader()` before the includes check
+- For adapters using `cells.some((c) => ARRAY.includes(c))`, normalize cells first and also normalize the keyword array entries
 
-## P2: Server extractor.ts Deduplication (MEDIUM)
-**File:** `packages/parser/src/pdf/extractor.ts`
+### Affected adapters (10 total):
+1. samsung (line ~320)
+2. shinhan (line ~386)
+3. kb (line ~452)
+4. hyundai (line ~518)
+5. lotte (line ~582)
+6. hana (line ~649)
+7. woori (line ~714)
+8. nh (line ~779)
+9. ibk (line ~845)
+10. bc (line ~909)
 
-8. Refactor `extractPages()` to reuse `extractPagesFromBuffer()` instead of duplicating the pdfParse + pagerender logic.
+## P2: PDF detectHeaderRow Multi-Category Validation (MEDIUM)
+**Files:** `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts`
 
-## P3: XLSX Memo Column Forward-Fill (MEDIUM)
-**Files:** `packages/parser/src/xlsx/index.ts`
+Replace single-keyword check with `isValidHeaderRow()` from column-matcher, matching CSV/XLSX behavior.
 
-9. Add forward-fill tracking for the memo column, matching the pattern used by date, merchant, category, and installments columns.
+## P3: Summary Row Skip Whitespace Tolerance (LOW)
+**Files:** All parsers (server CSV generic, server CSV adapter-factory, server XLSX, web CSV generic, web CSV adapters, web XLSX)
 
-## P4: CSV adapter-factory headerKeyword Normalization (LOW)
+Update `합계|총계|소계|total|sum` regex to also match spaced variants: `총\s*합계|총\s*계|소\s*계|합\s*계|total|sum`.
+
+## P4: Server adapter-factory Normalize Both Sides (LOW)
 **File:** `packages/parser/src/csv/adapter-factory.ts`
 
-10. In the header detection loop, apply `normalizeHeader()` before comparing with `headerKeywords` to handle zero-width spaces and parenthetical suffixes.
+Normalize the `headerKeywords` config array entries at adapter creation time for defensive matching.
 
 ## P5: Tests
-**File:** `packages/parser/__tests__/table-parser.test.ts` (extend), new test file for PDF index
+**Files:** Various test files
 
-11. Add tests for `detectHeaderRow()` -- header with Korean keywords, header with English keywords, no header found.
-12. Add tests for header-aware column extraction in structured parse.
-13. Add test for XLSX memo forward-fill (extend `packages/parser/__tests__/xlsx.test.ts`).
+- Test PDF detectHeaderRow rejects summary-only rows (amount keywords only)
+- Test summary row skip with spaced Korean text
+- Verify all existing tests still pass
 
 ## Deferred (explicitly)
-- Web-side CSV parser vs server-side duplication (architectural, D-01)
-- PDF multi-line header joining (complex, needs real PDF samples)
-- Web/server PDF tryStructuredParse return shape parity (low impact)
+- Web/server parser full dedup (architectural, requires shared package)
+- PDF multi-line header joining (needs real samples)
+- Web/server PDF tryStructuredParse return shape parity
 - Historical amount display format
 - Card name suffixes
 - Global config integration
-- CSS dark mode migration
 
 ## Execution Order
-1. P2 (extractor.ts dedup) -- smallest, zero risk
-2. P3 (XLSX memo forward-fill) -- small, contained
-3. P4 (adapter-factory normalization) -- small, contained
-4. P1 (PDF header detection) -- largest change
+1. P1 (web CSV header normalization) -- highest impact format diversity fix
+2. P2 (PDF header multi-category) -- medium impact
+3. P3 (summary row skip) -- small, all parsers
+4. P4 (adapter-factory defensive normalization) -- small
 5. P5 (tests) -- validate everything

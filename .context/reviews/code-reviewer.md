@@ -1,33 +1,35 @@
-# Code Review -- Cycle 15
+# Code Review -- Cycle 16
 
-## Finding 1: PDF Header Row Detection Missing (HIGH)
+## Finding 1: Web CSV Bank Adapters Skip normalizeHeader on Header Detection (HIGH)
 
-The PDF structured parser (`packages/parser/src/pdf/index.ts` tryStructuredParse) uses only positional heuristics to identify columns. It should detect header rows using the shared HEADER_KEYWORDS from column-matcher.ts before falling back to positional logic.
+In `apps/web/src/lib/parser/csv.ts`, all 10 bank adapters check for header rows using exact `cells.includes()`:
+- samsung (line 321): `cells.includes('이용일')` + `cells.includes('가맹점명')`
+- shinhan (line 388): `cells.includes('이용일')` + `cells.includes('이용처')`
+- kb (line 454): `cells.some((c) => KB_HEADERS.includes(c))`
+- hyundai (line 519): `cells.some((c) => HYUNDAI_HEADERS.includes(c))`
+- lotte (line 583): `cells.includes('거래일')` + `cells.includes('이용가맹점')`
+- hana (line 650): `cells.includes('이용일자')` + `cells.includes('가맹점명')`
+- woori (line 715): `cells.some((c) => WOORI_HEADERS.includes(c))`
+- nh (line 780): `cells.includes('거래일')` + `cells.includes('이용처')` + `cells.includes('거래금액')`
+- ibk (line 846): `cells.some((c) => IBK_HEADERS.includes(c))`
+- bc (line 910): `cells.includes('이용일')` + `cells.includes('가맹점')` + `cells.includes('이용금액')`
 
-Current flow:
-1. parseTable(text) -> 2D cell array
-2. filterTransactionRows -> rows with date + amount cells
-3. findDateCell (left-to-right), findAmountCell (right-to-left)
-4. Merchant = first non-empty between date and amount
+These should all normalize before comparison, matching the server-side adapter-factory pattern.
 
-Improved flow should be:
-1. parseTable(text) -> 2D cell array
-2. Detect header row using HEADER_KEYWORDS + findColumn
-3. If header found, use column positions directly
-4. If not found, fall back to existing positional heuristics
+## Finding 2: PDF detectHeaderRow Only Uses Single-Category Check (MEDIUM)
 
-## Finding 2: Server extractor.ts Code Duplication (MEDIUM)
+`packages/parser/src/pdf/table-parser.ts` `detectHeaderRow()` (line 176-182) and the web-side copy (line 193-200):
+```ts
+const hasKeyword = normalized.some((c) => (HEADER_KEYWORDS as string[]).includes(c));
+if (hasKeyword) return i;
+```
 
-`extractPages()` duplicates the buffer reading + pdfParse + pagerender logic from `extractText()`. Should reuse `extractPagesFromBuffer()`.
+Should use `isValidHeaderRow()` from column-matcher to require 2+ category keywords, matching CSV/XLSX parsers.
 
-## Finding 3: XLSX Memo Column Forward-Fill (MEDIUM)
+## Finding 3: Summary Row Skip Missing Whitespace Tolerant Patterns (LOW)
 
-Server and web XLSX parsers: memo column uses `row[memoCol]` directly without forward-fill. Other columns (date, merchant, category, installments) all have forward-fill for merged cells.
+All parsers use `합계|총계|소계|total|sum`. Some Korean exports have spaced variants. Should add `\s` tolerance in the regex or use normalizeHeader-like approach for summary detection.
 
-## Finding 4: CSV adapter-factory headerKeyword check doesn't normalize (LOW)
+## Finding 4: Server CSV Adapter-Factory headerKeywords Array Not Normalized (LOW)
 
-`adapter-factory.ts` line 86: `cells.some((c) => headerKeywords.includes(c.trim()))` -- uses raw trim but not `normalizeHeader()`. If header cells contain zero-width spaces or parenthetical suffixes, they won't match the keyword list. The XLSX parser correctly uses `isValidHeaderRow()` which normalizes.
-
-## Finding 5: PDF table-parser header-aware parsing (MEDIUM)
-
-The `parseTable()` function should identify header rows (containing known header keywords) and use them for column boundary anchoring. Currently it only uses date/amount pattern detection to find table lines.
+`packages/parser/src/csv/adapter-factory.ts` line 89-90: The comparison `normalizedCells.some((c) => headerKeywords.includes(c))` works because the bank config headerKeywords are pre-cleaned. But the `headerKeywords` themselves are never normalized through `normalizeHeader()`. If a bank config ever adds a spaced keyword, it would silently fail. Defensive normalization of both sides would be more robust.

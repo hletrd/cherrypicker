@@ -295,6 +295,27 @@ describe('detectHeaderRow', () => {
   test('returns -1 for empty rows', () => {
     expect(detectHeaderRow([])).toBe(-1);
   });
+
+  test('rejects summary-only row with only amount keywords (C16-02)', () => {
+    const rows = [
+      ['이용금액', '거래금액', '합계'],
+      ['이용일', '가맹점명', '이용금액'],
+      ['2024-01-15', '스타벅스', '6,500원'],
+    ];
+    // First row has only amount keywords (1 category) — should be rejected.
+    // Second row has date + merchant + amount (3 categories) — should be accepted.
+    expect(detectHeaderRow(rows)).toBe(1);
+  });
+
+  test('rejects row with only date keywords (C16-02)', () => {
+    const rows = [
+      ['이용일', '거래일', '날짜'],
+      ['이용일', '가맹점명', '이용금액'],
+    ];
+    // First row has only date keywords (1 category) — rejected.
+    // Second row has date + merchant + amount — accepted.
+    expect(detectHeaderRow(rows)).toBe(1);
+  });
 });
 
 describe('getHeaderColumns', () => {

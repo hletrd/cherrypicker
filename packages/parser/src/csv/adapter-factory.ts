@@ -62,6 +62,10 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
     maxHeaderScan = 30,
   } = config;
 
+  // Pre-normalize headerKeywords for defensive matching — ensures comparison
+  // works even if bank config keywords contain non-normalized forms (C16-04).
+  const normalizedKeywords = headerKeywords.map((k) => normalizeHeader(k));
+
   return {
     bankId,
 
@@ -82,12 +86,12 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       // amount) to avoid matching summary rows. Uses shared isValidHeaderRow
       // from column-matcher (C4-07). Normalize cell content before keyword
       // comparison to handle zero-width spaces and parenthetical suffixes
-      // (C15-02).
+      // (C15-02). Both sides of the comparison are normalized (C16-04).
       let headerIdx = -1;
       for (let i = 0; i < Math.min(maxHeaderScan, lines.length); i++) {
         const cells = splitCSVLine(lines[i] ?? '', delimiter);
         const normalizedCells = cells.map((c) => normalizeHeader(c));
-        if (normalizedCells.some((c) => headerKeywords.includes(c))) {
+        if (normalizedCells.some((c) => normalizedKeywords.includes(c))) {
           if (isValidHeaderRow(cells.map((c) => c.trim()))) {
             headerIdx = i;
             break;
@@ -111,7 +115,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i] ?? '';
         if (!line.trim()) continue;
-        if (/합계|총계|소계|total|sum/i.test(line)) continue;
+        if (/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|total|sum/i.test(line)) continue;
         const cells = splitCSVLine(line, delimiter);
 
         const dateRaw = dateCol !== -1 ? (cells[dateCol] ?? '') : '';
