@@ -58,17 +58,5 @@ async function extractPagesFromBuffer(buffer: Buffer): Promise<string[]> {
 
 export async function extractPages(filePath: string): Promise<string[]> {
   const buffer = await readFile(filePath);
-  const pages: string[] = [];
-
-  await pdfParse(buffer, {
-    pagerender(pageData: { getTextContent: () => Promise<{ items: Array<{ str: string; transform: number[] }> }> }) {
-      return pageData.getTextContent().then((textContent) => {
-        const text = renderPageText(textContent.items);
-        pages.push(text);
-        return text;
-      });
-    },
-  });
-
-  return pages;
+  return extractPagesFromBuffer(buffer);
 }

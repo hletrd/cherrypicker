@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { parseTable, filterTransactionRows } from '../src/pdf/table-parser.js';
+import { parseTable, filterTransactionRows, detectHeaderRow, getHeaderColumns } from '../src/pdf/table-parser.js';
 
 describe('parseTable', () => {
   test('returns empty array for empty input', () => {
@@ -230,5 +230,128 @@ describe('filterTransactionRows', () => {
     // the whitespace-split fallback, but those are decimal numbers
     // not matching amount pattern either (no comma separator)
     expect(rows.length).toBeLessThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Header row detection (C15-03)
+// ---------------------------------------------------------------------------
+
+describe('detectHeaderRow', () => {
+  test('detects Korean header keywords in table rows', () => {
+    const rows = [
+      ['이용일', '가맹점명', '이용금액'],
+      ['2024-01-15', '스타벅스', '6,500원'],
+      ['2024-01-16', '이마트', '45,000원'],
+    ];
+    expect(detectHeaderRow(rows)).toBe(0);
+  });
+
+  test('detects header with different Korean keywords', () => {
+    const rows = [
+      ['카드번호', '******1234'],
+      ['거래일시', '가맹점', '금액', '할부'],
+      ['2024-01-15', '스타벅스', '6,500원', '일시불'],
+    ];
+    expect(detectHeaderRow(rows)).toBe(1);
+  });
+
+  test('detects English header keywords', () => {
+    const rows = [
+      ['Date', 'Merchant', 'Amount'],
+      ['2024-01-15', 'Starbucks', '6500'],
+    ];
+    expect(detectHeaderRow(rows)).toBe(0);
+  });
+
+  test('returns -1 when no header keywords found', () => {
+    const rows = [
+      ['2024-01-15', '스타벅스', '6,500원'],
+      ['2024-01-16', '이마트', '45,000원'],
+    ];
+    expect(detectHeaderRow(rows)).toBe(-1);
+  });
+
+  test('skips metadata rows before header', () => {
+    const rows = [
+      ['삼성카드 이용명세서'],
+      ['카드번호: 1234-5678-****'],
+      ['이용일', '가맹점명', '이용금액'],
+      ['2024-01-15', '스타벅스', '6,500원'],
+    ];
+    expect(detectHeaderRow(rows)).toBe(2);
+  });
+
+  test('respects maxScan parameter', () => {
+    const rows = [
+      ['row0'],
+      ['row1'],
+      ['이용일', '가맹점명', '이용금액'],
+    ];
+    expect(detectHeaderRow(rows, 2)).toBe(-1);
+    expect(detectHeaderRow(rows, 3)).toBe(2);
+  });
+
+  test('returns -1 for empty rows', () => {
+    expect(detectHeaderRow([])).toBe(-1);
+  });
+});
+
+describe('getHeaderColumns', () => {
+  test('identifies date, merchant, amount columns from Korean header', () => {
+    const layout = getHeaderColumns(['이용일', '가맹점명', '이용금액']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(0);
+    expect(layout!.merchantCol).toBe(1);
+    expect(layout!.amountCol).toBe(2);
+  });
+
+  test('identifies columns with different Korean synonyms', () => {
+    const layout = getHeaderColumns(['거래일시', '가맹점', '거래금액']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(0);
+    expect(layout!.merchantCol).toBe(1);
+    expect(layout!.amountCol).toBe(2);
+  });
+
+  test('identifies columns with extra columns in between', () => {
+    const layout = getHeaderColumns(['이용일', '업종', '가맹점명', '이용금액', '할부']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(0);
+    expect(layout!.merchantCol).toBe(2);
+    expect(layout!.amountCol).toBe(3);
+    expect(layout!.installmentsCol).toBe(4);
+  });
+
+  test('identifies English column names', () => {
+    const layout = getHeaderColumns(['date', 'store', 'amount']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(0);
+    expect(layout!.merchantCol).toBe(1);
+    expect(layout!.amountCol).toBe(2);
+  });
+
+  test('returns null when date column missing', () => {
+    const layout = getHeaderColumns(['가맹점명', '이용금액']);
+    expect(layout).toBeNull();
+  });
+
+  test('returns null when amount column missing', () => {
+    const layout = getHeaderColumns(['이용일', '가맹점명']);
+    expect(layout).toBeNull();
+  });
+
+  test('returns -1 for merchant when not found', () => {
+    const layout = getHeaderColumns(['이용일', '기타컬럼', '이용금액']);
+    expect(layout).not.toBeNull();
+    expect(layout!.merchantCol).toBe(-1);
+  });
+
+  test('handles normalized headers with parenthetical suffixes', () => {
+    const layout = getHeaderColumns(['이용일', '가맹점명', '이용금액(원)']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(0);
+    expect(layout!.merchantCol).toBe(1);
+    expect(layout!.amountCol).toBe(2);
   });
 });

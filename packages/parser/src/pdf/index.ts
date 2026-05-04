@@ -2,7 +2,7 @@ import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.j
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO } from '../date-utils.js';
 import { extractText } from './extractor.js';
-import { parseTable, filterTransactionRows } from './table-parser.js';
+import { parseTable, filterTransactionRows, detectHeaderRow, getHeaderColumns } from './table-parser.js';
 import { parsePDFWithLLM } from './llm-fallback.js';
 
 export interface PDFParseOptions {
@@ -91,25 +91,85 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
 
     if (txRows.length === 0) return null;
 
+    // Detect header row using shared HEADER_KEYWORDS for header-aware
+    // column extraction (C15-03). This improves column identification
+    // when PDFs have non-standard column ordering or extra columns
+    // (e.g., category, card type) between date and amount columns.
+    const headerIdx = detectHeaderRow(rows);
+    let headerLayout = headerIdx !== -1 ? getHeaderColumns(rows[headerIdx]!) : null;
+
     const transactions: RawTransaction[] = [];
 
     for (const row of txRows) {
-      const dateCell = findDateCell(row);
-      const amountCell = findAmountCell(row);
+      // Use header-aware column positions when available, falling back
+      // to positional heuristics for PDFs without recognizable headers.
+      let dateIdx: number;
+      let amountIdx: number;
+      let merchantIdx: number;
 
-      if (!dateCell || !amountCell) continue;
+      if (headerLayout) {
+        dateIdx = headerLayout.dateCol;
+        amountIdx = headerLayout.amountCol;
+        merchantIdx = headerLayout.merchantCol;
+      } else {
+        const dateCell = findDateCell(row);
+        const amountCell = findAmountCell(row);
+        if (!dateCell || !amountCell) continue;
+        dateIdx = dateCell.idx;
+        amountIdx = amountCell.idx;
+        merchantIdx = -1;
+      }
 
-      // Merchant is the cell between date and amount (or the largest non-date, non-amount cell)
-      let merchantIdx = -1;
-      for (let i = dateCell.idx + 1; i < amountCell.idx; i++) {
-        if ((row[i] ?? '').trim()) {
-          merchantIdx = i;
-          break;
+      // Bounds check — header-based indices may be out of range for
+      // rows with fewer columns than the header.
+      if (dateIdx >= row.length || amountIdx >= row.length) continue;
+
+      const dateValue = (row[dateIdx] ?? '').trim();
+      const amountValue = (row[amountIdx] ?? '').trim();
+
+      // Validate that the cells at the header-detected positions actually
+      // contain date and amount patterns. If not, fall back to positional
+      // heuristics for this specific row (the header may have been
+      // misidentified or the row may have a different structure).
+      if (headerLayout) {
+        const dateCell = findDateCell(row);
+        const amountCell = findAmountCell(row);
+        if (!dateCell || !amountCell) continue;
+        // If the header-based column doesn't match the actual date/amount
+        // position, use the positional heuristic for this row.
+        if (dateCell.idx !== dateIdx) dateIdx = dateCell.idx;
+        if (amountCell.idx !== amountIdx) amountIdx = amountCell.idx;
+      }
+
+      if (!dateValue || dateIdx === -1) continue;
+
+      // Extract merchant
+      let merchant = '';
+      if (merchantIdx >= 0 && merchantIdx < row.length) {
+        merchant = (row[merchantIdx] ?? '').trim();
+      }
+      // Fallback: if no merchant from header or header column is empty,
+      // use the cell between date and amount (positional heuristic).
+      if (!merchant && dateIdx < amountIdx) {
+        // Find the longest text cell between date and amount — this is
+        // more likely to be the merchant name than the first non-empty
+        // cell, which might be a short category label (C15-04).
+        let bestIdx = -1;
+        let bestLen = 0;
+        for (let i = dateIdx + 1; i < amountIdx; i++) {
+          const cellText = (row[i] ?? '').trim();
+          if (cellText.length > bestLen) {
+            bestLen = cellText.length;
+            bestIdx = i;
+          }
+        }
+        if (bestIdx !== -1) {
+          merchantIdx = bestIdx;
+          merchant = (row[merchantIdx] ?? '').trim();
         }
       }
 
-      const merchant = merchantIdx !== -1 ? (row[merchantIdx] ?? '').trim() : '';
-      const amount = parseAmount(amountCell.value);
+      const amount = parseAmount(amountValue);
 
       // parseAmount returns null for unparseable inputs — skip the row
       // rather than silently treating it as 0 (C34-01).
@@ -117,19 +177,28 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
       if (amount <= 0) continue;
 
       const tx: RawTransaction = {
-        date: parseDateStringToISO(dateCell.value),
+        date: parseDateStringToISO((row[dateIdx] ?? '').trim()),
         merchant,
         amount,
       };
 
-      // Look for installment info in remaining cells
-      for (let i = 0; i < row.length; i++) {
-        if (i === dateCell.idx || i === amountCell.idx || i === merchantIdx) continue;
-        const cell = (row[i] ?? '').trim();
-        const instMatch = cell.match(/^(\d+)개?월?$/);
+      // Look for installment info in remaining cells or header-detected column
+      if (headerLayout && headerLayout.installmentsCol >= 0 && headerLayout.installmentsCol < row.length) {
+        const instCell = (row[headerLayout.installmentsCol] ?? '').trim();
+        const instMatch = instCell.match(/^(\d+)/);
         if (instMatch) {
           const inst = parseInt(instMatch[1] ?? '', 10);
           if (inst > 1) tx.installments = inst;
+        }
+      } else {
+        for (let i = 0; i < row.length; i++) {
+          if (i === dateIdx || i === amountIdx || i === merchantIdx) continue;
+          const cell = (row[i] ?? '').trim();
+          const instMatch = cell.match(/^(\d+)개?월?$/);
+          if (instMatch) {
+            const inst = parseInt(instMatch[1] ?? '', 10);
+            if (inst > 1) tx.installments = inst;
+          }
         }
       }
 

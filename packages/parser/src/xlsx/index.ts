@@ -274,6 +274,7 @@ function parseXLSXSheet(
   let lastMerchant: unknown = '';
   let lastCategory: unknown = '';
   let lastInstallments: unknown = '';
+  let lastMemo: unknown = '';
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -319,6 +320,18 @@ function parseXLSXSheet(
       ? (rawInstallValue !== '' && rawInstallValue != null ? rawInstallValue : lastInstallments)
       : '';
 
+    // Forward-fill memo column for merged cells (C15-01). Korean bank
+    // XLSX exports may merge memo cells across installment sub-rows,
+    // matching the forward-fill pattern used by date, merchant, category,
+    // and installments columns.
+    const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
+    if (memoCol !== -1 && rawMemoValue !== '' && rawMemoValue != null) {
+      lastMemo = rawMemoValue;
+    }
+    const memoRaw = memoCol !== -1
+      ? (rawMemoValue !== '' && rawMemoValue != null ? rawMemoValue : lastMemo)
+      : '';
+
     const amountRaw = amountCol !== -1 ? row[amountCol] : '';
 
     if (!dateRaw && !merchantRaw) continue;
@@ -350,8 +363,8 @@ function parseXLSXSheet(
       ...(categoryCol !== -1 && categoryRaw
         ? { category: String(categoryRaw).trim() }
         : {}),
-      ...(memoCol !== -1 && row[memoCol]
-        ? { memo: String(row[memoCol]).trim() }
+      ...(memoCol !== -1 && memoRaw
+        ? { memo: String(memoRaw).trim() }
         : {}),
     };
 

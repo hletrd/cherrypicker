@@ -1,5 +1,13 @@
 import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js';
 import { detectBank } from './detect.js';
+import {
+  normalizeHeader,
+  DATE_COLUMN_PATTERN,
+  MERCHANT_COLUMN_PATTERN,
+  AMOUNT_COLUMN_PATTERN,
+  INSTALLMENTS_COLUMN_PATTERN,
+  HEADER_KEYWORDS,
+} from './column-matcher.js';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 /** Minimal representation of pdfjs-dist TextContent.items members.
@@ -166,6 +174,55 @@ function filterTransactionRows(rows: string[][]): string[][] {
   });
 }
 
+/**
+ * Detected column layout from a PDF header row.
+ * Indices are -1 when a column is not found.
+ */
+interface PDFColumnLayout {
+  dateCol: number;
+  merchantCol: number;
+  amountCol: number;
+  installmentsCol: number;
+}
+
+/**
+ * Detect a header row in parsed PDF table rows using shared HEADER_KEYWORDS.
+ * Scans the first `maxScan` rows for one containing a recognized header
+ * keyword. Returns the row index, or -1 if none found (C15-03).
+ */
+function detectHeaderRow(rows: string[][], maxScan: number = 15): number {
+  for (let i = 0; i < Math.min(maxScan, rows.length); i++) {
+    const normalized = rows[i]!.map((c) => normalizeHeader(c).toLowerCase());
+    const hasKeyword = normalized.some((c) => (HEADER_KEYWORDS as string[]).includes(c));
+    if (hasKeyword) return i;
+  }
+  return -1;
+}
+
+/**
+ * Extract column layout from a detected header row. Uses shared column
+ * patterns from column-matcher.ts to identify date/merchant/amount columns.
+ * Returns null if date and amount columns are not found (C15-03).
+ */
+function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
+  const normalized = headerRow.map((c) => normalizeHeader(c));
+  let dateCol = -1;
+  let merchantCol = -1;
+  let amountCol = -1;
+  let installmentsCol = -1;
+
+  for (let i = 0; i < normalized.length; i++) {
+    const h = normalized[i]!;
+    if (dateCol === -1 && DATE_COLUMN_PATTERN.test(h)) dateCol = i;
+    else if (merchantCol === -1 && MERCHANT_COLUMN_PATTERN.test(h)) merchantCol = i;
+    else if (amountCol === -1 && AMOUNT_COLUMN_PATTERN.test(h)) amountCol = i;
+    else if (installmentsCol === -1 && INSTALLMENTS_COLUMN_PATTERN.test(h)) installmentsCol = i;
+  }
+
+  if (dateCol === -1 || amountCol === -1) return null;
+  return { dateCol, merchantCol, amountCol, installmentsCol };
+}
+
 // ---------------------------------------------------------------------------
 // Structured parser (ported from packages/parser/src/pdf/index.ts)
 // ---------------------------------------------------------------------------
@@ -232,55 +289,110 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
 
     if (txRows.length === 0) return null;
 
+    // Detect header row using shared HEADER_KEYWORDS for header-aware
+    // column extraction (C15-03). This improves column identification
+    // when PDFs have non-standard column ordering or extra columns.
+    const headerIdx = detectHeaderRow(rows);
+    const headerLayout = headerIdx !== -1 ? getHeaderColumns(rows[headerIdx]!) : null;
+
     const transactions: RawTransaction[] = [];
     const parseErrors: ParseError[] = [];
 
     for (const row of txRows) {
-      const dateCell = findDateCell(row);
-      const amountCell = findAmountCell(row);
+      let dateIdx: number;
+      let amountIdx: number;
+      let merchantIdx: number;
 
-      if (!dateCell || !amountCell) continue;
+      if (headerLayout) {
+        dateIdx = headerLayout.dateCol;
+        amountIdx = headerLayout.amountCol;
+        merchantIdx = headerLayout.merchantCol;
+      } else {
+        const dateCell = findDateCell(row);
+        const amountCell = findAmountCell(row);
+        if (!dateCell || !amountCell) continue;
+        dateIdx = dateCell.idx;
+        amountIdx = amountCell.idx;
+        merchantIdx = -1;
+      }
 
-      let merchantIdx = -1;
-      for (let i = dateCell.idx + 1; i < amountCell.idx; i++) {
-        if ((row[i] ?? '').trim()) {
-          merchantIdx = i;
-          break;
+      // Bounds check for header-based indices
+      if (dateIdx >= row.length || amountIdx >= row.length) continue;
+
+      const dateValue = (row[dateIdx] ?? '').trim();
+      const amountValue = (row[amountIdx] ?? '').trim();
+
+      // Validate header-detected positions against actual cell content;
+      // fall back to positional heuristic per-row if they don't match.
+      if (headerLayout) {
+        const dateCell = findDateCell(row);
+        const amountCell = findAmountCell(row);
+        if (!dateCell || !amountCell) continue;
+        if (dateCell.idx !== dateIdx) dateIdx = dateCell.idx;
+        if (amountCell.idx !== amountIdx) amountIdx = amountCell.idx;
+      }
+
+      if (!dateValue || dateIdx === -1) continue;
+
+      // Extract merchant: prefer header-detected column, then fall back
+      // to the longest text cell between date and amount (C15-04).
+      let merchant = '';
+      if (merchantIdx >= 0 && merchantIdx < row.length) {
+        merchant = (row[merchantIdx] ?? '').trim();
+      }
+      if (!merchant && dateIdx < amountIdx) {
+        let bestIdx = -1;
+        let bestLen = 0;
+        for (let i = dateIdx + 1; i < amountIdx; i++) {
+          const cellText = (row[i] ?? '').trim();
+          if (cellText.length > bestLen) {
+            bestLen = cellText.length;
+            bestIdx = i;
+          }
+        }
+        if (bestIdx !== -1) {
+          merchantIdx = bestIdx;
+          merchant = (row[merchantIdx] ?? '').trim();
         }
       }
 
-      const merchant = merchantIdx !== -1 ? (row[merchantIdx] ?? '').trim() : '';
-      const amountRaw = amountCell.value;
-      const amount = parseAmount(amountRaw);
+      const amount = parseAmount(amountValue);
 
       // parseAmount returns null for unparseable inputs — report an error
       // matching the CSV parser's isValidAmount() pattern (C33-03).
       if (amount === null) {
-        const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
+        const cleaned = amountValue.replace(/원$/, '').replace(/,/g, '').trim();
         if (cleaned && !/^0+$/.test(cleaned)) {
-          parseErrors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
+          parseErrors.push({ message: `금액을 해석할 수 없습니다: ${amountValue.trim()}` });
         }
         continue;
       }
-      // Skip zero- and negative-amount rows (e.g., balance inquiries, declined
-      // transactions, refunds). These don't contribute to spending optimization
-      // and would inflate monthly spending totals via Math.abs() downstream
-      // (C42-01/C42-02).
+      // Skip zero- and negative-amount rows (C42-01/C42-02).
       if (amount <= 0) continue;
 
       const tx: RawTransaction = {
-        date: parseDateToISO(dateCell.value, parseErrors),
+        date: parseDateToISO((row[dateIdx] ?? '').trim(), parseErrors),
         merchant,
         amount,
       };
 
-      for (let i = 0; i < row.length; i++) {
-        if (i === dateCell.idx || i === amountCell.idx || i === merchantIdx) continue;
-        const cell = (row[i] ?? '').trim();
-        const instMatch = cell.match(/^(\d+)개?월?$/);
+      // Look for installment info via header column or heuristic scan
+      if (headerLayout && headerLayout.installmentsCol >= 0 && headerLayout.installmentsCol < row.length) {
+        const instCell = (row[headerLayout.installmentsCol] ?? '').trim();
+        const instMatch = instCell.match(/^(\d+)/);
         if (instMatch) {
           const inst = parseInt(instMatch[1] ?? '', 10);
           if (inst > 1) tx.installments = inst;
+        }
+      } else {
+        for (let i = 0; i < row.length; i++) {
+          if (i === dateIdx || i === amountIdx || i === merchantIdx) continue;
+          const cell = (row[i] ?? '').trim();
+          const instMatch = cell.match(/^(\d+)개?월?$/);
+          if (instMatch) {
+            const inst = parseInt(instMatch[1] ?? '', 10);
+            if (inst > 1) tx.installments = inst;
+          }
         }
       }
 
@@ -289,9 +401,7 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
 
     return transactions.length > 0 ? { transactions, errors: parseErrors } : null;
   } catch (err) {
-    // Log structured parse failure for diagnostics — the fallback line scanner
-    // will still attempt recovery, but the structured parse failure should be
-    // visible in the console for debugging malformed PDFs (C25-06/D-106).
+    // Log structured parse failure for diagnostics (C25-06/D-106).
     console.warn('[cherrypicker] Structured PDF table parse failed, falling back to line scan:', err instanceof Error ? err.message : String(err));
     return null;
   }

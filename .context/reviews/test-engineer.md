@@ -1,22 +1,22 @@
-# Test Engineer Review — Cycle 11
+# Test Engineer Review -- Cycle 15
 
-## Missing Test Coverage
+## Test Coverage Gaps
 
-### 1. PDF short date structured parsing (HIGH)
-After fixing DATE_PATTERN, need tests verifying:
-- PDF text with only MM.DD dates gets structured parsed correctly
-- filterTransactionRows matches short date rows
-- parseTable detects table boundaries with short dates
+### 1. PDF Header-Aware Parsing (NEW -- needs tests)
+No tests exist for PDF header row detection because the feature doesn't exist yet. Once implemented, need tests for:
+- PDF with clear header row ("이용일  가맹점  금액")
+- PDF with header keywords but extra columns
+- PDF without header (falls back to positional heuristics)
+- PDF with split-column-header (multi-column text)
 
-### 2. normalizeHeader zero-width space handling (MEDIUM)
-Test that headers with U+200B, U+200C, U+200D are normalized correctly.
+### 2. XLSX Memo Forward-Fill (NEW -- needs tests)
+No tests for memo column forward-fill in merged cells. Need:
+- XLSX with merged memo cells across installment rows
 
-### 3. Web XLSX serial date error reporting (MEDIUM)
-Test that out-of-range serial dates produce errors in web parser.
+### 3. Server extractor.ts dedup (no new tests needed)
+Internal refactor, existing tests cover extractText/extractPages behavior.
 
-### 4. XLSX formula error cells (LOW)
-Test that SheetJS error cells (#REF!, #VALUE!) produce null amounts and appropriate error messages.
-
-## Current Test Count
-- 296 bun tests across 8 files (server-side)
-- 231 vitest tests (web-side)
+## Current Test Counts
+- bun: 703 tests across 22 files
+- vitest: 231 tests across 9 files
+- playwright: (not checked this cycle)

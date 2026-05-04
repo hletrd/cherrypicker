@@ -10,6 +10,7 @@ import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
 import { splitCSVLine, parseCSVAmount, parseCSVInstallments } from './shared.js';
 import {
   findColumn,
+  normalizeHeader,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
   AMOUNT_COLUMN_PATTERN,
@@ -79,11 +80,14 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       // that contains at least one of the bank's expected header keywords
       // AND keywords from at least 2 distinct categories (date, merchant,
       // amount) to avoid matching summary rows. Uses shared isValidHeaderRow
-      // from column-matcher (C4-07).
+      // from column-matcher (C4-07). Normalize cell content before keyword
+      // comparison to handle zero-width spaces and parenthetical suffixes
+      // (C15-02).
       let headerIdx = -1;
       for (let i = 0; i < Math.min(maxHeaderScan, lines.length); i++) {
         const cells = splitCSVLine(lines[i] ?? '', delimiter);
-        if (cells.some((c) => headerKeywords.includes(c.trim()))) {
+        const normalizedCells = cells.map((c) => normalizeHeader(c));
+        if (normalizedCells.some((c) => headerKeywords.includes(c))) {
           if (isValidHeaderRow(cells.map((c) => c.trim()))) {
             headerIdx = i;
             break;

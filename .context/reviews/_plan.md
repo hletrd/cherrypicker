@@ -1,38 +1,53 @@
-# Cycle 14 Implementation Plan
+# Implementation Plan -- Cycle 15
 
-## Priority 1: XLSX formula error cell detection (server + web)
-**Files**: `packages/parser/src/xlsx/index.ts`, `apps/web/src/lib/parser/xlsx.ts`
-- Add Excel error string detection (`#VALUE!`, `#REF!`, `#DIV/0!`, `#N/A`, `#NAME?`, `#NULL!`, `#NUM!`, `#CALC!`) in `parseDateToISO` and `parseAmount`
-- In `parseDateToISO`: detect error strings early, produce specific "셀 수식 오류: #VALUE!" message
-- In `parseAmount`: already returns null for non-numeric strings (correct), no change needed
-- Add bun test for formula error cell handling
+## P1: PDF Header Row Detection (HIGH)
+**Files:** `packages/parser/src/pdf/table-parser.ts`, `packages/parser/src/pdf/index.ts`
 
-## Priority 2: `extractPages` space insertion parity
-**File**: `packages/parser/src/pdf/extractor.ts`
-- Add the same `lastEndX` tracking and space insertion logic from `extractPagesFromBuffer` to `extractPages`
-- Add test for `extractPages` producing correct spacing
+### Changes to table-parser.ts
+1. Export a `detectHeaderRow(tableLines: string[][]): number` function that scans the first ~15 rows for one containing header keywords (using the shared `HEADER_KEYWORDS` vocabulary from `../csv/column-matcher.js`).
+2. Export a `getHeaderColumns(headerRow: string[]): { dateCol: number; merchantCol: number; amountCol: number; installmentsCol: number }` function that uses the shared column patterns (`DATE_COLUMN_PATTERN`, `MERCHANT_COLUMN_PATTERN`, `AMOUNT_COLUMN_PATTERN`, `INSTALLMENTS_COLUMN_PATTERN`) to map column indices.
+3. Modify `parseTable()` to also return header row metadata (or export the detection separately so `index.ts` can use it).
 
-## Priority 3: Web PDF text extraction Y-coordinate line breaks
-**File**: `apps/web/src/lib/parser/pdf.ts`
-- Replace simple `.join(' ')` with Y-coordinate-based line break detection
-- Track last Y position and insert `\n` when Y changes significantly (matching server-side threshold of 5 units)
-- This enables the web PDF structured table parser to work instead of relying solely on fallback
+### Changes to index.ts (server-side)
+4. In `tryStructuredParse()`, after getting parsed table rows, detect the header row.
+5. If a header row is found, use the detected column positions for date/merchant/amount extraction instead of positional heuristics.
+6. If no header found, fall back to existing positional heuristics.
+7. Export `tryStructuredParse` errors collection to match web-side behavior.
 
-## Priority 4: Server CSV generic parser English error messages
-**File**: `packages/parser/src/csv/generic.ts`
-- Change `'Empty file'` to `'빈 파일입니다.'`
-- Change `Cannot parse amount: ${amountRaw}` to `금액을 해석할 수 없습니다: ${amountRaw}`
+## P2: Server extractor.ts Deduplication (MEDIUM)
+**File:** `packages/parser/src/pdf/extractor.ts`
 
-## Priority 5: Tests
-**File**: `packages/parser/__tests__/xlsx.test.ts`
-- Add test for XLSX formula error cells (#VALUE!, #REF!)
-- Add test for `extractPages` space insertion
+8. Refactor `extractPages()` to reuse `extractPagesFromBuffer()` instead of duplicating the pdfParse + pagerender logic.
 
-## Deferred Items
-- Server/web column-matcher duplication (different build systems)
-- Web CSV parser duplication (acknowledged in NOTE)
-- PDF multi-line header support (complex, low real-world impact)
+## P3: XLSX Memo Column Forward-Fill (MEDIUM)
+**Files:** `packages/parser/src/xlsx/index.ts`
+
+9. Add forward-fill tracking for the memo column, matching the pattern used by date, merchant, category, and installments columns.
+
+## P4: CSV adapter-factory headerKeyword Normalization (LOW)
+**File:** `packages/parser/src/csv/adapter-factory.ts`
+
+10. In the header detection loop, apply `normalizeHeader()` before comparing with `headerKeywords` to handle zero-width spaces and parenthetical suffixes.
+
+## P5: Tests
+**File:** `packages/parser/__tests__/table-parser.test.ts` (extend), new test file for PDF index
+
+11. Add tests for `detectHeaderRow()` -- header with Korean keywords, header with English keywords, no header found.
+12. Add tests for header-aware column extraction in structured parse.
+13. Add test for XLSX memo forward-fill (extend `packages/parser/__tests__/xlsx.test.ts`).
+
+## Deferred (explicitly)
+- Web-side CSV parser vs server-side duplication (architectural, D-01)
+- PDF multi-line header joining (complex, needs real PDF samples)
+- Web/server PDF tryStructuredParse return shape parity (low impact)
 - Historical amount display format
 - Card name suffixes
 - Global config integration
-- CSS dark mode
+- CSS dark mode migration
+
+## Execution Order
+1. P2 (extractor.ts dedup) -- smallest, zero risk
+2. P3 (XLSX memo forward-fill) -- small, contained
+3. P4 (adapter-factory normalization) -- small, contained
+4. P1 (PDF header detection) -- largest change
+5. P5 (tests) -- validate everything

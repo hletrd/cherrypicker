@@ -587,6 +587,29 @@ describe('XLSX invalid serial date error reporting', () => {
     }
   });
 
+  test('forward-fills memo in merged cells (C15-01)', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액', '비고'],
+      ['2026-02-01', '이마트', 30000, '온라인결제'],
+      ['', '', 10000, ''],
+      ['', '', 5000, ''],
+      ['2026-02-05', '스타벅스', 6000, '오프라인'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(4);
+      // First row has explicit memo
+      expect(result.transactions[0]?.memo).toBe('온라인결제');
+      // Second and third rows inherit memo via forward-fill
+      expect(result.transactions[1]?.memo).toBe('온라인결제');
+      expect(result.transactions[2]?.memo).toBe('온라인결제');
+      // Fourth row has its own memo
+      expect(result.transactions[3]?.memo).toBe('오프라인');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
   // ---------------------------------------------------------------------------
   // Formula error cells — C11-04
   // ---------------------------------------------------------------------------

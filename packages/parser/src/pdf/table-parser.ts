@@ -6,6 +6,17 @@ const DATE_PATTERN = /(?:\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2}|\d{2}[.\-\/]\d{2}[.\-
 // phone numbers (010-1234-5678) being matched as amounts (F5-01).
 const AMOUNT_PATTERN = /(?<![a-zA-Z\d-])[₩￦]?[\d,]+원?(?![a-zA-Z\d-])|\([\d,]+\)/;
 
+// Import shared column patterns from the column-matcher module for
+// header-aware column detection in PDF tables (C15-03).
+import {
+  normalizeHeader,
+  DATE_COLUMN_PATTERN,
+  MERCHANT_COLUMN_PATTERN,
+  AMOUNT_COLUMN_PATTERN,
+  INSTALLMENTS_COLUMN_PATTERN,
+  HEADER_KEYWORDS,
+} from '../csv/column-matcher.js';
+
 interface Column {
   start: number;
   end: number;
@@ -138,4 +149,63 @@ export function filterTransactionRows(rows: string[][]): string[][] {
     const hasAmount = row.some((cell) => AMOUNT_PATTERN.test(cell));
     return hasDate && hasAmount;
   });
+}
+
+/**
+ * Detected column layout from a PDF header row.
+ * Indices are -1 when a column is not found.
+ */
+export interface PDFColumnLayout {
+  headerRowIdx: number;
+  dateCol: number;
+  merchantCol: number;
+  amountCol: number;
+  installmentsCol: number;
+}
+
+/**
+ * Detect a header row in parsed PDF table rows using the shared
+ * HEADER_KEYWORDS vocabulary from column-matcher.ts. Scans the first
+ * `maxScan` rows for one that contains at least one recognized header
+ * keyword. Returns the row index, or -1 if no header row is found.
+ *
+ * This enables the PDF parser to use header-aware column extraction
+ * instead of relying solely on positional heuristics (C15-03).
+ */
+export function detectHeaderRow(rows: string[][], maxScan: number = 15): number {
+  for (let i = 0; i < Math.min(maxScan, rows.length); i++) {
+    const normalized = rows[i]!.map((c) => normalizeHeader(c).toLowerCase());
+    const hasKeyword = normalized.some((c) => (HEADER_KEYWORDS as string[]).includes(c));
+    if (hasKeyword) return i;
+  }
+  return -1;
+}
+
+/**
+ * Extract column layout from a detected header row in a PDF table.
+ * Uses the shared column patterns from column-matcher.ts to identify
+ * which columns contain dates, merchants, amounts, and installments.
+ * Returns null if the header row doesn't contain enough columns.
+ */
+export function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
+  const normalized = headerRow.map((c) => normalizeHeader(c));
+  let dateCol = -1;
+  let merchantCol = -1;
+  let amountCol = -1;
+  let installmentsCol = -1;
+
+  for (let i = 0; i < normalized.length; i++) {
+    const h = normalized[i]!;
+    if (dateCol === -1 && DATE_COLUMN_PATTERN.test(h)) dateCol = i;
+    else if (merchantCol === -1 && MERCHANT_COLUMN_PATTERN.test(h)) merchantCol = i;
+    else if (amountCol === -1 && AMOUNT_COLUMN_PATTERN.test(h)) amountCol = i;
+    else if (installmentsCol === -1 && INSTALLMENTS_COLUMN_PATTERN.test(h)) installmentsCol = i;
+  }
+
+  // Need at least date and amount columns for meaningful extraction
+  if (dateCol === -1 || amountCol === -1) return null;
+
+  // If merchant column not found, leave it as -1 — the caller will
+  // fall back to positional heuristics for merchant extraction.
+  return { headerRowIdx: -1, dateCol, merchantCol, amountCol, installmentsCol };
 }
