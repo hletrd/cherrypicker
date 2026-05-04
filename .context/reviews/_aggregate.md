@@ -1,37 +1,25 @@
-# Aggregate Review -- Cycle 44
+# Aggregate Review -- Cycle 45
 
-## New Findings: 3 actionable, 2 deferred, 2 low/info
+## New Findings: 2 actionable
 
 ### Actionable (implement this cycle)
 
-**F1. Server XLSX: missing non-numeric header row guard [LOW]**
-- `packages/parser/src/xlsx/index.ts` line 239-247
-- CSV parsers require `hasNonNumeric` guard; XLSX does not
-- Fix: add guard for consistency
+**F1. CSV generic `^\d{6}$` DATE_PATTERN too broad for column detection [MEDIUM]**
+- `packages/parser/src/csv/generic.ts` line 29, `apps/web/src/lib/parser/csv.ts` line 139
+- Fix: add `isYYMMDDLike()` validation with month/day range checks
 
-**F2. PDF isValidShortDate rejects Feb 29 in leap years [LOW]**
-- `packages/parser/src/pdf/index.ts` line 29
-- MAX_DAYS_PER_MONTH hardcodes Feb as 28; CSV parser uses daysInMonth()
-- Fix: use daysInMonth() from date-utils.ts
+**F2. CSV `AMOUNT_PATTERNS` lack boundary guards [LOW]**
+- `packages/parser/src/csv/generic.ts` lines 52-59, `apps/web/src/lib/parser/csv.ts` lines 161-168
+- Fix: add hyphen exclusion to amount pattern boundary checks
 
-**F3. Web XLSX: same non-numeric guard inconsistency [LOW]**
-- `apps/web/src/lib/parser/xlsx.ts` line 419-427
-- Fix: add matching guard
+### Test Gaps
 
-### Deferred
-- **A1. Web CSV 10 hand-rolled adapters -> factory** (~700 lines, too large)
-- **A2. Column-matcher module duplication** (server vs web)
+**T1.** No test for 6-digit YYMMDD false positive in column detection
+**T2.** No test for amount pattern boundary guards
 
-### Low/Info
-- **F4.** All 709 bun + 252 vitest tests pass, 0 regressions
-- **F5.** Server/web parity confirmed across all 24 bank adapters
+### Deferred (unchanged)
 
-## Test Status
-- 709 bun tests passing
-- 252 vitest tests passing
-- 0 regressions
-
-## Priority Order for Implementation
-1. F2: PDF isValidShortDate leap year fix
-2. F1+F3: XLSX non-numeric header guard (both sides)
-3. Tests for both fixes
+| Item | Reason |
+|------|--------|
+| D-01 | Server/web shared module -- architectural refactor |
+| D-02 | PDF multi-line headers -- edge case |
