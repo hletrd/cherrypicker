@@ -334,7 +334,14 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     const amount = parseAmount(amountRaw);
     // Use the shared isValidAmount() helper which handles both NaN and
     // zero-amount filtering (C26-02), matching the bank-specific adapters.
-    if (!isValidAmount(amount, amountRaw, i, errors)) continue;
+    // Enrich amount errors with raw row text for easier debugging, matching
+    // the server-side isValidCSVAmount pattern in packages/parser/src/csv/shared.ts (C59-04).
+    if (!isValidAmount(amount, amountRaw, i, errors)) {
+      if (errors.length > 0 && errors[errors.length - 1]!.line === i + 1) {
+        errors[errors.length - 1]!.raw = line;
+      }
+      continue;
+    }
 
     const tx: RawTransaction = {
       date: parseDateToISO(dateRaw, errors, i),

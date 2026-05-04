@@ -979,13 +979,14 @@ describe('C58-01: Fullwidth minus amounts in PDF AMOUNT_PATTERN', () => {
 // ---------------------------------------------------------------------------
 
 describe('C58-01: Fullwidth minus in fallback amount pattern', () => {
-  // Updated fallback pattern with 5 capture groups:
+  // Updated fallback pattern with 6 capture groups:
   // 1. Parenthesized: (1,234)
   // 2. Won-sign: ₩500 or ￦1,234
   // 3. 마이너스: 마이너스1,000
   // 4. Fullwidth-minus: －50,000
-  // 5. Plain comma/5+digit: 10,000
-  const fallbackPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+  // 5. KRW: KRW10,000 (C59-02)
+  // 6. Plain comma/5+digit: 10,000
+  const fallbackPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
 
   test('captures fullwidth-minus amount as group 4', () => {
     const matches = [...'2024-01-15 환불 －50,000원'.matchAll(fallbackPattern)];
@@ -996,19 +997,66 @@ describe('C58-01: Fullwidth minus in fallback amount pattern', () => {
     expect(last[2]).toBeUndefined();
     expect(last[3]).toBeUndefined();
     expect(last[5]).toBeUndefined();
+    expect(last[6]).toBeUndefined();
   });
 
   test('group extraction fallback chain works for fullwidth-minus amount', () => {
     const matches = [...'2024-01-15 환불 －50,000원'.matchAll(fallbackPattern)];
     const last = matches[matches.length - 1]!;
-    const amountRaw = (last[1] ?? last[2] ?? last[3] ?? last[4] ?? last[5])!;
+    const amountRaw = (last[1] ?? last[2] ?? last[3] ?? last[4] ?? last[5] ?? last[6])!;
     expect(amountRaw).toBe('－50,000');
   });
 
-  test('plain amount still works as group 5 with updated pattern', () => {
+  test('plain amount still works as group 6 with updated pattern', () => {
     const matches = [...'2024-01-15 스타벅스 10,000원'.matchAll(fallbackPattern)];
     const last = matches[matches.length - 1]!;
+    expect(last[6]).toBe('10,000');
+    expect(last[5]).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C59-01/C59-02: KRW prefix support in PDF amount patterns
+// ---------------------------------------------------------------------------
+
+describe('C59-01: KRW prefix in AMOUNT_PATTERN', () => {
+  test('KRW10,000 matches AMOUNT_PATTERN', () => {
+    const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+원?|(?<![a-zA-Z\d])KRW[\d,]+원?(?![a-zA-Z\d])|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+원?(?![a-zA-Z\d])|\([\d,]+\)/;
+    expect(AMOUNT_PATTERN.test('KRW10,000')).toBe(true);
+    expect(AMOUNT_PATTERN.test('KRW1,234,567')).toBe(true);
+    expect(AMOUNT_PATTERN.test('KRW500')).toBe(true);
+  });
+
+  test('KRW prefix in table row is detected by filterTransactionRows', () => {
+    const text = [
+      '2024-01-15 스타벅스 강남점    KRW6,500',
+      '2024-01-16 이마트 서초점     KRW45,000',
+    ].join('\n');
+    const rows = parseTable(text);
+    const txRows = filterTransactionRows(rows);
+    expect(txRows.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('KRW prefix does not false-positive on non-KRW text', () => {
+    const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+원?|(?<![a-zA-Z\d])KRW[\d,]+원?(?![a-zA-Z\d])|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+원?(?![a-zA-Z\d])|\([\d,]+\)/;
+    expect(AMOUNT_PATTERN.test('AKRW10,000')).toBe(false);
+  });
+});
+
+describe('C59-02: KRW prefix in fallback amount pattern', () => {
+  const fallbackPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+
+  test('captures KRW amount as group 5', () => {
+    const matches = [...'2024-01-15 스타벅스 KRW10,000'.matchAll(fallbackPattern)];
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    const last = matches[matches.length - 1]!;
     expect(last[5]).toBe('10,000');
-    expect(last[4]).toBeUndefined();
+  });
+
+  test('group extraction fallback chain includes KRW group', () => {
+    const matches = [...'2024-01-15 이마트 KRW45,000원'.matchAll(fallbackPattern)];
+    const last = matches[matches.length - 1]!;
+    const amountRaw = (last[1] ?? last[2] ?? last[3] ?? last[4] ?? last[5] ?? last[6])!;
+    expect(amountRaw).toBe('45,000');
   });
 });

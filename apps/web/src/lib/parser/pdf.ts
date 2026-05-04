@@ -40,7 +40,7 @@ const DATE_PATTERN = /(?:\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-
 // commas (e.g., "1,234") or Won signs (e.g., "₩500") always match.
 // C32-01: Won-sign-prefixed amounts (₩/￦) match regardless of digit count,
 // so small amounts like "₩500" are correctly detected as transaction amounts.
-const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+원?|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+원?(?![a-zA-Z\d])|\([\d,]+\)/;
+const AMOUNT_PATTERN = /(?<![a-zA-Z\d\-－])₩\d[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d\-－])￦\d[\d,]*원?(?![a-zA-Z\d\-－])|마이너스[\d,]+원?|(?<![a-zA-Z\d])KRW[\d,]+원?(?![a-zA-Z\d])|(?<![a-zA-Z\d])(?:[\d,]*,|\d{5,})[\d,]*원?(?![a-zA-Z\d\-－])|(?<![a-zA-Z\d])－[\d,]+원?(?![a-zA-Z\d])|\([\d,]+\)/;
 const STRICT_DATE_PATTERN = /(\d{4})[.\-\/．。](\d{1,2})[.\-\/．。](\d{1,2})/;
 const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})/;
 const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
@@ -584,7 +584,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   // C27-01: Exclude 4-digit years by requiring either a comma or 5+ digits
   // for bare integers. "2024" alone won't match; "1,234" and "10000" will.
   // Also matches "마이너스" prefixed amounts used by some Korean banks.
-  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
@@ -609,7 +609,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
       if (amountStart > dateEnd) {
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
-          const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5])!;
+          const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6])!;
           const amount = parseAmount(amountRaw);
           // parseAmount returns null for unparseable inputs (C33-03).
           if (amount === null) {

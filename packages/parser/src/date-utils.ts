@@ -18,6 +18,21 @@ export function isValidDayForMonth(year: number, month: number, day: number): bo
   return day >= 1 && day <= daysInMonth(year, month);
 }
 
+/** Validate that a 6-digit string is a plausible YYMMDD date with valid
+ *  month/day ranges. Prevents false-positive date detection when a column
+ *  contains 6-digit transaction IDs (e.g., "123456", "999999") that would
+ *  otherwise match /^\d{6}$/ and steal the date column assignment (C45-01).
+ *  Shared across CSV generic parser and PDF parsers (C59-03). */
+export function isValidYYMMDD(value: string): boolean {
+  if (!/^\d{6}$/.test(value)) return false;
+  const yy = parseInt(value.slice(0, 2), 10);
+  const fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
+  const month = parseInt(value.slice(2, 4), 10);
+  const day = parseInt(value.slice(4, 6), 10);
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= daysInMonth(fullYear, month);
+}
+
 /** Infer the year for a short-date (month/day only) using a look-back
  *  heuristic: if the date would be more than 3 months in the future,
  *  assume it belongs to the previous year. */
