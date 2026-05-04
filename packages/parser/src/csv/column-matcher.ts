@@ -53,10 +53,10 @@ export function findColumn(headers: string[], exactName: string | undefined, pat
 // Column patterns include English alternatives for user-reformatted CSVs
 // and international card companies (C7-07). English terms use word-boundary
 // or case-insensitive matching to avoid false positives on Korean text.
-export const DATE_COLUMN_PATTERN = /이용일|이용일자|거래일|거래일시|날짜|일시|결제일|승인일|승인일자|매출일|작성일|^date$|^trans(?:action)?[\s_-]?date$/i;
-export const MERCHANT_COLUMN_PATTERN = /이용처|가맹점|가맹점명|이용가맹점|거래처|매출처|사용처|결제처|상호|판매처|구매처|매장|취급처|^merchant$|^store$|^shop$|^vendor$|^description$|^item$|^가게/i;
-export const AMOUNT_COLUMN_PATTERN = /이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액|취소금액|환불금액|입금액|결제액|^amount$|^total$|^price$|^won$/i;
-export const INSTALLMENTS_COLUMN_PATTERN = /할부|할부개월|할부기간|할부월|할부개월수|^installments?$/i;
+export const DATE_COLUMN_PATTERN = /이용일|이용일자|거래일|거래일시|날짜|일시|결제일|승인일|승인일자|승인일시|매출일|작성일|접수일|발행일|^date$|^trans(?:action)?[\s_-]?date$|^posted$|^billing$/i;
+export const MERCHANT_COLUMN_PATTERN = /이용처|가맹점|가맹점명|이용가맹점|승인가맹점|거래처|매출처|사용처|결제처|상호|판매처|구매처|매장|취급처|이용내용|거래내용|^merchant$|^store$|^shop$|^vendor$|^description$|^item$|^name$|^가게/i;
+export const AMOUNT_COLUMN_PATTERN = /이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액|취소금액|환불금액|입금액|결제액|청구금액|출금액|결제대금|승인취소금액|^amount$|^total$|^price$|^won$|^charge$|^payment$/i;
+export const INSTALLMENTS_COLUMN_PATTERN = /할부|할부개월|할부기간|할부월|할부개월수|할부횟수|^installments?$/i;
 export const CATEGORY_COLUMN_PATTERN = /업종|카테고리|분류|업종분류|업종명|거래유형|결제유형|이용구분|구분|가맹점유형|^category$|^type$/i;
 export const MEMO_COLUMN_PATTERN = /비고|적요|메모|내용|설명|참고|^memo$|^note$|^remarks?$/i;
 
@@ -79,18 +79,18 @@ export const SUMMARY_ROW_PATTERN = /총\s*합\s*계(?![가-힣])(?=[\s,;]|$)|(?<
 // contains column names rather than metadata text. Includes English equivalents
 // for user-reformatted CSVs and international exports (C7-07).
 export const HEADER_KEYWORDS: readonly string[] = [
-  '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일', '작성일',
-  '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처',
-  '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액',
-  'date', 'merchant', 'amount', 'total', 'store', 'shop', 'price', 'won', 'description', 'vendor', 'item',
+  '이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '승인일시', '매출일', '작성일', '접수일', '발행일',
+  '이용처', '가맹점', '가맹점명', '이용가맹점', '승인가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처', '이용내용', '거래내용',
+  '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액', '청구금액', '출금액', '결제대금', '승인취소금액',
+  'date', 'merchant', 'amount', 'total', 'store', 'shop', 'price', 'won', 'description', 'vendor', 'item', 'name', 'charge', 'payment', 'posted', 'billing',
 ];
 
 // Keyword category Sets for multi-category header detection. A valid header
 // row must contain keywords from at least 2 distinct categories to avoid
 // matching summary rows that only have amount keywords.
-export const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일', '작성일', 'date']);
-export const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처', 'merchant', 'store', 'shop', 'description', 'vendor', 'item']);
-export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액', 'amount', 'total', 'price', 'won']);
+export const DATE_KEYWORDS: ReadonlySet<string> = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '승인일시', '매출일', '작성일', '접수일', '발행일', 'date', 'posted', 'billing']);
+export const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '승인가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처', '이용내용', '거래내용', 'merchant', 'store', 'shop', 'description', 'vendor', 'item', 'name']);
+export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액', '취소금액', '환불금액', '입금액', '결제액', '청구금액', '출금액', '결제대금', '승인취소금액', 'amount', 'total', 'price', 'won', 'charge', 'payment']);
 
 /** Check whether a row of trimmed cell values looks like a valid header row
  *  by requiring keywords from at least 2 distinct categories. Normalizes

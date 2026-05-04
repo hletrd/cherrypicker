@@ -574,3 +574,85 @@ describe('parseCSV - edge cases', () => {
     expect(result.transactions[0]?.date).toBe('2024-01-15');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 36: New column pattern integration tests
+// ---------------------------------------------------------------------------
+
+describe('Cycle 36: New column pattern terms integration', () => {
+  test('generic parser handles 승인일시 + 승인가맹점 + 청구금액 headers', () => {
+    const content = [
+      '승인일시,승인가맹점,청구금액',
+      '2026-02-01,스타벅스 강남점,6500',
+      '2026-02-02,이마트 서초점,30000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2026-02-01');
+    expect(result.transactions[0]?.merchant).toBe('스타벅스 강남점');
+    expect(result.transactions[0]?.amount).toBe(6500);
+  });
+
+  test('generic parser handles 접수일 + 이용내용 + 출금액 headers', () => {
+    const content = [
+      '접수일,이용내용,출금액',
+      '2026-02-01,배달의민족,18000',
+      '2026-02-02,쿠팡,15000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.merchant).toBe('배달의민족');
+  });
+
+  test('generic parser handles 발행일 + 거래내용 + 결제대금 headers', () => {
+    const content = [
+      '발행일,거래내용,결제대금',
+      '2026-02-01,GS25 편의점,3500',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.date).toBe('2026-02-01');
+  });
+
+  test('generic parser handles English posted + name + charge headers', () => {
+    const content = [
+      'posted,name,charge',
+      '2026-02-01,Starbucks Gangnam,6500',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.date).toBe('2026-02-01');
+  });
+
+  test('generic parser handles English billing + merchant + payment headers', () => {
+    const content = [
+      'billing,merchant,payment',
+      '2026-02-01,Emart Seocho,30000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(30000);
+  });
+
+  test('generic parser handles 승인취소금액 header', () => {
+    const content = [
+      '이용일,이용처,승인취소금액',
+      '2026-02-01,환불건,5000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(5000);
+  });
+
+  test('generic parser handles header with 할부횟수 installment column', () => {
+    const content = [
+      '이용일,이용처,이용금액,할부횟수',
+      '2026-02-01,현대백화점,120000,3',
+      '2026-02-02,스타벅스,6000,0',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.installments).toBe(3);
+    expect(result.transactions[1]?.installments).toBeUndefined();
+  });
+});

@@ -752,3 +752,44 @@ describe('Cycle 35: PDF fallback amount pattern 마이너스 and group extractio
     expect(result).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 36: PDF AMOUNT_PATTERN explicit 마이너스 support
+// ---------------------------------------------------------------------------
+
+describe('Cycle 36: PDF AMOUNT_PATTERN explicit 마이너스 matching', () => {
+  test('parseTable detects 마이너스 amounts in PDF text', () => {
+    const text = [
+      '2024-01-15 환불 건    마이너스5,000',
+      '2024-01-16 이마트     45,000원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('filterTransactionRows matches 마이너스 cell directly', () => {
+    const rows = [
+      ['2024-01-15', '환불', '마이너스3,000'],
+      ['2024-01-16', '이마트', '45,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(2);
+  });
+
+  test('filterTransactionRows matches 마이너스 without comma', () => {
+    const rows = [
+      ['2024-01-15', '환불', '마이너스500'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('parseTable detects 마이너스 in plain text lines', () => {
+    const text = [
+      '2024-01-15 편의점    마이너스3,000',
+      '2024-01-16 카페      마이너스500원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
+});
