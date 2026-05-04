@@ -1,28 +1,32 @@
-# Architect Review -- Cycle 16
+# Architect Review -- Cycle 24
 
-## 1. Web CSV Bank Adapter Header Detection Doesn't Normalize (HIGH)
+## 1. Keyword Set Drift in isValidHeaderRow (HIGH)
 
-All 10 web-side bank adapters (`apps/web/src/lib/parser/csv.ts`) use exact string match for header detection:
-```ts
-const hasDate = cells.includes('이용일');  // samsung, line 321
-```
+`isValidHeaderRow()` in `column-matcher.ts` uses `DATE_KEYWORDS`, `MERCHANT_KEYWORDS`, and `AMOUNT_KEYWORDS` Sets for multi-category detection. However, these Sets do not include all entries matched by the column regex patterns:
 
-But the server-side `createBankAdapter()` normalizes before comparison:
-```ts
-const normalizedCells = cells.map((c) => normalizeHeader(c));
-if (normalizedCells.some((c) => headerKeywords.includes(c)))  // adapter-factory, line 89
-```
+- `AMOUNT_COLUMN_PATTERN` matches `price` and `won` via regex `^price$`, `^won$` -- but `AMOUNT_KEYWORDS` does NOT contain `'price'` or `'won'`
+- `MERCHANT_COLUMN_PATTERN` matches `store` and `shop` -- but `MERCHANT_KEYWORDS` does NOT contain `'store'` or `'shop'`
 
-This means CSV headers with extra whitespace (`"이용 금액"`), parenthetical suffixes (`"이용금액(원)"`), or zero-width spaces fail header detection on the web side but succeed on the server side. Real format diversity bug.
+This means a header row with only English columns like `['Date', 'Shop', 'Price']` would:
+- `Date` matches `DATE_KEYWORDS` (present)
+- `Shop` does NOT match `MERCHANT_KEYWORDS` (absent -- only matched by regex)
+- `Price` does NOT match `AMOUNT_KEYWORDS` (absent -- only matched by regex)
 
-## 2. PDF Header Detection Lacks Multi-Category Validation (MEDIUM)
+Result: only 1 category (date) found, isValidHeaderRow returns false, header row rejected.
 
-The PDF `detectHeaderRow()` only checks for ANY keyword presence. The CSV/XLSX `isValidHeaderRow()` requires keywords from 2+ distinct categories. A summary row with only amount keywords could be misidentified as a header in PDF parsing.
+**Fix**: Add the missing regex-matched alternatives to the keyword Sets.
 
-## 3. Summary Row Skip Patterns Missing Spaced Variants (LOW)
+## 2. Summary Row Pattern Missing Variants (MEDIUM)
 
-All parsers skip `합계|총계|소계|total|sum`. Some Korean exports use spaced variants: `총 합계`, `소 계`. Since `normalizeHeader()` handles whitespace in headers, the summary skip should too.
+Current `SUMMARY_ROW_PATTERN` misses real-world Korean bank variants:
+- `승인합계`, `승인 합계` (approval total)
+- `결제합계`, `결제 합계` (payment total)  
+- `총사용`, `총 사용`, `총이용`, `총 이용` (total usage)
 
-## 4. Architecture: Web/Server Duplication Accepted (DEFERRED)
+## 3. Architecture -- No New Debt
 
-Full dedup of web/server parsers requires shared package extraction. Currently `column-matcher.ts` and `date-utils.ts` are manually synced. Acceptable for now.
+After 23 cycles, the architecture is solid. Web/server duplication is accepted (deferred). Column-matcher and date-utils are properly shared.
+
+## Verdict
+
+F1 (keyword Set drift) is the highest priority fix. F2 is a robustness improvement. Both are low-risk changes.

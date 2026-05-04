@@ -1,8 +1,3 @@
-# Performance Review -- Cycle 21
+# Performance Review -- Cycle 24
 
-## No performance regressions identified
-
-All proposed changes are minimal:
-- `isDateLikeShort` month-aware fix: replaces a single `<= 31` comparison with a lookup table -- negligible overhead
-- XLSX whitespace strip: adds one `.replace(/\s/g, '')` call -- negligible
-- CSV amount reorder: no logic change, just reordering existing operations
+No performance concerns. Changes are limited to expanding keyword Sets (O(1) lookups) and regex alternation patterns (negligible impact). No new loops or allocations.

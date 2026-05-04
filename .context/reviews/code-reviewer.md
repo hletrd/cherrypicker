@@ -1,42 +1,38 @@
-# Code Review -- Cycle 23
+# Code Review -- Cycle 24
 
-## Finding 1: Web-side CSV bank adapters missing summary row skip [HIGH]
+## Finding 1: AMOUNT_KEYWORDS / MERCHANT_KEYWORDS missing entries that column regexes match [HIGH]
 
-**Location:** `apps/web/src/lib/parser/csv.ts` -- all 10 bank adapters (samsung, shinhan, kb, hyundai, lotte, hana, woori, nh, ibk, bc)
+**Location:** `packages/parser/src/csv/column-matcher.ts` lines 71-73
 
-**Problem:** The server-side `packages/parser/src/csv/adapter-factory.ts` line 119 has:
-```ts
-if (SUMMARY_ROW_PATTERN.test(line)) continue;
-```
+**Problem:** `isValidHeaderRow()` uses `AMOUNT_KEYWORDS`, `MERCHANT_KEYWORDS`, and `DATE_KEYWORDS` Sets to count how many distinct categories a header row covers. But these Sets are incomplete compared to the column regex patterns:
 
-But none of the 10 web-side bank adapters in `csv.ts` include this check. They only skip empty lines with `if (!line.trim()) continue;`.
+- `AMOUNT_COLUMN_PATTERN` matches `^price$`, `^won$` (case-insensitive) but `AMOUNT_KEYWORDS` only has `['amount', 'total']` -- missing `'price'` and `'won'`
+- `MERCHANT_COLUMN_PATTERN` matches `^store$`, `^shop$` but `MERCHANT_KEYWORDS` only has `['merchant', 'store', 'description']` -- `'shop'` is missing
 
-**Impact:** Summary/total rows like "총 합계,,6000" or "소 계,,45000" will be parsed as real transactions on the web side for bank-specific adapters. The generic parser correctly handles this, but bank-specific paths will produce inflated totals.
+This means a CSV with `['Date', 'Shop', 'Price']` headers would fail `isValidHeaderRow()` (only 1 category matched: date) and the parser would return a "header row not found" error. The column patterns would correctly match these headers, but the validation gate rejects them.
 
-**Severity:** High -- affects all web-side bank-specific CSV parsing with summary rows.
+**Fix:** Add `'price'`, `'won'` to `AMOUNT_KEYWORDS` and `'shop'` to `MERCHANT_KEYWORDS`.
 
-## Finding 2: Server-side PDF table-parser DATE_PATTERN short date missing full-width dot variants [MEDIUM]
+## Finding 2: SUMMARY_ROW_PATTERN missing common Korean variants [MEDIUM]
 
-**Location:** `packages/parser/src/pdf/table-parser.ts` line 3
+**Location:** `packages/parser/src/csv/column-matcher.ts` line 55
 
-**Problem:** The DATE_PATTERN short-date branch uses:
-```
-(?<![.\d])\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d])
-```
+**Problem:** The pattern `/총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i` misses several real-world Korean bank statement footer variants:
 
-But the web-side `apps/web/src/lib/parser/pdf.ts` line 33 correctly uses:
-```
-(?<![.\d．。])\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。])
-```
+- `승인합계`, `승인 합계` (approval total) -- common in Shinhan, KB exports
+- `결제합계`, `결제 합계` (payment total) -- common in Woori exports
+- `총사용`, `총 사용`, `총이용`, `총 이용` (total usage) -- common in BC, Lotte exports
 
-The server-side lookbehind and lookahead are missing `．` (U+FF0E full-width dot) and `。` (U+3002 ideographic full stop). This was introduced in cycle 22 when full-width dot support was added to the web-side but the server-side table-parser was missed.
+**Fix:** Add these variants to the pattern.
 
-**Impact:** PDFs containing full-width dots in short dates may have incorrect date boundary detection on the server side.
+## Finding 3: No test coverage for keyword Set completeness against regex patterns [LOW]
 
-## Finding 3: No integration test for full-width dot dates through CSV/PDF parsers [LOW]
+**Location:** `packages/parser/__tests__/column-matcher.test.ts`
 
-**Location:** `packages/parser/__tests__/`
+**Problem:** Tests verify that `isValidHeaderRow` works with standard headers, but there's no test that ensures every entry matched by the column regex patterns is also present in the keyword Sets. This means Set/regex drift (like Finding 1) is not caught by tests.
 
-**Problem:** `date-utils.test.ts` tests full-width dot and ideographic full stop parsing, but no CSV or PDF integration tests verify these formats work end-to-end through the actual parse pipeline.
+## Previous Cycle Status
 
-## No regressions detected. 504 bun tests passing.
+Cycle 23 F1 (web CSV summary row skip): CONFIRMED FIXED -- all 10 web adapters now include `SUMMARY_ROW_PATTERN.test(line)` checks.
+Cycle 23 F2 (PDF DATE_PATTERN full-width dot): CONFIRMED FIXED -- server-side `table-parser.ts` line 5 now includes full-width dot variants.
+Cycle 23 F3 (full-width dot integration tests): Still open, low priority.

@@ -1,28 +1,29 @@
-# Cycle 23 Implementation Plan
+# Cycle 24 Implementation Plan
 
 **Source:** `_aggregate.md` (3 findings)
 
 ## Fixes
 
-### Fix 1: Web-side CSV bank adapters missing summary row skip [HIGH]
-- **File:** `apps/web/src/lib/parser/csv.ts`
-- **Action:** Add `if (SUMMARY_ROW_PATTERN.test(line)) continue;` after the empty-line check in all 10 bank adapters (samsung, shinhan, kb, hyundai, lotte, hana, woori, nh, ibk, bc)
-- **Pattern:** `SUMMARY_ROW_PATTERN` is already imported at top of file from `./column-matcher.js`
-- **Verification:** Add test with summary rows in bank-specific CSV content
+### Fix 1: Keyword Set alignment with column regex patterns [HIGH]
+- **File:** `packages/parser/src/csv/column-matcher.ts`
+- **Action:** Add missing entries to keyword Sets:
+  - `AMOUNT_KEYWORDS`: add `'price'`, `'won'` (matched by AMOUNT_COLUMN_PATTERN `^price$`, `^won$`)
+  - `MERCHANT_KEYWORDS`: add `'shop'` (matched by MERCHANT_COLUMN_PATTERN `^shop$`)
+- **Verification:** Add tests in `column-matcher.test.ts` verifying English-only header rows pass isValidHeaderRow
 
-### Fix 2: Server-side PDF table-parser DATE_PATTERN full-width dot parity [MEDIUM]
-- **File:** `packages/parser/src/pdf/table-parser.ts`
-- **Action:** Update DATE_PATTERN short-date lookbehind from `(?<![.\d])` to `(?<![.\d．。])` and lookahead from `(?![.\-\/\d])` to `(?![.\-\/\d．。])`
-- **Verification:** Add bun test for full-width dot short dates in table-parser.test.ts
+### Fix 2: Expand SUMMARY_ROW_PATTERN [MEDIUM]
+- **File:** `packages/parser/src/csv/column-matcher.ts`
+- **Action:** Add `승인\s*합계`, `결제\s*합계`, `총\s*(?:사용|이용)` to the pattern
+- **Verification:** Add tests for new summary variants in `column-matcher.test.ts`
 
-### Fix 3: Integration tests for full-width dot dates [LOW]
-- **File:** `packages/parser/__tests__/csv.test.ts`, `packages/parser/__tests__/table-parser.test.ts`
-- **Action:** Add test cases for full-width dot dates through CSV and PDF table-parser
+### Fix 3: Keyword Set completeness test [LOW]
+- **File:** `packages/parser/__tests__/column-matcher.test.ts`
+- **Action:** Add test that exercises English-only headers through isValidHeaderRow to catch future Set/regex drift
 - **Verification:** Run full test suite
 
-## Deferred Items (unchanged)
+## Deferred Items (unchanged from cycle 23)
 - Server-side ColumnMatcher module path consistency
-- Web-side CSV parser vs server-side duplication (root cause of F1)
+- Web-side CSV parser vs server-side duplication
 - PDF multi-line header support
 - Historical amount display format
 - Card name suffixes

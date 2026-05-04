@@ -1,17 +1,23 @@
-# Cycle 23 Aggregate Review
+# Cycle 24 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 23
-**Tests:** 504 bun
+**Cycles completed:** 24
+**Tests:** 512 bun
 
 ## Actionable Findings (3)
 
 | ID | Severity | Category | Finding | File |
 |---|----------|----------|---------|------|
-| F1 | HIGH | Server/Web Parity | Web-side CSV bank adapters missing summary row skip (all 10 adapters) | `apps/web/src/lib/parser/csv.ts` |
-| F2 | MEDIUM | Format Diversity | Server-side PDF table-parser DATE_PATTERN short date lookbehind/lookahead missing full-width dot (U+FF0E) and ideographic full stop (U+3002) | `packages/parser/src/pdf/table-parser.ts` |
-| F3 | LOW | Test Coverage | No integration tests for full-width dot dates through CSV/PDF parsers | `packages/parser/__tests__/` |
+| F1 | HIGH | Format Diversity | AMOUNT_KEYWORDS missing `'price'`, `'won'`; MERCHANT_KEYWORDS missing `'shop'` -- causes isValidHeaderRow() to reject English-only header rows that column regexes would match | `packages/parser/src/csv/column-matcher.ts` |
+| F2 | MEDIUM | Format Diversity | SUMMARY_ROW_PATTERN missing `승인합계`, `결제합계`, `총사용`, `총이용` variants common in Korean bank exports | `packages/parser/src/csv/column-matcher.ts` |
+| F3 | LOW | Test Coverage | No tests ensuring keyword Sets include all entries matched by column regex patterns (Set/regex drift detection) | `packages/parser/__tests__/column-matcher.test.ts` |
+
+## Previous Cycle Status
+
+- Cycle 23 F1 (web CSV summary row skip): **CONFIRMED FIXED**
+- Cycle 23 F2 (PDF full-width dot DATE_PATTERN): **CONFIRMED FIXED**
+- Cycle 23 F3 (full-width dot integration tests): Still open, deferred (LOW)
 
 ## Assessment
 
-With 504 tests passing and declining findings (3 this cycle), the parser is approaching maturity. Finding 1 is the only high-severity item -- a clear parity bug where summary rows are not skipped in web-side bank-specific CSV adapters.
+After 24 cycles, findings have converged to 3 (from 734+ tests and 23 prior cycles of fixes). F1 is the only high-severity finding -- a Set/regex drift bug that causes English-only CSV headers to be rejected by the header validation gate. F2 is a robustness improvement for Korean summary row detection. F3 is test hardening.

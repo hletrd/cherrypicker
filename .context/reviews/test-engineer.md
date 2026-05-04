@@ -1,25 +1,30 @@
-# Test Engineer Review -- Cycle 21
+# Test Engineer Review -- Cycle 24
 
 ## New Test Cases Needed
 
-### 1. isDateLikeShort month-aware validation (F21-01)
+### 1. Keyword Set completeness against column regex patterns (F1)
 
-Add tests in `packages/parser/__tests__/csv.test.ts` (or a new CSV column-detection test) to verify:
-- "2/31" is NOT recognized as a date (Feb has 28 days max)
-- "4/31" is NOT recognized as a date (Apr has 30 days max)
-- "6/31" is NOT recognized as a date (Jun has 30 days max)
-- "2/28" IS recognized as a valid date
-- "1/31" IS recognized as a valid date
-- "12/25" IS recognized as a valid date
+Add tests in `column-matcher.test.ts` that verify `isValidHeaderRow()` accepts headers using ONLY regex-matched entries (not just Set entries):
+- `['Date', 'Shop', 'Price']` should pass isValidHeaderRow (Date=date, Shop=merchant via regex, Price=amount via regex)
+- `['Date', 'Store', 'Won']` should pass
+- `['transaction_date', 'shop', 'price']` should pass
 
-### 2. Web XLSX parseAmount whitespace stripping (F21-02)
+### 2. Expanded SUMMARY_ROW_PATTERN variants (F2)
 
-Add test in web-side test files (or server xlsx.test.ts parity test) to verify:
-- "1,234 원" (space before Won) is parsed as 1234
-- "₩ 1,234" (space after Won sign) is parsed as 1234
+Add tests verifying new summary variants are matched:
+- `승인 합계 100,000원` should match
+- `결제 합계` should match
+- `총사용 50,000` should match
+- `총 이용 금액` should match
+
+### 3. English-only CSV parsing end-to-end
+
+Add a test in `csv.test.ts` that parses a full CSV with English-only headers:
+```
+Date,Shop,Amount
+2024-01-15,Starbucks,5000
+```
+This exercises the full pipeline: header detection, column matching, and parsing.
 
 ## Current Test Counts
-
-- Bun: 495 pass, 0 fail
-- Vitest: 236 pass, 0 fail
-- Total: 731 tests passing
+- Bun: 512 pass, 0 fail
