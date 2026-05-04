@@ -891,3 +891,147 @@ describe('normalizeHeader variation selectors (C40-01)', () => {
     expect(findColumn(headers, '이용금액', AMOUNT_COLUMN_PATTERN)).toBe(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 46: New column pattern terms for broader format diversity
+// ---------------------------------------------------------------------------
+describe('Cycle 46: New DATE_COLUMN_PATTERN terms', () => {
+  const shouldMatch = ['사용일', '사용일자'];
+  for (const name of shouldMatch) {
+    it(`matches "${name}"`, () => {
+      expect(DATE_COLUMN_PATTERN.test(name)).toBe(true);
+    });
+  }
+
+  it('findColumn detects 사용일 as date column', () => {
+    const headers = ['사용일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('findColumn detects 사용일자 as date column', () => {
+    const headers = ['사용일자', '사용처', '금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('DATE_KEYWORDS contains new terms', () => {
+    expect(DATE_KEYWORDS.has('사용일')).toBe(true);
+    expect(DATE_KEYWORDS.has('사용일자')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains new date terms', () => {
+    expect(HEADER_KEYWORDS).toContain('사용일');
+    expect(HEADER_KEYWORDS).toContain('사용일자');
+  });
+});
+
+describe('Cycle 46: New MERCHANT_COLUMN_PATTERN terms', () => {
+  const shouldMatch = ['payee'];
+  for (const name of shouldMatch) {
+    it(`matches "${name}"`, () => {
+      expect(MERCHANT_COLUMN_PATTERN.test(name)).toBe(true);
+    });
+  }
+
+  it('findColumn detects English "payee" as merchant column', () => {
+    const headers = ['date', 'payee', 'amount'];
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
+  });
+
+  it('MERCHANT_KEYWORDS contains new terms', () => {
+    expect(MERCHANT_KEYWORDS.has('payee')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains new merchant terms', () => {
+    expect(HEADER_KEYWORDS).toContain('payee');
+  });
+});
+
+describe('Cycle 46: New AMOUNT_COLUMN_PATTERN terms', () => {
+  it('matches 매입금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('매입금액')).toBe(true);
+  });
+
+  it('findColumn detects 매입금액 as amount column', () => {
+    const headers = ['이용일', '이용처', '매입금액'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('AMOUNT_KEYWORDS contains 매입금액', () => {
+    expect(AMOUNT_KEYWORDS.has('매입금액')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains 매입금액', () => {
+    expect(HEADER_KEYWORDS).toContain('매입금액');
+  });
+});
+
+describe('Cycle 46: New INSTALLMENTS_COLUMN_PATTERN terms', () => {
+  const shouldMatch = ['할부회수', 'install'];
+  for (const name of shouldMatch) {
+    it(`matches "${name}"`, () => {
+      expect(INSTALLMENTS_COLUMN_PATTERN.test(name)).toBe(true);
+    });
+  }
+
+  it('findColumn detects 할부회수 as installments column', () => {
+    const headers = ['이용일', '이용처', '금액', '할부회수'];
+    expect(findColumn(headers, undefined, INSTALLMENTS_COLUMN_PATTERN)).toBe(3);
+  });
+
+  it('findColumn detects English "install" as installments column', () => {
+    const headers = ['date', 'merchant', 'amount', 'install'];
+    expect(findColumn(headers, undefined, INSTALLMENTS_COLUMN_PATTERN)).toBe(3);
+  });
+});
+
+describe('Cycle 46: New MEMO_COLUMN_PATTERN terms', () => {
+  it('matches 상세내역', () => {
+    expect(MEMO_COLUMN_PATTERN.test('상세내역')).toBe(true);
+  });
+
+  it('findColumn detects 상세내역 as memo column', () => {
+    const headers = ['이용일', '이용처', '금액', '상세내역'];
+    expect(findColumn(headers, undefined, MEMO_COLUMN_PATTERN)).toBe(3);
+  });
+});
+
+describe('Cycle 46: SUMMARY_ROW_PATTERN new terms', () => {
+  it('matches 이월잔액', () => {
+    expect(SUMMARY_ROW_PATTERN.test('이월잔액')).toBe(true);
+  });
+
+  it('matches 전월이월', () => {
+    expect(SUMMARY_ROW_PATTERN.test('전월이월')).toBe(true);
+  });
+
+  it('matches 이월금액', () => {
+    expect(SUMMARY_ROW_PATTERN.test('이월금액')).toBe(true);
+  });
+
+  it('matches 이월잔액 in longer string', () => {
+    expect(SUMMARY_ROW_PATTERN.test('이월잔액 50,000')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('전월이월 100,000원')).toBe(true);
+  });
+
+  it('does not false-positive on merchant names containing 이월', () => {
+    expect(SUMMARY_ROW_PATTERN.test('이월마트')).toBe(false);
+  });
+});
+
+describe('Cycle 46: isValidHeaderRow with new terms', () => {
+  it('accepts header row with 사용일 + 사용처 + 이용금액', () => {
+    expect(isValidHeaderRow(['사용일', '사용처', '이용금액'])).toBe(true);
+  });
+
+  it('accepts header row with 사용일자 + 가맹점 + 매입금액', () => {
+    expect(isValidHeaderRow(['사용일자', '가맹점', '매입금액'])).toBe(true);
+  });
+
+  it('accepts English header row with date + payee + amount', () => {
+    expect(isValidHeaderRow(['date', 'payee', 'amount'])).toBe(true);
+  });
+
+  it('accepts header with 사용일 + 이용내용 + 매입금액 + 할부회수', () => {
+    expect(isValidHeaderRow(['사용일', '이용내용', '매입금액', '할부회수'])).toBe(true);
+  });
+});

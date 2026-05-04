@@ -179,6 +179,40 @@ function tryStructuredParse(text: string, bank: BankId | null): { transactions: 
           merchant = (row[merchantIdx] ?? '').trim();
         }
       }
+      // When date and amount are adjacent columns (no cells between them),
+      // scan all non-date/amount cells for the longest Korean-text cell
+      // as merchant candidate. This handles PDFs where merchant is in a
+      // column before date or after amount (C46-01).
+      if (!merchant) {
+        const reserved = new Set([dateIdx, amountIdx]);
+        if (merchantIdx >= 0) reserved.add(merchantIdx);
+        let bestIdx = -1;
+        let bestLen = 0;
+        for (let i = 0; i < row.length; i++) {
+          if (reserved.has(i)) continue;
+          const cellText = (row[i] ?? '').trim();
+          // Prefer cells with Korean characters (merchant names)
+          if (cellText.length > bestLen && /[가-힣]/.test(cellText)) {
+            bestLen = cellText.length;
+            bestIdx = i;
+          }
+        }
+        // Fallback: longest non-numeric text cell even without Korean
+        if (bestIdx === -1) {
+          for (let i = 0; i < row.length; i++) {
+            if (reserved.has(i)) continue;
+            const cellText = (row[i] ?? '').trim();
+            if (cellText.length > bestLen && !/^\d[\d,.\-\/]*$/.test(cellText)) {
+              bestLen = cellText.length;
+              bestIdx = i;
+            }
+          }
+        }
+        if (bestIdx !== -1) {
+          merchantIdx = bestIdx;
+          merchant = (row[merchantIdx] ?? '').trim();
+        }
+      }
 
       const amount = parseAmount(amountValue);
 

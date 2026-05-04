@@ -1,41 +1,22 @@
-# Implementation Plan -- Cycle 44
+# Implementation Plan -- Cycle 46
 
-## P1. Fix PDF isValidShortDate leap year handling (F2)
-**Files:**
-- `packages/parser/src/pdf/index.ts` (line 29, MAX_DAYS_PER_MONTH constant + isValidShortDate function)
+## P1. PDF Merchant Extraction Fallback [HIGH]
+**Files**: `packages/parser/src/pdf/index.ts`, `apps/web/src/lib/parser/pdf.ts`
+**What**: When "between date and amount" extraction yields empty, add fallback that scans non-date/amount cells for longest Korean-text cell.
 
-**Change:** Replace hardcoded `MAX_DAYS_PER_MONTH` table with `daysInMonth()` import from date-utils.ts, using current year. This matches the CSV parser's `isDateLikeShort()` approach.
+## P2. Expand Column Patterns [MEDIUM]
+**File**: `packages/parser/src/csv/column-matcher.ts`
+**What**: Add missing terms: 사용일|사용일자, 사용처|payee, 매입금액, 할부회수|install, 상세내역 + HEADER_KEYWORDS
 
-**Before:**
-```ts
-const MAX_DAYS_PER_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-function isValidShortDate(cell: string): boolean {
-  // ... uses MAX_DAYS_PER_MONTH[month] ?? 0
-}
-```
+## P3. Summary Row Pattern [MEDIUM]
+**File**: `packages/parser/src/csv/column-matcher.ts`
+**What**: Add 이월잔액|전월이월|이월금액 with boundary guards
 
-**After:**
-```ts
-import { daysInMonth } from '../date-utils.js';  // already partially imported
-function isValidShortDate(cell: string): boolean {
-  // ... uses daysInMonth(new Date().getFullYear(), month)
-}
-```
-
-## P2. Add non-numeric header guard to XLSX parsers (F1, F3)
-**Files:**
-- `packages/parser/src/xlsx/index.ts` (line 239-247)
-- `apps/web/src/lib/parser/xlsx.ts` (line 419-427)
-
-**Change:** Add `hasNonNumeric` guard matching CSV generic parser pattern:
-```ts
-const hasNonNumeric = rowStrings.some((c) => /[가-힣a-zA-Z]/.test(c));
-if (hasNonNumeric && isValidHeaderRow(rowStrings)) { ... }
-```
-
-## P3. Tests
-- Add XLSX non-numeric header guard test to `packages/parser/__tests__/table-parser.test.ts` or xlsx test
+## P4. Tests
+**File**: `packages/parser/__tests__/table-parser.test.ts`
+**What**: Tests for new patterns and summary row edge cases
 
 ## Deferred
-- A1: Web CSV 10 hand-rolled adapters -> factory pattern (~700 lines)
-- A2: Column-matcher module dedup
+- D-01: Server/web shared module (architectural)
+- D-02: PDF multi-line headers (edge case, deferred)
+- D-03: Web CSV 10 hand-rolled adapters -> factory pattern
