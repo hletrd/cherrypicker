@@ -643,8 +643,9 @@ describe('XLSX invalid serial date error reporting', () => {
     try {
       const result = await parseXLSX(filePath);
       // The #REF! cell should be unparseable → error reported, row skipped
+      // Formula errors produce specific "셀 수식 오류" messages (C73-04)
       expect(result.errors.length).toBeGreaterThanOrEqual(1);
-      expect(result.errors.some((e) => e.message.includes('금액'))).toBe(true);
+      expect(result.errors.some((e) => e.message.includes('셀 수식 오류'))).toBe(true);
       // Valid row should still parse
       expect(result.transactions).toHaveLength(1);
       expect(result.transactions[0]?.amount).toBe(45000);
@@ -738,9 +739,8 @@ describe('XLSX invalid serial date error reporting', () => {
   });
 
   test('reports formula error for amount column (C14-01)', async () => {
-    // Formula errors in the amount column produce null from parseAmount,
-    // which triggers a "금액을 해석할 수 없습니다" error (not the formula-specific
-    // error, since parseAmount doesn't have Excel error detection).
+    // Formula errors in the amount column produce specific "셀 수식 오류"
+    // messages (C73-04), matching the date column behavior.
     const filePath = createTempXLSX([
       ['거래일시', '가맹점명', '이용금액'],
       ['2026-02-01', '스타벅스', '#VALUE!'],
@@ -750,8 +750,9 @@ describe('XLSX invalid serial date error reporting', () => {
       const result = await parseXLSX(filePath);
       expect(result.transactions).toHaveLength(1);
       expect(result.transactions[0]?.amount).toBe(45000);
-      // Amount error is reported as generic parse error
-      expect(result.errors.some((e) => e.message.includes('금액을 해석할 수 없습니다'))).toBe(true);
+      // Amount error is reported as specific formula error (C73-04)
+      expect(result.errors.some((e) => e.message.includes('셀 수식 오류'))).toBe(true);
+      expect(result.errors.some((e) => e.message.includes('#VALUE!'))).toBe(true);
     } finally {
       cleanup(filePath);
     }
@@ -902,6 +903,116 @@ describe('XLSX parenthesized negative amounts', () => {
       // The second row is the actual header. Third row is data.
       expect(result.transactions).toHaveLength(1);
       expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cycle 73: Amount forward-fill and whitespace guard (C73-01/C73-02)
+// ---------------------------------------------------------------------------
+
+describe('XLSX amount forward-fill and whitespace guard (C73-01/C73-02)', () => {
+  test('forward-fills amount for whitespace-only cells in merged groups (C73-01)', async () => {
+    // Simulates merged amount cells: first row has amount, subsequent rows
+    // have whitespace (common artifact from merged cells in Excel exports).
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액', '할부'],
+      ['2026-02-01', '이마트', 30000, 3],
+      ['', '', ' ', ''],
+      ['', '', ' ', ''],
+      ['2026-02-02', '스타벅스', 6000, 0],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(4);
+      // First row has explicit amount
+      expect(result.transactions[0]?.amount).toBe(30000);
+      // Second and third rows inherit amount from forward-fill
+      expect(result.transactions[1]?.amount).toBe(30000);
+      expect(result.transactions[2]?.amount).toBe(30000);
+      // Fourth row has its own amount
+      expect(result.transactions[3]?.amount).toBe(6000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('does NOT forward-fill amount for truly empty cells (C73-01)', async () => {
+    // Truly empty amount cells should not be forward-filled — they may
+    // represent legitimately empty data, not merged cells.
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2026-02-01', '이마트', 30000],
+      ['2026-02-02', '스타벅스', ''],
+      ['2026-02-03', '카페', 4500],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Row 2 has empty amount — should be skipped (no forward-fill)
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.amount).toBe(30000);
+      expect(result.transactions[1]?.amount).toBe(4500);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('whitespace-only date cell does not contaminate forward-fill (C73-02)', async () => {
+    // Whitespace-only cells should be treated as empty, preventing
+    // artifacts from contaminating forward-fill state.
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2026-02-01', '이마트', 30000],
+      ['   ', '스타벅스', 6000],
+      ['2026-02-03', '카페', 4500],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Row 2 has whitespace-only date — should use forward-fill from row 1
+      expect(result.transactions).toHaveLength(3);
+      expect(result.transactions[0]?.date).toBe('2026-02-01');
+      expect(result.transactions[1]?.date).toBe('2026-02-01');
+      expect(result.transactions[2]?.date).toBe('2026-02-03');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('whitespace-only merchant cell does not contaminate forward-fill (C73-02)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2026-02-01', '이마트', 30000],
+      ['2026-02-02', '  ', 6000],
+      ['2026-02-03', '카페', 4500],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Row 2 has whitespace-only merchant — should use forward-fill
+      expect(result.transactions).toHaveLength(3);
+      expect(result.transactions[0]?.merchant).toBe('이마트');
+      expect(result.transactions[1]?.merchant).toBe('이마트');
+      expect(result.transactions[2]?.merchant).toBe('카페');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('Excel formula error in amount column produces specific error (C73-04)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2026-02-01', '스타벅스', '#REF!'],
+      ['2026-02-02', '이마트', 45000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.amount).toBe(45000);
+      // Formula error should produce specific "셀 수식 오류" message
+      const formulaErrors = result.errors.filter((e) => e.message.includes('셀 수식 오류'));
+      expect(formulaErrors.length).toBeGreaterThanOrEqual(1);
+      expect(formulaErrors.some((e) => e.message.includes('#REF!'))).toBe(true);
     } finally {
       cleanup(filePath);
     }

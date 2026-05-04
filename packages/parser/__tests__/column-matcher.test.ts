@@ -1629,3 +1629,85 @@ describe('C72: New column pattern coverage', () => {
     expect(AMOUNT_KEYWORDS.has('사용금액')).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 73: New column header patterns (C73-03)
+// ---------------------------------------------------------------------------
+
+describe('Cycle 73: New column header patterns (C73-03)', () => {
+  it('DATE_COLUMN_PATTERN matches 이용시간', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('이용시간'))).toBe(true);
+  });
+  it('DATE_COLUMN_PATTERN matches book_date', () => {
+    expect(DATE_COLUMN_PATTERN.test(normalizeHeader('book_date'))).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches recipient', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test(normalizeHeader('recipient'))).toBe(true);
+  });
+  it('MERCHANT_COLUMN_PATTERN matches outlet', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test(normalizeHeader('outlet'))).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches 환급금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test(normalizeHeader('환급금액'))).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches 입금금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test(normalizeHeader('입금금액'))).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches 실입금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test(normalizeHeader('실입금액'))).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches debit', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test(normalizeHeader('debit'))).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches credit', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test(normalizeHeader('credit'))).toBe(true);
+  });
+  it('AMOUNT_COLUMN_PATTERN matches net', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test(normalizeHeader('net'))).toBe(true);
+  });
+  it('MEMO_COLUMN_PATTERN matches 카드명', () => {
+    expect(MEMO_COLUMN_PATTERN.test(normalizeHeader('카드명'))).toBe(true);
+  });
+  it('MEMO_COLUMN_PATTERN matches 이용카드', () => {
+    expect(MEMO_COLUMN_PATTERN.test(normalizeHeader('이용카드'))).toBe(true);
+  });
+  it('DATE_KEYWORDS contains 이용시간', () => {
+    expect(DATE_KEYWORDS.has('이용시간')).toBe(true);
+  });
+  it('DATE_KEYWORDS contains book_date', () => {
+    expect(DATE_KEYWORDS.has('book_date')).toBe(true);
+  });
+  it('AMOUNT_KEYWORDS contains 환급금액', () => {
+    expect(AMOUNT_KEYWORDS.has('환급금액')).toBe(true);
+  });
+  it('AMOUNT_KEYWORDS contains debit', () => {
+    expect(AMOUNT_KEYWORDS.has('debit')).toBe(true);
+  });
+  it('AMOUNT_KEYWORDS contains credit', () => {
+    expect(AMOUNT_KEYWORDS.has('credit')).toBe(true);
+  });
+  it('MERCHANT_KEYWORDS contains recipient', () => {
+    expect(MERCHANT_KEYWORDS.has('recipient')).toBe(true);
+  });
+  it('MERCHANT_KEYWORDS contains outlet', () => {
+    expect(MERCHANT_KEYWORDS.has('outlet')).toBe(true);
+  });
+  it('HEADER_KEYWORDS contains 카드명', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('카드명')).toBe(true);
+  });
+  it('HEADER_KEYWORDS contains 이용카드', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('이용카드')).toBe(true);
+  });
+  it('findColumn detects 환급금액 column', () => {
+    const headers = ['이용일', '가맹점', '환급금액'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+  it('findColumn detects book_date column', () => {
+    const headers = ['book_date', 'merchant', 'amount'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+  it('findColumn detects debit column as amount', () => {
+    const headers = ['date', 'merchant', 'debit'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+});

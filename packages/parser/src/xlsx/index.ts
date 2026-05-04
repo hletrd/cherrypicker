@@ -299,6 +299,7 @@ function parseXLSXSheet(
   let lastCategory: unknown = '';
   let lastInstallments: unknown = '';
   let lastMemo: unknown = '';
+  let lastAmount: unknown = '';
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -311,54 +312,59 @@ function parseXLSXSheet(
     // Forward-fill date column for merged cells (C4-04).
     // Skip forward-fill for summary row values to prevent summary text
     // from contaminating subsequent data rows (C47-01).
+    // Treat whitespace-only cells as empty to prevent artifacts from
+    // contaminating forward-fill state (C73-02).
     const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
-    if (dateCol !== -1 && rawDateValue !== '' && rawDateValue != null) {
+    if (dateCol !== -1 && rawDateValue !== '' && rawDateValue != null && String(rawDateValue).trim() !== '') {
       const dateStr = String(rawDateValue);
       if (!SUMMARY_ROW_PATTERN.test(dateStr)) {
         lastDate = rawDateValue;
       }
     }
-    const dateRaw = dateCol !== -1 ? (rawDateValue !== '' && rawDateValue != null ? rawDateValue : lastDate) : '';
+    const dateRaw = dateCol !== -1 ? (rawDateValue !== '' && rawDateValue != null && String(rawDateValue).trim() !== '' ? rawDateValue : lastDate) : '';
 
     // Forward-fill merchant column for merged cells (C5-03).
     // Skip forward-fill for summary row values (C47-01).
+    // Treat whitespace-only cells as empty (C73-02).
     const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
-    if (merchantCol !== -1 && rawMerchantValue !== '' && rawMerchantValue != null) {
+    if (merchantCol !== -1 && rawMerchantValue !== '' && rawMerchantValue != null && String(rawMerchantValue).trim() !== '') {
       const merchantStr = String(rawMerchantValue);
       if (!SUMMARY_ROW_PATTERN.test(merchantStr)) {
         lastMerchant = rawMerchantValue;
       }
     }
     const merchantRaw = merchantCol !== -1
-      ? (rawMerchantValue !== '' && rawMerchantValue != null ? rawMerchantValue : lastMerchant)
+      ? (rawMerchantValue !== '' && rawMerchantValue != null && String(rawMerchantValue).trim() !== '' ? rawMerchantValue : lastMerchant)
       : '';
 
     // Forward-fill category column for merged cells (C5-03).
     // Skip forward-fill for summary row values (C52-06, parity with date/merchant).
+    // Treat whitespace-only cells as empty (C73-02).
     const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
-    if (categoryCol !== -1 && rawCategoryValue !== '' && rawCategoryValue != null) {
+    if (categoryCol !== -1 && rawCategoryValue !== '' && rawCategoryValue != null && String(rawCategoryValue).trim() !== '') {
       const categoryStr = String(rawCategoryValue);
       if (!SUMMARY_ROW_PATTERN.test(categoryStr)) {
         lastCategory = rawCategoryValue;
       }
     }
     const categoryRaw = categoryCol !== -1
-      ? (rawCategoryValue !== '' && rawCategoryValue != null ? rawCategoryValue : lastCategory)
+      ? (rawCategoryValue !== '' && rawCategoryValue != null && String(rawCategoryValue).trim() !== '' ? rawCategoryValue : lastCategory)
       : '';
 
     // Forward-fill installments column for merged cells (C10-03).
     // Korean bank XLSX exports sometimes merge installment cells across
     // sub-rows of the same transaction. Skip forward-fill for summary
     // row values (C52-06, parity with date/merchant).
+    // Treat whitespace-only cells as empty (C73-02).
     const rawInstallValue = installCol !== -1 ? row[installCol] : '';
-    if (installCol !== -1 && rawInstallValue !== '' && rawInstallValue != null) {
+    if (installCol !== -1 && rawInstallValue !== '' && rawInstallValue != null && String(rawInstallValue).trim() !== '') {
       const installStr = String(rawInstallValue);
       if (!SUMMARY_ROW_PATTERN.test(installStr)) {
         lastInstallments = rawInstallValue;
       }
     }
     const installRaw = installCol !== -1
-      ? (rawInstallValue !== '' && rawInstallValue != null ? rawInstallValue : lastInstallments)
+      ? (rawInstallValue !== '' && rawInstallValue != null && String(rawInstallValue).trim() !== '' ? rawInstallValue : lastInstallments)
       : '';
 
     // Forward-fill memo column for merged cells (C15-01). Korean bank
@@ -366,29 +372,56 @@ function parseXLSXSheet(
     // matching the forward-fill pattern used by date, merchant, category,
     // and installments columns. Skip forward-fill for summary row values
     // (C52-06, parity with date/merchant).
+    // Treat whitespace-only cells as empty (C73-02).
     const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
-    if (memoCol !== -1 && rawMemoValue !== '' && rawMemoValue != null) {
+    if (memoCol !== -1 && rawMemoValue !== '' && rawMemoValue != null && String(rawMemoValue).trim() !== '') {
       const memoStr = String(rawMemoValue);
       if (!SUMMARY_ROW_PATTERN.test(memoStr)) {
         lastMemo = rawMemoValue;
       }
     }
     const memoRaw = memoCol !== -1
-      ? (rawMemoValue !== '' && rawMemoValue != null ? rawMemoValue : lastMemo)
+      ? (rawMemoValue !== '' && rawMemoValue != null && String(rawMemoValue).trim() !== '' ? rawMemoValue : lastMemo)
       : '';
 
-    const amountRaw = amountCol !== -1 ? row[amountCol] : '';
+    // Forward-fill amount column for merged cells (C73-01). Some Korean
+    // bank XLSX exports merge amount cells across installment sub-rows.
+    // Only forward-fill whitespace-only cells (not truly empty cells) to
+    // prevent contamination from legitimately empty amount cells.
+    const rawAmountValue = amountCol !== -1 ? row[amountCol] : '';
+    if (amountCol !== -1 && rawAmountValue !== '' && rawAmountValue != null && String(rawAmountValue).trim() !== '') {
+      const amountStr = String(rawAmountValue);
+      if (!SUMMARY_ROW_PATTERN.test(amountStr)) {
+        lastAmount = rawAmountValue;
+      }
+    }
+    // Whitespace-only cells are treated as merged (forward-fill from last).
+    // Truly empty cells are kept empty (no forward-fill).
+    const amountRaw = amountCol !== -1
+      ? (rawAmountValue !== '' && rawAmountValue != null && String(rawAmountValue).trim() !== ''
+        ? rawAmountValue
+        : (typeof rawAmountValue === 'string' && rawAmountValue !== '' ? lastAmount : rawAmountValue))
+      : '';
 
     if (!dateRaw && !merchantRaw) continue;
 
     const amount = parseAmount(amountRaw);
     if (amount === null) {
       if (String(amountRaw ?? '').trim()) {
-        errors.push({
-          line: i + 1,
-          message: `금액을 해석할 수 없습니다: ${String(amountRaw)}`,
-          raw: rowText,
-        });
+        // Detect Excel formula error strings for specific error messages (C73-04)
+        if (typeof amountRaw === 'string' && EXCEL_ERROR_PATTERN.test(amountRaw.trim())) {
+          errors.push({
+            line: i + 1,
+            message: `셀 수식 오류: ${amountRaw.trim()}`,
+            raw: rowText,
+          });
+        } else {
+          errors.push({
+            line: i + 1,
+            message: `금액을 해석할 수 없습니다: ${String(amountRaw)}`,
+            raw: rowText,
+          });
+        }
       }
       continue;
     }

@@ -1,17 +1,32 @@
-# Cycle 71 Aggregate Review
+# Cycle 73 Deep Review - Aggregate Findings
 
-## Findings (1 actionable)
+## F1: XLSX amount column missing forward-fill [MEDIUM - FORMAT DIVERSITY]
+**Files**: `packages/parser/src/xlsx/index.ts`, `apps/web/src/lib/parser/xlsx.ts`
+The XLSX parsers forward-fill date, merchant, category, installments, and memo columns for merged cells, but NOT the amount column. Some Korean bank XLSX exports merge amount cells across installment sub-rows (only first row has value). To prevent false fills on legitimately empty cells, forward-fill should be limited to whitespace-only cells (common artifact from merged cells).
 
-### C71-01: AMOUNT_PATTERNS missing leading-plus pattern (FORMAT DIVERSITY - MEDIUM)
+## F2: XLSX forward-fill treats whitespace-only cells as non-empty [LOW - FORMAT DIVERSITY]
+**Files**: `packages/parser/src/xlsx/index.ts`, `apps/web/src/lib/parser/xlsx.ts`
+The forward-fill condition `rawValue !== '' && rawValue != null` does not account for cells containing only whitespace. `String(cell)` for a whitespace cell is "  " which is truthy. These cells should be treated as empty to prevent whitespace artifacts from contaminating forward-fill state.
 
-All four CSV/PDF parsers' column-detection amount patterns lack support for leading-plus amounts (`+1,234`). The actual parse functions DO handle leading-plus (added C66-02), but the column-detection patterns were not updated. This causes generic CSV parsing to fail when banks export amounts with explicit `+` prefix.
+## F3: Missing column header keywords for Korean bank exports [MEDIUM - FORMAT DIVERSITY]
+**File**: `packages/parser/src/csv/column-matcher.ts`
+Several column header terms are missing from the pattern constants:
+- Amount: "환급금액", "입금금액" (refund/deposit amount variants)
+- Memo: "카드명" (card name), "이용카드" (card used) - common in PDF exports
+- Date: "이용시간" (usage time) - some banks use this instead of 이용일
+- English: "debit", "credit", "net", "recipient", "outlet", "trans_date", "book_date"
 
-**Fix:** Add `^\+[\d,]+원?$` to CSV `AMOUNT_PATTERNS` arrays. Add `\+(?=[\d,])` alternative to PDF `AMOUNT_PATTERN` / `STRICT_AMOUNT_PATTERN`.
+## F4: XLSX parseAmount missing EXCEL_ERROR_PATTERN check [LOW - QUALITY]
+**Files**: `packages/parser/src/xlsx/index.ts`, `apps/web/src/lib/parser/xlsx.ts`
+The `parseDateToISO` function detects Excel formula errors (#REF!, #VALUE!, etc.) and produces specific "셀 수식 오류" messages, but `parseAmount` does not. Formula errors in the amount column produce generic "금액을 해석할 수 없습니다" instead of specific messages.
 
-### C71-02: No test coverage for leading-plus column detection (TEST - LOW)
+## F5: PDF multi-line headers not handled [DEFERRED]
+**Files**: `packages/parser/src/pdf/index.ts`, `apps/web/src/lib/parser/pdf.ts`
+Some PDF tables have headers spanning multiple lines. Current parser detects only single-line headers. Architecturally complex, deferred.
 
-Need test verifying that generic CSV parser with `+1,234` amounts correctly infers the amount column.
-
-## No Regressions
-
-Server/web parity is excellent. All major format diversity issues have been addressed over 70 cycles. Architecture is mature.
+## Summary
+- **Actionable this cycle**: F1, F2, F3, F4
+- **Deferred**: F5 (multi-line PDF headers)
+- **No regressions detected**
+- **Server/web parity**: Good - both sides maintain consistent behavior
+- **Test baseline**: 1035 tests passing (bun), 0 failures

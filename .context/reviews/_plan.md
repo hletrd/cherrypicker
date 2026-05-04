@@ -1,23 +1,32 @@
-# Cycle 72 Plan
+# Cycle 73 Plan
 
-## Fix 1: Space-before-원 in amount parsing (C72-01)
-Change `원$` to `\s*원$` in all 6 parseAmount functions.
-Change `원?` to `\s*원?` in 2 AMOUNT_PATTERNS arrays (server+web generic CSV).
+## Fix 1: XLSX amount column forward-fill with whitespace guard (C73-01)
+Add amount column forward-fill to both server and web XLSX parsers.
+Limit forward-fill to whitespace-only cells only (not truly empty cells) to prevent
+contamination from legitimately empty amount cells.
 
-## Fix 2: Server XLSX isHTMLContent BOM strip (C72-02)
-Add `.replace(/^﻿/, '')` before toLowerCase() in server isHTMLContent.
+## Fix 2: XLSX whitespace-only cell forward-fill guard (C73-02)
+Update forward-fill condition for all columns (date, merchant, category, installments, memo)
+to treat whitespace-only cells as empty by checking `.trim() === ''` in addition to `!== ''`.
+This prevents whitespace artifacts from contaminating forward-fill state.
 
-## Fix 3: Add missing column header patterns (C72-03)
-Add to column-matcher.ts: "사용금액", "매입일", "전표일", "거래내역", "이용가맹점명"
-Update HEADER_KEYWORDS and category Sets accordingly.
+## Fix 3: Add missing column header keywords (C73-03)
+Add to column-matcher.ts:
+- Amount pattern: "환급금액", "입금금액"
+- Memo pattern: "카드명", "이용카드"
+- Date pattern: "이용시간"
+- English: "debit", "credit", "net", "recipient", "outlet", "trans_date", "book_date"
 
-## Fix 4: Tests for all new patterns
-Add tests for space-before-원 parsing, new column patterns, BOM handling.
+## Fix 4: XLSX parseAmount Excel error detection (C73-04)
+Add EXCEL_ERROR_PATTERN check to parseAmount in both server and web XLSX parsers
+for specific error messages matching the parseDateToISO pattern.
+
+## Fix 5: Tests for all new features
+Add tests for amount forward-fill, whitespace guard, new column patterns, Excel error in amount.
 
 ## Deferred (explicitly not this cycle)
-- PDF multi-line headers
+- PDF multi-line headers (architectural complexity)
 - Historical amount display format
 - Card name suffixes
 - Global config integration
 - CSS dark mode
-- Generic parser fallback behavior
