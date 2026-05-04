@@ -2114,3 +2114,172 @@ describe('Cycle 79: 가게 merchant and 기타 memo in HEADER_KEYWORDS', () => {
     expect(isValidHeaderRow(['거래유형', '이용일'])).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 80: Fullwidth alphanumeric normalization, new column patterns, summary patterns
+// ---------------------------------------------------------------------------
+
+describe('Cycle 80: normalizeHeader fullwidth alphanumeric (C80-01)', () => {
+  it('converts fullwidth Latin uppercase to ASCII', () => {
+    // Ｄ (U+FF24 uppercase D), ａ (U+FF41 lowercase a), ｔ (U+FF54 lowercase t), ｅ (U+FF45 lowercase e)
+    expect(normalizeHeader('Ｄａｔｅ')).toBe('Date');
+  });
+
+  it('converts fullwidth Latin lowercase to ASCII', () => {
+    expect(normalizeHeader('ａｍｏｕｎｔ')).toBe('amount');
+  });
+
+  it('converts fullwidth digits to ASCII', () => {
+    expect(normalizeHeader('１２３')).toBe('123');
+  });
+
+  it('converts mixed fullwidth uppercase and lowercase', () => {
+    // Ｔ (U+FF34 uppercase) ｏ (U+FF4F lowercase) ｔ (U+FF54 lowercase) ａ (U+FF41 lowercase) ｌ (U+FF4C lowercase)
+    expect(normalizeHeader('Ｔｏｔａｌ')).toBe('Total');
+  });
+
+  it('converts fullwidth uppercase letters in Korean-mixed header', () => {
+    // Fullwidth "A" (U+FF21) + Korean — converts to uppercase ASCII "A"
+    expect(normalizeHeader('Ａ이용금액')).toBe('A이용금액');
+  });
+
+  it('findColumn matches fullwidth header "Ｄａｔｅ" as date column', () => {
+    const headers = ['Ｄａｔｅ', 'Merchant', 'Amount'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('findColumn matches fullwidth header "Ａｍｏｕｎｔ" as amount column', () => {
+    const headers = ['Date', 'Merchant', 'Ａｍｏｕｎｔ'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('isValidHeaderRow accepts fullwidth headers', () => {
+    expect(isValidHeaderRow(['Ｄａｔｅ', 'Ｍｅｒｃｈａｎｔ', 'Ａｍｏｕｎｔ'])).toBe(true);
+  });
+});
+
+describe('Cycle 80: New CATEGORY_COLUMN_PATTERN terms (C80-02)', () => {
+  it('CATEGORY_COLUMN_PATTERN matches 결제수단', () => {
+    expect(CATEGORY_COLUMN_PATTERN.test('결제수단')).toBe(true);
+  });
+
+  it('CATEGORY_COLUMN_PATTERN matches 결제방법', () => {
+    expect(CATEGORY_COLUMN_PATTERN.test('결제방법')).toBe(true);
+  });
+
+  it('CATEGORY_COLUMN_PATTERN matches payment_method (English)', () => {
+    expect(CATEGORY_COLUMN_PATTERN.test(normalizeHeader('payment_method'))).toBe(true);
+  });
+
+  it('CATEGORY_KEYWORDS contains new terms', () => {
+    expect(CATEGORY_KEYWORDS.has('결제수단')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('결제방법')).toBe(true);
+    expect(CATEGORY_KEYWORDS.has('paymentmethod')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains new category terms', () => {
+    expect(HEADER_KEYWORDS).toContain('결제수단');
+    expect(HEADER_KEYWORDS).toContain('결제방법');
+    expect(HEADER_KEYWORDS).toContain('paymentmethod');
+  });
+
+  it('findColumn detects 결제수단 as category column', () => {
+    const headers = ['이용일', '결제수단', '이용금액'];
+    expect(findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN)).toBe(1);
+  });
+
+  it('isValidHeaderRow accepts 결제수단 + 이용일 header', () => {
+    expect(isValidHeaderRow(['결제수단', '이용일'])).toBe(true);
+  });
+});
+
+describe('Cycle 80: New MERCHANT_COLUMN_PATTERN terms (C80-02)', () => {
+  it('MERCHANT_COLUMN_PATTERN matches 취소가맹점', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('취소가맹점')).toBe(true);
+  });
+
+  it('MERCHANT_KEYWORDS contains 취소가맹점', () => {
+    expect(MERCHANT_KEYWORDS.has('취소가맹점')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains 취소가맹점', () => {
+    expect(HEADER_KEYWORDS).toContain('취소가맹점');
+  });
+
+  it('findColumn detects 취소가맹점 as merchant column', () => {
+    const headers = ['이용일', '취소가맹점', '금액'];
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
+  });
+});
+
+describe('Cycle 80: New AMOUNT_COLUMN_PATTERN terms (C80-02)', () => {
+  it('AMOUNT_COLUMN_PATTERN matches 할인전금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('할인전금액')).toBe(true);
+  });
+
+  it('AMOUNT_COLUMN_PATTERN matches 할인후금액', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('할인후금액')).toBe(true);
+  });
+
+  it('AMOUNT_KEYWORDS contains new terms', () => {
+    expect(AMOUNT_KEYWORDS.has('할인전금액')).toBe(true);
+    expect(AMOUNT_KEYWORDS.has('할인후금액')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains new amount terms', () => {
+    expect(HEADER_KEYWORDS).toContain('할인전금액');
+    expect(HEADER_KEYWORDS).toContain('할인후금액');
+  });
+
+  it('findColumn detects 할인전금액 as amount column', () => {
+    const headers = ['이용일', '이용처', '할인전금액'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('findColumn detects 할인후금액 as amount column', () => {
+    const headers = ['이용일', '이용처', '할인후금액'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+});
+
+describe('Cycle 80: New SUMMARY_ROW_PATTERN terms (C80-03)', () => {
+  it('SUMMARY_ROW_PATTERN matches 미결제잔액', () => {
+    expect(SUMMARY_ROW_PATTERN.test('미결제잔액')).toBe(true);
+  });
+
+  it('SUMMARY_ROW_PATTERN matches 미결제 잔액 with space', () => {
+    expect(SUMMARY_ROW_PATTERN.test('미결제 잔액')).toBe(true);
+  });
+
+  it('SUMMARY_ROW_PATTERN matches 카드이용합계', () => {
+    expect(SUMMARY_ROW_PATTERN.test('카드이용합계')).toBe(true);
+  });
+
+  it('SUMMARY_ROW_PATTERN matches 카드 이용 합계 with spaces', () => {
+    expect(SUMMARY_ROW_PATTERN.test('카드 이용 합계')).toBe(true);
+  });
+
+  it('SUMMARY_ROW_PATTERN matches 미결제잔액 in longer string', () => {
+    expect(SUMMARY_ROW_PATTERN.test('미결제잔액 50,000')).toBe(true);
+  });
+
+  it('SUMMARY_ROW_PATTERN does not match merchant name containing 미결제', () => {
+    expect(SUMMARY_ROW_PATTERN.test('미결제마트')).toBe(false);
+  });
+
+  it('SUMMARY_ROW_PATTERN does not match merchant name containing 카드이용', () => {
+    expect(SUMMARY_ROW_PATTERN.test('카드이용마트')).toBe(false);
+  });
+});
+
+describe('Cycle 80: Integration - fullwidth header CSV parsing', () => {
+  it('findColumn handles fullwidth + Korean combined header', () => {
+    const headers = ['Ｄａｔｅ/이용일', '가맹점명', 'Ａｍｏｕｎｔ'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('isValidHeaderRow accepts fullwidth + Korean mixed headers', () => {
+    expect(isValidHeaderRow(['Ｄａｔｅ', '가맹점명', '이용금액'])).toBe(true);
+  });
+});
