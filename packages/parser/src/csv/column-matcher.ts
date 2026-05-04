@@ -25,11 +25,19 @@ export function normalizeHeader(h: string): string {
  *  @param pattern - Regex pattern for fuzzy matching (e.g., /이용일|거래일|날짜/)
  */
 export function findColumn(headers: string[], exactName: string | undefined, pattern: RegExp): number {
-  // First pass: exact match (normalized)
+  // First pass: exact match (normalized). Also handles combined/delimited
+  // column headers like "이용일/승인일" by splitting on "/" and testing each
+  // part against the exactName (C43-01). This makes the exact-match path
+  // consistent with the regex path which already splits on "/".
   if (exactName) {
     const normalizedExact = normalizeHeader(exactName);
     for (let i = 0; i < headers.length; i++) {
-      if (normalizeHeader(headers[i] ?? '') === normalizedExact) return i;
+      const normalized = normalizeHeader(headers[i] ?? '');
+      if (normalized === normalizedExact) return i;
+      // Split combined headers on "/" and test each part (C43-01)
+      if (normalized.includes('/')) {
+        if (normalized.split('/').some((part) => part === normalizedExact)) return i;
+      }
     }
   }
   // Second pass: regex match on normalized headers, with combined-header

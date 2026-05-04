@@ -633,10 +633,33 @@ describe('Combined column headers (C33-04)', () => {
     expect(isValidHeaderRow(['이용일/거래일', '날짜'])).toBe(false);
   });
 
-  it('findColumn with exactName also works for combined headers', () => {
+  it('findColumn with exactName matches combined headers via split (C43-01)', () => {
     const headers = ['이용일/승인일', '가맹점명', '이용금액'];
-    // Exact name "이용일" won't match "이용일/승인일" directly,
-    // but regex fallback should find it via split
+    // Exact name "이용일" should match via combined-header splitting
+    // in the exact-match path (C43-01 fix)
+    expect(findColumn(headers, '이용일', DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('findColumn with exactName matches second part of combined header (C43-01)', () => {
+    const headers = ['이용일/승인일', '가맹점명', '이용금액/취소금액'];
+    // "승인일" is the second part — should still match
+    expect(findColumn(headers, '승인일', DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('findColumn with exactName matches amount in combined header (C43-01)', () => {
+    const headers = ['이용일', '가맹점명', '이용금액/취소금액'];
+    expect(findColumn(headers, '취소금액', AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('findColumn with exactName matches memo in combined header (C43-01)', () => {
+    const headers = ['이용일', '가맹점명', '이용금액', '비고/메모'];
+    expect(findColumn(headers, '메모', MEMO_COLUMN_PATTERN)).toBe(3);
+    expect(findColumn(headers, '비고', MEMO_COLUMN_PATTERN)).toBe(3);
+  });
+
+  it('findColumn with exactName prefers exact full-header match over split (C43-01)', () => {
+    const headers = ['이용일', '이용일/승인일', '이용금액'];
+    // "이용일" exact match should find index 0 (full match), not index 1 (split)
     expect(findColumn(headers, '이용일', DATE_COLUMN_PATTERN)).toBe(0);
   });
 });

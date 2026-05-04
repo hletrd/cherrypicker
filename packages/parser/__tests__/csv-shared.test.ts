@@ -99,6 +99,20 @@ describe('splitCSVLine', () => {
   test('handles mixed quoted and unquoted fields with tab delimiter', () => {
     expect(splitCSVLine('plain\t"quoted\tfield"\t12345', '\t')).toEqual(['plain', 'quoted\tfield', '12345']);
   });
+
+  test('handles tab-separated file with quoted fields containing multiple tabs', () => {
+    // Korean bank exports sometimes have tab-delimited content with
+    // quoted fields that contain embedded tab characters
+    expect(splitCSVLine('"카드\t번호\t확인"\t이용일\t이용금액', '\t')).toEqual([
+      '카드\t번호\t확인', '이용일', '이용금액',
+    ]);
+  });
+
+  test('handles tab-separated file with all fields quoted', () => {
+    expect(splitCSVLine('"2024-01-15"\t"스타벅스"\t"5500"', '\t')).toEqual([
+      '2024-01-15', '스타벅스', '5500',
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------
