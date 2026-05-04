@@ -1,6 +1,6 @@
 # Cycle 3 Plan: Parser Format Diversity — Web Adapter ColumnMatcher, XLSX Tests, Consistency
 
-## Status: IN PROGRESS
+## Status: DONE (Tasks 1-8 complete)
 
 ## Goal
 Fix the highest-impact remaining gap (web-side bank adapters using exact indexOf), add XLSX/PDF test coverage, fix server/web consistency issues, and hoist keyword sets.
@@ -13,7 +13,7 @@ Fix the highest-impact remaining gap (web-side bank adapters using exact indexOf
 
 Replace all 10 bank adapters' `headers.indexOf('exact')` calls with `findColumn(headers, exactName, PATTERN)` from the existing `./column-matcher.js`. Also standardize header detection to use keyword arrays + category check (matching server-side adapter-factory behavior).
 
-**Status**: IN PROGRESS
+**Status**: DONE
 
 ---
 
@@ -23,7 +23,7 @@ Replace all 10 bank adapters' `headers.indexOf('exact')` calls with `findColumn(
 
 Change from returning first sheet with transactions to selecting the sheet with the most transactions. Match web-side xlsx.ts behavior.
 
-**Status**: PENDING
+**Status**: DONE
 
 ---
 
@@ -33,7 +33,7 @@ Change from returning first sheet with transactions to selecting the sheet with 
 
 Move DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS from function scope to module scope in all 4 files.
 
-**Status**: PENDING
+**Status**: DONE
 
 ---
 
@@ -43,7 +43,7 @@ Move DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS from function scope to mo
 
 Add `.replace(/\s/g, '')` to match web-side behavior.
 
-**Status**: PENDING
+**Status**: DONE
 
 ---
 
@@ -53,7 +53,7 @@ Add `.replace(/\s/g, '')` to match web-side behavior.
 
 Remove console.warn — parsers already report unparseable dates as ParseError.
 
-**Status**: PENDING
+**Status**: DONE
 
 ---
 
@@ -63,7 +63,7 @@ Remove console.warn — parsers already report unparseable dates as ParseError.
 
 Test column boundary detection, table parsing, transaction row filtering with synthetic text.
 
-**Status**: PENDING
+**Status**: DONE
 
 ---
 
@@ -73,7 +73,7 @@ Test column boundary detection, table parsing, transaction row filtering with sy
 
 Generate XLSX fixtures using the xlsx library. Test HTML-as-XLS, serial dates, multi-sheet, column matching.
 
-**Status**: PENDING
+**Status**: DONE
 
 ---
 
@@ -83,7 +83,7 @@ Generate XLSX fixtures using the xlsx library. Test HTML-as-XLS, serial dates, m
 
 Add parsing tests for hyundai, ibk, woori, shinhan, lotte, hana, nh, bc fixtures that already exist.
 
-**Status**: PENDING
+**Status**: DONE
 
 ---
 
