@@ -1,43 +1,45 @@
-# Cycle 79 Implementation Plan
+# Cycle 81 Implementation Plan
 
-## Fix 1: Add missing terms to HEADER_KEYWORDS and create CATEGORY/MEMO keyword Sets (C79-01)
-**Priority**: HIGH (header detection / format diversity)
-**Files**:
-- `packages/parser/src/csv/column-matcher.ts`
-- `apps/web/src/lib/parser/column-matcher.ts`
+## Priority 1: F81-01 — PDF YYYYMMDD Date Detection [HIGH]
 
-**Changes**:
-1. Add missing CATEGORY_COLUMN_PATTERN terms to HEADER_KEYWORDS: 거래유형, 결제유형, 결제구분, 이용구분, 구분, 가맹점유형, 매장유형, 카드종류, 카드구분
-2. Add missing MERCHANT_COLUMN_PATTERN term `가게` to HEADER_KEYWORDS and MERCHANT_KEYWORDS
-3. Add missing MEMO_COLUMN_PATTERN term `기타` to HEADER_KEYWORDS
-4. Create CATEGORY_KEYWORDS Set with all terms from CATEGORY_COLUMN_PATTERN (Korean + English)
-5. Create MEMO_KEYWORDS Set with all terms from MEMO_COLUMN_PATTERN (Korean + English)
-6. Update isValidHeaderRow() to check DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS, CATEGORY_KEYWORDS, MEMO_KEYWORDS (5 categories, require 2+)
+### Problem
+PDF parsers cannot detect YYYYMMDD (8-digit) dates in:
+1. `findDateCell()` — used by structured table parser
+2. `isValidDateCell()` — used by `filterTransactionRows()`
+3. `fallbackDatePattern` — used by fallback line scanner
 
-## Fix 2: Expand English date abbreviations in DATE_COLUMN_PATTERN (C79-02)
-**Priority**: MEDIUM (format diversity)
-**Files**: Same as Fix 1
+The shared `parseDateStringToISO()` already handles this format, but the detection layer doesn't recognize it.
 
-**Changes**:
-1. Add English abbreviation patterns to DATE_COLUMN_PATTERN: `txn[\s_-]?d(?:ate|t)`, `trans(?:action)?[\s_-]?d(?:ate|t)`, `purchase[\s_-]?d(?:ate|t)`
-2. Add `txn`, `txn_dt`, `txndate`, `trans_dt`, `transdate`, `purchasedt`, `purchase_dt` to DATE_KEYWORDS
+### Implementation
 
-## Fix 3: Add tests for new patterns (C79-03)
-**Priority**: MEDIUM (robustness)
-**Files**:
-- `packages/parser/__tests__/column-matcher.test.ts`
+#### 1. Server-side `packages/parser/src/pdf/index.ts`
+- Add a `isValidYYYYMMDD()` helper (validate month 1-12, day 1-31, similar to `isValidYYMMDD` but 8-digit)
+- Add `isValidYYYYMMDD(cell)` check in `findDateCell()` after existing patterns
+- Add `(?<!\d)\d{8}(?!\d)` alternative to `fallbackDatePattern`
 
-**Changes**:
-1. Tests for CATEGORY_KEYWORDS and MEMO_KEYWORDS in isValidHeaderRow()
-2. Tests for category-only headers (거래유형 + 결제구분)
-3. Tests for English date abbreviations (txn_date, trans_dt, purchase_dt)
-4. Tests for `가게` merchant and `기타` memo matching
+#### 2. Server-side `packages/parser/src/pdf/table-parser.ts`
+- Add `isValidYYYYMMDD()` helper or reuse from date-utils.ts
+- Add `isValidYYYYMMDD(trimmed)` check in `isValidDateCell()` for 8-digit strings
 
-## Deferred Items (STRICT)
+#### 3. Web-side `apps/web/src/lib/parser/pdf.ts`
+- Mirror all server-side changes
+
+#### 4. Tests `packages/parser/__tests__/table-parser.test.ts`
+- Add test for `isValidDateCell("20240115")` returning true
+- Add test for `filterTransactionRows` accepting rows with YYYYMMDD dates
+- Add test for invalid YYYYMMDD dates (e.g., "20241315" with month 13) returning false
+
+### Files to modify
+1. `packages/parser/src/pdf/index.ts`
+2. `packages/parser/src/pdf/table-parser.ts`
+3. `apps/web/src/lib/parser/pdf.ts`
+4. `packages/parser/__tests__/table-parser.test.ts`
+
+### Deferred Items (unchanged)
 - PDF multi-line header support
 - Historical amount display format
 - Card name suffixes
 - Global config integration
 - Generic parser fallback behavior
 - CSS dark mode
-- D-01 shared module refactor (web CSV duplication)
+- D-01 shared module refactor

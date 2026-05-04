@@ -1,16 +1,19 @@
-# Cycle 77 Architect Review
+# Cycle 81 Architect Review
 
-## A77-01: DATE_KEYWORDS / DATE_COLUMN_PATTERN / HEADER_KEYWORDS Inconsistency [TO FIX]
+## Reviewer: architect
 
-The three structures that define "recognized date column headers" are out of sync. `DATE_COLUMN_PATTERN` (regex) and `HEADER_KEYWORDS` (array) include 5 terms (`취소일`, `정산일`, `환불일`, `반품일`, `교환일`) that are NOT in `DATE_KEYWORDS` (Set). This breaks the 2-category requirement in `isValidHeaderRow` for edge-case header rows.
+### Overview
+After 80 cycles, the parser architecture is well-structured with clear separation between server (packages/parser) and web (apps/web/src/lib/parser) sides, shared column-matcher patterns, and a factory pattern for bank adapters. This cycle identifies one architectural gap in the PDF date detection pipeline.
 
-## Deferred Items (unchanged)
+## Findings
 
-- PDF multi-line headers: architecturally complex, marginal benefit
-- Historical amount display format: not a parser concern
-- Card name suffixes: not a parser concern
-- Global config integration: not blocking
-- CSS dark mode: not a parser concern
-- D-01 shared module refactor: requires build system changes
+### F81-01: PDF date detection pipeline incomplete — missing YYYYMMDD [HIGH]
+**Architectural Assessment**: The date detection and parsing layers have a gap. The parsing layer (`parseDateStringToISO`) is complete and handles YYYYMMDD, but the detection layer (`findDateCell`, `isValidDateCell`, `fallbackDatePattern`) in the PDF path does not recognize this format. This violates the principle that detection should be a superset of parsing — if a parser can handle a format, the detector should recognize it.
 
-## Architecture is mature and stable after 77 cycles.
+The fix is surgical: add YYYYMMDD detection to the three PDF detection functions (findDateCell, isValidDateCell, fallbackDatePattern) on both server and web sides. No architectural changes needed.
+
+### D-01: Shared module refactor (DEFERRED, unchanged)
+**Status**: Still deferred. The server/web duplication of helper functions (splitLine, parseAmount, parseInstallments, isValidAmount) remains. This is an architectural debt item that doesn't affect correctness but increases maintenance burden. The current code is well-commented with cross-references.
+
+## Architecture Assessment
+The parser is architecturally sound. The column-matcher module provides excellent shared vocabulary. The factory pattern for bank adapters is clean. The PDF tiered parsing (structured -> fallback line scan -> LLM) is well-designed. No new architectural concerns in this cycle.

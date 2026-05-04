@@ -1303,4 +1303,55 @@ describe('C74-01: isValidDateCell short-date validation via isValidShortDate', (
     const result = filterTransactionRows(rows);
     expect(result).toHaveLength(0);
   });
+
+  // --- YYYYMMDD (8-digit) date format tests (C81-01) ---
+
+  test('accepts valid YYYYMMDD date "20240115" (C81-01)', () => {
+    const rows = [
+      ['20240115', '스타벅스 강남점', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('accepts valid YYYYMMDD date "20231231" (year boundary, C81-01)', () => {
+    const rows = [
+      ['20231231', '이마트', '45,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('rejects invalid YYYYMMDD date "20241315" (month 13, C81-01)', () => {
+    const rows = [
+      ['20241315', '스타벅스', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('rejects invalid YYYYMMDD date "20240230" (Feb 30, C81-01)', () => {
+    const rows = [
+      ['20240230', '스타벅스', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('rejects 8-digit non-date number "12345678" (C81-01)', () => {
+    const rows = [
+      ['12345678', '스타벅스', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('accepts YYYYMMDD in parseTable output (C81-01)', () => {
+    const text = [
+      '20240115 스타벅스 강남점    6,500원',
+      '20240116 이마트 서초점     45,000원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
 });

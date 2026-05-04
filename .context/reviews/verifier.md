@@ -1,3 +1,12 @@
-# Cycle 77 Verifier Report
+# Cycle 81 Verifier Review
 
-Pending: will verify after implementation. Tests to run: `bun test` (packages/parser) and `npx vitest run` (apps/web).
+## Reviewer: verifier
+
+### Verification Checklist
+- [x] Server/web column-matcher parity: CONFIRMED (zero diff on exports)
+- [x] F80 findings (fullwidth normalization, column terms, summary patterns): CONFIRMED resolved
+- [x] All 287 vitest tests passing
+- [x] No regressions detected
+
+### Remaining Gap
+- [ ] PDF YYYYMMDD date detection (F81-01): needs fix + tests

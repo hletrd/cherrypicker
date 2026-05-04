@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { parseDateStringToISO, daysInMonth, isValidDayForMonth, inferYear, isValidISODate, isValidYYMMDD } from '../src/date-utils.js';
+import { parseDateStringToISO, daysInMonth, isValidDayForMonth, inferYear, isValidISODate, isValidYYMMDD, isValidYYYYMMDD } from '../src/date-utils.js';
 
 describe('daysInMonth', () => {
   test('returns 28 for Feb in non-leap year', () => {
@@ -334,5 +334,48 @@ describe('isValidYYMMDD', () => {
 
   test('rejects non-leap year Feb 29', () => {
     expect(isValidYYMMDD('230229')).toBe(false); // 2023-02-29
+  });
+});
+
+describe('isValidYYYYMMDD', () => {
+  test('accepts valid YYYYMMDD date', () => {
+    expect(isValidYYYYMMDD('20240115')).toBe(true); // 2024-01-15
+  });
+
+  test('accepts valid YYYYMMDD date at year boundary', () => {
+    expect(isValidYYYYMMDD('20231231')).toBe(true); // 2023-12-31
+  });
+
+  test('rejects non-8-digit string', () => {
+    expect(isValidYYYYMMDD('2024011')).toBe(false);
+    expect(isValidYYYYMMDD('202401155')).toBe(false);
+  });
+
+  test('rejects invalid month', () => {
+    expect(isValidYYYYMMDD('20241315')).toBe(false);
+    expect(isValidYYYYMMDD('20240015')).toBe(false);
+  });
+
+  test('rejects invalid day', () => {
+    expect(isValidYYYYMMDD('20240132')).toBe(false);
+    expect(isValidYYYYMMDD('20240230')).toBe(false);
+  });
+
+  test('rejects out-of-range year', () => {
+    expect(isValidYYYYMMDD('18990115')).toBe(false);
+    expect(isValidYYYYMMDD('21010115')).toBe(false);
+  });
+
+  test('accepts leap year date', () => {
+    expect(isValidYYYYMMDD('20240229')).toBe(true); // 2024-02-29 (leap year)
+  });
+
+  test('rejects non-leap year Feb 29', () => {
+    expect(isValidYYYYMMDD('20230229')).toBe(false); // 2023-02-29
+  });
+
+  test('rejects 8-digit non-date numbers', () => {
+    expect(isValidYYYYMMDD('12345678')).toBe(false);
+    expect(isValidYYYYMMDD('99999999')).toBe(false);
   });
 });

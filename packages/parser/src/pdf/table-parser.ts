@@ -27,7 +27,7 @@ import {
   HEADER_KEYWORDS,
   isValidHeaderRow,
 } from '../csv/column-matcher.js';
-import { daysInMonth, isValidYYMMDD } from '../date-utils.js';
+import { daysInMonth, isValidYYMMDD, isValidYYYYMMDD } from '../date-utils.js';
 
 interface Column {
   start: number;
@@ -189,6 +189,7 @@ function isValidDateCell(cell: string): boolean {
   // Strip trailing delimiters before matching — Korean bank exports may
   // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
   const trimmed = cell.trim().replace(/[.\-\/．。]\s*$/, '');
+  if (/^\d{8}$/.test(trimmed)) return isValidYYYYMMDD(trimmed);  // YYYYMMDD (C81-01)
   if (/^\d{6}$/.test(trimmed)) return isValidYYMMDD(trimmed);
   // Short dates (MM.DD/MM/DD) must be validated with month/day range
   // checks via isValidShortDate, matching the web-side PDF parser behavior.

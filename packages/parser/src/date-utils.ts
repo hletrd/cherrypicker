@@ -33,6 +33,22 @@ export function isValidYYMMDD(value: string): boolean {
   return day >= 1 && day <= daysInMonth(fullYear, month);
 }
 
+/** Validate that an 8-digit string is a plausible YYYYMMDD date with valid
+ *  month/day ranges. Prevents false-positive date detection when a column
+ *  contains 8-digit numbers that are not valid dates (C81-01). The shared
+ *  parseDateStringToISO() already handles YYYYMMDD parsing, but the PDF
+ *  detection layer (findDateCell, isValidDateCell) needs this validation
+ *  function to recognize 8-digit dates as date candidates. */
+export function isValidYYYYMMDD(value: string): boolean {
+  if (!/^\d{8}$/.test(value)) return false;
+  const year = parseInt(value.slice(0, 4), 10);
+  const month = parseInt(value.slice(4, 6), 10);
+  const day = parseInt(value.slice(6, 8), 10);
+  if (year < 1900 || year > 2100) return false;
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= daysInMonth(year, month);
+}
+
 /** Infer the year for a short-date (month/day only) using a look-back
  *  heuristic: if the date would be more than 3 months in the future,
  *  assume it belongs to the previous year. */

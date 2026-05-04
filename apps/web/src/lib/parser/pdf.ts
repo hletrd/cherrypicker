@@ -185,6 +185,7 @@ function isValidDateCell(cell: string): boolean {
   // Strip trailing delimiters before matching — Korean bank exports may
   // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
   const trimmed = cell.trim().replace(/[.\-\/．。]\s*$/, '');
+  if (/^\d{8}$/.test(trimmed)) return isValidYYYYMMDD(trimmed);  // YYYYMMDD (C81-01)
   if (/^\d{6}$/.test(trimmed)) return isValidYYMMDD(trimmed);
   // Short dates (MM.DD/MM/DD) must be validated with month/day range
   // checks via isValidShortDate, matching the server-side PDF parser
@@ -254,7 +255,7 @@ function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
 
 /** Shared date-parsing — delegates to the canonical implementation in
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
-import { parseDateStringToISO, isValidISODate, isValidYYMMDD, daysInMonth } from './date-utils.js';
+import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, daysInMonth } from './date-utils.js';
 
 function parseDateToISO(raw: string, errors?: ParseError[]): string {
   const result = parseDateStringToISO(raw);
@@ -309,7 +310,8 @@ function findDateCell(row: string[]): { idx: number; value: string } | null {
       SHORT_YEAR_DATE_PATTERN.test(cell) ||
       KOREAN_FULL_DATE_PATTERN.test(cell) ||
       KOREAN_SHORT_DATE_PATTERN.test(cell) ||
-      isValidShortDate(cell)
+      isValidShortDate(cell) ||
+      isValidYYYYMMDD(cell)  // YYYYMMDD compact format (C81-01)
     ) return { idx: i, value: row[i] ?? '' };
   }
   return null;
@@ -575,7 +577,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   // Fallback: scan every line for date + amount patterns
   const fallbackTransactions: RawTransaction[] = [];
   const lines = text.split('\n');
-  const fallbackDatePattern = /(\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。])|(?<!\d)\d{6}(?!\d))/;
+  const fallbackDatePattern = /(\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。])|(?<!\d)\d{8}(?!\d)|(?<!\d)\d{6}(?!\d))/;
   // The 'g' flag is required for matchAll() below. Do NOT hoist this regex
   // to module scope — the global flag's lastIndex mutation would break
   // .test()/.exec() calls if the regex were shared across invocations.
@@ -598,6 +600,11 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
     // Validate YYMMDD (6-digit compact dates) to prevent false positives
     // from transaction IDs matching the new fallback date pattern (C58-02).
     if (dateMatch && /^\d{6}$/.test(dateMatch[0]) && !isValidYYMMDD(dateMatch[0])) {
+      continue;
+    }
+    // Validate YYYYMMDD (8-digit compact dates) to prevent false positives
+    // from 8-digit numbers that are not valid dates (C81-01).
+    if (dateMatch && /^\d{8}$/.test(dateMatch[0]) && !isValidYYYYMMDD(dateMatch[0])) {
       continue;
     }
     // Use the last amount match — Korean statements typically list the

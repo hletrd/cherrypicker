@@ -1,6 +1,6 @@
 import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
-import { parseDateStringToISO, isValidISODate, daysInMonth, isValidYYMMDD } from '../date-utils.js';
+import { parseDateStringToISO, isValidISODate, daysInMonth, isValidYYMMDD, isValidYYYYMMDD } from '../date-utils.js';
 import { extractText } from './extractor.js';
 import { parseTable, filterTransactionRows, detectHeaderRow, getHeaderColumns } from './table-parser.js';
 import { SUMMARY_ROW_PATTERN } from '../csv/column-matcher.js';
@@ -93,7 +93,8 @@ function findDateCell(row: string[]): { idx: number; value: string } | null {
       SHORT_YEAR_DATE_PATTERN.test(cell) ||
       KOREAN_FULL_DATE_PATTERN.test(cell) ||
       KOREAN_SHORT_DATE_PATTERN.test(cell) ||
-      isValidShortDate(cell)
+      isValidShortDate(cell) ||
+      isValidYYYYMMDD(cell)  // YYYYMMDD compact format (C81-01)
     ) return { idx: i, value: row[i] ?? '' };
   }
   return null;
@@ -349,7 +350,7 @@ export async function parsePDF(
   // fallback since initial implementation.
   const fallbackTransactions: RawTransaction[] = [];
   const lines = text.split('\n');
-  const fallbackDatePattern = /(\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。])|(?<!\d)\d{6}(?!\d))/;
+  const fallbackDatePattern = /(\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。])|(?<!\d)\d{8}(?!\d)|(?<!\d)\d{6}(?!\d))/;
   // The 'g' flag is required for matchAll() below. Do NOT hoist this regex
   // to module scope — the global flag's lastIndex mutation would break
   // .test()/.exec() calls if the regex were shared across invocations.
@@ -374,6 +375,11 @@ export async function parsePDF(
     // Validate YYMMDD (6-digit compact dates) to prevent false positives
     // from transaction IDs matching the new fallback date pattern (C58-02).
     if (dateMatch && /^\d{6}$/.test(dateMatch[0]) && !isValidYYMMDD(dateMatch[0])) {
+      continue;
+    }
+    // Validate YYYYMMDD (8-digit compact dates) to prevent false positives
+    // from 8-digit numbers that are not valid dates (C81-01).
+    if (dateMatch && /^\d{8}$/.test(dateMatch[0]) && !isValidYYYYMMDD(dateMatch[0])) {
       continue;
     }
     // Use the last amount match — Korean statements typically list the

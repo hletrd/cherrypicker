@@ -1,5 +1,9 @@
-# Cycle 71 Performance Review
+# Cycle 81 Performance Review
 
-## No Performance Issues Found
+## Reviewer: perf-reviewer
 
-Parser is well-optimized. All scan limits (30 lines for delimiter, 30 rows for header, 8 rows for data-inference) are appropriate. No changes needed this cycle.
+### Overview
+No performance concerns. The YYYYMMDD detection addition (F81-01) adds a simple regex check (`/^\d{8}$/`) plus month/day range validation, which is negligible cost compared to existing regex operations.
+
+## Findings
+No performance findings.
