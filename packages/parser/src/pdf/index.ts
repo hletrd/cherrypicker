@@ -3,6 +3,7 @@ import { detectBank } from '../detect.js';
 import { parseDateStringToISO } from '../date-utils.js';
 import { extractText } from './extractor.js';
 import { parseTable, filterTransactionRows, detectHeaderRow, getHeaderColumns } from './table-parser.js';
+import { SUMMARY_ROW_PATTERN } from '../csv/column-matcher.js';
 import { parsePDFWithLLM } from './llm-fallback.js';
 
 export interface PDFParseOptions {
@@ -100,15 +101,10 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
 
     const transactions: RawTransaction[] = [];
 
-    // Summary/total row pattern — matches CSV/XLSX parser behavior to skip
-    // footer rows like "총 합계", "누계", "잔액" that happen to contain
-    // date and amount patterns (C17-01).
-    const summaryPattern = /총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i;
-
     for (const row of txRows) {
       // Skip summary/total rows that happen to have date+amount patterns
       const rowText = row.join(' ');
-      if (summaryPattern.test(rowText)) continue;
+      if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
 
       // Use header-aware column positions when available, falling back
       // to positional heuristics for PDFs without recognizable headers.
@@ -191,6 +187,18 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
         amount,
       };
 
+      // Extract category from header-detected column
+      if (headerLayout && headerLayout.categoryCol >= 0 && headerLayout.categoryCol < row.length) {
+        const catValue = (row[headerLayout.categoryCol] ?? '').trim();
+        if (catValue) tx.category = catValue;
+      }
+
+      // Extract memo from header-detected column
+      if (headerLayout && headerLayout.memoCol >= 0 && headerLayout.memoCol < row.length) {
+        const memoValue = (row[headerLayout.memoCol] ?? '').trim();
+        if (memoValue) tx.memo = memoValue;
+      }
+
       // Look for installment info in remaining cells or header-detected column
       if (headerLayout && headerLayout.installmentsCol >= 0 && headerLayout.installmentsCol < row.length) {
         const instCell = (row[headerLayout.installmentsCol] ?? '').trim();
@@ -219,12 +227,10 @@ function tryStructuredParse(text: string, bank: BankId | null): RawTransaction[]
     // Log structured parse failure for diagnostics — the fallback line scanner
     // will still attempt recovery, but the structured parse failure should be
     // visible in the console for debugging malformed PDFs.
-    // Matches web-side behavior in apps/web/src/lib/parser/pdf.ts (C25-06).
+    // Catch all errors and return null to allow fallback, matching web-side
+    // behavior in apps/web/src/lib/parser/pdf.ts (C25-06).
     console.warn('[cherrypicker] Structured PDF table parse failed, falling back to line scan:', err instanceof Error ? err.message : String(err));
-    if (err instanceof SyntaxError || err instanceof TypeError || err instanceof RangeError) {
-      return null;
-    }
-    throw err;
+    return null;
   }
 }
 

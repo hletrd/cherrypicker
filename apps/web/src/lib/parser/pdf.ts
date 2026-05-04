@@ -6,6 +6,9 @@ import {
   MERCHANT_COLUMN_PATTERN,
   AMOUNT_COLUMN_PATTERN,
   INSTALLMENTS_COLUMN_PATTERN,
+  CATEGORY_COLUMN_PATTERN,
+  MEMO_COLUMN_PATTERN,
+  SUMMARY_ROW_PATTERN,
   HEADER_KEYWORDS,
   isValidHeaderRow,
 } from './column-matcher.js';
@@ -184,6 +187,8 @@ interface PDFColumnLayout {
   merchantCol: number;
   amountCol: number;
   installmentsCol: number;
+  categoryCol: number;
+  memoCol: number;
 }
 
 /**
@@ -211,6 +216,8 @@ function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
   let merchantCol = -1;
   let amountCol = -1;
   let installmentsCol = -1;
+  let categoryCol = -1;
+  let memoCol = -1;
 
   for (let i = 0; i < normalized.length; i++) {
     const h = normalized[i]!;
@@ -218,10 +225,12 @@ function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
     else if (merchantCol === -1 && MERCHANT_COLUMN_PATTERN.test(h)) merchantCol = i;
     else if (amountCol === -1 && AMOUNT_COLUMN_PATTERN.test(h)) amountCol = i;
     else if (installmentsCol === -1 && INSTALLMENTS_COLUMN_PATTERN.test(h)) installmentsCol = i;
+    else if (categoryCol === -1 && CATEGORY_COLUMN_PATTERN.test(h)) categoryCol = i;
+    else if (memoCol === -1 && MEMO_COLUMN_PATTERN.test(h)) memoCol = i;
   }
 
   if (dateCol === -1 || amountCol === -1) return null;
-  return { dateCol, merchantCol, amountCol, installmentsCol };
+  return { dateCol, merchantCol, amountCol, installmentsCol, categoryCol, memoCol };
 }
 
 // ---------------------------------------------------------------------------
@@ -299,15 +308,10 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
     const transactions: RawTransaction[] = [];
     const parseErrors: ParseError[] = [];
 
-    // Summary/total row pattern — matches CSV/XLSX parser behavior to skip
-    // footer rows like "총 합계", "누계", "잔액" that happen to contain
-    // date and amount patterns (C17-01).
-    const summaryPattern = /총\s*합계|합\s*계|총\s*계|소\s*계|합계|총계|소계|누계|잔액|이월|소비|당월|명세|total|sum/i;
-
     for (const row of txRows) {
       // Skip summary/total rows that happen to have date+amount patterns
       const rowText = row.join(' ');
-      if (summaryPattern.test(rowText)) continue;
+      if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
 
       let dateIdx: number;
       let amountIdx: number;
@@ -385,6 +389,18 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
         merchant,
         amount,
       };
+
+      // Extract category from header-detected column
+      if (headerLayout && headerLayout.categoryCol >= 0 && headerLayout.categoryCol < row.length) {
+        const catValue = (row[headerLayout.categoryCol] ?? '').trim();
+        if (catValue) tx.category = catValue;
+      }
+
+      // Extract memo from header-detected column
+      if (headerLayout && headerLayout.memoCol >= 0 && headerLayout.memoCol < row.length) {
+        const memoValue = (row[headerLayout.memoCol] ?? '').trim();
+        if (memoValue) tx.memo = memoValue;
+      }
 
       // Look for installment info via header column or heuristic scan
       if (headerLayout && headerLayout.installmentsCol >= 0 && headerLayout.installmentsCol < row.length) {

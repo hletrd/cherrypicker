@@ -14,6 +14,8 @@ import {
   MERCHANT_COLUMN_PATTERN,
   AMOUNT_COLUMN_PATTERN,
   INSTALLMENTS_COLUMN_PATTERN,
+  CATEGORY_COLUMN_PATTERN,
+  MEMO_COLUMN_PATTERN,
   HEADER_KEYWORDS,
   isValidHeaderRow,
 } from '../csv/column-matcher.js';
@@ -162,6 +164,8 @@ export interface PDFColumnLayout {
   merchantCol: number;
   amountCol: number;
   installmentsCol: number;
+  categoryCol: number;
+  memoCol: number;
 }
 
 /**
@@ -196,6 +200,8 @@ export function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
   let merchantCol = -1;
   let amountCol = -1;
   let installmentsCol = -1;
+  let categoryCol = -1;
+  let memoCol = -1;
 
   for (let i = 0; i < normalized.length; i++) {
     const h = normalized[i]!;
@@ -203,6 +209,8 @@ export function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
     else if (merchantCol === -1 && MERCHANT_COLUMN_PATTERN.test(h)) merchantCol = i;
     else if (amountCol === -1 && AMOUNT_COLUMN_PATTERN.test(h)) amountCol = i;
     else if (installmentsCol === -1 && INSTALLMENTS_COLUMN_PATTERN.test(h)) installmentsCol = i;
+    else if (categoryCol === -1 && CATEGORY_COLUMN_PATTERN.test(h)) categoryCol = i;
+    else if (memoCol === -1 && MEMO_COLUMN_PATTERN.test(h)) memoCol = i;
   }
 
   // Need at least date and amount columns for meaningful extraction
@@ -210,5 +218,5 @@ export function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
 
   // If merchant column not found, leave it as -1 — the caller will
   // fall back to positional heuristics for merchant extraction.
-  return { headerRowIdx: -1, dateCol, merchantCol, amountCol, installmentsCol };
+  return { headerRowIdx: -1, dateCol, merchantCol, amountCol, installmentsCol, categoryCol, memoCol };
 }
