@@ -428,4 +428,68 @@ describe('XLSX invalid serial date error reporting', () => {
       cleanup(filePath);
     }
   });
+
+  test('parses string amounts with Won sign (₩)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2026-02-01', '스타벅스', '₩6,000'],
+      ['2026-02-02', '이마트', '₩120,000'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.amount).toBe(6000);
+      expect(result.transactions[1]?.amount).toBe(120000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('parses string amounts with fullwidth Won sign (￦)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2026-02-01', '스타벅스', '￦6,000'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.amount).toBe(6000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('forward-fills date in merged cells', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액', '할부'],
+      ['2026-02-01', '스타벅스', 6000, 0],
+      ['', '맥도날드', 8900, 0],
+      ['', '이마트', 45000, 3],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(3);
+      expect(result.transactions[0]?.date).toBe('2026-02-01');
+      expect(result.transactions[1]?.date).toBe('2026-02-01');
+      expect(result.transactions[2]?.date).toBe('2026-02-01');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('forward-fills merchant in merged cells', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액', '할부'],
+      ['2026-02-01', '스타벅스', 6000, 0],
+      ['2026-02-01', '', 3000, 3],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.merchant).toBe('스타벅스');
+      expect(result.transactions[1]?.merchant).toBe('스타벅스');
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });

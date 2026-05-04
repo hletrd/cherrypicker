@@ -9,7 +9,6 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
-  HEADER_KEYWORDS,
   isValidHeaderRow,
 } from './column-matcher.js';
 
@@ -242,7 +241,7 @@ function parseAmount(raw: unknown): number | null {
     return Number.isFinite(raw) ? Math.round(raw) : null;
   }
   if (typeof raw === 'string') {
-    let cleaned = raw.trim().replace(/원$/, '').replace(/,/g, '');
+    let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '');
     const isNegative = cleaned.startsWith('(') && cleaned.endsWith(')');
     if (isNegative) cleaned = cleaned.slice(1, -1);
     if (!cleaned) return null;
@@ -419,6 +418,15 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   const transactions: RawTransaction[] = [];
   const errors: ParseError[] = [];
 
+  // Track last non-empty values for merged cell forward-fill.
+  // Korean bank XLSX exports commonly merge cells across installment
+  // rows — SheetJS fills merged cells with empty strings. Forward-fill
+  // extends to date, merchant, and category columns (matching server-side
+  // parser in packages/parser/src/xlsx/index.ts).
+  let lastDate: unknown = '';
+  let lastMerchant: unknown = '';
+  let lastCategory: unknown = '';
+
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
     if (row.every((c) => !c)) continue;
@@ -427,8 +435,31 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (/합계|총계|소계|total|sum/i.test(rowText)) continue;
 
-    const dateRaw = dateCol !== -1 ? row[dateCol] : '';
-    const merchantRaw = merchantCol !== -1 ? row[merchantCol] : '';
+    // Forward-fill date column for merged cells
+    const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
+    if (dateCol !== -1 && rawDateValue !== '' && rawDateValue != null) {
+      lastDate = rawDateValue;
+    }
+    const dateRaw = dateCol !== -1 ? (rawDateValue !== '' && rawDateValue != null ? rawDateValue : lastDate) : '';
+
+    // Forward-fill merchant column for merged cells
+    const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
+    if (merchantCol !== -1 && rawMerchantValue !== '' && rawMerchantValue != null) {
+      lastMerchant = rawMerchantValue;
+    }
+    const merchantRaw = merchantCol !== -1
+      ? (rawMerchantValue !== '' && rawMerchantValue != null ? rawMerchantValue : lastMerchant)
+      : '';
+
+    // Forward-fill category column for merged cells
+    const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
+    if (categoryCol !== -1 && rawCategoryValue !== '' && rawCategoryValue != null) {
+      lastCategory = rawCategoryValue;
+    }
+    const categoryRaw = categoryCol !== -1
+      ? (rawCategoryValue !== '' && rawCategoryValue != null ? rawCategoryValue : lastCategory)
+      : '';
+
     const amountRaw = amountCol !== -1 ? row[amountCol] : '';
 
     if (!dateRaw && !merchantRaw) continue;
@@ -456,8 +487,8 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       ...(installCol !== -1 && row[installCol]
         ? { installments: parseInstallments(row[installCol]) }
         : {}),
-      ...(categoryCol !== -1 && row[categoryCol]
-        ? { category: String(row[categoryCol]).trim() }
+      ...(categoryCol !== -1 && categoryRaw
+        ? { category: String(categoryRaw).trim() }
         : {}),
       ...(memoCol !== -1 && row[memoCol]
         ? { memo: String(row[memoCol]).trim() }

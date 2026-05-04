@@ -185,7 +185,7 @@ function parseDateToISO(raw: string, errors?: ParseError[]): string {
  *  so callers can distinguish between genuinely zero amounts and parse failures,
  *  matching the CSV parser's isValidAmount() pattern (C33-03). */
 function parseAmount(raw: string): number | null {
-  let cleaned = raw.replace(/원$/, '').replace(/,/g, '');
+  let cleaned = raw.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '');
   // Handle parenthesized negatives: (1,234) → -1234 (C36-01).
   // All other parsers (web CSV/XLSX, server CSV/XLSX/PDF) handle this format;
   // the web PDF parser was the only one missing it.
