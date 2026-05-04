@@ -1204,4 +1204,23 @@ describe('C65-02: Data-inference column detection failure error message', () => 
     expect(result.transactions[1]?.amount).toBe(15000);
     expect(result.transactions[2]?.amount).toBe(28000);
   });
+
+  test('generic parser handles datetime with T-separator (C75-02)', () => {
+    // Some Korean bank exports use ISO datetime with T-separator:
+    // "2024-01-15T10:30:00". The generic CSV parser's isDateLike must
+    // recognize these for column inference, and parseDateStringToISO must
+    // extract the date portion (ignoring the time).
+    const content = [
+      '이용일,이용처,이용금액',
+      '2024-01-15T10:30:00,스타벅스 강남점,6500',
+      '2024-01-16T14:20:30,이마트 서초점,30000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+    expect(result.transactions[0]?.merchant).toBe('스타벅스 강남점');
+    expect(result.transactions[0]?.amount).toBe(6500);
+    expect(result.transactions[1]?.date).toBe('2024-01-16');
+    expect(result.transactions[1]?.amount).toBe(30000);
+  });
 });

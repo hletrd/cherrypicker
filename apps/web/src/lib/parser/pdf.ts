@@ -176,12 +176,22 @@ function parseTable(text: string): string[][] {
 }
 
 /** Validate that a cell contains a plausible date. 6-digit strings
- *  must pass YYMMDD validation (C50-01). */
+ *  must pass YYMMDD validation (C50-01). Short dates (MM.DD) must be
+ *  validated with month/day range checks via isValidShortDate to prevent
+ *  decimal amounts like "3.5" from being misidentified as dates. Parity
+ *  with server-side PDF parser's isValidDateCell in
+ *  packages/parser/src/pdf/table-parser.ts (C75-02). */
 function isValidDateCell(cell: string): boolean {
   // Strip trailing delimiters before matching — Korean bank exports may
   // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
   const trimmed = cell.trim().replace(/[.\-\/．。]\s*$/, '');
   if (/^\d{6}$/.test(trimmed)) return isValidYYMMDD(trimmed);
+  // Short dates (MM.DD/MM/DD) must be validated with month/day range
+  // checks via isValidShortDate, matching the server-side PDF parser
+  // behavior. The DATE_PATTERN's short-date alternative uses a lookahead
+  // but no end-anchor and no month/day validation, so it can false-positive
+  // on cells like "13.01" (invalid month) or "3.5" (decimal amount) (C75-02).
+  if (SHORT_MD_DATE_PATTERN.test(trimmed)) return isValidShortDate(trimmed);
   return DATE_PATTERN.test(trimmed);
 }
 

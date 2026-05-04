@@ -1278,4 +1278,29 @@ describe('C74-01: isValidDateCell short-date validation via isValidShortDate', (
     const result = filterTransactionRows(rows);
     expect(result).toHaveLength(1);
   });
+
+  test('"3.5" passes short-date validation (month=3, day=5 is valid) (C75-02)', () => {
+    // "3.5" looks like month=3, day=5 which is valid per daysInMonth.
+    // The SHORT_MD_DATE_PATTERN matches it and isValidShortDate accepts it.
+    // This is an inherent ambiguity of the MM.DD format — "3.5" can be both
+    // a date (March 5) and a decimal amount. The web-side PDF parser's
+    // isValidDateCell now also checks SHORT_MD_DATE_PATTERN (C75-02 parity),
+    // matching server-side behavior.
+    const rows = [
+      ['3.5', '스타벅스', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('rejects "3.50" as short date — 3 digits after dot (C75-02)', () => {
+    // "3.50" has trailing "0" after the MM.DD pattern. The SHORT_MD_DATE_PATTERN
+    // is end-anchored ($), so "3.50" does NOT match. The DATE_PATTERN's
+    // short-date alternative also rejects "3.50" via its lookahead.
+    const rows = [
+      ['3.50', '스타벅스', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
 });
