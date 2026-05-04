@@ -375,6 +375,42 @@ describe('getHeaderColumns', () => {
     expect(layout!.merchantCol).toBe(1);
     expect(layout!.amountCol).toBe(2);
   });
+
+  test('identifies category column from PDF header (F19-01)', () => {
+    const layout = getHeaderColumns(['이용일', '가맹점명', '이용금액', '업종']);
+    expect(layout).not.toBeNull();
+    expect(layout!.dateCol).toBe(0);
+    expect(layout!.merchantCol).toBe(1);
+    expect(layout!.amountCol).toBe(2);
+    expect(layout!.categoryCol).toBe(3);
+    expect(layout!.memoCol).toBe(-1);
+  });
+
+  test('identifies memo column from PDF header (F19-01)', () => {
+    const layout = getHeaderColumns(['이용일', '가맹점명', '이용금액', '비고']);
+    expect(layout).not.toBeNull();
+    expect(layout!.memoCol).toBe(3);
+    expect(layout!.categoryCol).toBe(-1);
+  });
+
+  test('identifies both category and memo columns (F19-01)', () => {
+    const layout = getHeaderColumns(['이용일', '가맹점', '이용금액', '업종', '비고']);
+    expect(layout).not.toBeNull();
+    expect(layout!.categoryCol).toBe(3);
+    expect(layout!.memoCol).toBe(4);
+  });
+
+  test('identifies category with Korean synonym 업종분류 (F19-01)', () => {
+    const layout = getHeaderColumns(['이용일', '이용처', '이용금액', '업종분류']);
+    expect(layout).not.toBeNull();
+    expect(layout!.categoryCol).toBe(3);
+  });
+
+  test('identifies memo with Korean synonym 적요 (F19-01)', () => {
+    const layout = getHeaderColumns(['거래일', '가맹점', '거래금액', '적요']);
+    expect(layout).not.toBeNull();
+    expect(layout!.memoCol).toBe(3);
+  });
 });
 
 // ---------------------------------------------------------------------------

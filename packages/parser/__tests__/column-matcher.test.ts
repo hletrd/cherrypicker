@@ -9,6 +9,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
+  SUMMARY_ROW_PATTERN,
   HEADER_KEYWORDS,
   DATE_KEYWORDS,
   MERCHANT_KEYWORDS,
@@ -325,5 +326,35 @@ describe('Keyword category Sets', () => {
     expect(AMOUNT_KEYWORDS.has('이용금액')).toBe(true);
     expect(AMOUNT_KEYWORDS.has('amount')).toBe(true);
     expect(AMOUNT_KEYWORDS.has('이용일')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SUMMARY_ROW_PATTERN
+// ---------------------------------------------------------------------------
+describe('SUMMARY_ROW_PATTERN', () => {
+  it('matches Korean summary variants', () => {
+    const variants = ['총 합계', '합 계', '총 계', '소 계', '합계', '총계', '소계', '누계', '잔액', '이월', '소비', '당월', '명세'];
+    for (const v of variants) {
+      expect(SUMMARY_ROW_PATTERN.test(v)).toBe(true);
+    }
+  });
+
+  it('matches English summary variants', () => {
+    expect(SUMMARY_ROW_PATTERN.test('total')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('Total')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('sum')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('SUM')).toBe(true);
+  });
+
+  it('matches summary text within longer strings', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총 합계 100,000원')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('2026-02-01 합계 50,000')).toBe(true);
+  });
+
+  it('does not match normal transaction text', () => {
+    expect(SUMMARY_ROW_PATTERN.test('스타벅스 강남점')).toBe(false);
+    expect(SUMMARY_ROW_PATTERN.test('이마트 서초점')).toBe(false);
+    expect(SUMMARY_ROW_PATTERN.test('2026-02-01')).toBe(false);
   });
 });
