@@ -501,19 +501,27 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       ? (rawMerchantValue !== '' && rawMerchantValue != null ? rawMerchantValue : lastMerchant)
       : '';
 
-    // Forward-fill category column for merged cells
+    // Forward-fill category column for merged cells.
+    // Skip forward-fill for summary row values (C52-06, parity with date/merchant).
     const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
     if (categoryCol !== -1 && rawCategoryValue !== '' && rawCategoryValue != null) {
-      lastCategory = rawCategoryValue;
+      const categoryStr = String(rawCategoryValue);
+      if (!SUMMARY_ROW_PATTERN.test(categoryStr)) {
+        lastCategory = rawCategoryValue;
+      }
     }
     const categoryRaw = categoryCol !== -1
       ? (rawCategoryValue !== '' && rawCategoryValue != null ? rawCategoryValue : lastCategory)
       : '';
 
-    // Forward-fill installments column for merged cells (C10-03)
+    // Forward-fill installments column for merged cells (C10-03).
+    // Skip forward-fill for summary row values (C52-06, parity with date/merchant).
     const rawInstallValue = installCol !== -1 ? row[installCol] : '';
     if (installCol !== -1 && rawInstallValue !== '' && rawInstallValue != null) {
-      lastInstallments = rawInstallValue;
+      const installStr = String(rawInstallValue);
+      if (!SUMMARY_ROW_PATTERN.test(installStr)) {
+        lastInstallments = rawInstallValue;
+      }
     }
     const installRaw = installCol !== -1
       ? (rawInstallValue !== '' && rawInstallValue != null ? rawInstallValue : lastInstallments)
@@ -521,9 +529,13 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
 
     // Forward-fill memo column for merged cells (C15-01). Korean bank
     // XLSX exports may merge memo cells across installment sub-rows.
+    // Skip forward-fill for summary row values (C52-06, parity with date/merchant).
     const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
     if (memoCol !== -1 && rawMemoValue !== '' && rawMemoValue != null) {
-      lastMemo = rawMemoValue;
+      const memoStr = String(rawMemoValue);
+      if (!SUMMARY_ROW_PATTERN.test(memoStr)) {
+        lastMemo = rawMemoValue;
+      }
     }
     const memoRaw = memoCol !== -1
       ? (rawMemoValue !== '' && rawMemoValue != null ? rawMemoValue : lastMemo)

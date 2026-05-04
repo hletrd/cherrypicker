@@ -1099,3 +1099,166 @@ describe('Cycle 50: SUMMARY_ROW_PATTERN "합계금액" variant (C50-03)', () => 
     expect(SUMMARY_ROW_PATTERN.test('합계마트')).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 52: Comma/plus delimiter splitting, new keywords, summary patterns
+// ---------------------------------------------------------------------------
+
+describe('Cycle 52-01: findColumn comma/plus delimiter splitting', () => {
+  it('splits comma-delimited combined header for exact match', () => {
+    const headers = ['이용일,승인일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, '이용일', DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('splits comma-delimited combined header for exact match (second part)', () => {
+    const headers = ['승인일,이용일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, '이용일', DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('splits comma-delimited combined header for regex match', () => {
+    const headers = ['이용일,승인일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('splits plus-delimited combined header for regex match', () => {
+    const headers = ['이용일+승인일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('splits fullwidth plus-delimited combined header', () => {
+    const headers = ['이용일＋승인일', '가맹점명', '이용금액'];
+    expect(findColumn(headers, '이용일', DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('isValidHeaderRow splits comma-delimited headers', () => {
+    expect(isValidHeaderRow(['이용일,승인일', '가맹점명', '이용금액'])).toBe(true);
+  });
+
+  it('isValidHeaderRow splits plus-delimited headers', () => {
+    expect(isValidHeaderRow(['이용일+승인일', '가맹점명', '이용금액'])).toBe(true);
+  });
+});
+
+describe('Cycle 52-03: New merchant column keywords', () => {
+  it('matches "이용업소" as merchant column', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('이용업소')).toBe(true);
+  });
+
+  it('matches "승인점" as merchant column', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('승인점')).toBe(true);
+  });
+
+  it('matches "매장명" as merchant column', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('매장명')).toBe(true);
+  });
+
+  it('matches "이용매장" as merchant column', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('이용매장')).toBe(true);
+  });
+
+  it('findColumn finds "이용업소" column', () => {
+    const headers = ['이용일', '이용업소', '이용금액'];
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
+  });
+
+  it('findColumn finds "매장명" column', () => {
+    const headers = ['이용일', '매장명', '이용금액'];
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
+  });
+
+  it('MERCHANT_KEYWORDS includes new terms', () => {
+    expect(MERCHANT_KEYWORDS.has('이용업소')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('승인점')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('매장명')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('이용매장')).toBe(true);
+  });
+});
+
+describe('Cycle 52-04: New memo column keywords', () => {
+  it('matches "비고란" as memo column', () => {
+    expect(MEMO_COLUMN_PATTERN.test('비고란')).toBe(true);
+  });
+
+  it('matches "메모란" as memo column', () => {
+    expect(MEMO_COLUMN_PATTERN.test('메모란')).toBe(true);
+  });
+
+  it('matches "상세" as memo column', () => {
+    expect(MEMO_COLUMN_PATTERN.test('상세')).toBe(true);
+  });
+
+  it('matches "비고내용" as memo column', () => {
+    expect(MEMO_COLUMN_PATTERN.test('비고내용')).toBe(true);
+  });
+
+  it('matches "메모내용" as memo column', () => {
+    expect(MEMO_COLUMN_PATTERN.test('메모내용')).toBe(true);
+  });
+
+  it('findColumn finds "비고란" column', () => {
+    const headers = ['이용일', '이용금액', '비고란'];
+    expect(findColumn(headers, undefined, MEMO_COLUMN_PATTERN)).toBe(2);
+  });
+});
+
+describe('Cycle 52-05: New summary row patterns', () => {
+  it('matches "사용합계" as summary row', () => {
+    expect(SUMMARY_ROW_PATTERN.test('사용합계')).toBe(true);
+  });
+
+  it('matches "이용합계" as summary row', () => {
+    expect(SUMMARY_ROW_PATTERN.test('이용합계')).toBe(true);
+  });
+
+  it('matches "총결제금액" as summary row', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총결제금액')).toBe(true);
+  });
+
+  it('matches "총이용금액" as summary row', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총이용금액')).toBe(true);
+  });
+
+  it('matches "총액" as summary row', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총액')).toBe(true);
+  });
+
+  it('does not false-positive on "총액" inside merchant name', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총액마트')).toBe(false);
+  });
+
+  it('matches "총 결제 금액" with spaces', () => {
+    expect(SUMMARY_ROW_PATTERN.test('총 결제 금액')).toBe(true);
+  });
+});
+
+describe('Cycle 52-07: New category column keywords', () => {
+  it('matches "카드종류" as category column', () => {
+    expect(CATEGORY_COLUMN_PATTERN.test('카드종류')).toBe(true);
+  });
+
+  it('matches "카드구분" as category column', () => {
+    expect(CATEGORY_COLUMN_PATTERN.test('카드구분')).toBe(true);
+  });
+
+  it('findColumn finds "카드종류" column', () => {
+    const headers = ['이용일', '카드종류', '이용금액'];
+    expect(findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN)).toBe(1);
+  });
+});
+
+describe('Cycle 52: HEADER_KEYWORDS includes new terms', () => {
+  it('includes new merchant keywords', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('이용업소')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('승인점')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('매장명')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('이용매장')).toBe(true);
+  });
+
+  it('includes new memo keywords', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('비고란')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('메모란')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('비고내용')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('메모내용')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('상세')).toBe(true);
+  });
+});

@@ -319,10 +319,14 @@ function parseXLSXSheet(
       ? (rawMerchantValue !== '' && rawMerchantValue != null ? rawMerchantValue : lastMerchant)
       : '';
 
-    // Forward-fill category column for merged cells (C5-03)
+    // Forward-fill category column for merged cells (C5-03).
+    // Skip forward-fill for summary row values (C52-06, parity with date/merchant).
     const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
     if (categoryCol !== -1 && rawCategoryValue !== '' && rawCategoryValue != null) {
-      lastCategory = rawCategoryValue;
+      const categoryStr = String(rawCategoryValue);
+      if (!SUMMARY_ROW_PATTERN.test(categoryStr)) {
+        lastCategory = rawCategoryValue;
+      }
     }
     const categoryRaw = categoryCol !== -1
       ? (rawCategoryValue !== '' && rawCategoryValue != null ? rawCategoryValue : lastCategory)
@@ -330,10 +334,14 @@ function parseXLSXSheet(
 
     // Forward-fill installments column for merged cells (C10-03).
     // Korean bank XLSX exports sometimes merge installment cells across
-    // sub-rows of the same transaction.
+    // sub-rows of the same transaction. Skip forward-fill for summary
+    // row values (C52-06, parity with date/merchant).
     const rawInstallValue = installCol !== -1 ? row[installCol] : '';
     if (installCol !== -1 && rawInstallValue !== '' && rawInstallValue != null) {
-      lastInstallments = rawInstallValue;
+      const installStr = String(rawInstallValue);
+      if (!SUMMARY_ROW_PATTERN.test(installStr)) {
+        lastInstallments = rawInstallValue;
+      }
     }
     const installRaw = installCol !== -1
       ? (rawInstallValue !== '' && rawInstallValue != null ? rawInstallValue : lastInstallments)
@@ -342,10 +350,14 @@ function parseXLSXSheet(
     // Forward-fill memo column for merged cells (C15-01). Korean bank
     // XLSX exports may merge memo cells across installment sub-rows,
     // matching the forward-fill pattern used by date, merchant, category,
-    // and installments columns.
+    // and installments columns. Skip forward-fill for summary row values
+    // (C52-06, parity with date/merchant).
     const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
     if (memoCol !== -1 && rawMemoValue !== '' && rawMemoValue != null) {
-      lastMemo = rawMemoValue;
+      const memoStr = String(rawMemoValue);
+      if (!SUMMARY_ROW_PATTERN.test(memoStr)) {
+        lastMemo = rawMemoValue;
+      }
     }
     const memoRaw = memoCol !== -1
       ? (rawMemoValue !== '' && rawMemoValue != null ? rawMemoValue : lastMemo)
