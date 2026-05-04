@@ -135,7 +135,9 @@ const DATE_PATTERNS = [
   /^\d{4}[\s]*[.\-\/．。][\s]*\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}\s+\d/,  // datetime: 2024-01-15 10:30:00 (C28-01)
   /^\d{2}[\s]*[.\-\/．。][\s]*\d{2}[\s]*[.\-\/．。][\s]*\d{2}$/,       // 24-01-15, 24．01．15 (C22-01)
   /^\d{4}\d{2}\d{2}$/,                                           // 20240115
-  /^\d{6}$/,                                                     // 240115 (YYMMDD, C32-02)
+  // YYMMDD (6-digit) is NOT included here because /^\d{6}$/ matches any
+  // 6-digit number (transaction IDs, phone suffixes), causing false-positive
+  // column detection. Validated separately by isYYMMDDLike() (C45-01).
   /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일$/,                          // 2024년 1월 15일
   /^\d{1,2}월\s*\d{1,2}일$/,                                    // 1월 15일
 ];
@@ -156,20 +158,40 @@ function isDateLikeShort(value: string): boolean {
   return day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
 }
 
+/** Validate YYMMDD format (6-digit compact date) with month/day range
+ *  checks. Prevents false-positive column detection when a CSV column
+ *  contains 6-digit transaction IDs (e.g., "123456", "999999") that
+ *  would otherwise match /^\d{6}$/ and steal the date column assignment
+ *  from the real date column (C45-01). Parity with server-side
+ *  packages/parser/src/csv/generic.ts. */
+function isYYMMDDLike(value: string): boolean {
+  if (!/^\d{6}$/.test(value)) return false;
+  const yy = parseInt(value.slice(0, 2), 10);
+  const fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
+  const month = parseInt(value.slice(2, 4), 10);
+  const day = parseInt(value.slice(4, 6), 10);
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= daysInMonth(fullYear, month);
+}
+
 // Korean amount patterns — must recognize all formats that parseAmount
 // handles, including Won sign prefixes (C7-06).
+// C45-02: Patterns require at least one comma (thousand separator) or Won
+// sign for short digit sequences to prevent false positives on strings
+// like "12-34" (card number fragments) or "1-2" being misidentified as
+// amounts during column detection.
 const AMOUNT_PATTERNS = [
-  /^₩?-?[\d,]+원?$/,    // ₩1,234 or 1,234원 or ₩1,234원
+  /^₩-?[\d,]+원?$/,     // ₩1,234 or ₩1,234원 (Won sign prefix)
   /^￦-?[\d,]+원?$/,     // ￦1,234 (fullwidth Won sign)
-  /^-?[\d,]+원?$/,      // 1,234원 or 1,234 or -1,234
-  /^-?[\d,]+$/,         // Integer amounts only — Korean Won has no subunits
-  /^\([\d,]+\)$/,       // Parenthesized negatives: (1,234) → -1234
+  /^₩?\d[\d,]*원?$/,     // ₩500 or 1,234원 — requires comma or Won sign
+  /^-[\d,]+원?$/,        // -1,234 or -1,234원 (negative with comma)
+  /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
 ];
 
 function isDateLike(value: string): boolean {
   const trimmed = value.trim();
-  return DATE_PATTERNS.some((p) => p.test(trimmed)) || isDateLikeShort(trimmed);
+  return DATE_PATTERNS.some((p) => p.test(trimmed)) || isDateLikeShort(trimmed) || isYYMMDDLike(trimmed);
 }
 
 function isAmountLike(value: string): boolean {

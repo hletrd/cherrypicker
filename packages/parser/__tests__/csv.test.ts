@@ -684,4 +684,62 @@ describe('Cycle 36: New column pattern terms integration', () => {
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]?.amount).toBe(6000);
   });
+
+  test('generic parser does not misidentify 6-digit transaction IDs as dates (C45-01)', () => {
+    // A CSV with 6-digit transaction IDs should not cause the generic parser
+    // to pick the ID column as the date column. Valid YYMMDD like "240115"
+    // should still be recognized.
+    const content = [
+      '번호,이용일,이용처,이용금액',
+      '123456,2026-03-15,편의점,5000',
+      '999999,2026-03-16,카페,6000',
+      '000001,2026-03-17,식당,7000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(3);
+    // Dates should come from the actual date column, not the ID column
+    expect(result.transactions[0]?.date).toBe('2026-03-15');
+    expect(result.transactions[1]?.date).toBe('2026-03-16');
+    expect(result.transactions[2]?.date).toBe('2026-03-17');
+  });
+
+  test('generic parser still recognizes valid YYMMDD dates (C45-01)', () => {
+    // Valid YYMMDD dates should still work when there's no header-based detection
+    const content = [
+      '날짜,가게,금액',
+      '260315,편의점,5000',
+      '260316,카페,6000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2026-03-15');
+    expect(result.transactions[1]?.date).toBe('2026-03-16');
+  });
+
+  test('generic parser does not misidentify hyphenated strings as amounts (C45-02)', () => {
+    // Strings like "12-34" should not be matched as amounts during column detection.
+    // The parser should still correctly parse real amounts with commas.
+    const content = [
+      '이용일,이용처,비고,이용금액',
+      '2026-03-15,편의점,ABC-123,5000',
+      '2026-03-16,카페,XYZ-456,6000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(5000);
+    expect(result.transactions[1]?.amount).toBe(6000);
+  });
+
+  test('generic parser recognizes Won-sign amounts without comma (C45-02)', () => {
+    // Small amounts with Won sign should still be recognized
+    const content = [
+      '날짜,가게,금액',
+      '2026-03-15,편의점,₩500',
+      '2026-03-16,카페,₩1200',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(500);
+    expect(result.transactions[1]?.amount).toBe(1200);
+  });
 });
