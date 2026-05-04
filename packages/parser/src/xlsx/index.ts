@@ -3,6 +3,15 @@ import type { BankId, ParseResult } from '../types.js';
 import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
 import { parseDateStringToISO, isValidDayForMonth } from '../date-utils.js';
+import {
+  normalizeHeader,
+  DATE_COLUMN_PATTERN,
+  MERCHANT_COLUMN_PATTERN,
+  AMOUNT_COLUMN_PATTERN,
+  INSTALLMENTS_COLUMN_PATTERN,
+  CATEGORY_COLUMN_PATTERN,
+  MEMO_COLUMN_PATTERN,
+} from '../csv/column-matcher.js';
 
 // SheetJS is imported as a CommonJS module
 import xlsx from 'xlsx';
@@ -154,18 +163,30 @@ function parseXLSXSheet(
     }
   }
 
-  // Find header row — scan up to 30 rows for banks with long preambles
+  // Find header row — scan up to 30 rows for banks with long preambles.
+  // Require keywords from at least 2 distinct categories (date, merchant,
+  // amount) to avoid matching summary rows with only amount keywords.
+  // Matches the web-side xlsx.ts (C86-05) and both generic CSV parsers.
   let headerRowIdx = -1;
   let headers: string[] = [];
+
+  const xlsxDateKeywords = new Set(['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '매출일']);
+  const xlsxMerchantKeywords = new Set(['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호']);
+  const xlsxAmountKeywords = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
 
   for (let i = 0; i < Math.min(30, rows.length); i++) {
     const row = rows[i] ?? [];
     const rowStrings = row.map((c) => String(c ?? '').trim());
     const matchCount = rowStrings.filter((c) => HEADER_KEYWORDS.includes(c)).length;
     if (matchCount >= 2) {
-      headerRowIdx = i;
-      headers = rowStrings;
-      break;
+      const matchedCategories = [xlsxDateKeywords, xlsxMerchantKeywords, xlsxAmountKeywords]
+        .filter(catSet => rowStrings.some((c) => catSet.has(c)))
+        .length;
+      if (matchedCategories >= 2) {
+        headerRowIdx = i;
+        headers = rowStrings;
+        break;
+      }
     }
   }
 
@@ -181,21 +202,24 @@ function parseXLSXSheet(
   // Get column config for this bank (or auto-detect from headers)
   const config = resolvedBank ? getBankColumnConfig(resolvedBank) : null;
 
-  // Try bank-specific config name first; if not found, fall back to regex pattern
+  // Try bank-specific config name first; if not found, fall back to regex
+  // pattern from the shared ColumnMatcher module. Uses normalizeHeader() to
+  // tolerate whitespace and parenthetical suffixes in column names.
   const findCol = (configName: string | undefined, pattern: RegExp): number => {
     if (configName) {
-      const idx = headers.indexOf(configName);
+      const normalizedConfig = normalizeHeader(configName);
+      const idx = headers.findIndex((h) => normalizeHeader(h) === normalizedConfig);
       if (idx !== -1) return idx;
     }
-    return headers.findIndex((h) => pattern.test(h));
+    return headers.findIndex((h) => pattern.test(normalizeHeader(h)));
   };
 
-  const dateCol = findCol(config?.date, /이용일|이용일자|거래일|거래일시|날짜|일시|결제일|승인일|매출일/);
-  const merchantCol = findCol(config?.merchant, /이용처|가맹점|가맹점명|이용가맹점|거래처|매출처|사용처|결제처|상호/);
-  const amountCol = findCol(config?.amount, /이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액/);
-  const installCol = findCol(config?.installments, /할부|할부개월|할부기간|할부월/);
-  const categoryCol = findCol(config?.category, /업종|분류|카테고리|업종분류|업종명/);
-  const memoCol = findCol(config?.memo, /비고|적요|메모|내용|설명|참고/);
+  const dateCol = findCol(config?.date, DATE_COLUMN_PATTERN);
+  const merchantCol = findCol(config?.merchant, MERCHANT_COLUMN_PATTERN);
+  const amountCol = findCol(config?.amount, AMOUNT_COLUMN_PATTERN);
+  const installCol = findCol(config?.installments, INSTALLMENTS_COLUMN_PATTERN);
+  const categoryCol = findCol(config?.category, CATEGORY_COLUMN_PATTERN);
+  const memoCol = findCol(config?.memo, MEMO_COLUMN_PATTERN);
 
   const transactions: import('../types.js').RawTransaction[] = [];
   const errors: import('../types.js').ParseError[] = [];
