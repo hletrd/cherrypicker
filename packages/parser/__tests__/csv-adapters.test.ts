@@ -282,10 +282,22 @@ describe('isValidHeaderRow', () => {
     expect(isValidHeaderRow([])).toBe(false);
   });
 
-  test('handles keywords with parenthetical suffixes via normalization', () => {
-    // isValidHeaderRow uses raw string comparison, not normalizeHeader,
-    // so parenthetical suffixes should still match if the base keyword is present
+  test('handles keywords with parenthetical suffixes via normalization (C6-01)', () => {
+    // isValidHeaderRow now normalizes cells before keyword matching so that
+    // parenthetical suffixes like "이용금액(원)" and extra whitespace are tolerated.
     expect(isValidHeaderRow(['이용일', '이용처', '이용금액(원)'])).toBe(true);
+  });
+
+  test('handles keywords with extra whitespace via normalization (C6-01)', () => {
+    expect(isValidHeaderRow(['이용 일', '이용 처', '이용 금액'])).toBe(true);
+  });
+
+  test('handles combined whitespace and parenthetical suffixes (C6-01)', () => {
+    expect(isValidHeaderRow(['  이용일  ', '이용처', '  이용 금액 (원)  '])).toBe(true);
+  });
+
+  test('still rejects rows with no recognizable keywords after normalization', () => {
+    expect(isValidHeaderRow(['열1(원)', '열2(원)', '열3(원)'])).toBe(false);
   });
 });
 

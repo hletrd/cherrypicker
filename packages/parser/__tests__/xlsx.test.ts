@@ -210,6 +210,65 @@ describe('parseXLSX', () => {
       cleanup(filePath);
     }
   });
+
+  test('parses amounts with Won sign prefix (C6-05)', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '스타벅스', '₩6,500'],
+      ['2026-02-02', '이마트', '￦30,000'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.amount).toBe(6500);
+      expect(result.transactions[1]?.amount).toBe(30000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('handles Date objects in cells (C6-04)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [new Date(2024, 1, 1), '스타벅스', 5500],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.date).toBe('2024-02-01');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('handles headers with parenthetical suffixes (C6-01)', async () => {
+    const filePath = createTempXLSX([
+      ['카드사 이용내역'],
+      ['이용일', '이용처', '이용금액(원)', '할부(개월)'],
+      ['2026-02-01', '스타벅스', 6500, 0],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.amount).toBe(6500);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('handles headers with extra whitespace (C6-01)', async () => {
+    const filePath = createTempXLSX([
+      ['이용 일', '이용 처', '이용 금액'],
+      ['2026-02-01', '스타벅스', 6500],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.merchant).toBe('스타벅스');
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

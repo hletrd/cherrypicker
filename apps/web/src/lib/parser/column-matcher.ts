@@ -53,12 +53,15 @@ export const MERCHANT_KEYWORDS: ReadonlySet<string> = new Set(['이용처', '가
 export const AMOUNT_KEYWORDS: ReadonlySet<string> = new Set(['이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액']);
 
 /** Check whether a row of trimmed cell values looks like a valid header row
- *  by requiring keywords from at least 2 distinct categories. */
+ *  by requiring keywords from at least 2 distinct categories. Normalizes
+ *  each cell before matching so that parenthetical suffixes like "이용금액(원)"
+ *  and extra whitespace like "이용 금액" are tolerated (C6-01). */
 export function isValidHeaderRow(cells: string[]): boolean {
-  const hasHeaderKeyword = cells.some((c) => (HEADER_KEYWORDS as string[]).includes(c));
+  const normalized = cells.map((c) => normalizeHeader(c));
+  const hasHeaderKeyword = normalized.some((c) => (HEADER_KEYWORDS as string[]).includes(c));
   if (!hasHeaderKeyword) return false;
   const matchedCategories = [DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS]
-    .filter(catSet => cells.some((c) => catSet.has(c)))
+    .filter(catSet => normalized.some((c) => catSet.has(c)))
     .length;
   return matchedCategories >= 2;
 }

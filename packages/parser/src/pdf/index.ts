@@ -50,7 +50,7 @@ function isValidShortDate(cell: string): boolean {
  *  so callers can distinguish between genuinely zero amounts and parse failures,
  *  matching the CSV parser's isValidAmount() pattern (C33-03/C34-01). */
 function parseAmount(raw: string): number | null {
-  let cleaned = raw.replace(/원$/, '').replace(/,/g, '');
+  let cleaned = raw.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '');
   const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNeg) cleaned = cleaned.slice(1, -1);
   if (!cleaned.trim()) return null;

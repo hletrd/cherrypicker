@@ -33,7 +33,7 @@ export function splitCSVLine(line: string, delimiter: string): string[] {
  *  strips Korean Won suffix, comma separators, and internal whitespace
  *  (C70-04 — matches the web CSV parser's behavior). */
 export function parseCSVAmount(raw: string): number | null {
-  let cleaned = raw.trim().replace(/원$/, '').replace(/,/g, '').replace(/\s/g, '');
+  let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
   const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
   if (isNeg) cleaned = cleaned.slice(1, -1);
   if (!cleaned) return null;

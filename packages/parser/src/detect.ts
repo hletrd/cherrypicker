@@ -207,10 +207,11 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
 
   // For CSV, detect bank from content. Reuse the already-read buffer when
   // available (from the unknown-extension sniff path) to avoid reading the
-  // file a second time (C5-02).
+  // file a second time (C5-02). Strip BOM before bank detection so that
+  // patterns anchored to content start match correctly (C6-02).
   if (format === 'csv') {
     const csvBuffer = sniffBuffer ?? await readFile(filePath);
-    const content = csvBuffer.toString('utf-8');
+    const content = csvBuffer.toString('utf-8').replace(/^﻿/, '');
     const { bank, confidence } = detectBank(content);
     return { format, bank, confidence, encoding: 'utf-8' };
   }

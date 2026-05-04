@@ -154,4 +154,12 @@ describe('detectFormat', () => {
     const result = await detectFormat(join(fixturesDir, 'sample-kb.csv'));
     expect(result.encoding).toBeDefined();
   });
+
+  test('BOM does not break format detection (C6-02)', async () => {
+    const result = await detectFormat(join(fixturesDir, 'sample-bom.csv'));
+    expect(result.format).toBe('csv');
+    // The BOM fixture has no bank-specific text, so bank is expected to be null.
+    // The key assertion is that format detection succeeds despite the BOM.
+    expect(result.encoding).toBe('utf-8');
+  });
 });

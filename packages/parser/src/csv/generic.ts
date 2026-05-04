@@ -114,8 +114,9 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     // where sample data contains Korean text (C4-03). This avoids picking
     // numeric columns like installments or card number suffixes.
     if (dateCol !== -1 && amountCol !== -1 && merchantCol === -1) {
+      const reservedCols = new Set([dateCol, amountCol, installmentsCol, categoryCol, memoCol].filter((c) => c !== -1));
       for (let i = 0; i < headers.length; i++) {
-        if (i !== dateCol && i !== amountCol && i !== installmentsCol && i !== categoryCol && i !== memoCol) {
+        if (!reservedCols.has(i)) {
           // Check if any sample data in this column contains Korean characters
           const hasKorean = sampleRows.some((row) => {
             const cells = splitCSVLine(row, delimiter);
@@ -130,7 +131,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
       // Fallback: pick the first non-reserved column even without Korean
       if (merchantCol === -1) {
         for (let i = 0; i < headers.length; i++) {
-          if (i !== dateCol && i !== amountCol && i !== installmentsCol && i !== categoryCol && i !== memoCol) {
+          if (!reservedCols.has(i)) {
             merchantCol = i;
             break;
           }

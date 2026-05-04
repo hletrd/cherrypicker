@@ -306,6 +306,20 @@ describe('parseCSV - edge cases', () => {
     expect(result).toBeDefined();
   });
 
+  test('parses amount with Won sign prefix (C6-05)', () => {
+    // Use quoted fields since the amount contains commas as thousand separators
+    // and the delimiter is also comma.
+    const content = [
+      '거래일시,가맹점명,이용금액',
+      '2026-02-01,테스트,"₩6,500"',
+      '2026-02-02,테스트2,"￦30,000"',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.amount).toBe(6500);
+    expect(result.transactions[1]?.amount).toBe(30000);
+  });
+
   test('parses 8-digit date format', () => {
     const shinhanContent = [
       '신한카드',

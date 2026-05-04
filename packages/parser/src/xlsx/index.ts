@@ -42,6 +42,20 @@ function parseDateToISO(
   errors?: import('../types.js').ParseError[],
   lineIdx?: number,
 ): string {
+  // Handle Date objects — SheetJS may return these when cellDates is enabled
+  // or in certain edge cases. Defensive hardening (C6-04).
+  if (raw instanceof Date) {
+    if (!Number.isNaN(raw.getTime())) {
+      const y = raw.getFullYear().toString().padStart(4, '0');
+      const m = (raw.getMonth() + 1).toString().padStart(2, '0');
+      const d = raw.getDate().toString().padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    if (errors && lineIdx !== undefined) {
+      errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${String(raw)}` });
+    }
+    return String(raw);
+  }
   if (typeof raw === 'number') {
     if (!Number.isFinite(raw) || raw < 1 || raw > 100000) {
       if (errors && lineIdx !== undefined && raw !== 0) {
@@ -96,7 +110,7 @@ function parseAmount(raw: unknown): number | null {
     return Number.isFinite(raw) ? Math.round(raw) : null;
   }
   if (typeof raw === 'string') {
-    let cleaned = raw.trim().replace(/원$/, '').replace(/,/g, '');
+    let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '');
     // Handle parenthesized negatives: (1234) → -1234
     const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
     if (isNeg) cleaned = cleaned.slice(1, -1);
