@@ -55,6 +55,7 @@ const AMOUNT_PATTERNS = [
   /^-?[\d,]+원?$/,      // 1,234원 or 1,234 or -1,234
   /^-?[\d,]+$/,         // Integer amounts only — Korean Won has no subunits
   /^\([\d,]+\)$/,       // Parenthesized negatives: (1,234) → -1234
+  /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
 ];
 
 function isDateLike(value: string): boolean {

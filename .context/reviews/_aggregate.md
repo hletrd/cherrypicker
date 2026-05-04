@@ -1,16 +1,19 @@
-# Aggregate Review -- Cycle 41
+# Aggregate Review -- Cycle 42
 
-## New Findings: 1 actionable, 1 deferred
+## New Findings: 1 actionable, 0 deferred
 
 ### Actionable
-1. **[LOW]** Server PDF fallback amount pattern uses `[₩]` character class instead of plain `₩` - inconsistent with web-side pattern
+1. **[MEDIUM]** Generic CSV `AMOUNT_PATTERNS` (both server and web) missing `마이너스` prefix pattern for column inference -- affects generic CSV parsing of files using 마이너스-prefixed amounts
 
-### Deferred
+### Previously Deferred (unchanged)
 - D-01: Web/server CSV parser shared module refactor (architecture)
 - D-02: Headerless CSV fallback (low ROI, edge case)
 
+### Cycle 41 Finding Correction
+The cycle 41 aggregate reported "[LOW] Server PDF fallback amount pattern uses `[₩]`". This was **incorrect** -- both server and web PDF use `[₩￦]` (both characters). No fix needed.
+
 ## No Regressions
-All 806 tests (696 bun + 110 vitest) passing.
+All 951 tests (701 bun + 250 vitest) passing.
 
 ## Format Diversity Status
 - CSV: 24 bank adapters (server + web), generic fallback, column inference, BOM stripping, encoding detection
@@ -21,5 +24,6 @@ All 806 tests (696 bun + 110 vitest) passing.
 - Unicode: NBSP, zero-width chars, directional markers, variation selectors all stripped
 
 ## Plan for This Cycle
-1. Fix server PDF fallback amount pattern `[₩]` → `₩`
-2. Add test coverage for the fix
+1. Add `마이너스` pattern to server generic CSV `AMOUNT_PATTERNS` in `packages/parser/src/csv/generic.ts`
+2. Add `마이너스` pattern to web CSV `AMOUNT_PATTERNS` in `apps/web/src/lib/parser/csv.ts`
+3. Add test coverage for 마이너스 amounts in generic CSV column inference

@@ -1,87 +1,36 @@
-# Cycle 41 Code Review
+# Code Review -- Cycle 42
 
-**Reviewer:** code-reviewer
-**Focus:** Format diversity, server/web parity, PDF/XLSX/CSV edge cases
+## Scope
+Full parser package deep review after 41 cycles of improvements.
 
----
+## Findings
 
-## Finding 1: Server PDF fallback date pattern missing full-width dot support [MEDIUM]
+### F-42-01: Generic CSV `AMOUNT_PATTERNS` missing `마이너스` prefix pattern [MEDIUM]
+**Files**:
+- `packages/parser/src/csv/generic.ts` (AMOUNT_PATTERNS, lines 52-58)
+- `apps/web/src/lib/parser/csv.ts` (AMOUNT_PATTERNS, lines 161-167)
 
-**File:** `packages/parser/src/pdf/index.ts:304`
+**Issue**: The `AMOUNT_PATTERNS` arrays used by `isAmountLike()` for column inference in generic CSV parsers do not include a pattern for `마이너스`-prefixed amounts. While `parseCSVAmount()` in shared.ts correctly handles `마이너스` prefix, the column-inference heuristic `isAmountLike()` won't recognize these as amount values during headerless/generic parsing.
 
-The fallback line scanner date pattern only matches half-width delimiters (`.\-\/`) but not full-width dots (`．` U+FF0E) or ideographic stops (`。` U+3002):
+When a CSV file has no recognizable header keywords AND uses `마이너스`-prefixed amounts as the dominant format, the generic parser's column inference will fail to detect the amount column.
 
-```
-/(\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。]))/
-```
+**Impact**: Generic CSV parser column inference may fail when `마이너스`-prefixed amounts are the primary format. Only affects unknown-bank CSV files without recognizable headers.
 
-Wait, actually looking at this pattern again, it DOES include `．` and `。` in the character classes. The issue is that it does NOT include `　` (ideographic space U+3000) which some PDF extractors produce between date components.
+### F-42-02: Cycle 41 `[₩]` finding was incorrect -- already resolved [NONE]
+**Files**: `packages/parser/src/pdf/index.ts`, `apps/web/src/lib/parser/pdf.ts`
+**Issue**: Both server and web PDF `AMOUNT_PATTERN` use `[₩￦]` character class (both Won sign characters). The cycle 41 aggregate incorrectly stated the server side uses `[₩]` alone. **No fix needed.**
 
-Actually on closer inspection, the pattern is correct. The full-width dots ARE included. This is a non-finding.
+### F-42-03: No format diversity issues remain unfixed [PASS]
+All major format diversity issues identified across 41 cycles have been resolved:
+- CSV: 24 bank adapters, generic fallback, encoding detection, BOM stripping, delimiter detection
+- XLSX: HTML-as-XLS, multi-sheet, merged cell forward-fill, formula errors
+- PDF: Structured table, header-aware columns, fallback line scanner, LLM fallback
+- Date: 8+ format variants
+- Amount: Won signs, parenthesized negatives, 마이너스, whitespace
+- Unicode: NBSP, zero-width, directional markers, variation selectors
 
-**Revised Finding 1: Server PDF fallback amount pattern uses `[₩]` character class [LOW]**
-
-**File:** `packages/parser/src/pdf/index.ts:23`
-
-```javascript
-const AMOUNT_PATTERN = /^[₩]\d[\d,]*원?$|^[￦]\d[\d,]*원?$|...
-```
-
-The `[₩]` creates a character class containing ₩ and the implicit backslash-escape, which is coincidentally functional but semantically incorrect. Should be `₩\d[\d,]*` without the character class brackets. The web-side equivalent correctly uses `₩\d` in its AMOUNT_PATTERN.
-
----
-
-## Finding 2: CSV header scan doesn't account for headerless CSV files [LOW]
-
-**Files:**
-- `packages/parser/src/csv/generic.ts:90-97`
-- `packages/parser/src/csv/adapter-factory.ts:92-101`
-
-When no header row is found, both parsers return an error "헤더 행을 찾을 수 없습니다." Some simple CSV files (especially from fintech apps like Toss or Kakao) may not have header rows at all - just data rows with recognizable date/amount patterns. The generic parser could fall back to column inference from sample data when no header keywords match.
-
-**Severity:** Low - this would only affect edge-case files without any recognizable column headers.
-
----
-
-## Finding 3: All parseAmount implementations consistently handle common formats [PASS]
-
-All 8 parseAmount implementations (server CSV, server XLSX, server PDF, web CSV, web XLSX, web PDF) correctly handle:
-- `원` suffix stripping
-- `₩/￦` Won sign prefixes
-- `마이너스` prefix
-- Parenthesized negatives `(1,234)`
-- Whitespace stripping
-- Math.round for correct rounding
-
-No parity issues found.
-
----
-
-## Finding 4: Column patterns consistent across server and web [PASS]
-
-Both column-matcher modules (server and web) have identical:
-- All 6 column pattern regexes (DATE, MERCHANT, AMOUNT, INSTALLMENTS, CATEGORY, MEMO)
-- SUMMARY_ROW_PATTERN
-- HEADER_KEYWORDS, DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS
-- isValidHeaderRow function
-- normalizeHeader function
-- findColumn function
-
----
-
-## Finding 5: Date parsing parity [PASS]
-
-Both date-utils modules (server and web) handle identical formats:
-- YYYY-MM-DD, YYYY.MM.DD, YYYY/MM/DD with optional spaces
-- Full-width dots (U+FF0E) and ideographic stops (U+3002)
-- YYYYMMDD and YYMMDD compact formats
-- YY-MM-DD with 2-digit year
-- MM/DD short dates with year inference
-- Korean full (2024년 1월 15일) and short (1월 15일) dates
-- All branches validate month/day ranges with isValidDayForMonth
-
----
+### F-42-04: Server/web parity is strong [PASS]
+Column patterns, date parsing, amount parsing, header detection, summary row filtering all maintain parity between server and web implementations.
 
 ## Summary
-
-Only 1 actionable finding (the `[₩]` character class in server PDF). The codebase has achieved strong server/web parity after 40 cycles. Format diversity coverage is comprehensive.
+1 actionable finding: `마이너스` pattern missing from generic CSV column inference on both server and web sides.

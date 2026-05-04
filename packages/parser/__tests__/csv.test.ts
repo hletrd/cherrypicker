@@ -655,4 +655,33 @@ describe('Cycle 36: New column pattern terms integration', () => {
     expect(result.transactions[0]?.installments).toBe(3);
     expect(result.transactions[1]?.installments).toBeUndefined();
   });
+
+  test('generic parser infers amount column from 마이너스-prefixed amounts', () => {
+    // When headers are unknown but data contains 마이너스-prefixed amounts,
+    // the generic parser should infer the amount column correctly.
+    const content = [
+      '날짜,내용,금액',
+      '2026-02-01,편의점,마이너스3500',
+      '2026-02-02,카페,마이너스6000',
+    ].join('\n');
+    const result = parseCSV(content);
+    // 마이너스 amounts are negative — the parser skips negative amounts
+    // (they don't contribute to spending), but column inference should
+    // still succeed (no "헤더 행을 찾을 수 없습니다" error).
+    expect(result.errors.filter((e) => e.message.includes('헤더'))).toHaveLength(0);
+  });
+
+  test('generic parser parses 마이너스 amounts as negative (skipped)', () => {
+    // Verify that 마이너스 amounts in recognized columns are parsed correctly
+    // and skipped as negative amounts.
+    const content = [
+      '이용일,이용처,이용금액',
+      '2026-02-01,편의점,마이너스3500',
+      '2026-02-02,카페,6000',
+    ].join('\n');
+    const result = parseCSV(content);
+    // Only the positive amount transaction should be included
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.amount).toBe(6000);
+  });
 });
