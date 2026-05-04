@@ -505,6 +505,21 @@ describe('parseCSV - edge cases', () => {
     expect(result.transactions[2]?.date).toMatch(/^\d{4}-04-30$/);
   });
 
+  test('isDateLike accepts datetime strings for column inference (C28-01)', () => {
+    // Some Korean bank exports include datetime strings like "2024-01-15 10:30:00".
+    // The generic CSV parser's isDateLike must recognize these for column inference.
+    // The date portion is extracted by parseDateStringToISO; the time is ignored.
+    const content = [
+      '이용일,이용처,이용금액',
+      '2024-01-15 10:30:00,스타벅스 강남점,6500',
+      '2024-01-16 14:20,이마트 서초점,30000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+    expect(result.transactions[1]?.date).toBe('2024-01-16');
+  });
+
   test('parseDateStringToISO reports error for impossible dates like "4/31" (F21-01)', () => {
     // With recognized headers, parseDateStringToISO validates dates.
     // "4/31" is impossible (Apr has 30 days) — parseDateStringToISO returns

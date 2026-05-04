@@ -1,31 +1,25 @@
-# Cycle 27 Aggregate Review
+# Cycle 28 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 27
-**Tests:** 526 bun, 242 vitest
+**Cycles completed:** 28
+**Tests:** 534 bun, 242 vitest
 
-## Actionable Findings (2)
+## Summary
+3 findings from comprehensive code review of all parser source files (14 server-side, 8 web-side).
 
-| ID | Severity | Category | Finding | File |
-|---|----------|----------|---------|------|
-| F1 | MEDIUM | PDF Format | PDF `AMOUNT_PATTERN` false-positive: bare 4-digit integers like "2024" match as amounts in all 4 PDF amount regexes (server index.ts, server table-parser.ts, web STRICT_AMOUNT_PATTERN, web AMOUNT_PATTERN) | `packages/parser/src/pdf/index.ts`, `packages/parser/src/pdf/table-parser.ts`, `apps/web/src/lib/parser/pdf.ts` |
-| F2 | LOW | Test Coverage | No tests for PDF amount pattern rejecting year values like "2024" or "2025" as amounts | `packages/parser/__tests__/table-parser.test.ts` |
+## Findings
 
-## Fixes Applied
+### F1: normalizeHeader missing NBSP (Medium)
+**Files:** `packages/parser/src/csv/column-matcher.ts`, `apps/web/src/lib/parser/column-matcher.ts`
+No-break space (U+00A0) not stripped from headers. Common in Korean bank exports.
+Headers with NBSP fail to match expected column names, causing fallback to data inference.
 
-- F1: Changed `[\d,]+` to `(?:[\d,]*,|\d{3,})[\d,]*` in all 4 PDF amount patterns to require either a comma (thousand separator) or minimum 3 digits, preventing 4-digit year values from matching as amounts (C27-01)
-- F2: Added tests verifying amount patterns reject "2024" while accepting "1,234", "100", "12345" (C27-02)
+### F2: CSV isDateLike rejects datetime strings (Medium)
+**Files:** `packages/parser/src/csv/generic.ts`, `apps/web/src/lib/parser/csv.ts`
+DATE_PATTERNS use `$` anchor, so datetime strings like "2024-01-15 10:30:00" fail isDateLike().
+Column inference in generic CSV parser may fail when cells contain datetime values.
 
-## Previous Cycle Status
-
-- Cycle 26 F1 (PDF reversed column order): **CONFIRMED FIXED**
-- Cycle 26 F2 (reversed column order tests): **CONFIRMED FIXED**
-
-## Deferred Items
-
-- Web CSV factory pattern refactor (D1)
-- Server ColumnMatcher path consistency (D2)
-- PDF multi-line header support
-- Historical amount display format
-- Card name suffixes
-- Global config integration
+### F3: Missing column pattern terms (Low-Medium)
+**Files:** Both server and web `column-matcher.ts`
+MERCHANT_COLUMN_PATTERN missing "판매처", "구매처", "매장", "취급처"; DATE_COLUMN_PATTERN missing "작성일".
+Alternative bank export formats with these terms fail header-based column detection.

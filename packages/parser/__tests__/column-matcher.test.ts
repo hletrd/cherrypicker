@@ -70,6 +70,13 @@ describe('normalizeHeader', () => {
   it('strips mixed invisible and whitespace characters', () => {
     expect(normalizeHeader('  이\t용\n 금액(원)  ')).toBe('이용금액');
   });
+
+  it('strips no-break spaces (U+00A0)', () => {
+    // NBSP commonly appears in Korean bank exports copied from web pages
+    expect(normalizeHeader('이용 금액')).toBe('이용금액');
+    expect(normalizeHeader(' 이용일 ')).toBe('이용일');
+    expect(normalizeHeader('이용  일')).toBe('이용일');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -192,7 +199,7 @@ describe('isValidHeaderRow', () => {
 // Column pattern constants
 // ---------------------------------------------------------------------------
 describe('DATE_COLUMN_PATTERN', () => {
-  const shouldMatch = ['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일', 'date', 'Date', 'transaction_date', 'trans_date'];
+  const shouldMatch = ['이용일', '이용일자', '거래일', '거래일시', '날짜', '일시', '결제일', '승인일', '승인일자', '매출일', '작성일', 'date', 'Date', 'transaction_date', 'trans_date'];
   const shouldNotMatch = ['이용처', '금액', '할부', '스타벅스'];
 
   for (const name of shouldMatch) {
@@ -209,7 +216,7 @@ describe('DATE_COLUMN_PATTERN', () => {
 });
 
 describe('MERCHANT_COLUMN_PATTERN', () => {
-  const shouldMatch = ['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호', 'merchant', 'Merchant', 'store', 'description'];
+  const shouldMatch = ['이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처', '결제처', '상호', '판매처', '구매처', '매장', '취급처', 'merchant', 'Merchant', 'store', 'description', 'vendor', 'item'];
   const shouldNotMatch = ['이용일', '금액', '할부', '날짜'];
 
   for (const name of shouldMatch) {
@@ -439,5 +446,33 @@ describe('Keyword Set completeness (C24)', () => {
     expect(MERCHANT_KEYWORDS.has('store')).toBe(true);
     expect(MERCHANT_KEYWORDS.has('merchant')).toBe(true);
     expect(MERCHANT_KEYWORDS.has('description')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('vendor')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('item')).toBe(true);
+  });
+
+  it('DATE_KEYWORDS contains expanded Korean terms', () => {
+    expect(DATE_KEYWORDS.has('작성일')).toBe(true);
+    expect(DATE_KEYWORDS.has('승인일')).toBe(true);
+    expect(DATE_KEYWORDS.has('매출일')).toBe(true);
+  });
+
+  it('MERCHANT_KEYWORDS contains expanded Korean terms', () => {
+    expect(MERCHANT_KEYWORDS.has('판매처')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('구매처')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('매장')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('취급처')).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts headers with expanded merchant terms', () => {
+    expect(isValidHeaderRow(['작성일', '판매처', '금액'])).toBe(true);
+    expect(isValidHeaderRow(['거래일', '취급처', '거래금액'])).toBe(true);
+    expect(isValidHeaderRow(['Date', 'Vendor', 'Amount'])).toBe(true);
+    expect(isValidHeaderRow(['date', 'item', 'total'])).toBe(true);
+  });
+
+  it('findColumn matches expanded merchant patterns', () => {
+    const headers = ['작성일', '판매처', '이용금액'];
+    expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
   });
 });
