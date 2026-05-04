@@ -67,6 +67,7 @@ function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): s
 function parseAmount(raw: string): number | null {
   if (!raw.trim()) return null; // Early return for empty/whitespace-only input (parity with server-side C56-04)
   let cleaned = raw.trim()
+    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
     .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
     .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
     .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII

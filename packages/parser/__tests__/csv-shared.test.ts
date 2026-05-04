@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { splitCSVLine, parseCSVAmount, isValidCSVAmount, parseCSVInstallments } from '../src/csv/shared.js';
+import { splitCSVLine, splitCSVContent, parseCSVAmount, isValidCSVAmount, parseCSVInstallments } from '../src/csv/shared.js';
 import { normalizeHeader, findColumn, DATE_COLUMN_PATTERN, isValidHeaderRow, HEADER_KEYWORDS } from '../src/csv/column-matcher.js';
 
 // ---------------------------------------------------------------------------
@@ -488,5 +488,134 @@ describe('parseCSVAmount - KRW prefix (C56-01)', () => {
 
   test('returns null for whitespace-only string (C56-04 early return)', () => {
     expect(parseCSVAmount('   ')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseCSVAmount — leading plus sign (C66-02)
+// ---------------------------------------------------------------------------
+
+describe('parseCSVAmount - leading plus sign (C66-02)', () => {
+  test('strips leading + from positive amount', () => {
+    expect(parseCSVAmount('+5500')).toBe(5500);
+  });
+
+  test('strips leading + with comma separator', () => {
+    expect(parseCSVAmount('+12,345')).toBe(12345);
+  });
+
+  test('strips leading + with Won sign', () => {
+    expect(parseCSVAmount('+₩12,345')).toBe(12345);
+  });
+
+  test('strips leading + with KRW prefix', () => {
+    expect(parseCSVAmount('+KRW 10,000')).toBe(10000);
+  });
+
+  test('strips leading + with Won suffix', () => {
+    expect(parseCSVAmount('+6,500원')).toBe(6500);
+  });
+
+  test('strips leading + with fullwidth plus and Won sign', () => {
+    expect(parseCSVAmount('+₩30,000')).toBe(30000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// splitCSVContent — multi-line quoted field support (C66-01)
+// ---------------------------------------------------------------------------
+
+describe('splitCSVContent - multi-line quoted fields (C66-01)', () => {
+  test('handles simple single-line content', () => {
+    const content = 'a,b,c\nd,e,f';
+    expect(splitCSVContent(content, ',')).toEqual(['a,b,c', 'd,e,f']);
+  });
+
+  test('handles multi-line quoted field', () => {
+    const content = '1,"hello\nworld",3\n4,5,6';
+    const result = splitCSVContent(content, ',');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe('1,"hello\nworld",3');
+    expect(result[1]).toBe('4,5,6');
+  });
+
+  test('handles multi-line quoted field spanning 3 lines', () => {
+    const content = '1,"line1\nline2\nline3",3\n4,5,6';
+    const result = splitCSVContent(content, ',');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe('1,"line1\nline2\nline3",3');
+  });
+
+  test('handles CRLF line endings', () => {
+    const content = 'a,b,c\r\nd,e,f\r\n';
+    expect(splitCSVContent(content, ',')).toEqual(['a,b,c', 'd,e,f']);
+  });
+
+  test('handles CRLF inside quoted field', () => {
+    const content = '1,"hello\r\nworld",3\r\n4,5,6';
+    const result = splitCSVContent(content, ',');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe('1,"hello\nworld",3');
+  });
+
+  test('filters empty lines', () => {
+    const content = 'a,b\n\n\nc,d';
+    expect(splitCSVContent(content, ',')).toEqual(['a,b', 'c,d']);
+  });
+
+  test('handles Korean merchant with embedded newline', () => {
+    const content = '2024-01-15,"스타벅스\n강남점",5500\n2024-01-16,카페,3000';
+    const result = splitCSVContent(content, ',');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe('2024-01-15,"스타벅스\n강남점",5500');
+  });
+
+  test('handles doubled-quote escapes within multi-line field', () => {
+    const content = '1,"say ""hello""\nworld",3\n4,5,6';
+    const result = splitCSVContent(content, ',');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe('1,"say ""hello""\nworld",3');
+  });
+
+  test('handles tab delimiter with multi-line field', () => {
+    const content = '1\t"hello\nworld"\t3\n4\t5\t6';
+    const result = splitCSVContent(content, '\t');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe('1\t"hello\nworld"\t3');
+  });
+
+  test('handles file with no multi-line fields (normal CSV)', () => {
+    const content = '이용일,이용처,이용금액\n2024-01-15,스타벅스,5500\n2024-01-16,카페,3000';
+    const result = splitCSVContent(content, ',');
+    expect(result).toHaveLength(3);
+  });
+
+  test('handles empty content', () => {
+    expect(splitCSVContent('', ',')).toEqual([]);
+  });
+
+  test('handles content with only whitespace lines', () => {
+    expect(splitCSVContent('  \n  \n', ',')).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SUMMARY_ROW_PATTERN — subtotal English keyword (C66-04)
+// ---------------------------------------------------------------------------
+
+describe('SUMMARY_ROW_PATTERN - subtotal keyword (C66-04)', () => {
+  test('matches "subtotal" English keyword', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    expect(SUMMARY_ROW_PATTERN.test('subtotal 12,345')).toBe(true);
+  });
+
+  test('matches "Subtotal" case-insensitively', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    expect(SUMMARY_ROW_PATTERN.test('Subtotal 12,345')).toBe(true);
+  });
+
+  test('does not match "subtotal" inside merchant name', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    expect(SUMMARY_ROW_PATTERN.test('SUBTOTALSHOES STORE')).toBe(false);
   });
 });

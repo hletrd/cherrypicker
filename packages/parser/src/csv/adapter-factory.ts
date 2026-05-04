@@ -7,7 +7,7 @@ import type { BankAdapter, BankId, ParseResult, RawTransaction, ParseError } fro
 import { detectCSVDelimiter } from '../detect.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
-import { splitCSVLine, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
+import { splitCSVLine, splitCSVContent, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
 import {
   findColumn,
   normalizeHeader,
@@ -77,7 +77,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
     parseCSV(content: string): ParseResult {
       const delimiter = detectCSVDelimiter(content);
-      const lines = content.split('\n').filter((l) => l.trim());
+      const lines = splitCSVContent(content, delimiter);
       const errors: ParseError[] = [];
       const transactions: RawTransaction[] = [];
 
@@ -123,7 +123,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
         const merchantRaw = merchantCol !== -1 ? (cells[merchantCol] ?? '') : '';
         const amountRaw = amountCol !== -1 ? (cells[amountCol] ?? '') : '';
 
-        if (!dateRaw && !merchantRaw) continue;
+        if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
         const rowText = line;
         const amount = parseCSVAmount(amountRaw);

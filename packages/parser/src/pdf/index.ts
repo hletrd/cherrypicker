@@ -55,6 +55,7 @@ function isValidShortDate(cell: string): boolean {
  *  matching the CSV parser's isValidAmount() pattern (C33-03/C34-01). */
 function parseAmount(raw: string): number | null {
   let cleaned = raw
+    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
     .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
     .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
     .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII

@@ -1,29 +1,39 @@
-# Cycle 65 Implementation Plan
+# Cycle 66 Implementation Plan
 
-## Changes
+## Priority 1: CSV multi-line quoted field support (F1)
+**File**: `packages/parser/src/csv/shared.ts`
+- Add `splitCSVContent(content: string, delimiter: string): string[]` that tracks quote state across line breaks
+- Normalize CRLF to LF before processing (F7)
+- Then split logical lines respecting quoted fields
 
-### P1: Lower CSV generic bare-integer amount threshold from 8 to 5 digits (F1)
-- File: `packages/parser/src/csv/generic.ts` line 73
-  - Change: `^\d{8,}원?$` -> `^\d{5,}원?$`
-- File: `apps/web/src/lib/parser/csv.ts` line 188
-  - Change: `^\d{8,}원?$` -> `^\d{5,}원?$`
-- Restores parity with PDF parser's 5+ digit bare integer matching
-- Enables column detection for CSV files with unformatted 5-7 digit amounts
+**File**: `packages/parser/src/csv/index.ts`
+- Replace `content.split('\n').filter(l => l.trim())` with `splitCSVContent(cleanContent, delimiter)`
 
-### P2: Add console.warn to server adapter-factory detect failure (F2)
-- File: `packages/parser/src/csv/adapter-factory.ts`
-- In the signature-detect loop catch block, add `console.warn` matching web-side pattern
+**File**: `packages/parser/src/csv/adapter-factory.ts`
+- Replace `content.split('\n').filter(l => l.trim())` with `splitCSVContent(content, delimiter)`
 
-### P3: Add error message when data-inference column detection fails (F3)
-- File: `packages/parser/src/csv/generic.ts`
-- After the data-inference block, check if required columns (date, amount) still -1
-- Return error message indicating column detection failure
+## Priority 2: Strip leading `+` sign in amount parsing (F2)
+**File**: `packages/parser/src/csv/shared.ts`
+**File**: `packages/parser/src/xlsx/index.ts`
+**File**: `packages/parser/src/pdf/index.ts`
+- Add `.replace(/^\+/, '')` to amount cleaning after Won/currency stripping
 
-### P4: Add tests for bare-integer column detection at 5+ digits
-- File: `packages/parser/__tests__/csv.test.ts` or `packages/parser/__tests__/csv-shared.test.ts`
-- Test that isAmountLike matches 5-digit bare integers
-- Test that generic CSV parser handles files with unformatted amounts
+## Priority 3: Adapter-factory skip condition parity (F4)
+**File**: `packages/parser/src/csv/adapter-factory.ts`
+- Change `if (!dateRaw && !merchantRaw)` to `if (!dateRaw && !merchantRaw && !amountRaw)`
+
+## Priority 4: Add English "subtotal" to SUMMARY_ROW_PATTERN (F8)
+**File**: `packages/parser/src/csv/column-matcher.ts`
+**File**: `apps/web/src/lib/parser/column-matcher.ts`
+- Add `\bsubtotal\b` to SUMMARY_ROW_PATTERN
+
+## Priority 5: Tests
+**File**: `packages/parser/__tests__/csv-shared.test.ts`
+- Multi-line quoted CSV fields via splitCSVContent
+- Leading `+` in amounts via parseCSVAmount
+- CRLF line endings via splitCSVContent
 
 ## Deferred
-### D1: PDF multi-line header support
-Low frequency, high complexity. Future cycle.
+- F3 (delimiter detection inside quotes) - low impact
+- F5 (PDF multi-line headers) - high complexity, low occurrence
+- D-01 (shared module) - architectural refactor

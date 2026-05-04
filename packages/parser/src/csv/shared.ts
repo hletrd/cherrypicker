@@ -28,6 +28,70 @@ export function splitCSVLine(line: string, delimiter: string): string[] {
   return result;
 }
 
+/** Split CSV content into logical lines, handling multi-line quoted fields.
+ *  RFC 4180 allows fields enclosed in double quotes to contain newline
+ *  characters. Korean bank CSVs exported from Excel may include such fields
+ *  (e.g., merchant names or memo fields with embedded line breaks). This
+ *  function normalizes CRLF to LF, then reassembles lines that fall within
+ *  quoted fields before splitting into logical lines.
+ *
+ *  Empty/whitespace-only logical lines are filtered out to match the
+ *  behavior of the previous `content.split('\n').filter(l => l.trim())`
+ *  pattern used throughout the CSV parsers (C66-01). */
+export function splitCSVContent(content: string, delimiter: string): string[] {
+  // Normalize CRLF to LF (Windows line endings) and strip trailing CR
+  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const rawLines = normalized.split('\n');
+
+  const logicalLines: string[] = [];
+  let pending = '';
+  let inQuotes = false;
+
+  for (const rawLine of rawLines) {
+    if (inQuotes) {
+      // We're inside a multi-line quoted field — accumulate and check
+      // whether the quote is closed on this line.
+      pending += '\n' + rawLine;
+      // Count unescaped quotes (not followed by another quote) to determine
+      // if we're still inside a quoted field.
+      let quoteCount = 0;
+      for (let i = 0; i < rawLine.length; i++) {
+        if (rawLine[i] === '"') {
+          if (i + 1 < rawLine.length && rawLine[i + 1] === '"') { i++; } // escaped quote
+          else { quoteCount++; }
+        }
+      }
+      if (quoteCount % 2 === 1) {
+        // Odd number of unescaped quotes means we closed the quoted field
+        inQuotes = false;
+        if (pending.trim()) logicalLines.push(pending);
+        pending = '';
+      }
+    } else {
+      // Count unescaped quotes on this line to check if we enter a quoted field
+      let quoteCount = 0;
+      for (let i = 0; i < rawLine.length; i++) {
+        if (rawLine[i] === '"') {
+          if (i + 1 < rawLine.length && rawLine[i + 1] === '"') { i++; } // escaped quote
+          else { quoteCount++; }
+        }
+      }
+      if (quoteCount % 2 === 1) {
+        // Odd number of unescaped quotes — we've entered a multi-line quoted field
+        inQuotes = true;
+        pending = rawLine;
+      } else {
+        // Normal line — add if non-empty
+        if (rawLine.trim()) logicalLines.push(rawLine);
+      }
+    }
+  }
+  // If content ends while still in a quoted field, flush what we have
+  if (pending.trim()) logicalLines.push(pending);
+
+  return logicalLines;
+}
+
 /** Parse an amount string from CSV data. Returns null for unparseable inputs
  *  (NaN), handles parenthesized negatives like (1,234) → -1234, uses
  *  Math.round(parseFloat(...)) for correct rounding (C21-03/C35-01), and
@@ -36,6 +100,7 @@ export function splitCSVLine(line: string, delimiter: string): string[] {
 export function parseCSVAmount(raw: string): number | null {
   if (!raw.trim()) return null; // Early return for empty/whitespace-only input (C56-04)
   let cleaned = raw.trim()
+    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
     .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits ０-９ -> 0-9
     .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
     .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII

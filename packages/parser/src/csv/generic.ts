@@ -1,7 +1,7 @@
 import type { BankId, ParseError, ParseResult, RawTransaction } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
 import { parseDateStringToISO, isValidISODate, daysInMonth, isValidYYMMDD } from '../date-utils.js';
-import { splitCSVLine, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
+import { splitCSVLine, splitCSVContent, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
 import {
   normalizeHeader,
   findColumn,
@@ -95,7 +95,7 @@ function isAmountLike(value: string): boolean {
 
 export function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   const delimiter = detectCSVDelimiter(content);
-  const lines = content.split('\n').filter((l) => l.trim());
+  const lines = splitCSVContent(content, delimiter);
   const errors: ParseError[] = [];
   const transactions: RawTransaction[] = [];
 
