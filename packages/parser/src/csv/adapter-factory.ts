@@ -7,7 +7,7 @@ import type { BankAdapter, BankId, ParseResult, RawTransaction, ParseError } fro
 import { detectCSVDelimiter } from '../detect.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
-import { splitCSVLine, parseCSVAmount, parseCSVInstallments } from './shared.js';
+import { splitCSVLine, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
 import {
   findColumn,
   normalizeHeader,
@@ -126,13 +126,10 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
         if (!dateRaw && !merchantRaw) continue;
 
         const amount = parseCSVAmount(amountRaw);
-        if (amount === null) {
-          if (amountRaw.trim()) {
-            errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}`, raw: line });
-          }
-          continue;
-        }
-        if (amount <= 0) continue;
+        // Use shared isValidCSVAmount for unified validation — handles null
+        // (unparseable), zero (balance inquiries), and negative (refunds)
+        // amounts in one call, matching the web-side isValidAmount pattern.
+        if (!isValidCSVAmount(amount, amountRaw, i, errors)) continue;
 
         const parsedDate = parseDateStringToISO(dateRaw);
         // Report unparseable dates as parse errors so users can see which

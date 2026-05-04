@@ -168,6 +168,24 @@ describe('parseDateStringToISO', () => {
   test('parses mixed dot types YYYY．MM.DD', () => {
     expect(parseDateStringToISO('2024．01.15')).toBe('2024-01-15');
   });
+
+  // Datetime strings — the non-anchored fullMatch regex extracts just the date
+  // portion, which is correct behavior for CSV/XLSX cells containing times.
+  test('parses datetime YYYY-MM-DD HH:MM:SS by extracting date portion', () => {
+    expect(parseDateStringToISO('2024-01-15 10:30:00')).toBe('2024-01-15');
+  });
+
+  test('parses datetime YYYY.MM.DD HH:MM by extracting date portion', () => {
+    expect(parseDateStringToISO('2024.01.15 14:30')).toBe('2024-01-15');
+  });
+
+  test('parses datetime with full-width dot by extracting date portion', () => {
+    expect(parseDateStringToISO('2024．01．15 09:00')).toBe('2024-01-15');
+  });
+
+  test('parses datetime with single-digit month/day', () => {
+    expect(parseDateStringToISO('2024-1-5 08:00')).toBe('2024-01-05');
+  });
 });
 
 // ---------------------------------------------------------------------------

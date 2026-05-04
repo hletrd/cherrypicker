@@ -3,8 +3,7 @@ import pdfParse from 'pdf-parse';
 
 /** Shared page text renderer — uses Y-coordinate changes to insert line
  *  breaks and X-position gaps to insert spaces between items on the same
- *  line. Used by both extractText and extractPages to ensure consistent
- *  text extraction (C14-02). */
+ *  line. Used by extractText to ensure consistent text extraction (C14-02). */
 function renderPageText(items: Array<{ str: string; transform: number[] }>): string {
   let lastY = -1;
   let lastEndX = -1;
@@ -56,7 +55,3 @@ async function extractPagesFromBuffer(buffer: Buffer): Promise<string[]> {
   return pages;
 }
 
-export async function extractPages(filePath: string): Promise<string[]> {
-  const buffer = await readFile(filePath);
-  return extractPagesFromBuffer(buffer);
-}

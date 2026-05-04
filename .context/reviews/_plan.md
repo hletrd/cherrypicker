@@ -1,24 +1,26 @@
-# Cycle 27 Implementation Plan
+# Cycle 29 Implementation Plan
 
-**Source:** `_aggregate.md` (2 findings)
+**Source:** `_aggregate.md` (3 findings)
 
 ## Fixes
 
-### Fix 1: PDF AMOUNT_PATTERN year false-positive (F1 -- MEDIUM)
-**Files:**
-- `packages/parser/src/pdf/index.ts` (line 20)
-- `packages/parser/src/pdf/table-parser.ts` (line 9)
-- `apps/web/src/lib/parser/pdf.ts` (lines 37, 67)
+### F1: Add test coverage for full-width dot date variants and datetime [TODO]
+- **Files:** `packages/parser/__tests__/date-utils.test.ts`
+- **Action:** Add test cases for full-width dot (U+FF0E), ideographic full stop (U+3002), and datetime strings
+- **Tests:** 4+ new assertions
 
-**Action:** Replace `[\d,]+` with `(?:[\d,]*,|\d{3,})[\d,]*` in all 4 PDF amount patterns.
-This requires either a comma (thousand separator) or minimum 3 digits for bare integers,
-preventing 4-digit year values like "2024" from matching as amounts while still accepting
-valid amounts like "100", "1,234", "12345", "₩6,500".
+### F2: Remove dead extractPages function [TODO]
+- **Files:** `packages/parser/src/pdf/extractor.ts`
+- **Action:** Remove unused `extractPages` export and its comment block
 
-### Fix 2: Year-value rejection tests (F2 -- LOW)
-**File:** `packages/parser/__tests__/table-parser.test.ts`
+### F3: Adopt isValidCSVAmount in server-side parsers [TODO]
+- **Files:** `packages/parser/src/csv/generic.ts`, `packages/parser/src/csv/adapter-factory.ts`
+- **Action:** Import `isValidCSVAmount` from shared.ts, replace inline amount validation in both parsers, matching web-side `isValidAmount` pattern
 
-**Action:** Add tests verifying:
-- `AMOUNT_PATTERN` does NOT match "2024", "2025" when preceded by space
-- `AMOUNT_PATTERN` matches "1,234", "100", "12345", "₩6,500"
-- `findAmountCell` returns null for rows with only year values
+## Deferred (unchanged)
+- Server/web parseDateStringToISO duplication (shared module refactor D-01)
+- PDF multi-line header support
+- Historical amount display format
+- Card name suffixes
+- Global config integration
+- CSS dark mode migration
