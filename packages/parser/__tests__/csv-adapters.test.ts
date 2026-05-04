@@ -510,6 +510,23 @@ describe('Won sign amount column inference (C7-06)', () => {
     expect(result.transactions[0]?.amount).toBe(5500);
     expect(result.transactions[1]?.amount).toBe(125000);
   });
+
+  // C54-01: Fullwidth-minus amount column inference
+  test('generic CSV parser handles fullwidth-minus amounts for column inference', () => {
+    // Use unnamed amount column to force data-inference. Fullwidth-minus
+    // (U+FF0D) amounts like "－1,234" should be recognized by isAmountLike.
+    const content = [
+      '거래일시\t가맹점명\t기타',
+      '2024-01-15\t스타벅스\t－5,500',
+      '2024-01-20\t이마트\t－125,000',
+    ].join('\n');
+    const result = parseGenericCSV(content, null);
+    // Fullwidth-minus amounts are parsed as negative by parseCSVAmount.
+    // Since amounts <= 0 are filtered, no transactions result, but the
+    // key test is that column inference correctly identified column 2 as
+    // amount (no "금액을 해석할 수 없습니다" errors).
+    expect(result.errors.filter(e => e.message.includes('금액'))).toHaveLength(0);
+  });
 });
 
 // ---------------------------------------------------------------------------

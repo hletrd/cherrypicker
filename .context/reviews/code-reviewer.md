@@ -1,41 +1,57 @@
-# Code Review -- Cycle 50
+# Code Review -- Cycle 54
 
-## Summary
+## Reviewer: code-reviewer
+## Focus: Format diversity edge cases, remaining gaps, regressions
 
-After 49 cycles the parser handles 24 bank CSV/XLSX adapters, flexible column matching with extensive Unicode normalization, multi-format support (CSV/TSV/XLSX/PDF/HTML-as-XLS), and 772 bun + 265 vitest tests. Remaining findings focus on PDF date validation gaps, PDF combined-header splitting, and test coverage.
+### C54-01: CSV generic AMOUNT_PATTERNS missing fullwidth-minus variant
+**Severity:** Low | **Kind:** Format diversity gap
 
-## Findings
+The AMOUNT_PATTERNS arrays in both server (`packages/parser/src/csv/generic.ts`) and web (`apps/web/src/lib/parser/csv.ts`) generic CSV parsers do not include fullwidth-minus (U+FF0D `－`) in their regex patterns. While `parseCSVAmount` correctly normalizes fullwidth-minus before parsing, the column detection heuristics (`isAmountLike()`) use these patterns to identify the amount column. A column containing "－1,234원" would NOT match any AMOUNT_PATTERN, causing the amount column to be missed during data-inference fallback.
 
-### F1. PDF filterTransactionRows accepts any 6-digit string as date [MEDIUM]
+**Affected files:**
+- `packages/parser/src/csv/generic.ts` (AMOUNT_PATTERNS, line ~77)
+- `apps/web/src/lib/parser/csv.ts` (AMOUNT_PATTERNS, line ~191)
 
-**Files:** `packages/parser/src/pdf/table-parser.ts:5,156-162`, `apps/web/src/lib/parser/pdf.ts:33,174-180`
+**Fix:** Add fullwidth-minus variant `－` to AMOUNT_PATTERNS negative patterns.
 
-The `DATE_PATTERN` includes `(?<!\d)\d{6}(?!\d)` which matches any 6-digit string. The CSV parser validates these via `isYYMMDDLike()` (rejecting "123456", "999999"), but `filterTransactionRows()` has no such validation. A row with a 6-digit transaction ID and an amount is falsely detected as a transaction row.
+### C54-02: CSV generic data-inference scans only 4 sample rows
+**Severity:** Low | **Kind:** Robustness
 
-**Fix:** Add post-filter validation checking date cells against actual date patterns + YYMMDD validation. Apply in both server and web PDF parsers.
+Both server and web generic CSV parsers use `lines.slice(headerIdx + 1, headerIdx + 5)` (4 rows) for column inference when header-based detection fails. For files with sparse early data (blank rows, sub-headers, metadata lines mixed with data), 4 rows may be insufficient to detect date/amount patterns. Increasing to 8 rows provides better coverage without meaningful performance impact.
 
-### F2. PDF getHeaderColumns doesn't split combined headers [MEDIUM]
+**Affected files:**
+- `packages/parser/src/csv/generic.ts` (sampleRows, line ~157)
+- `apps/web/src/lib/parser/csv.ts` (sampleRows, line ~268)
 
-**Files:** `packages/parser/src/pdf/table-parser.ts:204-229`, `apps/web/src/lib/parser/pdf.ts:214-235`
+**Fix:** Increase sample from 4 to 8 rows.
 
-`getHeaderColumns()` tests normalized cells directly against patterns. Combined headers like "비고/적요" or "취소금액|환불금액" tested as whole strings may not match. `findColumn()` from column-matcher.ts already splits on "/" and "|". Refactor to use shared `findColumn()`.
+### C54-03: No XLSX data-inference fallback when header detection fails
+**Severity:** Low | **Kind:** Feature gap (deferred from C53-05)
 
-### F3. Summary row pattern missing standalone "합 계" variant [LOW]
+When XLSX header detection fails (no row matches isValidHeaderRow), the parser returns a "헤더 행을 찾을 수 없습니다" error. Unlike CSV which has data-inference fallback, XLSX has no recovery path. Some unusual XLSX exports may have data without recognizable header rows. Implementing a date/amount column scanner as a fallback would improve format diversity.
 
-**File:** `packages/parser/src/csv/column-matcher.ts:83`
+**Fix:** Add data-row scanning fallback before returning error. Deferred — requires careful implementation.
 
-The pattern has `총\s*합\s*계` but no standalone `합\s*계`. Some exports use "합 계" as a subtotal marker without "총" prefix.
+### C54-04: Cycle 53 fullwidth tests already present
+**Severity:** N/A | **Kind:** Verified
 
-**Fix:** Add standalone `(?<![가-힣])합\s*계(?![가-힣])(?=[\s,;]|$)`.
+C53-01 fullwidth digit/comma normalization tests were already added in `csv-shared.test.ts` (lines 259-286). No action needed.
 
-## Confirmed Fixed (from cycle 49)
+### C54-05: All C53 findings verified as fixed
+- C53-01: Fullwidth normalization — FIXED (all 6 parseAmount implementations)
+- C53-02: PDF daysInMonth — FIXED (both table-parser.ts use shared utility)
+- C53-03: HEADER_KEYWORDS memo terms — FIXED (present in column-matcher.ts line 93)
 
-- F3 (cycle 49): CSV AMOUNT_PATTERNS bare 5+ digit integers -- already present
-- F4 (cycle 49): findColumn pipe splitting -- already present
-- F5 (cycle 49): PDF DATE_PATTERN YYMMDD -- pattern present, but validation missing (F1 above)
+### Parity Check
+- Server/web column-matcher: PARITY
+- Server/web date-utils: PARITY
+- Server/web bank signatures: PARITY (24 banks each)
+- Server/web XLSX column configs: PARITY (24 banks each)
+- Server/web CSV: Both have 10 hand-written + 14 factory adapters (parity)
+- No regressions detected
 
-## Test Gaps
-
-### T1. No YYMMDD date test in PDF table parsing [MEDIUM]
-### T2. No combined-header test in PDF column detection [MEDIUM]
-### T3. No "합계" spacing variant test in summary row pattern [LOW]
+### Test Coverage
+- 826 bun + 265 vitest = 1091 total tests passing
+- Fullwidth amount tests present in csv-shared.test.ts
+- Combined header tests cover "/" "|" "," "+" "＋" delimiters
+- SUMMARY_ROW_PATTERN has boundary guard tests

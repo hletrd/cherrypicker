@@ -193,6 +193,7 @@ const AMOUNT_PATTERNS = [
   /^￦-?[\d,]+원?$/,     // ￦1,234 (fullwidth Won sign)
   /^₩?\d[\d,]*원?$/,     // ₩500 or 1,234원 — requires comma or Won sign
   /^-[\d,]+원?$/,        // -1,234 or -1,234원 (negative with comma)
+  /^－[\d,]+원?$/,       // －1,234 — fullwidth-minus negative (C54-01)
   /^\([\d,]+\)$/,        // Parenthesized negatives: (1,234) → -1234
   /^마이너스[\d,]+원?$/, // 마이너스1,234 — prefix-based negative used by some banks
   /^\d{5,}원?$/,         // Bare 5+ digit integers: 50000 or 50000원 (C49-01)
@@ -265,7 +266,10 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   memoCol = findColumn(headers, undefined, MEMO_COLUMN_PATTERN);
 
   if (dateCol === -1 || merchantCol === -1 || amountCol === -1) {
-    const sampleRows = lines.slice(headerIdx + 1, headerIdx + 5);
+    // Scan 8 rows for data-inference — provides better coverage for files
+    // with sparse early data (blank rows, sub-headers, metadata lines)
+    // without meaningful performance impact (C54-02).
+    const sampleRows = lines.slice(headerIdx + 1, headerIdx + 9);
     for (const row of sampleRows) {
       const cells = splitLine(row, delimiter);
       for (let i = 0; i < cells.length; i++) {
