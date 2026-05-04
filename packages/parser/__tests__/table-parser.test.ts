@@ -679,3 +679,76 @@ describe('C27-01: AMOUNT_PATTERN rejects year values', () => {
     expect(result).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 35: PDF fallback amount pattern — 마이너스 prefix and group extraction
+// ---------------------------------------------------------------------------
+
+describe('Cycle 35: PDF fallback amount pattern 마이너스 and group extraction', () => {
+  // The fallback pattern has 4 capture groups:
+  // 1. Parenthesized: (1,234)
+  // 2. Won-sign: ₩500 or ￦1,234
+  // 3. 마이너스: 마이너스1,000
+  // 4. Plain comma/5+digit: 10,000
+  const fallbackPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+
+  test('captures plain comma amount as group 4', () => {
+    const matches = [...'2024-01-15 스타벅스 10,000원'.matchAll(fallbackPattern)];
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    const last = matches[matches.length - 1]!;
+    expect(last[4]).toBe('10,000');
+    expect(last[1]).toBeUndefined();
+    expect(last[2]).toBeUndefined();
+    expect(last[3]).toBeUndefined();
+  });
+
+  test('captures Won-sign amount as group 2', () => {
+    const matches = [...'2024-01-15 스타벅스 ₩6,500'.matchAll(fallbackPattern)];
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    const last = matches[matches.length - 1]!;
+    expect(last[2]).toBe('6,500');
+    expect(last[4]).toBeUndefined();
+  });
+
+  test('captures parenthesized amount as group 1', () => {
+    const matches = [...'2024-01-15 환불 (1,234)'.matchAll(fallbackPattern)];
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    const last = matches[matches.length - 1]!;
+    expect(last[1]).toBe('1,234');
+  });
+
+  test('captures 마이너스 amount as group 3', () => {
+    const matches = [...'2024-01-15 환불 마이너스5,000'.matchAll(fallbackPattern)];
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    const last = matches[matches.length - 1]!;
+    expect(last[3]).toBe('5,000');
+    expect(last[1]).toBeUndefined();
+    expect(last[2]).toBeUndefined();
+    expect(last[4]).toBeUndefined();
+  });
+
+  test('group extraction fallback chain works for plain amount', () => {
+    const matches = [...'2024-01-15 스타벅스 10,000원'.matchAll(fallbackPattern)];
+    const last = matches[matches.length - 1]!;
+    const amountRaw = (last[1] ?? last[2] ?? last[3] ?? last[4])!;
+    expect(amountRaw).toBe('10,000');
+  });
+
+  test('group extraction fallback chain works for 마이너스 amount', () => {
+    const matches = [...'2024-01-15 환불 마이너스5,000'.matchAll(fallbackPattern)];
+    const last = matches[matches.length - 1]!;
+    const amountRaw = (last[1] ?? last[2] ?? last[3] ?? last[4])!;
+    expect(amountRaw).toBe('5,000');
+  });
+
+  test('filterTransactionRows detects 마이너스 amounts in rows', () => {
+    const rows = [
+      ['2024-01-15', '환불', '마이너스5,000'],
+    ];
+    // The AMOUNT_PATTERN's lookbehind only excludes ASCII letters/digits/hyphens,
+    // so Korean characters before the digits don't prevent matching. The "5,000"
+    // portion of "마이너스5,000" matches the comma-separated amount pattern.
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+});

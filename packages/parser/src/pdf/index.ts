@@ -55,8 +55,14 @@ function isValidShortDate(cell: string): boolean {
  *  matching the CSV parser's isValidAmount() pattern (C33-03/C34-01). */
 function parseAmount(raw: string): number | null {
   let cleaned = raw.replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-  const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
-  if (isNeg) cleaned = cleaned.slice(1, -1);
+  // Handle "마이너스" prefix — some Korean bank exports use this instead of
+  // a negative sign or parentheses. Parity with web-side parseAmount
+  // (apps/web/src/lib/parser/pdf.ts) and CSV shared parseCSVAmount.
+  const isManeuners = /^마이너스/.test(cleaned);
+  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
+  const hasParens = cleaned.startsWith('(') && cleaned.endsWith(')');
+  const isNeg = hasParens || isManeuners;
+  if (hasParens) cleaned = cleaned.slice(1, -1);
   if (!cleaned.trim()) return null;
   // Use Math.round(parseFloat(...)) to match the web-side parser's rounding
   // behavior (C21-03/C32-01). Korean Won amounts are always integers, but
@@ -290,7 +296,8 @@ export async function parsePDF(
   // and should be treated as negative amounts by parseAmount() (C17-02).
   // C27-01: Exclude 4-digit years by requiring either a comma or 5+ digits
   // for bare integers. "2024" alone won't match; "1,234" and "10000" will.
-  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+  // Also matches "마이너스" prefixed amounts used by some Korean banks.
+  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
@@ -312,7 +319,7 @@ export async function parsePDF(
       if (amountStart > dateEnd) {
         const between = line.slice(dateEnd, amountStart).trim();
         if (between) {
-          const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3])!;
+          const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4])!;
           const amount = parseAmount(amountRaw);
           // parseAmount returns null for unparseable inputs — skip the row
           // rather than silently treating it as 0 (C34-01).
