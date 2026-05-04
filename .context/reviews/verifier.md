@@ -1,14 +1,12 @@
-# Verifier -- Cycle 34
+# Verifier -- Cycle 39
 
 **Date:** 2026-05-05
 
 ## Status
-Pending implementation of 5 findings.
+Pending implementation of 3 findings.
 
 ## Pre-verification Checklist
-- [ ] F-01: Server PDF AMOUNT_PATTERN has ╋ alternation
-- [ ] F-02: Both server and web PDF fallback regex have Won-sign alternations
-- [ ] F-03: Server XLSX parseAmount handles "마이너스" prefix
-- [ ] F-04: Web PDF parseAmount handles "마이너스" prefix
-- [ ] F-05: All new tests pass
-- [ ] All existing tests still pass (no regressions)
+- [ ] F-1: Server PDF parseAmount strips whitespace
+- [ ] F-2: Server PDF tryStructuredParse + fallback report amount errors
+- [ ] F-3: 7 new bank adapter tests pass
+- [ ] All existing 683 tests still pass (no regressions)

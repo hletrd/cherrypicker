@@ -1,3 +1,3 @@
-# Security Review -- Cycle 33
+# Security Review -- Cycle 39
 
-No new security concerns. Changes are limited to regex pattern fixes and string splitting for better format coverage. No new external inputs, auth changes, or data exposure paths.
+No new security concerns. Changes are limited to adding whitespace stripping and error reporting in the PDF parser.

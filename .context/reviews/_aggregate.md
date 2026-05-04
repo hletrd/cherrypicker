@@ -1,41 +1,29 @@
-# Cycle 38 Aggregate Review
+# Cycle 39 Aggregate Review
 
 **Date:** 2026-05-05
-**Cycles completed:** 38
-**Tests:** 683 bun (before changes)
-**Reviewer:** Cycle 38 inline deep scan (server/web parity focus)
+**Cycles completed:** 39
+**Tests:** 683 bun (baseline)
+**Reviewer:** Cycle 39 inline deep scan (PDF parity + test coverage focus)
 
 ---
 
-## Finding 1: Server-side CATEGORY_COLUMN_PATTERN missing "카테고리" [BUG-FIX]
+## Finding 1: Server-side PDF parseAmount missing whitespace stripping [BUG-FIX]
 - **Severity**: Medium
-- **File**: `packages/parser/src/csv/column-matcher.ts:60`
-- **Detail**: Web-side column-matcher.ts (line 54) includes `카테고리` in CATEGORY_COLUMN_PATTERN, but server-side does not. Files with "카테고리" headers fail category detection on server-side CSV/XLSX parsers.
-- **Impact**: Format diversity bug -- "카테고리" is a common Korean column header.
+- **File**: `packages/parser/src/pdf/index.ts:57`
+- **Detail**: Missing `.replace(/\s/g, '')` in cleaning chain. ALL other 5 parseAmount implementations include this. PDF text extraction can produce amounts with spaces (e.g., "12 345").
+- **Impact**: Silent transaction loss for PDF files with whitespace in amounts.
 
-## Finding 2: Web-side column patterns missing ~15 keywords from server-side [BUG-FIX]
+## Finding 2: Server-side PDF tryStructuredParse doesn't report amount parse errors [BUG-FIX]
 - **Severity**: Medium
-- **File**: `apps/web/src/lib/parser/column-matcher.ts`
-- **Detail**: Keyword-level diff:
-  - DATE: web missing `승인일시`, `접수일`, `발행일`, `posted`, `billing`
-  - MERCHANT: web missing `승인가맹점`, `이용내용`, `거래내용`, `name`
-  - AMOUNT: web missing `청구금액`, `출금액`, `결제대금`, `승인취소금액`, `charge`, `payment`
-  - INSTALLMENTS: web missing `할부횟수`
-- **Impact**: Web-side fails to detect these header variants in CSV/XLSX/PDF files.
+- **File**: `packages/parser/src/pdf/index.ts:190-195`
+- **Detail**: `if (amount === null) continue;` without pushing ParseError. ALL other parsers report unparseable amounts. The fallback scanner in the same file also has this issue at line 326.
+- **Impact**: Silent data loss -- users cannot identify which PDF rows had parse failures.
 
-## Finding 3: Web-side HEADER_KEYWORDS and category Sets missing ~14 entries [BUG-FIX]
-- **Severity**: Medium
-- **File**: `apps/web/src/lib/parser/column-matcher.ts`
-- **Detail**:
-  - HEADER_KEYWORDS: missing `접수일`, `발행일`, `승인일시`, `이용내용`, `거래내용`, `청구금액`, `출금액`, `결제대금`, `승인취소금액`, `name`, `charge`, `payment`, `posted`, `billing`
-  - DATE_KEYWORDS: missing `접수일`, `발행일`, `승인일시`, `posted`, `billing`
-  - MERCHANT_KEYWORDS: missing `승인가맹점`, `이용내용`, `거래내용`, `name`
-  - AMOUNT_KEYWORDS: missing `청구금액`, `출금액`, `결제대금`, `승인취소금액`, `charge`, `payment`
-- **Impact**: Header row validation on web-side rejects valid header rows using these keywords.
-
-## Finding 4: Missing tests for newly synced keywords [TEST]
-- No tests verify that server-side patterns match keywords like `접수일`, `발행일`, `청구금액`, `할부횟수`.
-- **Fix**: Add test cases in column-matcher.test.ts.
+## Finding 3: 7 bank adapters missing test coverage [TEST]
+- **Severity**: Low
+- **File**: `packages/parser/__tests__/csv-adapters.test.ts`
+- **Detail**: suhyup, jb, kwangju, jeju, mg, cu, kdb adapters have zero test coverage. The other 7 new adapters (kakao, toss, kbank, bnk, dgb, sc, epost) were tested in C37-02.
+- **Impact**: Regression risk.
 
 ---
 
