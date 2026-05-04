@@ -193,6 +193,13 @@ export async function parsePDF(
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
+    // Validate short dates (MM.DD) to prevent false positives from
+    // decimal amounts like "3.5" or impossible dates like "2/31" (F7-01).
+    // Full-format dates (YYYY.MM.DD, Korean) don't need this check since
+    // they have explicit year context and are validated by parseDateStringToISO.
+    if (dateMatch && SHORT_MD_DATE_PATTERN.test(dateMatch[0]) && !isValidShortDate(dateMatch[0])) {
+      continue;
+    }
     // Use the last amount match — Korean statements typically list the
     // transaction amount as the last numeric value on the line
     const amountMatches = [...line.matchAll(fallbackAmountPattern)];

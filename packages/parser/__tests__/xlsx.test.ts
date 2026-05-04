@@ -492,4 +492,38 @@ describe('XLSX invalid serial date error reporting', () => {
       cleanup(filePath);
     }
   });
+
+  test('returns graceful error for corrupted XLSX bytes (F4)', async () => {
+    // Write garbage bytes that look like XLSX (PK magic) but aren't valid
+    mkdirSync(FIXTURE_DIR, { recursive: true });
+    const filePath = join(FIXTURE_DIR, `corrupt-${++fileCounter}.xlsx`);
+    // PK magic bytes followed by garbage
+    writeFileSync(filePath, Buffer.from([0x50, 0x4B, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00]));
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(0);
+      expect(result.errors.length).toBeGreaterThan(0);
+      expect(result.errors[0]?.message).toContain('XLSX 파일을 읽을 수 없습니다');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('uses shared findColumn for column matching (F6)', async () => {
+    // Test that column matching uses the shared ColumnMatcher which handles
+    // parenthetical suffixes and whitespace normalization
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액(원)', '할부'],
+      ['2026-02-01', '스타벅스', 6000, 0],
+      ['2026-02-02', '이마트', 45000, 0],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.amount).toBe(6000);
+      expect(result.transactions[1]?.amount).toBe(45000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });

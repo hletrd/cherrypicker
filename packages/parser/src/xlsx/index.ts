@@ -4,7 +4,7 @@ import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
 import { parseDateStringToISO, isValidDayForMonth } from '../date-utils.js';
 import {
-  normalizeHeader,
+  findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
   AMOUNT_COLUMN_PATTERN,
@@ -141,12 +141,21 @@ export async function parseXLSX(filePath: string, bank?: BankId): Promise<ParseR
   let workbook: xlsx.WorkBook;
   let htmlBankHint: BankId | null = null;
 
-  if (isHTMLContent(buffer)) {
-    const html = normalizeHTML(buffer.toString('utf-8'));
-    htmlBankHint = detectBank(html).bank;
-    workbook = xlsx.read(Buffer.from(html, 'utf-8'), { type: 'buffer', cellDates: false });
-  } else {
-    workbook = xlsx.read(buffer, { type: 'buffer', cellDates: false });
+  try {
+    if (isHTMLContent(buffer)) {
+      const html = normalizeHTML(buffer.toString('utf-8'));
+      htmlBankHint = detectBank(html).bank;
+      workbook = xlsx.read(Buffer.from(html, 'utf-8'), { type: 'buffer', cellDates: false });
+    } else {
+      workbook = xlsx.read(buffer, { type: 'buffer', cellDates: false });
+    }
+  } catch (err) {
+    return {
+      bank: bank ?? null,
+      format: 'xlsx',
+      transactions: [],
+      errors: [{ message: `XLSX 파일을 읽을 수 없습니다: ${err instanceof Error ? err.message : String(err)}` }],
+    };
   }
 
   if (workbook.SheetNames.length === 0) {
@@ -232,24 +241,15 @@ function parseXLSXSheet(
   // Get column config for this bank (or auto-detect from headers)
   const config = resolvedBank ? getBankColumnConfig(resolvedBank) : null;
 
-  // Try bank-specific config name first; if not found, fall back to regex
-  // pattern from the shared ColumnMatcher module. Uses normalizeHeader() to
-  // tolerate whitespace and parenthetical suffixes in column names.
-  const findCol = (configName: string | undefined, pattern: RegExp): number => {
-    if (configName) {
-      const normalizedConfig = normalizeHeader(configName);
-      const idx = headers.findIndex((h) => normalizeHeader(h) === normalizedConfig);
-      if (idx !== -1) return idx;
-    }
-    return headers.findIndex((h) => pattern.test(normalizeHeader(h)));
-  };
-
-  const dateCol = findCol(config?.date, DATE_COLUMN_PATTERN);
-  const merchantCol = findCol(config?.merchant, MERCHANT_COLUMN_PATTERN);
-  const amountCol = findCol(config?.amount, AMOUNT_COLUMN_PATTERN);
-  const installCol = findCol(config?.installments, INSTALLMENTS_COLUMN_PATTERN);
-  const categoryCol = findCol(config?.category, CATEGORY_COLUMN_PATTERN);
-  const memoCol = findCol(config?.memo, MEMO_COLUMN_PATTERN);
+  // Use shared findColumn from column-matcher for consistent column
+  // matching across all parsers. Tries bank-specific config name first,
+  // then falls back to regex pattern (F6-01).
+  const dateCol = findColumn(headers, config?.date, DATE_COLUMN_PATTERN);
+  const merchantCol = findColumn(headers, config?.merchant, MERCHANT_COLUMN_PATTERN);
+  const amountCol = findColumn(headers, config?.amount, AMOUNT_COLUMN_PATTERN);
+  const installCol = findColumn(headers, config?.installments, INSTALLMENTS_COLUMN_PATTERN);
+  const categoryCol = findColumn(headers, config?.category, CATEGORY_COLUMN_PATTERN);
+  const memoCol = findColumn(headers, config?.memo, MEMO_COLUMN_PATTERN);
 
   const transactions: import('../types.js').RawTransaction[] = [];
   const errors: import('../types.js').ParseError[] = [];

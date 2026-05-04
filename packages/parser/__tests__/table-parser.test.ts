@@ -106,4 +106,35 @@ describe('filterTransactionRows', () => {
     const result = filterTransactionRows(rows);
     expect(result).toHaveLength(1);
   });
+
+  test('does not match hyphenated card numbers as amounts (F5)', () => {
+    const rows = [
+      ['2024-01-15', '카드번호', '1234-5678-9012-3456'],
+      ['2024-01-16', '스타벅스', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    // Only the second row should match (card number row rejected)
+    expect(result).toHaveLength(1);
+    expect(result[0]?.[1]).toBe('스타벅스');
+  });
+
+  test('does not match phone numbers as amounts (F5)', () => {
+    const rows = [
+      ['2024-01-15', '전화', '010-1234-5678'],
+      ['2024-01-16', '이마트', '45,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.[1]).toBe('이마트');
+  });
+
+  test('still matches valid comma-separated amounts (F5)', () => {
+    const rows = [
+      ['2024-01-15', '스타벅스', '6,500'],
+      ['2024-01-16', '이마트', '45,000원'],
+      ['2024-01-17', 'GS25', '100'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(3);
+  });
 });
