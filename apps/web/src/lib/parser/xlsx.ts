@@ -1,6 +1,15 @@
 import * as XLSX from 'xlsx';
 import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js';
 import { detectBank } from './detect.js';
+import {
+  normalizeHeader,
+  DATE_COLUMN_PATTERN,
+  MERCHANT_COLUMN_PATTERN,
+  AMOUNT_COLUMN_PATTERN,
+  INSTALLMENTS_COLUMN_PATTERN,
+  CATEGORY_COLUMN_PATTERN,
+  MEMO_COLUMN_PATTERN,
+} from './column-matcher.js';
 
 // ---------------------------------------------------------------------------
 // Column config per bank (ported from packages/parser/src/xlsx/adapters)
@@ -399,21 +408,24 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   // Get column config for this bank (or auto-detect from headers)
   const config = resolvedBank ? getBankColumnConfig(resolvedBank) : null;
 
-  // Try bank-specific config name first; if not found, fall back to regex pattern
+  // Try bank-specific config name first; if not found, fall back to regex
+  // pattern from the shared ColumnMatcher module. Uses normalizeHeader() to
+  // tolerate whitespace and parenthetical suffixes in column names.
   const findCol = (configName: string | undefined, pattern: RegExp): number => {
     if (configName) {
-      const idx = headers.indexOf(configName);
+      const normalizedConfig = normalizeHeader(configName);
+      const idx = headers.findIndex((h) => normalizeHeader(h) === normalizedConfig);
       if (idx !== -1) return idx;
     }
-    return headers.findIndex((h) => pattern.test(h));
+    return headers.findIndex((h) => pattern.test(normalizeHeader(h)));
   };
 
-  const dateCol = findCol(config?.date, /이용일|거래일|날짜|일시|이용일자|거래일시|결제일|승인일|매출일/);
-  const merchantCol = findCol(config?.merchant, /이용처|가맹점|이용가맹점|가맹점명|거래처|매출처|사용처|결제처|상호/);
-  const amountCol = findCol(config?.amount, /이용금액|거래금액|금액|결제금액|승인금액|매출금액|이용액/);
-  const installCol = findCol(config?.installments, /할부|할부개월|할부기간|할부월/);
-  const categoryCol = findCol(config?.category, /업종|분류|카테고리|업종분류|업종명/);
-  const memoCol = findCol(config?.memo, /비고|적요|메모|내용|설명|참고/);
+  const dateCol = findCol(config?.date, DATE_COLUMN_PATTERN);
+  const merchantCol = findCol(config?.merchant, MERCHANT_COLUMN_PATTERN);
+  const amountCol = findCol(config?.amount, AMOUNT_COLUMN_PATTERN);
+  const installCol = findCol(config?.installments, INSTALLMENTS_COLUMN_PATTERN);
+  const categoryCol = findCol(config?.category, CATEGORY_COLUMN_PATTERN);
+  const memoCol = findCol(config?.memo, MEMO_COLUMN_PATTERN);
 
   const transactions: RawTransaction[] = [];
   const errors: ParseError[] = [];
