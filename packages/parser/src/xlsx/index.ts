@@ -122,7 +122,7 @@ function parseAmount(raw: unknown): number | null {
     return Number.isFinite(raw) ? Math.round(raw) : null;
   }
   if (typeof raw === 'string') {
-    let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '');
+    let cleaned = raw.trim().replace(/원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
     // Handle parenthesized negatives: (1234) → -1234
     const isNeg = cleaned.startsWith('(') && cleaned.endsWith(')');
     if (isNeg) cleaned = cleaned.slice(1, -1);

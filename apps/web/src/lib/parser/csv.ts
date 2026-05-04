@@ -316,14 +316,14 @@ const samsungAdapter: BankAdapter = {
     let headerIdx = -1;
     // Scan up to 30 rows for header — matching the generic parser's limit
     // (C81-02). Some bank exports have 10+ metadata rows before the header.
-    // Normalize cells before comparison to handle zero-width spaces,
-    // parenthetical suffixes, and extra whitespace (C16-01).
+    // Use flexible matching: normalize cells and check for ANY known keyword
+    // rather than requiring exact matches, matching server-side factory
+    // behavior with normalizedKeywords.some() (F18-03).
+    const SAMSUNG_KEYWORDS = ['이용일', '가맹점명', '이용금액', '할부', '업종'].map(h => normalizeHeader(h));
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       const normalizedCells = cells.map(c => normalizeHeader(c));
-      const hasDate = normalizedCells.includes('이용일');
-      const hasMerchant = normalizedCells.includes('가맹점명');
-      if (hasDate && hasMerchant && isValidHeaderRow(cells.map(c => c.trim()))) {
+      if (normalizedCells.some((c) => SAMSUNG_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
         headerIdx = i;
         break;
       }
@@ -386,10 +386,11 @@ const shinhanAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
+    const SHINHAN_KEYWORDS = ['이용일', '이용처', '이용금액', '할부개월수', '업종분류'].map(h => normalizeHeader(h));
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.includes('이용일') && normalizedCells.includes('이용처') && isValidHeaderRow(cells.map(c => c.trim()))) {
+      if (normalizedCells.some((c) => SHINHAN_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
         headerIdx = i;
         break;
       }
@@ -588,10 +589,11 @@ const lotteAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
+    const LOTTE_KEYWORDS = ['거래일', '이용가맹점', '이용금액', '할부', '업종'].map(h => normalizeHeader(h));
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.includes('거래일') && normalizedCells.includes('이용가맹점') && isValidHeaderRow(cells.map(c => c.trim()))) {
+      if (normalizedCells.some((c) => LOTTE_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
         headerIdx = i;
         break;
       }
@@ -654,10 +656,11 @@ const hanaAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
+    const HANA_KEYWORDS = ['이용일자', '가맹점명', '이용금액', '할부개월', '적요'].map(h => normalizeHeader(h));
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.includes('이용일자') && normalizedCells.includes('가맹점명') && isValidHeaderRow(cells.map(c => c.trim()))) {
+      if (normalizedCells.some((c) => HANA_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
         headerIdx = i;
         break;
       }
@@ -788,10 +791,11 @@ const nhAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
+    const NH_KEYWORDS = ['거래일', '이용처', '거래금액', '할부', '비고'].map(h => normalizeHeader(h));
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.includes('거래일') && normalizedCells.includes('이용처') && normalizedCells.includes('거래금액') && isValidHeaderRow(cells.map(c => c.trim()))) {
+      if (normalizedCells.some((c) => NH_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
         headerIdx = i;
         break;
       }
@@ -922,10 +926,11 @@ const bcAdapter: BankAdapter = {
     const transactions: RawTransaction[] = [];
 
     let headerIdx = -1;
+    const BC_KEYWORDS = ['이용일', '가맹점', '이용금액', '할부', '업종'].map(h => normalizeHeader(h));
     for (let i = 0; i < Math.min(30, lines.length); i++) {
       const cells = splitLine(lines[i] ?? '', delimiter);
       const normalizedCells = cells.map(c => normalizeHeader(c));
-      if (normalizedCells.includes('이용일') && normalizedCells.includes('가맹점') && normalizedCells.includes('이용금액') && isValidHeaderRow(cells.map(c => c.trim()))) {
+      if (normalizedCells.some((c) => BC_KEYWORDS.includes(c)) && isValidHeaderRow(cells.map(c => c.trim()))) {
         headerIdx = i;
         break;
       }

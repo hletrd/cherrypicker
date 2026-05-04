@@ -791,3 +791,67 @@ describe('XLSX spaced summary row skip', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// XLSX parenthesized negative amounts (F18-04)
+// ---------------------------------------------------------------------------
+
+describe('XLSX parenthesized negative amounts', () => {
+  test('parses parenthesized negative string "(5,000)" as negative', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '환불거래', '(5,000)'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Negative amounts are filtered out (refunds don't count for spending)
+      expect(result.transactions).toHaveLength(0);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('parses parenthesized negative with Won sign "(₩3,000)"', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '스타벅스', 6000],
+      ['2026-02-02', '환불', '(₩3,000)'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Only the positive transaction is kept
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.amount).toBe(6000);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('parses string amount with internal whitespace "1 234"', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '테스트', '1 234'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.amount).toBe(1234);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('parses string amount with parenthesized negative and spaces "( 1,234 )"', async () => {
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액'],
+      ['2026-02-01', '환불', '( 1,234 )'],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Negative amounts are filtered out
+      expect(result.transactions).toHaveLength(0);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+});
