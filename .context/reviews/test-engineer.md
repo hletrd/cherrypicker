@@ -1,18 +1,22 @@
-# Test Engineer — Cycle 7
+# Test Engineer Review — Cycle 11
 
-## Test Coverage Review
+## Missing Test Coverage
 
-### T7-01: No UTF-16 Test Fixtures
-No test coverage for UTF-16 encoded CSV files. Need fixtures with UTF-16 LE BOM.
+### 1. PDF short date structured parsing (HIGH)
+After fixing DATE_PATTERN, need tests verifying:
+- PDF text with only MM.DD dates gets structured parsed correctly
+- filterTransactionRows matches short date rows
+- parseTable detects table boundaries with short dates
 
-### T7-02: No CP949 Test Fixtures
-No test coverage for CP949 encoded CSV files. Need a CP949 fixture.
+### 2. normalizeHeader zero-width space handling (MEDIUM)
+Test that headers with U+200B, U+200C, U+200D are normalized correctly.
 
-### T7-03: Won Sign Amount Column Inference Not Tested
-The generic parser's column inference with ₩/￦ prefixed amounts has no test.
+### 3. Web XLSX serial date error reporting (MEDIUM)
+Test that out-of-range serial dates produce errors in web parser.
 
-### T7-04: English Header Column Detection Not Tested
-No tests for English column headers like "Date", "Amount", "Merchant".
+### 4. XLSX formula error cells (LOW)
+Test that SheetJS error cells (#REF!, #VALUE!) produce null amounts and appropriate error messages.
 
-### T7-05: Existing Coverage Good
-218 vitest + 201 bun tests passing. Core functionality well covered.
+## Current Test Count
+- 296 bun tests across 8 files (server-side)
+- 231 vitest tests (web-side)

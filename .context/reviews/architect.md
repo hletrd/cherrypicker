@@ -1,15 +1,18 @@
-# Architect — Cycle 7
+# Architect Review — Cycle 11
 
-## Architecture Review
+## Deferred Items Status
+1. Server-side ColumnMatcher module path consistency — STILL DEFERRED
+2. Web-side CSV parser vs server-side duplication (D-02) — STILL DEFERRED
+3. PDF multi-line header/transaction support (D-04) — STILL DEFERRED
+4. Historical amount display format — STILL DEFERRED
+5. Card name suffixes — STILL DEFERRED
+6. Global config integration — STILL DEFERRED
+7. Generic parser fallback behavior — STILL DEFERRED
+8. CSS dark mode complete migration — STILL DEFERRED
+9. Server/web shared module refactoring (D-01) — STILL DEFERRED
+10. PDF parser deduplication (D-03) — STILL DEFERRED
 
-### A7-01: Dead Code Elimination
-10 legacy adapter files in packages/parser/src/csv/{bank}.ts are superseded by adapter-factory.ts. No imports. Remove.
+## Architecture Observations
+The PDF DATE_PATTERN short date fix is a good targeted improvement. It enables structured parsing for a common PDF format variant without requiring the larger D-04 multi-line transaction refactor.
 
-### A7-02: Encoding Architecture
-detectFormat() always assumes UTF-8 for bank detection. CP949 files get garbled Korean text, causing bank detection failure. Fix: detect encoding before bank detection.
-
-### A7-03: Web vs Server Parser Duplication [DEFERRED]
-Significant duplication remains. Requires shared module refactor for Bun+browser compatibility.
-
-### A7-04: Column Pattern Extensibility
-Adding English patterns to regex-based column matcher is straightforward. No architecture change needed.
+The normalizeHeader zero-width space fix is a defensive improvement that protects against real-world Korean bank export quirks.

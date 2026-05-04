@@ -1,54 +1,29 @@
-# Cycle 9 Review Aggregate
+# Cycle 11 Aggregate Review
 
-**Date:** 2026-05-04
-**Reviews:** 1 comprehensive (cycle-9)
-**Previous cycles:** 8 cycles, ~26 commits
-**Baseline:** 231 bun tests passing
+## Findings Summary
 
-## New Findings (4 actionable, 4 deferred, 2 no-action)
+### HIGH Priority
+1. **PDF DATE_PATTERN missing short dates (MM.DD)** — `parseTable()` and `filterTransactionRows()` use a DATE_PATTERN that doesn't include MM.DD short dates. Structured PDF parsing fails silently for PDFs using short date formats, falling through to the less reliable line scanner. (code-reviewer)
 
 ### MEDIUM Priority
-1. **F4** — XLSX parser has no try/catch around `xlsx.read()` — corrupted files crash
-2. **F5** — PDF `AMOUNT_PATTERN` matches any digit sequence, causing false-positive row detection
-3. **F7** — PDF fallback line scanner doesn't validate short dates with `isValidShortDate()`
+2. **Web XLSX missing serial date error reporting** — Server XLSX parser reports errors for out-of-range serial dates but web parser silently returns the raw value. Parity issue. (code-reviewer, verifier)
+3. **normalizeHeader doesn't strip zero-width spaces** — JavaScript `\s` doesn't match U+200B/U+200C/U+200D. Korean bank exports with these characters will fail header matching. (code-reviewer)
 
 ### LOW Priority
-4. **F6** — XLSX `findCol()` duplicates shared `findColumn()` from column-matcher
+4. **No tests for PDF short date structured parsing** — After fix #1, comprehensive tests needed. (test-engineer)
+5. **XLSX formula error cells untested** — SheetJS error cells (#REF!, #VALUE!) should be handled gracefully. (test-engineer)
 
-### Deferred (explicit deferral)
-5. **F1** — XLSX duplicate column picks first match (requires data-aware heuristics)
-6. **F3** — CSV splitCSVLine only handles quoted fields for comma delimiter
-7. **F8** — English merchant column inference gap in generic parser
+### DEFERRED (no action this cycle)
+| # | Item |
+|---|------|
+| D-01 | Server/web shared module refactoring |
+| D-02 | Web CSV adapter factory pattern |
+| D-03 | PDF parser deduplication |
+| D-04 | PDF multi-line transaction support |
+| D-05 | Historical amount display format |
+| D-06 | Card name suffixes |
+| D-07 | Global config integration |
+| D-08 | Generic parser fallback behavior |
+| D-09 | CSS dark mode complete migration |
 
-### No Action Required
-8. **F2** — Server/web detectBank parity confirmed OK
-9. **F9** — XLSX formula cells already handled gracefully
-10. **F10** — Date validation parity confirmed OK
-11. **F11** — BOM detection correct as-is
-
-## Implementation Plan
-
-### Fix F4: XLSX graceful degradation
-- Wrap `xlsx.read()` in try/catch in `parseXLSX()`
-- Return user-friendly ParseResult with Korean error message
-- Add test for corrupted XLSX buffer
-
-### Fix F5: Stricter PDF amount pattern
-- Change `AMOUNT_PATTERN` to exclude hyphenated number sequences (card/phone numbers)
-- Update both server and web-side PDF parsers
-- Add test for false-positive rejection
-
-### Fix F6: Use shared findColumn in XLSX
-- Replace inline `findCol()` closure with imported `findColumn()`
-
-### Fix F7: PDF fallback short date validation
-- Add `isValidShortDate()` check after fallback date pattern match
-
-## Deferred Items (for future cycles)
-- Server/web CSV parser dedup (D-01 architectural refactor)
-- PDF multi-line header support
-- XLSX duplicate column resolution with data-aware heuristics
-- Historical amount display format
-- Card name suffixes
-- Global config integration
-- Generic parser fallback behavior
+## Total: 5 findings (1 HIGH, 2 MEDIUM, 2 LOW)
