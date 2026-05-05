@@ -99,8 +99,11 @@
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/vnd.ms-excel',
     'application/pdf',
+    'application/json',
+    'application/ofx',
+    'text/html',
   ];
-  const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx', '.xls', '.pdf'];
+  const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx', '.xls', '.pdf', '.json', '.ofx', '.qfx', '.html', '.htm'];
 
   const ALL_BANKS: { value: string; label: string }[] = [
     { value: 'hyundai', label: '현대카드' },
@@ -248,7 +251,7 @@
   function clearAllFiles() {
     uploadedFiles = [];
     uploadStatus = 'idle';
-    errorMessage = '';
+    errorMessages = [];
     bank = '';
     previousSpending = '';
     detectedBankId = null;
@@ -311,7 +314,7 @@
   async function handleUpload() {
     if (uploadedFiles.length === 0) return;
     uploadStatus = 'uploading';
-    errorMessage = '';
+    errorMessages = [];
     isBlockingNavigation = true;
 
     try {
@@ -360,7 +363,7 @@
   function handleRetry() {
     if (navigateTimeout) { clearTimeout(navigateTimeout); navigateTimeout = null; }
     uploadStatus = 'idle';
-    errorMessage = '';
+    errorMessages = [];
   }
 </script>
 
