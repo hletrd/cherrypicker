@@ -1,5 +1,5 @@
 import type { BankId, ParseResult, RawTransaction } from '../types.js';
-import { ParseError } from '../types.js';;
+import { ParseError } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
 import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from '../date-utils.js';
 import { splitCSVLine, splitCSVContent, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';

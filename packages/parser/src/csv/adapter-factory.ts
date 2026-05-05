@@ -4,7 +4,7 @@
  *  Uses ColumnMatcher for flexible header matching instead of exact indexOf. */
 
 import type { BankAdapter, BankId, ParseResult, RawTransaction } from '../types.js';
-import { ParseError } from '../types.js';;
+import { ParseError } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
