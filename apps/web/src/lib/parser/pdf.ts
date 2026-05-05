@@ -562,7 +562,15 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   // C27-01: Exclude 4-digit years by requiring either a comma or 5+ digits
   // for bare integers. "2024" alone won't match; "1,234" and "10000" will.
   // Also matches "마이너스" prefixed amounts used by some Korean banks.
-  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*)-|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+  // Capture groups:
+  // 1: Parenthesized negative        (1,234)
+  // 2: Currency prefix               ₩1,234원
+  // 3: "마이너스" prefix             마이너스1,234원
+  // 4: Fullwidth minus prefix        －1,234원
+  // 5: KRW prefix                    KRW1,234원
+  // 6: Trailing minus                1,234-  (minus IN capture so parseAmount sees it)
+  // 7: Plain amount with 원 suffix   1,234원
+  const fallbackAmountPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*-)|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
 
   for (const line of lines) {
     const dateMatch = line.match(fallbackDatePattern);
