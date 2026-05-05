@@ -1,14 +1,46 @@
-# Cycle 10 — verifier
+# Cycle 10 Verifier Review — Evidence-Based Correctness
 
-## Gates run
-- `bun run verify` — PASS (FULL TURBO, 10/10 cached, 10 tests across vitest/bun).
-- `bun run build` — PASS (background run, exit 0).
-- `bun run test:e2e` — scheduled (background run; Playwright hosts on 4173).
+**Reviewer:** verifier  
+**Cycle:** 10  
+**Date:** 2026-05-05
 
-## Cycle 9 resolution verification
-- D7-M2: grep `rg setResult apps/ e2e/ packages/ tools/` → zero matches. Deletion complete. VERIFIED.
-- C8CR-01: subsumed — no path creates a non-analyzer-cache result. VERIFIED.
-- Prior cycle fixes (C7-E01, C7-E02, C7-E03, C7-E04, C7-E05, C7-E06, C7-E07, C8-01..C8-04) all in main branch, no regressions.
+---
 
-## Confidence
-High. Verify + build are green; e2e expected to remain 74/74 given no code changes this cycle before this report.
+## Findings
+
+### [P1-HIGH] Server/web parser parity: Infinity handling mismatch
+**Description:** The server-side `parseAmountString` (packages/parser/src/csv/shared.ts:160) and web-side `parseAmount` (apps/web/src/lib/parser/csv.ts:148) both have the Infinity bug. Both should be fixed together to maintain parity.
+**Evidence:** Comparing the two files shows identical `Math.round(parseFloat(cleaned))` pattern without finite check.
+**Fix:** Fix both simultaneously.
+**Confidence:** High
+
+### [P2-MEDIUM] Server/web JSON parser parity: web-side has `description` in MEMO_ALIASES, server-side doesn't
+**Description:** apps/web/src/lib/parser/json.ts:52 has `'description'` in MEMO_ALIASES. packages/parser/src/json/index.ts:56 does NOT.
+**Evidence:** Server JSON parser MEMO_ALIASES ends with `'승인번호'`. Web JSON parser has `'description'` added after.
+**Impact:** JSON files with `description` field parsed differently between server and web.
+**Fix:** Add `'description'` to server-side MEMO_ALIASES for parity.
+**Confidence:** High
+
+### [P2-MEDIUM] Server/web OFX parser: memo deduplication logic parity
+**Description:** Both server (C99-03) and web-side OFX parsers have `memo && memo !== tx.merchant` dedup. Verified consistent.
+**Evidence:** packages/parser/src/ofx/index.ts:189-191 and apps/web/src/lib/parser/ofx.ts:143-145 both implement identical logic.
+**Status:** Correctly matched. No fix needed.
+**Confidence:** High
+
+### [P2-MEDIUM] Server/web HTML parser: normalizeHTML function duplicated
+**Description:** Both packages/parser/src/html/index.ts:41 and apps/web/src/lib/parser/html.ts:27 define `normalizeHTML`. The web-side uses `TextEncoder().encode()`, server-side uses `Buffer.from()`.
+**Evidence:** Different binary encoding paths. SheetJS should handle both, but it's a parity gap.
+**Impact:** Potential encoding issues with non-ASCII content in web vs server.
+**Fix:** Document the intentional difference (Buffer not available in browser) or use a shared approach.
+**Confidence:** Medium
+
+---
+
+## Summary Table
+
+| Severity | Count |
+|----------|-------|
+| P1-HIGH | 1 |
+| P2-MEDIUM | 3 |
+
+**Verdict:** FIX AND SHIP

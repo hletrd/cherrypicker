@@ -1,37 +1,67 @@
-# Cycle 10 — code-reviewer
+# Cycle 10 Code Review — Code Quality, Logic, Maintainability
 
-Scope: apps/web (store, analyzer, FileDropzone, dashboard components), packages/core/rules, playwright/e2e configs, recent cycle 8/9 commits. Verified against cycle 9 aggregate baseline.
+**Reviewer:** code-reviewer  
+**Cycle:** 10  
+**Date:** 2026-05-05  
+**Scope:** Full repository (packages/*, apps/web, tools/*)
 
-## Methodology
-- Re-read `apps/web/src/lib/store.svelte.ts` (post-C9-01 `setResult` deletion, lines 452-601).
-- Re-read `apps/web/src/lib/analyzer.ts` (cardRules cache, `optimizeFromTransactions`, `analyzeMultipleFiles`, `getLatestMonth`).
-- Re-read `apps/web/src/components/upload/FileDropzone.svelte` (onMount/onDestroy, `parsePreviousSpending`, handleUpload, `beforeUnloadGuard`).
-- Grepped for dead-code, race-risky patterns, missing invariants, API contract drift across `apps/`, `packages/`, `tools/`, `e2e/`.
+---
 
 ## Findings
 
-### C10CR-00 — No new actionable findings [High]
-- File refs: the post-C9-01 codebase passes all prior cycle audits.
-- Evidence:
-  - `rg setResult apps/ e2e/ packages/ tools/` → zero hits outside `.context/**` documentation. `setResult` is gone.
-  - `generation++` invariant remains: set once in `analyze()` (line 465) and once in `reoptimize()` (line 575). Both sites also call `persistToStorage` and assign `persistWarningKind`/`truncatedTxCount` atomically.
-  - `invalidateAnalyzerCaches()` still wired only in `reset()` (line 597). No path creates a result without going through `analyze()` or `reoptimize()`.
-  - `parsePreviousSpending` (FileDropzone.svelte:222-253) correctly handles `unknown` input type with -0 coercion (C7E-01 + C8-02 regression-tested).
-  - `navigateTimeout` (FileDropzone.svelte:7, :289, :314, onDestroy :8) correctly cleared on four code paths: onDestroy, before-reassignment, handleRetry, and intentionally on success (fires navigate).
-  - `beforeUnloadGuard` (FileDropzone.svelte:259-264, :270/:309) added+removed symmetrically around analyzeMultipleFiles.
+### [P1-HIGH] Infinity propagation in parseAmountString — packages/parser/src/csv/shared.ts:160
+**Description:** `parseAmountString` does `const n = Math.round(parseFloat(cleaned)); if (Number.isNaN(n)) return null;`. For inputs like `"1e309"`, `parseFloat` returns `Infinity`, `Math.round(Infinity)` returns `Infinity`, and `Number.isNaN(Infinity)` is `false`. The function returns `Infinity` instead of `null`.
+**Impact:** Malicious or malformed bank statements with very large numbers can produce `Infinity` transaction amounts that propagate through the system. The optimizer filters with `Number.isFinite`, but other consumers (report tables, direct API calls) may not.
+**Fix:** Add `!Number.isFinite(n)` check: `if (Number.isNaN(n) || !Number.isFinite(n)) return null;`
+**Confidence:** High
+**Also affects:** apps/web/src/lib/parser/csv.ts:148, apps/web/src/lib/parser/pdf.ts:271
 
-### Deferrals re-confirmed this cycle
-- D7-M6 `_loadPersistWarningKind` module-mutable (store.svelte.ts:216-220,:379) — still present. Exit criterion (persistence extracted to dedicated module, tied to A7-02) unchanged.
-- D7-M7 `reuseExistingServer: !process.env.CI` (playwright.config.ts:19) — still present. Exit criterion (CI pipeline) unchanged.
-- D7-M12 `getAllCardRules` refetched per reoptimize (analyzer.ts:185-201) — cache hit path works (cachedCoreRules) but `getAllCardRules()` itself still re-flatMaps on every call. Exit criterion (profiler bottleneck) unchanged.
-- D7-M13 `script-src 'unsafe-inline'` (apps/web/src/layouts/Layout.astro:42) — still present; comment at :30-40 documents the constraint.
-- D7-M5 silent-drop of malformed-date rows from monthlyBreakdown — unchanged.
-- D7-M14 e2e selector polish (T7-05..T7-15) — unchanged.
-- D8-01 `prefers-reduced-motion` rule for spinner — `app.css:102` has a generic `@media (prefers-reduced-motion: reduce)` block but the `animate-bounce` + `animate-spin` classes on the upload success/loading icons are not individually gated. Keep deferred to a11y cycle.
-- D8-02 dashboard cards lack `role="region"` + `aria-labelledby` — still unchanged.
+### [P1-HIGH] Infinity propagation in parseOFXAmount — packages/parser/src/ofx/index.ts:111
+**Description:** Same pattern: `const n = parseFloat(cleaned); if (Number.isNaN(n)) return null; return Math.round(n);`. `parseFloat("1e309")` returns `Infinity`, passes the NaN check.
+**Impact:** OFX files with extreme amount values produce Infinity amounts.
+**Fix:** Add `!Number.isFinite(n)` check before returning.
+**Confidence:** High
+**Also affects:** apps/web/src/lib/parser/ofx.ts:79
 
-## Cross-agent overlap expected
-- perf-reviewer: D7-M12 (cardRules); architect: D7-M6, D7-M11 persistence extraction; security-reviewer: D7-M13 CSP.
+### [P2-MEDIUM] Web-side JSON parser delegates Infinity risk to parseCSVAmount — apps/web/src/lib/parser/json.ts:67-75
+**Description:** `normalizeAmount` checks `Number.isFinite(raw)` for number inputs, but for string inputs it delegates to `parseCSVAmount` which has the Infinity bug above.
+**Impact:** JSON files with string amounts like `"1e309"` bypass the finite check.
+**Fix:** Guard the return value of `parseCSVAmount` with `Number.isFinite` in `normalizeAmount`.
+**Confidence:** High
+**Also affects:** packages/parser/src/json/index.ts:79-87 (server-side)
 
-## Confidence
-High for "no net-new actionable findings". The cycle-9 delete of `setResult` closed the last MEDIUM-severity deferrable. Remaining items require dedicated refactor/a11y/CI cycles.
+### [P2-MEDIUM] XLSX parseAmount delegates string parsing to buggy parseAmountString — packages/parser/src/xlsx/index.ts:157-160
+**Description:** For number inputs it checks `Number.isFinite`, but for string inputs it directly returns `parseAmountString(raw)` without guarding.
+**Impact:** XLSX cells with string values like `"1e309"` produce Infinity.
+**Fix:** Guard `parseAmountString` result with `Number.isFinite`.
+**Confidence:** High
+
+### [P2-MEDIUM] Missing explicit `any` type guards in store.svelte.ts — apps/web/src/lib/store.svelte.ts:114, 273, 312
+**Description:** Three instances of `any` type: `Record<number, (data: any) => any>` and callback parameters.
+**Impact:** Type safety erosion in migration and store hydration logic. `any` bypasses the entire type system.
+**Fix:** Replace with proper types or `unknown` with runtime validation.
+**Confidence:** Medium
+
+### [P3-LOW] esc() over-escapes forward slash — packages/viz/src/report/generator.ts:42
+**Description:** `.replace(/\//g, '&#47;')` escapes forward slash in HTML text content. Forward slash does not need escaping in HTML text.
+**Impact:** Unnecessary entity encoding. URLs or paths with slashes in card names will display as `&#47;`.
+**Fix:** Remove the forward slash replacement line.
+**Confidence:** Medium
+
+### [P3-LOW] console.warn in production parser code — packages/parser/src/csv/index.ts:101
+**Description:** `console.warn(\`[cherrypicker] Bank adapter ${adapter.bankId} (detect) failed:\`, err);` logs to stderr in production.
+**Impact:** Pollutes production logs. Should use a proper logging mechanism or silently collect errors in ParseResult.
+**Fix:** Remove console.warn; adapter failures are already collected in `signatureFailures` and returned in the result.
+**Confidence:** Low
+
+---
+
+## Summary Table
+
+| Severity | Count | Categories |
+|----------|-------|------------|
+| P1-HIGH | 2 | Infinity bugs in amount parsing |
+| P2-MEDIUM | 4 | JSON/XLSX Infinity delegation, any types |
+| P3-LOW | 2 | Over-escaping, console.warn |
+
+**Verdict:** FIX AND SHIP

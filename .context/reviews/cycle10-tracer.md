@@ -1,32 +1,46 @@
-# Cycle 10 — tracer
+# Cycle 10 Tracer Review — Causal Flow Analysis
 
-## Scope
-- Trace the upload → analyze → dashboard → reoptimize data flow.
-- Verify state transitions remain deterministic.
+**Reviewer:** tracer  
+**Cycle:** 10  
+**Date:** 2026-05-05
 
-## Flow traced
+---
 
-1. `FileDropzone.handleUpload` (FileDropzone.svelte:266)
-   → install `beforeUnloadGuard` (:270)
-   → `analysisStore.analyze(uploadedFiles, { bank, previousMonthSpending: parsePreviousSpending(raw) })` (:273-276)
-   → `analyzeMultipleFiles` constructs shared `MerchantMatcher`, parses each file, merges, optimizes latest month.
-   → `result = analysisResult`, `generation++`, `persistToStorage(...)`.
-   → FileDropzone checks `analysisStore.error` (:280-284) and either shows error OR triggers success state + 1200ms navigate timer.
-   → Remove `beforeUnloadGuard` in finally (:309).
-2. Dashboard (`dashboard.astro` → Svelte islands) reads `analysisStore.result` + derived getters.
-3. `TransactionReview.svelte` `$effect` syncs `editedTxs` from `store.transactions` when `generation !== lastSyncedGeneration` (C7-01 fix ensures post-refresh generation starts at 1 if restored from sessionStorage).
-4. On category edit, `TransactionReview` calls `analysisStore.reoptimize(editedTxs)`:
-   → early null-guard (:485-489)
-   → snapshot `result` (:497)
-   → `getCategoryLabels()` (cache-hit path) (:499)
-   → filter to latest month (:503-506)
-   → rebuild monthlyBreakdown (:513-533)
-   → compute previousMonthSpending (:541-557)
-   → `optimizeFromTransactions` returns with `cachedCoreRules` hit
-   → `result = { ...snapshot, transactions: editedTransactions, optimization, monthlyBreakdown }`, `generation++`, persist.
+## Traced Flows
 
-### T10-00 — No deviations from the documented flow [High]
-All callsites preserve the invariant: `result` non-null ⇒ `optimization` non-null ⇒ `monthlyBreakdown` non-null. `generation++` is the single source of truth for UI re-sync. No new concurrency risks introduced since cycle 9.
+### Flow 1: Malformed amount -> Infinity -> parse result -> optimizer
+**Chain:** Uploaded file -> parseAmountString/parseOFXAmount -> Infinity amount -> RawTransaction.amount = Infinity -> categorizer -> optimizer filter -> excluded from optimization.
+**Finding:** The optimizer's `Number.isFinite` guard (greedy.ts:204) prevents Infinity from affecting calculations, but Infinity amounts are still present in `ParseResult.transactions` and `ParseResult.errors`. The report generator's `formatWon` handles Infinity by returning "0원".
+**Bottleneck:** No single point catches Infinity. It's a distributed responsibility that happens to work but relies on every downstream consumer guarding.
+**Fix:** Fix at source (parsers) rather than relying on downstream guards.
+**Confidence:** High
 
-## Confidence
-High.
+### Flow 2: User uploads HTML -> web parser -> forward-fill -> transaction
+**Chain:** FileDropzone -> analysisStore.analyze -> parseHTML -> SheetJS -> parseHTMLSheet -> forward-fill -> transactions.
+**Finding:** Forward-fill correctly handles merged cells. No causal chain issues found.
+**Confidence:** High
+
+### Flow 3: User uploads OFX (credit card) -> CCSTMTRS detection -> transactions
+**Chain:** parseOFX -> extractTransactionBlocks -> SGML/XML pattern -> CCSTMTRS terminators -> extractTag -> transactions.
+**Finding:** Credit card OFX support (C99-03) is implemented consistently on both server and web. Causal chain verified.
+**Confidence:** High
+
+### Flow 4: Parser fix applied to server but not web (parity drift)
+**Chain:** Bug found -> fix server-side -> forget web-side -> web users affected.
+**Finding:** This has happened in past cycles (C9-01, C9-02, C9-03 were all parity fixes). The structural duplication between packages/parser and apps/web/src/lib/parser makes this inevitable.
+**Root cause:** Architectural debt (D-01) — no shared parser module.
+**Fix:** Prioritize D-01 refactor.
+**Confidence:** High
+
+---
+
+## Summary
+
+| Flow | Status | Root Cause |
+|------|--------|------------|
+| Infinity propagation | Vulnerable | Missing finite check in parsers |
+| HTML forward-fill | Safe | Correct implementation |
+| OFX credit card | Safe | Correct implementation |
+| Parity drift | Recurring | Architectural duplication |
+
+**Verdict:** FIX AND SHIP

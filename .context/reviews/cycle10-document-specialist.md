@@ -1,17 +1,44 @@
-# Cycle 10 — document-specialist
+# Cycle 10 Document Specialist Review
 
-## Scope
-- Code comment vs behavior drift.
-- README / CLAUDE.md / context docs alignment with current state.
-- Deferred-items ledger accuracy.
+**Reviewer:** document-specialist  
+**Cycle:** 10  
+**Date:** 2026-05-05
+
+---
 
 ## Findings
 
-### DOC10-00 — No net-new documentation drift [High]
-- `apps/web/src/lib/store.svelte.ts:592-595` correctly notes the cycle-8 D7-M1 cleanup; comment accurately reflects the current code state.
-- `apps/web/src/lib/analyzer.ts:73-79` describes `invalidateAnalyzerCaches` correctly (C26-03 + C72-02 rationale).
-- `apps/web/src/components/upload/FileDropzone.svelte:225-230` comment on `parsePreviousSpending` accurately reflects the Svelte 5 `bind:value` coercion pitfall (C7E-01) and -0 normalization (D7-M4 / C8-02).
-- `.context/plans/00-deferred-items.md` cycle-9 section (lines 1064-1091) correctly marks D7-M2 resolved and retains severity/confidence + exit criteria for all remaining deferrals.
+### [P2-MEDIUM] TODO comment without tracking — packages/core/src/calculator/reward.ts:78
+**Description:** `// TODO: If a future card's terms explicitly include subcategories...`
+**Impact:** Unclear if this is a planned feature or a known limitation. No issue or plan tracks it.
+**Fix:** Convert to a GitHub issue or add to backlog.
+**Confidence:** Low
 
-## Confidence
-High.
+### [P2-MEDIUM] Layout.astro CSP TODO is stale — apps/web/src/layouts/Layout.astro:46
+**Description:** TODO comment about nonce-based CSP has existed for multiple cycles.
+**Impact:** Security documentation/code mismatch — stated intent but no implementation.
+**Fix:** Implement CSP or remove TODO with justification.
+**Confidence:** Medium
+
+### [P3-LOW] Package descriptions in package.json are generic
+**Description:** All packages have version "0.1.0" and minimal descriptions.
+**Impact:** Monorepo tooling and npm displays show unhelpful metadata.
+**Fix:** Update package.json with accurate versions and descriptions.
+**Confidence:** Low
+
+### [P3-LOW] Missing inline docs for public API functions
+**Description:** Many exported functions in packages/core/src/ lack JSDoc comments.
+**Impact:** IDE hover information is unhelpful for consumers.
+**Fix:** Add JSDoc to public exports.
+**Confidence:** Low
+
+---
+
+## Summary Table
+
+| Severity | Count |
+|----------|-------|
+| P2-MEDIUM | 2 |
+| P3-LOW | 2 |
+
+**Verdict:** FIX AND SHIP

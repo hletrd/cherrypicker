@@ -1565,3 +1565,70 @@ All previously deferred items remain unchanged. No severity downgrades. The foll
 
 Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings** across all 11 reviewer perspectives. Source tree was bit-identical to cycle 14 (`git diff 455eb9b HEAD` empty for `*.ts/*.svelte/*.astro/*.yaml`). All previously deferred items remain unchanged with original severity, confidence, file+line citation, reason, and exit criterion. No items added or removed. No severity downgrades. The cycle's only output is documentation re-confirmation under `.context/reviews/c15-*.md` and the cycle-15 aggregate roll-forward.
 
+
+
+## Deferred Findings (Cycle 10)
+
+### D-C10-01: Parser code duplication (D-01 continuation)
+- **Original finding:** cycle10-architect P1-HIGH, cycle10-tracer
+- **Severity:** HIGH (architectural)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/*` vs `packages/parser/src/*`
+- **Reason for deferral:** This is the existing D-01 architectural refactor. Requires creating a shared parser module that works in both Bun and browser environments. Too large for a single fix cycle.
+- **Exit criterion:** Implement D-01 refactor plan with browser-compatible shared parser package.
+
+### D-C10-02: Greedy optimizer O(n*m*t) complexity
+- **Original finding:** cycle10-perf-reviewer P2-MEDIUM
+- **Severity:** MEDIUM (performance)
+- **Confidence:** Medium
+- **File+line:** `packages/core/src/optimizer/greedy.ts`
+- **Reason for deferral:** Performance optimization requires profiling with real transaction data. Current complexity is acceptable for typical workloads (<1000 transactions, <20 cards).
+- **Exit criterion:** Profile with realistic dataset; if optimization takes >1s, implement memoization.
+
+### D-C10-03: In-place array mutation in greedy optimizer
+- **Original finding:** cycle10-architect P2-MEDIUM
+- **Severity:** MEDIUM (maintainability)
+- **Confidence:** Medium
+- **File+line:** `packages/core/src/optimizer/greedy.ts:56`
+- **Reason for deferral:** The mutation is currently safe (documented in comment). Fixing requires refactoring the core optimization algorithm and extensive testing to ensure no regression.
+- **Exit criterion:** Add comprehensive unit tests for calculateCardOutput with shared arrays, then refactor to immutable operations.
+
+### D-C10-04: Missing CSP implementation
+- **Original finding:** cycle10-security-reviewer P2-MEDIUM, cycle10-document-specialist
+- **Severity:** MEDIUM (security)
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/layouts/Layout.astro:46`
+- **Reason for deferral:** CSP requires careful configuration to avoid breaking existing functionality (inline scripts, Astro transitions). Needs dedicated testing cycle.
+- **Exit criterion:** Implement nonce-based CSP and verify all pages work correctly with e2e tests.
+
+### D-C10-05: OFX regex ReDoS risk
+- **Original finding:** cycle10-security-reviewer P1-HIGH
+- **Severity:** HIGH (security)
+- **Confidence:** Medium
+- **File+line:** `packages/parser/src/ofx/index.ts:61`, `apps/web/src/lib/parser/ofx.ts:33`
+- **Reason for deferral:** Tag names are hardcoded (not user-controlled), limiting exploitability. The risk is theoretical unless tagName becomes dynamic. Documented as known limitation.
+- **Exit criterion:** If tagName ever becomes user-controlled, pre-compile regexes or add input validation.
+
+### D-C10-06: Step indicator color-only differentiation
+- **Original finding:** cycle10-designer P3-LOW
+- **Severity:** LOW (accessibility)
+- **Confidence:** Low
+- **File+line:** `apps/web/src/components/upload/FileDropzone.svelte`
+- **Reason for deferral:** Accessibility enhancement. Current implementation has text labels and aria-current for screen readers. Color-only is a secondary concern.
+- **Exit criterion:** Add icon or shape differentiation to step indicator.
+
+### D-C10-07: Stale TODO in reward.ts
+- **Original finding:** cycle10-document-specialist P3-LOW
+- **Severity:** LOW (documentation)
+- **Confidence:** Low
+- **File+line:** `packages/core/src/calculator/reward.ts:78`
+- **Reason for deferral:** Future feature planning. Not a bug.
+- **Exit criterion:** When subcategory inclusion feature is prioritized, implement `includeSubcategories` field.
+
+### D-C10-08: i18n infrastructure missing
+- **Original finding:** cycle10-critic P3-LOW
+- **Severity:** LOW (feature gap)
+- **Confidence:** Low
+- **File+line:** All Svelte components
+- **Reason for deferral:** Major feature requiring translation keys, ICU message format, and locale management. Out of scope for parser-focused cycle.
+- **Exit criterion:** Create i18n RFC and implement incrementally.

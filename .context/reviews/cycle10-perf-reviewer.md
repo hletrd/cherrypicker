@@ -1,17 +1,37 @@
-# Cycle 10 — perf-reviewer
+# Cycle 10 Performance Review
 
-## Scope
-- Analyzer hot paths (getAllCardRules refetch, cardRules transform cache).
-- Store reactivity (generation++ vs reactive cascade).
-- Render-layer hot spots in dashboard (CategoryBreakdown, SavingsComparison, TransactionReview).
+**Reviewer:** perf-reviewer  
+**Cycle:** 10  
+**Date:** 2026-05-05
+
+---
 
 ## Findings
 
-### P10-00 — No net-new perf findings [High]
-- `cachedCoreRules` (analyzer.ts:48, :187-201) correctly caches the post-transform rules array and invalidates on `reset()` (store.svelte.ts:597). Empty-array gating (analyzer.ts:193-195) avoids poisoning cache with AbortError `[]` results. D7-M12 (getAllCardRules itself refetched per reoptimize) is the remaining LOW / High-confidence item — 10-50ms per reoptimize. Exit criterion (profiler bottleneck) not triggered.
-- `cachedCategoryLabels` (store.svelte.ts:383, :385-398) correctly caches category labels map; empty-result gating at :394 prevents poisoning.
-- Persist-on-edit (P8-02, LOW/High) — unchanged; user-paced edits make debouncing unnecessary at current scale.
-- P8-01 `reoptimize` rebuilds monthlyBreakdown from scratch — unchanged; <5ms on 10k transactions.
+### [P2-MEDIUM] Greedy optimizer O(n*m) score calculation
+**Description:** `scoreCardsForTransaction` calls `calculateCardOutput` for every card for every transaction. `calculateCardOutput` iterates over all transactions for that card.
+**Impact:** For a user with 1000 transactions and 10 cards, this is ~10,000 calls to `calculateCardOutput`, each iterating over the card's transactions. Total complexity is O(n*m*t) where t grows with assignments.
+**Fix:** The in-place push/pop optimization (C68-02) helps but doesn't change asymptotic complexity. Consider memoizing reward calculations per (card, category, amount) tuple.
+**Confidence:** Medium
 
-## Confidence
-High.
+### [P2-MEDIUM] PDF parser reads entire file into memory
+**Description:** `apps/web/src/lib/parser/pdf.ts` and `packages/parser/src/pdf/` process PDF files by extracting all text.
+**Impact:** Large PDF statements (100+ pages) could cause memory pressure in browser.
+**Fix:** Add file size limits or streaming PDF parsing. Already has 10MB per-file limit in FileDropzone.
+**Confidence:** Low
+
+### [P3-LOW] HTML table parser iterates all sheets
+**Description:** `parseHTML` tries all sheets and picks the one with most transactions.
+**Impact:** For HTML with many tables, this is wasteful. Could exit early if a sheet has >N transactions.
+**Confidence:** Low
+
+---
+
+## Summary Table
+
+| Severity | Count |
+|----------|-------|
+| P2-MEDIUM | 2 |
+| P3-LOW | 1 |
+
+**Verdict:** FIX AND SHIP

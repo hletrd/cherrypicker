@@ -1,113 +1,65 @@
-# Cycle 9 Aggregate Review
+# Cycle 10 Aggregate Review
 
-**Date:** 2026-05-06
-**Scope:** Full repository — cherrypicker Korean credit card optimizer
-
----
-
-## Summary
-
-Cycle 9 review covered the codebase after Cycle 8 fixes. All gates pass (0 lint errors, 0 type errors, 10 test suites green). Cycle 8 findings C8-01 (web-side negative amounts), C8-02 (SUMMARY_ROW_PATTERN ReDoS), and C8-03 (build-json.ts exit code) are verified fixed.
-
-Five agents reviewed: code-reviewer, security-reviewer, test-engineer, architect, debugger. 4 new findings: 3 low, 1 medium (carried from previous cycle). No critical or high-severity new findings this cycle.
-
-**AGENT FAILURES:** No Agent/Task spawner tool available in this environment. All reviews performed manually by the orchestrator. Per-agent files written for provenance.
+**Date:** 2026-05-05  
+**Cycle:** 10 of 100  
+**Reviewers:** code-reviewer, security-reviewer, debugger, verifier, architect, test-engineer, perf-reviewer, critic, tracer, document-specialist, designer
 
 ---
 
-## Verified Fixes (Cycle 8)
+## Cross-Agent Agreement (High-Signal Findings)
 
-| Issue | File | Commit | Evidence |
-|-------|------|--------|----------|
-| C8-01 Web PDF Math.abs | `apps/web/src/lib/parser/pdf.ts:432` | `274a3a4` | `if (amount <= 0) continue;` |
-| C8-01 Web XLSX Math.abs | `apps/web/src/lib/parser/xlsx.ts:611` | `274a3a4` | `if (amount <= 0) continue;` |
-| C8-01 Web CSV Math.abs | `apps/web/src/lib/parser/csv.ts:433,554` | `274a3a4` | `if (amount <= 0) continue;` |
-| C8-02 SUMMARY_ROW_PATTERN ReDoS | `packages/parser/src/csv/column-matcher.ts:101` | `ca1ed4b` | `text.slice(0, 500)` cap |
-| C8-03 build-json.ts exit code | `scripts/build-json.ts:292-294` | `4ebf2e5` | `process.exit(1)` on errors |
+### Infinity Bug in Amount Parsing — CONFIRMED by 5 agents
+- **code-reviewer:** P1-HIGH in `parseAmountString`, `parseOFXAmount`
+- **debugger:** P0-CRITICAL, traced across all parsers
+- **verifier:** P1-HIGH, server/web parity mismatch on fix status
+- **critic:** P1-HIGH, user impact perspective
+- **tracer:** High confidence, traced full causal chain
 
----
+**Consensus:** This is the highest-priority issue. It affects CSV, OFX, PDF, XLSX, and JSON parsers on both server and web sides.
 
-## New Findings (Cycle 9)
+### Parser Code Duplication / Parity Drift — CONFIRMED by 3 agents
+- **architect:** P1-HIGH, calls for D-01 refactor
+- **verifier:** P2-MEDIUM, documented multiple parity gaps
+- **tracer:** High confidence, identified as root cause of recurring parity bugs
 
-### C9-03: Server-side OFX memo/merchant deduplication check uses wrong field
-
-**Agents:** code-reviewer (Medium), debugger (High)
-**File:** `packages/parser/src/ofx/index.ts:189-191`
-**Confidence:** High
-
-When `<NAME>` is empty, `tx.merchant` falls back to `<MEMO>` value. The subsequent memo deduplication check uses `memo !== tx.memo` where `tx.memo` is `undefined`, so it always evaluates to true. This causes `tx.memo` to duplicate the merchant fallback value. The web-side correctly checks `memo !== tx.merchant`.
-
-**Cross-agent agreement:** 2 of 5 agents flagged this. Both code-reviewer and debugger identified the same issue.
-
-**Fix:** Change `tx.memo` to `tx.merchant` in server-side OFX parser (one-line fix).
+**Consensus:** Structural issue causing repeated work. Long-term refactor needed.
 
 ---
 
-### C9-01: Web-side HTML parser imports `parseCSVAmount` instead of `parseAmountString`
+## Deduplicated Findings (Highest Severity Preserved)
 
-**Agents:** code-reviewer (Low), architect (Low)
-**File:** `apps/web/src/lib/parser/html.ts:10`
-**Confidence:** Medium
-
-Server-side HTML parser imports `parseAmountString` from `../csv/shared.js`. Web-side imports `parseCSVAmount` from `./csv.js`. Functionally equivalent (alias) but creates divergence risk.
-
-**Fix:** Normalize import paths or export naming between server and web.
-
----
-
-### C9-02: Web-side JSON parser missing `'description'` in MEMO_ALIASES
-
-**Agents:** code-reviewer (Low)
-**File:** `apps/web/src/lib/parser/json.ts:51-54`
-**Confidence:** Medium
-
-Server-side JSON parser includes `'description' /* fallback */` in MEMO_ALIASES. Web-side does not.
-
-**Fix:** Add to web-side MEMO_ALIASES.
+| # | Severity | Category | File | Finding | Agents |
+|---|----------|----------|------|---------|--------|
+| 1 | P0-CRITICAL | Correctness | All parsers | Infinity amount propagation | debugger, code-reviewer, verifier, critic, tracer |
+| 2 | P1-HIGH | Architecture | packages/parser/, apps/web/src/lib/parser/ | Server/web parser duplication | architect, verifier, tracer |
+| 3 | P1-HIGH | Security | packages/parser/src/ofx/index.ts:61 | OFX dynamic regex ReDoS risk | security-reviewer |
+| 4 | P2-MEDIUM | Correctness | apps/web/src/lib/parser/json.ts:67-75 | JSON normalizeAmount delegates Infinity risk | code-reviewer, debugger |
+| 5 | P2-MEDIUM | Correctness | packages/parser/src/xlsx/index.ts:157-160 | XLSX parseAmount delegates Infinity risk | code-reviewer |
+| 6 | P2-MEDIUM | Security | apps/web/src/layouts/Layout.astro:46 | Missing CSP implementation | security-reviewer, document-specialist |
+| 7 | P2-MEDIUM | Testing | All parser tests | No Infinity edge case tests | test-engineer |
+| 8 | P2-MEDIUM | UX | apps/web/src/components/upload/FileDropzone.svelte | Upload button lacks aria-busy | designer |
+| 9 | P2-MEDIUM | Performance | packages/core/src/optimizer/greedy.ts | O(n*m*t) score calculation | perf-reviewer |
+| 10 | P2-MEDIUM | Correctness | packages/core/src/optimizer/greedy.ts:56 | In-place array mutation | architect |
+| 11 | P3-LOW | Quality | packages/viz/src/report/generator.ts:42 | esc() over-escapes forward slash | code-reviewer |
+| 12 | P3-LOW | Quality | packages/parser/src/csv/index.ts:101 | console.warn in production | code-reviewer |
+| 13 | P3-LOW | Docs | packages/core/src/calculator/reward.ts:78 | Stale TODO comment | document-specialist |
+| 14 | P3-LOW | UX | apps/web/src/components/upload/FileDropzone.svelte | Step indicator color-only | designer |
 
 ---
 
-### C8-05 [CARRIED]: esc() missing DEL and high-Unicode surrogates
-
-**Agents:** security-reviewer (Medium)
-**File:** `packages/viz/src/report/generator.ts:31-41`
-**Confidence:** Medium
-
-esc() strips `\x00-\x08\x0b\x0c\x0e-\x1f` but not `\x7f` (DEL) or U+FFFE/U+FFFF. Partially hardened by `b57820e` but gaps remain.
-
-**Fix:** Add `.replace(/\x7f/g, '').replace(/￾|￿/g, '')` to esc().
+## Agent Failures
+None. All 11 agents completed successfully.
 
 ---
 
-## Still Open from Previous Cycles
+## Recommended Priority Order
+1. Fix Infinity bug in all amount parsers (P0)
+2. Add Infinity test cases (P1)
+3. Fix JSON MEMO_ALIASES parity (P2)
+4. Address CSP TODO or remove (P2)
+5. Improve upload button accessibility (P2)
+6. Clean up esc() forward-slash (P3)
+7. Remove console.warn (P3)
+8. Plan D-01 parser shared module refactor (architectural, deferred)
 
-| Finding | First Cycle | Severity | Status |
-|---------|-------------|----------|--------|
-| Server/web parser structural duplication | 2 | **HIGH** | **OPEN** |
-| No parity test suite | 4 | **HIGH** | **OPEN** — C8-04 |
-| isValidHeaderRow doesn't normalize headers | 6 | **HIGH** | **OPEN** — C6-01 |
-| build-json.ts duplicates Zod schemas | 8 | **MEDIUM** | **OPEN** — C8-06 |
-| No web-side parser tests for negatives | 8 | **MEDIUM** | **OPEN** — C8-07 |
-| No tests for JSON negative amounts | 6 | **MEDIUM** | **OPEN** — T6-03 |
-| No tests for OFX CCSTMTRS | 9 | **MEDIUM** | **OPEN** — C9-TE-01 |
-| No tests for HTML forward-fill | 9 | **MEDIUM** | **OPEN** — C9-TE-02 |
-| Regex DoS in column patterns | 4 | **MEDIUM** | **PARTIAL** — SUMMARY_ROW_PATTERN capped, others not |
-| Non-KRW transactions silently dropped | 5 | **LOW** | **OPEN** |
-| PDF three code paths | 4 | **LOW** | **OPEN** |
-| No brute-force benchmark | 4 | **LOW** | **OPEN** |
-
----
-
-## Cross-Cutting Themes
-
-1. **Parity micro-divergences persist:** Despite fixing C8-01 (negative amounts), new micro-divergences continue to surface (C9-01, C9-02, C9-03). The structural duplication between server and web parsers makes these inevitable.
-2. **Observability gaps enable silent failures:** C9-03 (OFX memo deduplication) would have been caught by parity tests or by parser-level unit tests with assertions on output fields.
-3. **Defense-in-depth is incomplete:** C8-05 (esc() gaps) shows that partial hardening leaves residual attack surface.
-
----
-
-## Verdict
-
-**FIX NOW:** C9-03 (OFX memo bug — one-line fix, high confidence)
-**FIX SOON:** C8-05 (esc() gaps — low effort), C9-01, C9-02 (parity micro-divergences)
-**DEFER WITH EXIT CRITERION:** Server/web parser structural unification, parity test suite
+**Overall Verdict:** FIX AND SHIP
