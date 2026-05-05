@@ -48,10 +48,13 @@ const VALID_SOURCES = new Set(['manual', 'llm-scrape', 'web']);
 const VALID_REWARD_TYPES = new Set(['discount', 'points', 'cashback', 'mileage']);
 
 // Cache for toCoreCardRuleSets — rules from static JSON don't change per session.
-// The cache is keyed by existence only (not reference equality) because
-// getAllCardRules() returns a new array via flatMap on every call, making
-// reference comparisons always fail. Since the underlying cards.json data
-// never changes within a session, caching the first transformation is safe.
+// The cache is keyed by existence only (not by cardIds) because:
+// 1. getAllCardRules() returns a new array via flatMap on every call, making
+//    reference comparisons always fail.
+// 2. The web app always calls analyze() (unfiltered) first, then reoptimize()
+//    with the same cardIds — no alternation between filtered/unfiltered.
+// 3. Filtering AFTER cache retrieval is O(rules) which is negligible (< 500).
+// If the calling pattern changes to alternate cardId sets, key by cardIds hash.
 let cachedCoreRules: CoreCardRuleSet[] | null = null;
 
 function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
