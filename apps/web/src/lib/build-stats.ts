@@ -23,13 +23,8 @@ export async function readCardStats(): Promise<CardStats> {
     totalIssuers = data.meta?.totalIssuers ?? totalIssuers;
     totalCategories = data.meta?.categories?.length ?? totalCategories;
   } catch (err) {
-    if (err instanceof SyntaxError) {
-      console.warn('[cherrypicker] cards.json is malformed at build time, using fallback stats:', err.message);
-    } else {
-      const code = (err as NodeJS.ErrnoException)?.code;
-      const reason = code === 'ENOENT' ? 'not found' : code === 'EACCES' ? 'permission denied' : 'unreadable';
-      console.warn(`[cherrypicker] cards.json ${reason} at build time, using fallback stats:`, err);
-    }
+    // Silent fallback — build stats are cosmetic; malformed or missing cards.json
+    // is not fatal. The fallback values are displayed on the landing page.
   }
   return { totalCards, totalIssuers, totalCategories };
 }

@@ -184,12 +184,9 @@ function persistToStorage(data: AnalysisResult): PersistResult {
         (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
       return { kind: 'quota_exceeded', truncatedTxCount: null };
     }
-    // Non-quota errors (e.g., circular reference in JSON.stringify) are unexpected
-    // and should be logged for diagnostics. Return 'error' instead of 'corrupted'
-    // to distinguish code bugs from quota failures (C66-04/C69).
-    if (typeof console !== 'undefined') {
-      console.warn('[cherrypicker] Unexpected error persisting analysis data:', err);
-    }
+    // Non-quota errors (e.g., circular reference in JSON.stringify) are unexpected.
+    // Return 'error' instead of 'corrupted' to distinguish code bugs from quota
+    // failures (C66-04/C69). The UI surfaces this via persistWarningKind.
     return { kind: 'error', truncatedTxCount: null };
   }
   return { kind: null, truncatedTxCount: null };
@@ -238,13 +235,8 @@ function loadFromStorage(): AnalysisResult | null {
       // migrations run correctly for all data (C76-01).
       const storedVersion = parsed._v ?? 0;
       if (storedVersion < STORAGE_VERSION) {
-        if (storedVersion === 0) {
-          if (typeof console !== 'undefined') {
-            console.warn(`[cherrypicker] Session storage has legacy (unversioned) data. Attempting migration to v${STORAGE_VERSION}.`);
-          }
-        } else if (typeof console !== 'undefined') {
-          console.warn(`[cherrypicker] Session storage schema version mismatch: stored=${storedVersion}, current=${STORAGE_VERSION}. Attempting to load anyway.`);
-        }
+        // Version mismatch: attempt migrations (if any) then continue validation.
+        // The UI does not warn on version mismatch — data is loaded best-effort.
         // Apply migrations from the stored version to the current version
         // before validation, so the validator sees the current schema shape
         // (C75-03). Legacy data (_v undefined, treated as version 0) will
@@ -322,21 +314,12 @@ function loadFromStorage(): AnalysisResult | null {
       sessionStorage.removeItem(STORAGE_KEY);
     }
   } catch (err) {
-    // Log the initial load failure for diagnostics — this catch handles
-    // JSON.parse errors, validation failures, and unexpected exceptions
-    // from sessionStorage.getItem. Without logging, these failures are
-    // invisible to developers debugging persistence issues (C2-R02/D03).
-    if (typeof console !== 'undefined') {
-      console.warn('[cherrypicker] Failed to load persisted data from sessionStorage:', err);
-    }
+    // Load failure handles JSON.parse errors, validation failures, and
+    // unexpected exceptions from sessionStorage.getItem. The UI surfaces
+    // persistence issues via persistWarningKind; no console logging needed.
     try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch (err2) {
       // Best-effort cleanup: corrupted data removal.
       // SecurityError in sandboxed iframes is expected and safe to ignore.
-      // Log when sessionStorage is available but the remove failed for another
-      // reason, matching the pattern in clearStorage() (C24-02/C27-01/C30-03).
-      if (typeof sessionStorage !== 'undefined') {
-        console.warn('[cherrypicker] Failed to remove corrupted data from sessionStorage:', err2);
-      }
     }
   }
   return null;
@@ -352,11 +335,7 @@ function clearStorage(): void {
     }
   } catch (err) {
     // SSR environments don't have sessionStorage — that's expected.
-    // Non-SSR failures (e.g., SecurityError in sandboxed iframes) are
-    // worth logging for diagnostics (C24-02).
-    if (typeof sessionStorage !== 'undefined') {
-      console.warn('[cherrypicker] Failed to clear sessionStorage:', err);
-    }
+    // SecurityError in sandboxed iframes is also safe to ignore.
   }
 }
 
