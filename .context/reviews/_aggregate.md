@@ -1,35 +1,36 @@
-# Cycle 91 Aggregate Review
+# Cycle 94 Aggregate Review
 
 ## Summary
-After 90 cycles, 1299 bun tests passing. This cycle identifies **2 format diversity bugs** in the PDF and XLSX parsers:
+After 93 cycles, 1306 bun tests pass with 0 failing. This cycle identifies **3 actionable findings** (1 bug, 2 enhancements) and **4 deferred items**.
 
-1. **F-91-01 (HIGH)**: PDF `findDateCell()` missing YYMMDD validation in both server and web-side parsers. The structured parser's `filterTransactionRows()` correctly identifies rows with 6-digit YYMMDD dates (e.g., "240115") via `isValidDateCell()` → `isValidYYMMDD()`, but then the structured parser's `findDateCell()` doesn't include YYMMDD validation, so it returns null and the row is skipped.
+## Actionable Findings
 
-2. **F-91-02 (MEDIUM)**: XLSX parser missing numeric YYMMDD date handling. 6-digit numeric dates (e.g., 240115) stored in XLSX cells hit the serial date guard (`raw > 100000`) and are rejected instead of being parsed as YYMMDD dates. Affects both server and web-side XLSX parsers.
+### F-94-01: XLSX parser returns invalid dates in transaction objects (BUG)
+Both XLSX parsers (server `packages/parser/src/xlsx/index.ts`, web `apps/web/src/lib/parser/xlsx.ts`)
+push a parse error when `parseDateToISO` returns an invalid date, but still include
+the invalid date string in the transaction. The CSV adapter-factory and generic CSV
+parser both validate with `isValidISODate(parsedDate)` after parsing — the XLSX
+parsers should do the same for consistency.
 
-## Findings
+**Fix**: Add `isValidISODate` post-parse check in both XLSX parsers after
+`parseDateToISO` call, matching the CSV adapter pattern.
 
-| # | Severity | Area | Description | Status |
-|---|----------|------|-------------|--------|
-| F-91-01 | HIGH | PDF (server+web) | `findDateCell()` missing YYMMDD (6-digit compact date) validation — structured parser skips valid YYMMDD rows that `filterTransactionRows` accepts | Planned |
-| F-91-02 | MEDIUM | XLSX (server+web) | Numeric YYMMDD dates (6-digit, e.g., 240115) rejected by serial date guard (`raw > 100000`) instead of parsed as YYMMDD dates | Planned |
+### F-94-02: Generic CSV merchant inference picks first Korean-text column, not best (ENHANCEMENT)
+Both generic CSV parsers iterate columns left-to-right, pick the first non-reserved
+column with any Korean text. This can misidentify memo/비고 columns that appear before
+the actual merchant column. Better: rank by Korean text density.
 
-## Previous Cycle Findings (Resolved)
-- F-90-01 (server PDF isValidShortDate parity): Fixed in cycle 90 — now uses 4-year window
-- F-90-02 (Missing test coverage for Feb 29): Fixed in cycle 90
-- F-90-03 (D-01 shared module): Deferred (unchanged)
+**Fix**: Collect all candidate columns, rank by Korean character count, pick highest.
 
-## Architecture Notes
-- Server/web parity is excellent across all parsers (CSV, XLSX, PDF)
-- All 6 isValidShortDate/isDateLikeShort implementations use 4-year window (C88-01)
-- Column matching, header detection, and summary row patterns are fully shared
-- 24 bank adapters on both server and web sides
+### F-94-03: Missing header keyword "매입일자" in date column pattern (FORMAT DIVERSITY)
+Date column pattern includes "매입일" but not "매입일자" (common variant). This causes
+header detection failure for banks using "매입일자" as a date column name.
 
-## Deferred Items (unchanged)
-- D-01: Shared module between Bun/browser (significant refactor)
-- PDF multi-line header support (needs fixture data)
-- Historical amount display (low priority)
-- Card name suffixes (low priority)
-- Global config integration (feature work)
-- Generic parser fallback (needs UX decisions)
-- CSS dark mode (frontend work)
+**Fix**: Add "매입일자" to DATE_COLUMN_PATTERN, HEADER_KEYWORDS, DATE_KEYWORDS in
+both server and web column-matcher files.
+
+## Deferred Items
+- D-01: PDF multi-line header support (architectural)
+- D-02: Web-side code duplication / shared module refactor
+- D-03: Six copies of isValidShortDate/parseAmount (consistent, defer to shared module)
+- D-04: Historical amount display format, card name suffixes, global config
