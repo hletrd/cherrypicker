@@ -38,4 +38,5 @@ export {
 
 export {
   buildCategoryNamesKo,
+  buildCategoryLabelMap,
 } from './category-names.js';

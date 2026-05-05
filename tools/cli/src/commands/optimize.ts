@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { parseStatement } from '@cherrypicker/parser';
 import { MerchantMatcher, buildConstraints, optimize } from '@cherrypicker/core';
-import { loadCategories, loadAllCardRules } from '@cherrypicker/rules';
+import { loadCategories, loadAllCardRules, buildCategoryLabelMap } from '@cherrypicker/rules';
 import type { RawTransaction } from '@cherrypicker/parser';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import { printCardComparison, printOptimizationResult } from '@cherrypicker/viz';
@@ -92,16 +92,7 @@ export async function runOptimize(args: string[]): Promise<void> {
   const matcher = new MerchantMatcher(categories);
 
   // Build category labels map for the optimizer
-  const categoryLabels = new Map<string, string>();
-  for (const node of categories) {
-    categoryLabels.set(node.id, node.labelKo);
-    if (node.subcategories) {
-      for (const sub of node.subcategories) {
-        categoryLabels.set(sub.id, sub.labelKo);
-        categoryLabels.set(`${node.id}.${sub.id}`, sub.labelKo);
-      }
-    }
-  }
+  const categoryLabels = buildCategoryLabelMap(categories);
 
   const categorized: CategorizedTransaction[] = parseResult.transactions.map((tx: RawTransaction, idx: number) => {
     const match = matcher.match(tx.merchant, tx.category);
