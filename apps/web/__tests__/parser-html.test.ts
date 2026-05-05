@@ -81,6 +81,37 @@ describe('HTML Table Parser (web)', () => {
     it('leaves well-formed tags unchanged', () => {
       expect(normalizeHTML('<td>content</td>')).toBe('<td>content</td>');
     });
+
+    it('strips script tags and their contents (C22-TEST01)', () => {
+      expect(normalizeHTML('<td><script>alert(1)</script>value</td>')).toBe('<td>value</td>');
+    });
+
+    it('strips style tags and their contents (C22-TEST01)', () => {
+      expect(normalizeHTML('<style>body{color:red}</style><td>value</td>')).toBe('<td>value</td>');
+    });
+
+    it('strips iframe tags (C22-TEST01)', () => {
+      expect(normalizeHTML('<iframe src="evil"></iframe><td>value</td>')).toBe('<td>value</td>');
+    });
+
+    it('strips object and embed tags (C22-TEST01)', () => {
+      expect(normalizeHTML('<object data="evil"></object><td>value</td>')).toBe('<td>value</td>');
+      expect(normalizeHTML('<embed src="evil"><td>value</td>')).toBe('<td>value</td>');
+    });
+
+    it('removes quoted event handler attributes (C22-TEST01)', () => {
+      expect(normalizeHTML('<td onclick="alert(1)">value</td>')).toBe('<td>value</td>');
+      expect(normalizeHTML('<td onerror=\'console.log(1)\'>value</td>')).toBe('<td>value</td>');
+    });
+
+    it('removes unquoted event handler attributes with non-word values (C22-TEST01)', () => {
+      expect(normalizeHTML('<td onclick=alert(1)>value</td>')).toBe('<td>value</td>');
+      expect(normalizeHTML('<td onerror=foo(bar)>value</td>')).toBe('<td>value</td>');
+    });
+
+    it('removes event handler attributes without values (C22-TEST01)', () => {
+      expect(normalizeHTML('<td onclick=>value</td>')).toBe('<td>value</td>');
+    });
   });
 
   describe('Edge cases', () => {
