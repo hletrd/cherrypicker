@@ -156,5 +156,19 @@ describe('HTML Table Parser (web)', () => {
       const result = parseHTML(content);
       expect(result.transactions).toHaveLength(2);
     });
+
+    it('does not forward-fill summary row amounts to merged cells (C20-TEST03)', () => {
+      const content = `<table>
+<tr><th>날짜</th><th>가맹점</th><th>금액</th></tr>
+<tr><td>2024.01.15</td><td>스타벅스</td><td>5,000</td></tr>
+<tr><td></td><td>총합계</td><td>999,999</td></tr>
+<tr><td>2024.01.16</td><td>이마트</td><td></td></tr>
+</table>`;
+
+      const result = parseHTML(content);
+      const emartTx = result.transactions.find((t) => t.merchant.includes('이마트'));
+      expect(emartTx).toBeDefined();
+      expect(emartTx!.amount).not.toBe(999999);
+    });
   });
 });
