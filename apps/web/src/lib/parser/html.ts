@@ -29,8 +29,6 @@ function normalizeHTML(html: string): string {
 
 /** Parse HTML content and extract transactions from tables. */
 export function parseHTML(content: string, bank?: BankId): ParseResult {
-  const errors: ParseError[] = [];
-  const transactions: RawTransaction[] = [];
   const resolvedBank: BankId | null = bank ?? detectBank(content).bank ?? null;
 
   const normalized = normalizeHTML(content);

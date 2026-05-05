@@ -20,7 +20,6 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
  *  from its main entry point. Matches the official TextItem / TextMarkedContent
  *  union — only `str` is accessed, so we narrow with `'str' in item`. */
 type PdfTextItem = { str: string; dir: string; transform: unknown[]; width: number; height: number; hasEOL: boolean };
-type PdfTextMarkedContent = { type: string; id: string };
 
 // ---------------------------------------------------------------------------
 // Table parser (ported from packages/parser/src/pdf/table-parser.ts)
@@ -239,7 +238,7 @@ function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
 
 /** Shared date-parsing — delegates to the canonical implementation in
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
-import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate, daysInMonth } from './date-utils.js';
+import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from './date-utils.js';
 
 function parseDateToISO(raw: string, errors?: ParseError[]): string {
   const result = parseDateStringToISO(raw);

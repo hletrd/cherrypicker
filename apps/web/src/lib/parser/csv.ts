@@ -49,7 +49,7 @@ function splitLine(line: string, delimiter: string): string[] {
  *  behavior of the previous `content.split('\n').filter(l => l.trim())`
  *  pattern used throughout the CSV parsers. Parity with server-side
  *  splitCSVContent in packages/parser/src/csv/shared.ts (C67-01). */
-function splitCSVContent(content: string, delimiter: string): string[] {
+function splitCSVContent(content: string, _delimiter: string): string[] {
   const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const rawLines = normalized.split('\n');
 
