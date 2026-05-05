@@ -6,6 +6,7 @@ import type { RawTransaction } from '@cherrypicker/parser';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import { printSpendingSummary } from '@cherrypicker/viz';
 import { validateFilePath } from '../validation.js';
+import { requireRemoteLLMConsent } from '../consent.js';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
   new URL('../../../..', import.meta.url).pathname,
@@ -17,17 +18,19 @@ function parseArgs(args: string[]): {
   bank?: string;
   categoriesPath?: string;
   allowRemoteLLM: boolean;
+  yes: boolean;
 } {
   const file = args[0];
   if (!file) {
     throw new Error(
-      '명세서 파일 경로를 지정하세요.\n  사용법: cherrypicker analyze <statement-file> [--bank <bankId>] [--allow-remote-llm]',
+      '명세서 파일 경로를 지정하세요.\n  사용법: cherrypicker analyze <statement-file> [--bank <bankId>] [--allow-remote-llm] [--yes]',
     );
   }
 
   let bank: string | undefined;
   let categoriesPath: string | undefined;
   let allowRemoteLLM = false;
+  let yes = false;
   for (let i = 1; i < args.length; i++) {
     if (args[i] === '--bank' && args[i + 1]) {
       bank = args[i + 1];
@@ -37,15 +40,19 @@ function parseArgs(args: string[]): {
       i++;
     } else if (args[i] === '--allow-remote-llm') {
       allowRemoteLLM = true;
+    } else if (args[i] === '--yes') {
+      yes = true;
     }
   }
-  return { file, bank, categoriesPath, allowRemoteLLM };
+  return { file, bank, categoriesPath, allowRemoteLLM, yes };
 }
 
 export async function runAnalyze(args: string[]): Promise<void> {
-  const { file, bank, categoriesPath, allowRemoteLLM } = parseArgs(args);
+  const { file, bank, categoriesPath, allowRemoteLLM, yes } = parseArgs(args);
 
   validateFilePath(file, { mustExist: true, label: '명세서 파일' });
+
+  const resolvedAllowRemoteLLM = await requireRemoteLLMConsent(file, allowRemoteLLM, yes);
 
   console.log(`파일 분석 중: ${file}`);
 
@@ -53,7 +60,7 @@ export async function runAnalyze(args: string[]): Promise<void> {
     ...(bank
       ? { bank: bank as Parameters<typeof parseStatement>[1] extends { bank?: infer B } ? B : never }
       : {}),
-    allowRemoteLLM,
+    allowRemoteLLM: resolvedAllowRemoteLLM,
   });
 
   if (parseResult.errors.length > 0) {

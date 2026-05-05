@@ -1,9 +1,31 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, beforeAll, afterAll } from 'bun:test';
+import { mkdtempSync, writeFileSync, unlinkSync, rmdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { runAnalyze } from '../src/commands/analyze.js';
 import { runOptimize } from '../src/commands/optimize.js';
 import { runReport } from '../src/commands/report.js';
 import { runScrape } from '../src/commands/scrape.js';
 import { validateFilePath } from '../src/validation.js';
+import { requireRemoteLLMConsent } from '../src/consent.js';
+
+let tempDir: string;
+let tempPdf: string;
+let tempCsv: string;
+
+beforeAll(() => {
+  tempDir = mkdtempSync(join(tmpdir(), 'cherrypicker-test-'));
+  tempPdf = join(tempDir, 'statement.pdf');
+  tempCsv = join(tempDir, 'statement.csv');
+  writeFileSync(tempPdf, 'fake pdf content');
+  writeFileSync(tempCsv, 'date,merchant,amount\n2024-01-01,test,10000');
+});
+
+afterAll(() => {
+  try { unlinkSync(tempPdf); } catch {}
+  try { unlinkSync(tempCsv); } catch {}
+  try { rmdirSync(tempDir); } catch {}
+});
 
 describe('CLI command argument guards', () => {
   test('analyze requires a statement path', async () => {
@@ -20,6 +42,31 @@ describe('CLI command argument guards', () => {
 
   test('scrape requires an issuer', async () => {
     await expect(runScrape([])).rejects.toThrow('--issuer 옵션이 필요합니다');
+  });
+});
+
+describe('LLM fallback consent (C1)', () => {
+  test('PDF without --allow-remote-llm throws with instructions', async () => {
+    await expect(runAnalyze([tempPdf])).rejects.toThrow('--allow-remote-llm');
+  });
+
+  test('non-PDF file skips consent and proceeds to parsing', async () => {
+    // CSV file should skip LLM consent and complete without error
+    await expect(runAnalyze([tempCsv])).resolves.toBeUndefined();
+  });
+
+  test('requireRemoteLLMConsent returns false for non-PDF', async () => {
+    const result = await requireRemoteLLMConsent(tempCsv, false, false);
+    expect(result).toBe(false);
+  });
+
+  test('requireRemoteLLMConsent throws for PDF without flag', async () => {
+    await expect(requireRemoteLLMConsent(tempPdf, false, false)).rejects.toThrow('--allow-remote-llm');
+  });
+
+  test('requireRemoteLLMConsent returns true for PDF with flag in non-interactive mode', async () => {
+    const result = await requireRemoteLLMConsent(tempPdf, true, true);
+    expect(result).toBe(true);
   });
 });
 
