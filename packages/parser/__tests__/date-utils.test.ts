@@ -71,6 +71,14 @@ describe('parseDateStringToISO', () => {
     expect(parseDateStringToISO('2024.01.15')).toBe('2024-01-15');
   });
 
+  test('parses YYYY．MM．DD with full-width dot (U+FF0E) (C22-TEST03)', () => {
+    expect(parseDateStringToISO('2024．01．15')).toBe('2024-01-15');
+  });
+
+  test('parses YYYY。MM。DD with ideographic full stop (U+3002) (C22-TEST03)', () => {
+    expect(parseDateStringToISO('2024。01。15')).toBe('2024-01-15');
+  });
+
   test('parses YYYY/MM/DD', () => {
     expect(parseDateStringToISO('2024/01/15')).toBe('2024-01-15');
   });
