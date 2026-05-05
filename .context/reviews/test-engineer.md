@@ -1,14 +1,21 @@
-# Cycle 86 Test Engineer Review
+# Cycle 88 Test Engineer Review
 
 ## Reviewer: test-engineer
 
 ### Current Coverage
-Excellent. 8519 lines of test code across 10 test files. 1244+ bun + 299+ vitest tests passing.
+Excellent. 1284 bun tests passing across 9 test files. No failures.
 
-### Finding T1 — Missing English-only header detection tests (MEDIUM)
-`column-matcher.test.ts` should verify that `isValidHeaderRow` returns true for rows with only English column names. Currently tests primarily use Korean headers. After adding the missing English keywords to HEADER_KEYWORDS, add tests for:
-- `['Date', 'Merchant', 'Amount']` → true
-- `['Transaction Date', 'Description', 'Total']` → true
-- `['Date', 'Debit', 'Credit']` → true (validates F3 additions)
-- `['Purchase Date', 'Name', 'Amount']` → true (validates F1/F2 additions)
-- `['Settlement Date', 'Payee', 'Net Amount']` → true (validates F1 additions)
+### Finding T1 — Missing leap year short date tests (MEDIUM)
+**Area**: `date-utils.test.ts`, `csv.test.ts`, `table-parser.test.ts`
+
+No tests verify that short dates (MM.DD format) for Feb 29 are accepted during non-leap years. The `isDateLikeShort()` and `isValidShortDate()` functions use `new Date().getFullYear()` for validation, meaning:
+- "2/29" is rejected when the test runs in a non-leap year
+- `parseDateStringToISO("2.29")` fails in non-leap years because `inferYear()` returns the current year
+
+**Required test additions**:
+1. `parseDateStringToISO("2.29")` should produce a valid ISO date when the input is from a leap year context
+2. Short date validation should accept "2.29" as a plausible date regardless of current year
+3. PDF table parser should not drop "2.29" rows from leap-year statements
+
+### Finding T2 — No other test gaps found
+All parser features have corresponding tests. Previous cycle's T1/T2 (desc/amt/txn matching, numeric YYYYMMDD dates) appear resolved.
