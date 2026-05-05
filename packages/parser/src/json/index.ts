@@ -62,7 +62,7 @@ const MEMO_ALIASES = [
  *  Returns the value if found, undefined otherwise. */
 function findField(obj: Record<string, unknown>, aliases: string[]): unknown {
   for (const alias of aliases) {
-    if (alias in obj) return obj[alias];
+    if (Object.hasOwn(obj, alias)) return obj[alias];
     // Case-insensitive fallback for English aliases
     const lower = alias.toLowerCase();
     for (const key of Object.keys(obj)) {
