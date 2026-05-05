@@ -1499,4 +1499,32 @@ describe('C88-01: Leap year short date validation in CSV', () => {
     const dateErrors = result.errors.filter((e) => e.message.includes('날짜'));
     expect(dateErrors).toHaveLength(0);
   });
+
+  test('generic CSV merchant inference prefers column with most Korean text (C94-02)', () => {
+    // Memo column (비고) at index 2 has some Korean text, but merchant column
+    // at index 3 has much more Korean text. The improved inference should pick
+    // the column with the highest Korean character count, not just the first.
+    const content = [
+      '날짜,금액,비고,상세내역',
+      '2024-01-15,10000,확인,스타벅스 강남점',
+      '2024-01-16,20000,완료,이마트 장보기',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    // The merchant column should be index 3 (상세내역) which has more Korean chars
+    expect(result.transactions[0]?.merchant).toContain('스타벅스');
+    expect(result.transactions[1]?.merchant).toContain('이마트');
+  });
+
+  test('generic CSV detects 매입일자 as date column header (C94-03)', () => {
+    const content = [
+      '매입일자,가맹점,이용금액',
+      '2024-01-15,편의점,5000',
+      '2024-01-16,카페,8000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+    expect(result.transactions[0]?.merchant).toBe('편의점');
+  });
 });

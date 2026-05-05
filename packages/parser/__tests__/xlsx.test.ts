@@ -1137,4 +1137,41 @@ describe('XLSX amount forward-fill and whitespace guard (C73-01/C73-02)', () => 
       cleanup(filePath);
     }
   });
+
+  test('XLSX parser reports error for invalid date from serial date conversion (C94-01)', async () => {
+    // Use a string date that parseDateToISO cannot parse — the isValidISODate
+    // post-check should catch it and report an error.
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['invalid-date-string', '테스트', 5000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Should have at least one date parse error
+      const dateErrors = result.errors.filter((e) =>
+        e.message.includes('날짜를 해석할 수 없습니다'),
+      );
+      expect(dateErrors.length).toBeGreaterThanOrEqual(1);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('XLSX parser with valid date produces no date errors', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      ['2024-01-15', '스타벅스', 5500],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.date).toBe('2024-01-15');
+      const dateErrors = result.errors.filter((e) =>
+        e.message.includes('날짜를 해석할 수 없습니다'),
+      );
+      expect(dateErrors).toHaveLength(0);
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });

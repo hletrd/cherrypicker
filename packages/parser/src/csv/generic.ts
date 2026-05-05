@@ -186,21 +186,32 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     // numeric columns like installments or card number suffixes.
     if (dateCol !== -1 && amountCol !== -1 && merchantCol === -1) {
       const reservedCols = new Set([dateCol, amountCol, installmentsCol, categoryCol, memoCol].filter((c) => c !== -1));
+      // Rank candidate columns by Korean character count — the merchant column
+      // in Korean bank exports has the highest Korean text density. This avoids
+      // misidentifying memo/비고 columns that happen to precede the merchant
+      // column when iterating left-to-right (C94-02).
+      let bestCol = -1;
+      let bestKoreanCount = 0;
       for (let i = 0; i < headers.length; i++) {
         if (!reservedCols.has(i)) {
-          // Check if any sample data in this column contains Korean characters
-          const hasKorean = sampleRows.some((row) => {
+          let koreanCount = 0;
+          for (const row of sampleRows) {
             const cells = splitCSVLine(row, delimiter);
-            return /[가-힣]/.test(cells[i] ?? '');
-          });
-          if (hasKorean) {
-            merchantCol = i;
-            break;
+            const cell = cells[i] ?? '';
+            for (const ch of cell) {
+              if (ch >= '가' && ch <= '힯') koreanCount++;
+            }
+          }
+          if (koreanCount > bestKoreanCount) {
+            bestKoreanCount = koreanCount;
+            bestCol = i;
           }
         }
       }
-      // Fallback: pick the first non-reserved column even without Korean
-      if (merchantCol === -1) {
+      if (bestCol !== -1) {
+        merchantCol = bestCol;
+      } else {
+        // Fallback: pick the first non-reserved column even without Korean
         for (let i = 0; i < headers.length; i++) {
           if (!reservedCols.has(i)) {
             merchantCol = i;

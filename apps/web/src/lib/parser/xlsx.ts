@@ -616,8 +616,27 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     // and would inflate monthly spending totals (C42-01/C42-02).
     if (amount <= 0) continue;
 
+    const parsedDate = parseDateToISO(dateRaw, errors, i);
+    // Validate that the parsed date is a proper ISO date string (YYYY-MM-DD).
+    // Without this check, invalid dates from failed serial date conversions
+    // (e.g., "45678") or corrupted data leak into the transaction object.
+    // Parity with CSV adapter-factory and generic CSV parser which both
+    // validate with isValidISODate after parseDateStringToISO (C94-01).
+    if (!isValidISODate(parsedDate) && String(dateRaw ?? '').trim()) {
+      const alreadyReported = errors.some(
+        (e) => e.line === i + 1 && e.message.includes('날짜를 해석할 수 없습니다'),
+      );
+      if (!alreadyReported) {
+        errors.push({
+          line: i + 1,
+          message: `날짜를 해석할 수 없습니다: ${String(dateRaw).trim()}`,
+          raw: rowText,
+        });
+      }
+    }
+
     const tx: RawTransaction = {
-      date: parseDateToISO(dateRaw, errors, i),
+      date: parsedDate,
       merchant: String(merchantRaw ?? '').replace(/^"(.*)"$/, '$1').trim(),
       amount,
       ...(installCol !== -1 && installRaw

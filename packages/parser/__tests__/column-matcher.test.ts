@@ -2514,4 +2514,21 @@ describe('Cycle 87: HEADER_KEYWORDS completeness (C87-02)', () => {
   it('isValidHeaderRow accepts date + remark headers (2 categories)', () => {
     expect(isValidHeaderRow(['date', 'remark', 'amount'])).toBe(true);
   });
+
+  // Verify "매입일자" header keyword is recognized (C94-03)
+  it('HEADER_KEYWORDS contains 매입일자', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('매입일자')).toBe(true);
+  });
+
+  it('DATE_COLUMN_PATTERN matches 매입일자', () => {
+    expect(DATE_COLUMN_PATTERN.test('매입일자')).toBe(true);
+  });
+
+  it('findColumn detects 매입일자 as date column', () => {
+    expect(findColumn(['매입일자', '가맹점', '금액'], undefined, DATE_COLUMN_PATTERN)).toBe(0);
+  });
+
+  it('isValidHeaderRow accepts 매입일자 + amount headers (2 categories)', () => {
+    expect(isValidHeaderRow(['매입일자', '가맹점', '금액'])).toBe(true);
+  });
 });
