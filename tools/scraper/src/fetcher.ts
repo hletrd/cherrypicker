@@ -3,50 +3,62 @@ import * as cheerio from 'cheerio';
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
+const FETCH_TIMEOUT_MS = 30_000;
+
 /**
  * Fetch a card product page and return its raw HTML.
  * Handles Korean EUC-KR encoding by detecting charset and re-decoding if needed.
+ * Aborts after 30 seconds to prevent hanging on unresponsive hosts.
  */
 export async function fetchCardPage(url: string): Promise<string> {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': USER_AGENT,
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Accept-Encoding': 'gzip, deflate, br',
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText} — ${url}`);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText} — ${url}`);
+    }
+
+    const contentType = response.headers.get('content-type') ?? '';
+
+    // Check for EUC-KR encoding (common on older Korean banking sites)
+    const isEucKr =
+      contentType.toLowerCase().includes('euc-kr') ||
+      contentType.toLowerCase().includes('ks_c_5601');
+
+    if (isEucKr) {
+      const buffer = await response.arrayBuffer();
+      const decoder = new TextDecoder('euc-kr');
+      return decoder.decode(buffer);
+    }
+
+    const text = await response.text();
+
+    // Also check meta charset in HTML head for cases where Content-Type doesn't specify
+    const metaCharset = text.match(/<meta[^>]+charset=["']?([^"'\s;>]+)/i)?.[1]?.toLowerCase();
+    if (metaCharset && (metaCharset === 'euc-kr' || metaCharset === 'ks_c_5601-1987')) {
+      const buffer = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'User-Agent': USER_AGENT },
+      }).then((r) => r.arrayBuffer());
+      const decoder = new TextDecoder('euc-kr');
+      return decoder.decode(buffer);
+    }
+
+    return text;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const contentType = response.headers.get('content-type') ?? '';
-
-  // Check for EUC-KR encoding (common on older Korean banking sites)
-  const isEucKr =
-    contentType.toLowerCase().includes('euc-kr') ||
-    contentType.toLowerCase().includes('ks_c_5601');
-
-  if (isEucKr) {
-    const buffer = await response.arrayBuffer();
-    const decoder = new TextDecoder('euc-kr');
-    return decoder.decode(buffer);
-  }
-
-  const text = await response.text();
-
-  // Also check meta charset in HTML head for cases where Content-Type doesn't specify
-  const metaCharset = text.match(/<meta[^>]+charset=["']?([^"'\s;>]+)/i)?.[1]?.toLowerCase();
-  if (metaCharset && (metaCharset === 'euc-kr' || metaCharset === 'ks_c_5601-1987')) {
-    const buffer = await fetch(url, {
-      headers: { 'User-Agent': USER_AGENT },
-    }).then((r) => r.arrayBuffer());
-    const decoder = new TextDecoder('euc-kr');
-    return decoder.decode(buffer);
-  }
-
-  return text;
 }
 
 /**
