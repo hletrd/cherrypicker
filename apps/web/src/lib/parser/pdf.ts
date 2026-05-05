@@ -426,14 +426,15 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
         }
         continue;
       }
-      // Skip zero-amount rows (balance inquiries) but accept negative amounts
-      // (refunds/credits) by taking absolute value (C100-02).
-      if (amount === 0) continue;
+      // Skip zero- and negative-amount rows (balance inquiries, refunds,
+      // credits). These don't contribute to spending optimization.
+      // Matches server-side PDF parser behavior (C8-01).
+      if (amount <= 0) continue;
 
       const tx: RawTransaction = {
         date: parseDateToISO((row[dateIdx] ?? '').trim(), parseErrors),
         merchant,
-        amount: Math.abs(amount),
+        amount,
       };
 
       // Extract category from header-detected column
@@ -611,16 +612,17 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
             errors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountRaw.trim()}`));
           }
           // Skip unparseable amounts
-        } else if (amount !== 0) {
-          // Accept non-zero amounts (including refunds) and take absolute value
-          // for spending optimization parity with other parsers (C100-02).
+        } else if (amount > 0) {
+          // Only positive amounts contribute to spending optimization.
+          // Refunds/credits (negative amounts) are skipped, matching
+          // server-side PDF parser behavior (C8-01).
           fallbackTransactions.push({
             date: parseDateToISO(dateMatch[1]!, errors),
             merchant: between.replace(/\s+/g, ' ').trim(),
-            amount: Math.abs(amount),
+            amount,
           });
         }
-        // amount === 0: skip zero-amount rows (balance inquiries)
+        // amount <= 0: skip zero-amount rows (balance inquiries) and refunds
       }
     }
   }

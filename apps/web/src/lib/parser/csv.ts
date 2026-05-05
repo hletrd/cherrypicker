@@ -429,7 +429,8 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
       }
       continue;
     }
-    amount = Math.abs(amount);
+    // Skip negative amounts (refunds/credits), matching server-side behavior (C8-01).
+    if (amount <= 0) continue;
 
     const tx: RawTransaction = {
       date: parseDateToISO(dateRaw, errors, i),
@@ -549,7 +550,8 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
           }
           continue;
         }
-        amount = Math.abs(amount);
+        // Skip negative amounts (refunds/credits), matching server-side behavior (C8-01).
+        if (amount <= 0) continue;
 
         const tx: RawTransaction = {
           date: parseDateToISO(dateRaw, errors, i),
