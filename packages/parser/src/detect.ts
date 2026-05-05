@@ -244,6 +244,8 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
     format = 'xlsx';
   } else if (ext === '.pdf') {
     format = 'pdf';
+  } else if (ext === '.json') {
+    format = 'json';
   } else {
     // Try to sniff from first bytes
     sniffBuffer = await readFile(filePath);
@@ -261,9 +263,20 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
     else if (header[0] === 0xd0 && header[1] === 0xcf) {
       format = 'xlsx';
     }
-    // Default to CSV for text-like content
+    // Check for JSON content: first non-whitespace char is [ or {
     else {
-      format = 'csv';
+      const head = sniffBuffer.slice(0, 256).toString('utf-8').trimStart();
+      if (head.startsWith('[') || head.startsWith('{')) {
+        try {
+          JSON.parse(sniffBuffer.toString('utf-8'));
+          format = 'json';
+        } catch {
+          format = 'csv';
+        }
+      } else {
+        // Default to CSV for text-like content
+        format = 'csv';
+      }
     }
   }
 

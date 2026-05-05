@@ -1,34 +1,64 @@
-# Code Reviewer -- Cycle 95
+# Cycle 97 Deep Code Review -- code-reviewer
 
-## Summary
-After 94 cycles, parser handles extensive format diversity. This review identifies keyword/pattern parity bugs between column regex patterns and the keyword Sets used by `isValidHeaderRow()`.
+## Review Scope
+Full review of packages/parser/src/ focusing on harder edge cases, more flexibility, more modality, and more reliability after 96 cycles.
 
-## Findings
+## Baseline: 1317 bun + 306 vitest tests passing
 
-### F-95-01: MERCHANT_KEYWORDS Set missing 3 entries from MERCHANT_COLUMN_PATTERN (BUG)
-**Severity: Medium** -- `isValidHeaderRow()` requires keywords from 2+ categories. Missing keywords cause header detection failure for banks using these terms.
+---
 
-Missing from `MERCHANT_KEYWORDS` but present in `MERCHANT_COLUMN_PATTERN`:
-- `구매내용` (purchase description)
-- `취소가맹점` (cancelled merchant)
-- `가게` (store/shop)
+## Finding F-01: No JSON Transaction Format Support [MODALITY]
+**Severity: HIGH**
+**Files:** `types.ts`, `detect.ts`, `index.ts`
 
-File: `packages/parser/src/csv/column-matcher.ts` line 111
+The parser only supports CSV, XLSX, and PDF. JSON transaction exports from banking APIs, mobile apps, and financial tools are completely unsupported. Many Korean banking apps (Kakao, Toss) offer JSON exports. The `FileFormat` type is `'csv' | 'xlsx' | 'pdf'` with no extension path.
 
-### F-95-02: CATEGORY_KEYWORDS Set missing 2 entries from CATEGORY_COLUMN_PATTERN (BUG)
-**Severity: Low** -- Same parity issue for category keywords.
+**Impact:** Users with JSON exports cannot use the tool without manual conversion.
 
-Missing from `CATEGORY_KEYWORDS` but present in `CATEGORY_COLUMN_PATTERN`:
-- `가맹점유형` (merchant type)
-- `매장유형` (store type)
+---
 
-File: `packages/parser/src/csv/column-matcher.ts` line 113
+## Finding F-02: Duplicated parseAmount Across 3 Parsers [RELIABILITY]
+**Severity: MEDIUM**
+**Files:** `csv/shared.ts`, `xlsx/index.ts`, `pdf/index.ts`
 
-### F-95-03: AMOUNT_COLUMN_PATTERN missing "원금" (FORMAT DIVERSITY)
-**Severity: Low** -- "원금" means "principal amount" and is used by some Korean bank exports. Not in `AMOUNT_COLUMN_PATTERN` or `AMOUNT_KEYWORDS`.
+The amount parsing logic (fullwidth normalization, KRW prefix, Won sign, 마이너스, trailing minus, parenthesized negatives, Math.round) is copy-pasted across all three parsers with identical logic (~25 lines each).
 
-File: `packages/parser/src/csv/column-matcher.ts` lines 74, 112
+**Risk:** Bug fixes in one copy don't propagate. The XLSX `parseAmount` could diverge from CSV's `parseCSVAmount` or PDF's `parseAmount`.
+
+**Fix:** Extract to a shared `parseAmountString()` in `shared.ts` used by all three parsers.
+
+---
+
+## Finding F-03: Duplicated isValidShortDate/isDateLikeShort Across 4 Files [RELIABILITY]
+**Severity: MEDIUM**
+**Files:** `csv/generic.ts`, `pdf/index.ts`, `pdf/table-parser.ts`
+
+Short-date validation logic (MM.DD format with month/day range checks, 4-year leap year window) is duplicated in 3 files.
+
+**Fix:** Extract to a shared function in `date-utils.ts`.
+
+---
+
+## Finding F-04: CSV Parser Silent Skip on Short Rows [HARDER]
+**Severity: LOW-MEDIUM**
+**Files:** `csv/generic.ts`, `csv/adapter-factory.ts`
+
+When a data row has fewer columns than the header, `cells[dateCol]` returns undefined and the row is silently skipped. No diagnostic for column-count mismatches.
+
+**Fix:** Add bounds checking that explicitly handles short rows, logging a debug message.
+
+---
+
+## Finding F-05: Web-Side Parser Also Missing JSON Support [MODALITY]
+**Severity: MEDIUM**
+**Files:** `apps/web/src/lib/parser/`
+
+Web-side parser has the same limitation — no JSON support. `parseFile` only handles csv/xlsx/pdf.
+
+---
 
 ## Deferred Items
-- D-01: PDF multi-line header support (architectural)
-- D-02: Shared module refactor for duplicated parseAmount/isValidShortDate
+- D-01: OFX/QFX format support (complex SGML-like format)
+- D-02: HTML table as standalone format (handled by XLSX HTML-as-XLS detection)
+- D-03: Clipboard paste format (depends on UI)
+- D-04: Confidence scoring for parsed transactions (significant feature)

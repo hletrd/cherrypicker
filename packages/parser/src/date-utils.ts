@@ -192,6 +192,34 @@ export function parseDateStringToISO(raw: string): string {
   return cleaned;
 }
 
+/** Validate short-date format (MM/DD or MM.DD) with month-aware day range
+ *  checks. Used by CSV generic parser, PDF parser, and PDF table parser
+ *  to prevent decimal amounts like "3.5" from being misidentified as dates
+ *  and to reject impossible dates like "2/31" (Feb 31), "4/31" (Apr 31).
+ *  Uses daysInMonth() with a 4-year leap year window (C88-01). Shared
+ *  across all parsers to eliminate duplication (C97-03). */
+export function isValidShortDate(cell: string): boolean {
+  // Strip trailing delimiters before matching — Korean bank exports may
+  // append a period or slash to dates (e.g., "1.15." or "1/15/").
+  const stripped = cell.replace(/[.\-\/．。]\s*$/, '');
+  const match = stripped.match(/^\d{1,2}[.\-\/．。]\d{1,2}$/);
+  if (!match) return false;
+  const parts = stripped.split(/[.\-\/．。]/);
+  const month = parseInt(parts[0] ?? '', 10);
+  const day = parseInt(parts[1] ?? '', 10);
+  if (month < 1 || month > 12) return false;
+  // Accept dates valid in any year within a 4-year window (current year back
+  // to 3 years ago). This ensures Feb 29 from leap-year statements is accepted
+  // regardless of when the parser runs, since leap years occur every 4 years.
+  const thisYear = new Date().getFullYear();
+  return day >= 1 && (
+    day <= daysInMonth(thisYear, month) ||
+    day <= daysInMonth(thisYear - 1, month) ||
+    day <= daysInMonth(thisYear - 2, month) ||
+    day <= daysInMonth(thisYear - 3, month)
+  );
+}
+
 /** Check if a string is a valid ISO 8601 date (YYYY-MM-DD).
  *  Used by parsers to detect unparseable dates returned by
  *  parseDateStringToISO() and report them as parse errors.

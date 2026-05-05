@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { parseDateStringToISO, daysInMonth, isValidDayForMonth, inferYear, isValidISODate, isValidYYMMDD, isValidYYYYMMDD } from '../src/date-utils.js';
+import { parseDateStringToISO, daysInMonth, isValidDayForMonth, inferYear, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from '../src/date-utils.js';
 
 describe('daysInMonth', () => {
   test('returns 28 for Feb in non-leap year', () => {
@@ -377,5 +377,57 @@ describe('isValidYYYYMMDD', () => {
   test('rejects 8-digit non-date numbers', () => {
     expect(isValidYYYYMMDD('12345678')).toBe(false);
     expect(isValidYYYYMMDD('99999999')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isValidShortDate — shared short-date validation (C97-03)
+// ---------------------------------------------------------------------------
+
+describe('isValidShortDate', () => {
+  test('accepts valid month/day pairs', () => {
+    expect(isValidShortDate('1/15')).toBe(true);
+    expect(isValidShortDate('12/31')).toBe(true);
+    expect(isValidShortDate('3.5')).toBe(true);
+    expect(isValidShortDate('6.30')).toBe(true);
+  });
+
+  test('rejects invalid months', () => {
+    expect(isValidShortDate('0/15')).toBe(false);
+    expect(isValidShortDate('13/1')).toBe(false);
+  });
+
+  test('rejects impossible days', () => {
+    expect(isValidShortDate('2/31')).toBe(false); // Feb 31
+    expect(isValidShortDate('4/31')).toBe(false); // Apr 31
+    expect(isValidShortDate('6/31')).toBe(false); // Jun 31
+    expect(isValidShortDate('9/31')).toBe(false); // Sep 31
+    expect(isValidShortDate('11/31')).toBe(false); // Nov 31
+  });
+
+  test('rejects zero day', () => {
+    expect(isValidShortDate('1/0')).toBe(false);
+  });
+
+  test('accepts Feb 29 (leap year window)', () => {
+    expect(isValidShortDate('2/29')).toBe(true);
+  });
+
+  test('rejects non-date-like strings', () => {
+    expect(isValidShortDate('abc')).toBe(false);
+    expect(isValidShortDate('')).toBe(false);
+    expect(isValidShortDate('2024-01-15')).toBe(false);
+  });
+
+  test('rejects decimal amounts like 3.5 where day exceeds month limit', () => {
+    // "3.5" is March 5, which is valid
+    expect(isValidShortDate('3.5')).toBe(true);
+    // "12.34" is Dec 34, which is invalid
+    expect(isValidShortDate('12.34')).toBe(false);
+  });
+
+  test('handles trailing delimiters', () => {
+    expect(isValidShortDate('1/15/')).toBe(true);
+    expect(isValidShortDate('1.15.')).toBe(true);
   });
 });

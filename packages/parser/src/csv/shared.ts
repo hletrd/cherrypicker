@@ -92,34 +92,11 @@ export function splitCSVContent(content: string, delimiter: string): string[] {
   return logicalLines;
 }
 
-/** Parse an amount string from CSV data. Returns null for unparseable inputs
- *  (NaN), handles parenthesized negatives like (1,234) → -1234, uses
- *  Math.round(parseFloat(...)) for correct rounding (C21-03/C35-01), and
- *  strips Korean Won suffix, comma separators, and internal whitespace
- *  (C70-04 — matches the web CSV parser's behavior). */
+/** Parse an amount string from CSV data. Delegates to parseAmountString
+ *  for the actual parsing logic. Kept as a named export for backward
+ *  compatibility with existing imports (C97-02). */
 export function parseCSVAmount(raw: string): number | null {
-  if (!raw.trim()) return null; // Early return for empty/whitespace-only input (C56-04)
-  let cleaned = raw.trim()
-    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
-    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits ０-９ -> 0-9
-    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
-    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
-    .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
-    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-  // Handle "마이너스" prefix — some Korean bank exports use this instead of
-  // a negative sign or parentheses (C32-05). Must be checked before stripping.
-  const isManeuners = /^마이너스/.test(cleaned);
-  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
-  // Handle trailing minus sign — some Korean bank exports use "1,234-"
-  // instead of "-1,234" for negative amounts (C68-01).
-  const hasTrailingMinus = /\d-$/.test(cleaned);
-  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
-  const isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
-  if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
-  if (!cleaned) return null;
-  const n = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(n)) return null;
-  return isNeg ? -n : n;
+  return parseAmountString(raw);
 }
 
 /** Validate that a parsed amount is usable for optimization: not null (parseable),
@@ -142,6 +119,45 @@ export function isValidCSVAmount(
   }
   if (amount <= 0) return false;
   return true;
+}
+
+/** Parse an amount string to a number. Handles all Korean Won amount formats:
+ *  - Fullwidth digits (０-９), fullwidth comma/dot/minus, fullwidth parentheses
+ *  - KRW currency prefix
+ *  - Won sign (₩/￦) prefix and 원 suffix
+ *  - 마이너스 prefix for negative amounts
+ *  - Parenthesized negatives: (1,234) → -1234
+ *  - Trailing minus: 1,234- → -1234
+ *  - Leading plus: +1,234 → 1234
+ *  - Comma-separated thousands: 1,234,567
+ *  - Bare integers: 10000 or 10000원
+ *
+ *  Returns null for unparseable inputs (NaN), matching the behavior of the
+ *  per-parser amount parsing functions. Shared across CSV, XLSX, and PDF
+ *  parsers to eliminate code duplication (C97-02). */
+export function parseAmountString(raw: string): number | null {
+  if (!raw.trim()) return null;
+  let cleaned = raw.trim()
+    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts
+    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits ０-９ -> 0-9
+    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
+    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
+    .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix
+    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+  // Handle "마이너스" prefix — some Korean bank exports use this instead of
+  // a negative sign or parentheses.
+  const isManeuners = /^마이너스/.test(cleaned);
+  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
+  // Handle trailing minus sign — some Korean bank exports use "1,234-"
+  // instead of "-1,234" for negative amounts.
+  const hasTrailingMinus = /\d-$/.test(cleaned);
+  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
+  const isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
+  if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
+  if (!cleaned) return null;
+  const n = Math.round(parseFloat(cleaned));
+  if (Number.isNaN(n)) return null;
+  return isNeg ? -n : n;
 }
 
 /** Parse an installment value from a CSV cell. Returns undefined for

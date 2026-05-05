@@ -1,6 +1,7 @@
 import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
-import { parseDateStringToISO, isValidISODate, daysInMonth, isValidYYMMDD, isValidYYYYMMDD } from '../date-utils.js';
+import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from '../date-utils.js';
+import { parseAmountString } from '../csv/shared.js';
 import { extractText } from './extractor.js';
 import { parseTable, filterTransactionRows, detectHeaderRow, getHeaderColumns } from './table-parser.js';
 import { SUMMARY_ROW_PATTERN } from '../csv/column-matcher.js';
@@ -27,73 +28,15 @@ const AMOUNT_PATTERN = /^[₩￦]\d[\d,]*\s*원?$|^마이너스[\d,]+\s*원?$|^K
 // the web-side pdf.ts STRICT_AMOUNT_PATTERN (C63-01).
 const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+\s*원?$|^KRW[\d,]+\s*원?$|^\+[\d,]+\s*원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*\s*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
 
-/** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
- *  values using month-aware day limits. This prevents decimal amounts
- *  like "3.5" from being misidentified as MM.DD dates (C8-11/C34-03),
- *  and also rejects impossible dates like "2/31" or "4/31".
- *  Uses daysInMonth() from date-utils.ts with current year for correct
- *  leap year handling (C44-01), matching the CSV parser's
- *  isDateLikeShort() approach which also uses daysInMonth(). */
-function isValidShortDate(cell: string): boolean {
-  // Strip trailing delimiters before matching — Korean bank exports may
-  // append a period or slash to dates (e.g., "1.15." or "1/15/") (C57-01).
-  const stripped = cell.replace(/[.\-\/．。]\s*$/, '');
-  const match = stripped.match(SHORT_MD_DATE_PATTERN);
-  if (!match) return false;
-  const parts = stripped.split(/[.\-\/．。]/);
-  const month = parseInt(parts[0] ?? '', 10);
-  const day = parseInt(parts[1] ?? '', 10);
-  if (month < 1 || month > 12) return false;
-  // Accept dates valid in any year within a 4-year window (current year back
-  // to 3 years ago). This ensures Feb 29 from leap-year statements is accepted
-  // regardless of when the parser runs, since leap years occur every 4 years.
-  // Credit card statements rarely span more than 1-2 years, so a 4-year window
-  // is more than sufficient (C88-01). Parity with table-parser.ts, web/pdf.ts,
-  // generic.ts, and web/csv.ts isValidShortDate/isDateLikeShort implementations.
-  const thisYear = new Date().getFullYear();
-  return day >= 1 && (
-    day <= daysInMonth(thisYear, month) ||
-    day <= daysInMonth(thisYear - 1, month) ||
-    day <= daysInMonth(thisYear - 2, month) ||
-    day <= daysInMonth(thisYear - 3, month)
-  );
-}
+// isValidShortDate is imported from date-utils.ts to eliminate duplication
+// across CSV generic parser, PDF parser, and PDF table parser (C97-03).
 
 // Date string parsing delegated to shared parseDateStringToISO from
 // date-utils.ts to avoid divergence (C35-03).
 
-/** Parse an amount string from PDF text. Returns null for unparseable inputs
- *  so callers can distinguish between genuinely zero amounts and parse failures,
- *  matching the CSV parser's isValidAmount() pattern (C33-03/C34-01). */
-function parseAmount(raw: string): number | null {
-  let cleaned = raw
-    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
-    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
-    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
-    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
-    .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
-    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-  // Handle "마이너스" prefix — some Korean bank exports use this instead of
-  // a negative sign or parentheses. Parity with web-side parseAmount
-  // (apps/web/src/lib/parser/pdf.ts) and CSV shared parseCSVAmount.
-  const isManeuners = /^마이너스/.test(cleaned);
-  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
-  // Handle trailing minus sign — some Korean bank exports use "1,234-"
-  // instead of "-1,234" for negative amounts (C68-01).
-  const hasTrailingMinus = /\d-$/.test(cleaned);
-  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
-  const hasParens = cleaned.startsWith('(') && cleaned.endsWith(')');
-  const isNeg = hasParens || isManeuners || hasTrailingMinus;
-  if (hasParens) cleaned = cleaned.slice(1, -1);
-  if (!cleaned.trim()) return null;
-  // Use Math.round(parseFloat(...)) to match the web-side parser's rounding
-  // behavior (C21-03/C32-01). Korean Won amounts are always integers, but
-  // PDF-extracted strings may contain decimal remainders from formula cells;
-  // rounding is more correct than truncation via parseInt (C34-01).
-  const n = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(n)) return null;
-  return isNeg ? -n : n;
-}
+// parseAmount delegates to the shared parseAmountString from csv/shared.ts
+// to eliminate duplication across CSV, XLSX, and PDF parsers (C97-02).
+const parseAmount = parseAmountString;
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {
   for (let i = 0; i < row.length; i++) {

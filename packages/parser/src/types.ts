@@ -1,4 +1,4 @@
-export type FileFormat = 'csv' | 'xlsx' | 'pdf';
+export type FileFormat = 'csv' | 'xlsx' | 'pdf' | 'json';
 export type BankId = 'hyundai' | 'kb' | 'ibk' | 'woori' | 'samsung' | 'shinhan' | 'lotte' | 'hana' | 'nh' | 'bc' | 'kakao' | 'toss' | 'kbank' | 'bnk' | 'dgb' | 'suhyup' | 'jb' | 'kwangju' | 'jeju' | 'sc' | 'mg' | 'cu' | 'kdb' | 'epost';
 
 export interface DetectionResult {

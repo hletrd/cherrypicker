@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { splitCSVLine, splitCSVContent, parseCSVAmount, isValidCSVAmount, parseCSVInstallments } from '../src/csv/shared.js';
+import { splitCSVLine, splitCSVContent, parseCSVAmount, isValidCSVAmount, parseCSVInstallments, parseAmountString } from '../src/csv/shared.js';
 import { normalizeHeader, findColumn, DATE_COLUMN_PATTERN, isValidHeaderRow, HEADER_KEYWORDS } from '../src/csv/column-matcher.js';
 
 // ---------------------------------------------------------------------------
@@ -711,5 +711,71 @@ describe('SUMMARY_ROW_PATTERN - 총소비 variants (C89-02)', () => {
     // "소비금액" without 총 prefix should NOT match since "소비" alone
     // was removed as overly broad
     expect(SUMMARY_ROW_PATTERN.test('소비금액')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseAmountString — shared amount parsing (C97-02)
+// ---------------------------------------------------------------------------
+
+describe('parseAmountString', () => {
+  test('parses comma-separated amounts', () => {
+    expect(parseAmountString('1,234')).toBe(1234);
+    expect(parseAmountString('1,234,567')).toBe(1234567);
+  });
+
+  test('parses bare integers', () => {
+    expect(parseAmountString('10000')).toBe(10000);
+    expect(parseAmountString('10000원')).toBe(10000);
+  });
+
+  test('parses Won sign prefix', () => {
+    expect(parseAmountString('₩1,234')).toBe(1234);
+    expect(parseAmountString('₩1,234원')).toBe(1234);
+  });
+
+  test('parses fullwidth Won sign', () => {
+    expect(parseAmountString('￦1,234')).toBe(1234);
+  });
+
+  test('parses KRW prefix', () => {
+    expect(parseAmountString('KRW1,234')).toBe(1234);
+    expect(parseAmountString('KRW10000')).toBe(10000);
+  });
+
+  test('parses negative amounts', () => {
+    expect(parseAmountString('-1,234')).toBe(-1234);
+    expect(parseAmountString('(1,234)')).toBe(-1234);
+    expect(parseAmountString('1,234-')).toBe(-1234);
+    expect(parseAmountString('마이너스1,234')).toBe(-1234);
+  });
+
+  test('parses fullwidth minus', () => {
+    expect(parseAmountString('－1,234')).toBe(-1234);
+  });
+
+  test('parses leading plus', () => {
+    expect(parseAmountString('+1,234')).toBe(1234);
+  });
+
+  test('parses fullwidth digits', () => {
+    expect(parseAmountString('１，２３４')).toBe(1234);
+    expect(parseAmountString('１２３４５')).toBe(12345);
+  });
+
+  test('returns null for empty or unparseable', () => {
+    expect(parseAmountString('')).toBeNull();
+    expect(parseAmountString('  ')).toBeNull();
+    expect(parseAmountString('abc')).toBeNull();
+  });
+
+  test('rounds decimal amounts', () => {
+    expect(parseAmountString('1,234.5')).toBe(1235);
+    expect(parseAmountString('1,234.4')).toBe(1234);
+  });
+
+  test('parseCSVAmount delegates to parseAmountString', () => {
+    expect(parseCSVAmount('1,234')).toBe(1234);
+    expect(parseCSVAmount('₩500')).toBe(500);
   });
 });

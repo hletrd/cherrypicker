@@ -1,6 +1,6 @@
 import type { BankId, ParseError, ParseResult, RawTransaction } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
-import { parseDateStringToISO, isValidISODate, daysInMonth, isValidYYMMDD, isValidYYYYMMDD } from '../date-utils.js';
+import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from '../date-utils.js';
 import { splitCSVLine, splitCSVContent, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
 import {
   normalizeHeader,
@@ -37,36 +37,9 @@ const DATE_PATTERNS = [
   /^\d{6}$/,                                                      // 240115 (validated by isYYMMDDLike)
 ];
 
-/** Validate short-date format (MM/DD or MM.DD) with month-aware day range
- *  checks. Uses daysInMonth() from date-utils.ts for correct validation
- *  of impossible dates like "2/31" (Feb 31), "4/31" (Apr 31), matching
- *  the PDF parser's isValidShortDate approach which uses MAX_DAYS_PER_MONTH
- *  (F21-01). Also rejects decimal amounts like "3.5" (month 3, day 5
- *  passes daysInMonth) and "12.34" (month 12, day 34 fails). */
-function isDateLikeShort(value: string): boolean {
-  // Strip trailing delimiters before matching — Korean bank exports may
-  // append a period or slash to dates (e.g., "1/15/" or "1.15.") (C57-01).
-  const stripped = value.replace(/[.\-\/．。]\s*$/, '');
-  const match = stripped.match(/^\d{1,2}[\s]*[.\-\/．。][\s]*\d{1,2}$/);
-  if (!match) return false;
-  const parts = stripped.trim().split(/[.\-\/．。]/);
-  const month = parseInt(parts[0] ?? '', 10);
-  const day = parseInt(parts[1] ?? '', 10);
-  if (month < 1 || month > 12) return false;
-  // Accept dates valid in any year within a 4-year window (current year back
-  // to 3 years ago). This ensures Feb 29 from leap-year statements is accepted
-  // regardless of when the parser runs, since leap years occur every 4 years.
-  // Credit card statements rarely span more than 1-2 years, so a 4-year window
-  // is more than sufficient (C88-01). Aligns with inferYear()'s look-back
-  // heuristic which can assign dates to the previous year.
-  const thisYear = new Date().getFullYear();
-  return day >= 1 && (
-    day <= daysInMonth(thisYear, month) ||
-    day <= daysInMonth(thisYear - 1, month) ||
-    day <= daysInMonth(thisYear - 2, month) ||
-    day <= daysInMonth(thisYear - 3, month)
-  );
-}
+// isDateLikeShort delegates to the shared isValidShortDate from date-utils.ts
+// to eliminate duplication across CSV, PDF, and PDF table parsers (C97-03).
+const isDateLikeShort = isValidShortDate;
 
 // Korean amount patterns — must recognize all formats that parseCSVAmount
 // handles, including Won sign prefixes (C7-06).

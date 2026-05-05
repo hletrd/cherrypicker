@@ -3,12 +3,14 @@ import { detectFormatFromFile, detectBankFromText } from './detect.js';
 import { parseCSV } from './csv.js';
 import { parseXLSX } from './xlsx.js';
 import { parsePDF } from './pdf.js';
+import { parseJSON } from './json.js';
 
 export type { FileFormat, BankId, DetectionResult, RawTransaction, ParseResult, ParseError, BankAdapter } from './types.js';
 export { detectFormatFromFile, detectBank, detectBankFromText, detectCSVDelimiter } from './detect.js';
 export { parseCSV } from './csv.js';
 export { parseXLSX } from './xlsx.js';
 export { parsePDF } from './pdf.js';
+export { parseJSON } from './json.js';
 
 export async function parseFile(file: File, bank?: BankId): Promise<ParseResult> {
   const format = detectFormatFromFile(file);
@@ -60,6 +62,10 @@ export async function parseFile(file: File, bank?: BankId): Promise<ParseResult>
     case 'pdf': {
       const buffer = await file.arrayBuffer();
       return parsePDF(buffer, bank);
+    }
+    case 'json': {
+      const content = await file.text();
+      return parseJSON(content, bank);
     }
     default: {
       const _exhaustive: never = format;

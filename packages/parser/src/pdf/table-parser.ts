@@ -27,7 +27,7 @@ import {
   HEADER_KEYWORDS,
   isValidHeaderRow,
 } from '../csv/column-matcher.js';
-import { daysInMonth, isValidYYMMDD, isValidYYYYMMDD } from '../date-utils.js';
+import { isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from '../date-utils.js';
 
 interface Column {
   start: number;
@@ -160,33 +160,8 @@ export function parseTable(text: string): string[][] {
  *  Parity with web-side PDF parser's SHORT_MD_DATE_PATTERN. */
 const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 
-/** Validate short MM.DD date format with month-aware day range checks.
- *  Prevents decimal amounts like "3.5" from being misidentified as dates
- *  and rejects impossible dates like "2/31" (Feb 31), "4/31" (Apr 31).
- *  Uses daysInMonth() from date-utils.ts for correct leap year handling.
- *  Parity with web-side PDF parser's isValidShortDate. */
-function isValidShortDate(cell: string): boolean {
-  // Strip trailing delimiters before matching
-  const stripped = cell.replace(/[.\-\/．。]\s*$/, '');
-  const match = stripped.match(SHORT_MD_DATE_PATTERN);
-  if (!match) return false;
-  const parts = stripped.split(/[.\-\/．。]/);
-  const month = parseInt(parts[0] ?? '', 10);
-  const day = parseInt(parts[1] ?? '', 10);
-  if (month < 1 || month > 12) return false;
-  // Accept dates valid in any year within a 4-year window (current year back
-  // to 3 years ago). This ensures Feb 29 from leap-year statements is accepted
-  // regardless of when the parser runs, since leap years occur every 4 years.
-  // Credit card statements rarely span more than 1-2 years, so a 4-year window
-  // is more than sufficient (C88-01).
-  const thisYear = new Date().getFullYear();
-  return day >= 1 && (
-    day <= daysInMonth(thisYear, month) ||
-    day <= daysInMonth(thisYear - 1, month) ||
-    day <= daysInMonth(thisYear - 2, month) ||
-    day <= daysInMonth(thisYear - 3, month)
-  );
-}
+// isValidShortDate is imported from date-utils.ts to eliminate duplication
+// across CSV generic parser, PDF parser, and PDF table parser (C97-03).
 
 /** Validate that a cell contains a plausible date value. Rejects
  *  6-digit strings that fail YYMMDD validation (transaction IDs,
