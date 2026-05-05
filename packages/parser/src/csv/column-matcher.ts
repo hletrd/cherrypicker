@@ -52,6 +52,8 @@ export function findColumn(headers: string[], exactName: string | undefined, pat
   // splitting for headers like "이용일/승인일" (C33-04) and "이용일|승인일" (C49-03).
   for (let i = 0; i < headers.length; i++) {
     const normalized = normalizeHeader(headers[i] ?? '');
+    // Defensive cap: extremely long headers may cause regex backtracking (C5-12)
+    if (normalized.length > 200) continue;
     if (pattern.test(normalized)) return i;
     // Split combined headers on "/", "|", ",", or "+" and test each part (C52-01)
     if (/[/|,+＋]/.test(normalized)) {

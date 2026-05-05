@@ -34,7 +34,11 @@ function esc(str: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/\\/g, '&#92;')
+    .replace(/\//g, '&#47;')
+    .replace(/\x00/g, '');
 }
 
 function buildSummary(result: OptimizationResult): string {

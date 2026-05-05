@@ -59,4 +59,28 @@ describe('generateHTMLReport', () => {
     expect(html).toContain('심플플랜');
     expect(html).not.toContain('<이마트>');
   });
+
+  test('escapes HTML entities including quotes, slashes, and null bytes', () => {
+    const evilOptimization: OptimizationResult = {
+      ...optimization,
+      bestSingleCard: { cardId: 'evil', cardName: "O'Brien / Test \\0", totalReward: 0 },
+      cardResults: [
+        {
+          cardId: 'evil',
+          cardName: "O'Brien / Test \\0",
+          totalReward: 0,
+          totalSpending: 0,
+          effectiveRate: 0,
+          byCategory: [],
+          performanceTier: 'tier0',
+          capsHit: [],
+        },
+      ],
+    };
+    const html = generateHTMLReport(evilOptimization, transactions);
+    expect(html).toContain('O&#39;Brien');   // single quote escaped
+    expect(html).toContain('&#47;');         // forward slash escaped
+    expect(html).toContain('&#92;');         // backslash escaped
+    expect(html).not.toContain("O'Brien");   // raw single quote not present
+  });
 });
