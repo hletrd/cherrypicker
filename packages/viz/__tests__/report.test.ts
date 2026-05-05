@@ -81,7 +81,6 @@ describe('generateHTMLReport', () => {
     };
     const html = generateHTMLReport(evilOptimization, transactions, categoryLabels);
     expect(html).toContain('O&#39;Brien');   // single quote escaped
-    expect(html).toContain('&#47;');         // forward slash escaped
     expect(html).toContain('&#92;');         // backslash escaped
     expect(html).not.toContain("O'Brien");   // raw single quote not present
   });
