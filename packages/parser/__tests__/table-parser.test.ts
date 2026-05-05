@@ -1388,3 +1388,55 @@ describe('C74-01: isValidDateCell short-date validation via isValidShortDate', (
     expect(rows.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+// ---------------------------------------------------------------------------
+// C88-01: Leap year short date validation — Feb 29 accepted in non-leap years
+// ---------------------------------------------------------------------------
+
+describe('C88-01: Leap year short date validation', () => {
+  test('accepts short date "2.29" (Feb 29) regardless of current year', () => {
+    // Feb 29 is valid in leap years (2024, 2028, etc.). The isValidShortDate
+    // function now checks both current year AND previous year (2-year window)
+    // to ensure Feb 29 from leap-year statements is accepted even when the
+    // parser runs in a non-leap year.
+    const rows = [
+      ['2.29', '스타벅스', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('accepts short date "2/29" (Feb 29 with slash) regardless of current year', () => {
+    const rows = [
+      ['2/29', '이마트', '45,000원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(1);
+  });
+
+  test('still rejects impossible "2.30" (Feb 30) in both years', () => {
+    // Feb 30 is impossible in any year (leap or non-leap)
+    const rows = [
+      ['2.30', '가맹점', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('still rejects impossible "2.31" (Feb 31) in both years', () => {
+    const rows = [
+      ['2.31', '가맹점', '6,500원'],
+    ];
+    const result = filterTransactionRows(rows);
+    expect(result).toHaveLength(0);
+  });
+
+  test('accepts parseTable lines with Feb 29 short dates', () => {
+    const text = [
+      '2.29  스타벅스 강남점    6,500원',
+      '3.01  이마트 서초점     45,000원',
+    ].join('\n');
+    const rows = parseTable(text);
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+  });
+});

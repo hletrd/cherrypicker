@@ -35,11 +35,18 @@ export function isValidDayForMonth(year: number, month: number, day: number): bo
 export function inferYear(month: number, day: number): number {
   const now = new Date();
   const candidate = new Date(now.getFullYear(), month - 1, day);
-  // If the candidate is more than ~3 months in the future, use previous year
-  if (candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000) {
-    return now.getFullYear() - 1;
+  let year = candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000
+    ? now.getFullYear() - 1
+    : now.getFullYear();
+  // For Feb 29, ensure we land on a leap year (C88-01).
+  // Parity with server-side inferYear in packages/parser/src/date-utils.ts.
+  if (month === 2 && day === 29) {
+    for (let i = 0; i < 4; i++) {
+      if (isValidDayForMonth(year, 2, 29)) break;
+      year--;
+    }
   }
-  return now.getFullYear();
+  return year;
 }
 
 /** Parse a date string in various Korean credit card statement formats to
