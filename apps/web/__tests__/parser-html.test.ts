@@ -166,9 +166,13 @@ describe('HTML Table Parser (web)', () => {
 </table>`;
 
       const result = parseHTML(content);
+      // Summary row resets forward-fill state, so the 이마트 row with empty
+      // amount cell gets no forward-fill value and is skipped — ensuring the
+      // summary amount 999,999 never propagates to data rows.
       const emartTx = result.transactions.find((t) => t.merchant.includes('이마트'));
-      expect(emartTx).toBeDefined();
-      expect(emartTx!.amount).not.toBe(999999);
+      expect(emartTx).toBeUndefined();
+      // Also verify no transaction picked up the summary amount
+      expect(result.transactions.some((t) => t.amount === 999999)).toBe(false);
     });
   });
 });
