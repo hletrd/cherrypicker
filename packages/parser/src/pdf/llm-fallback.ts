@@ -42,7 +42,7 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
 
   const client = new Anthropic({ apiKey });
 
-  const model = process.env['ANTHROPIC_MODEL'] ?? 'claude-opus-4-5';
+  const model = process.env['ANTHROPIC_MODEL'] ?? 'claude-sonnet-4-6';
 
   // Truncate text to avoid token limits — take first 8000 chars
   const truncated = text.length > 8000 ? text.slice(0, 8000) + '\n...(truncated)' : text;
