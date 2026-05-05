@@ -1,48 +1,81 @@
-# Cycle 7 — debugger
+# Cycle 7 Debugger Review
 
-Focus: reproduce D6-01 and D6-02; identify fixes.
+**Date:** 2026-05-05
+**Scope:** Latent bugs, failure modes, edge cases in Cycle 6 fixes
+**Reviewer:** debugger
 
-## D6-01 — upload → dashboard waitForURL timeout
+---
 
-### Repro
+## Summary
 
-Run `bunx playwright test e2e/ui-ux-review.spec.js --reporter=line`. Multiple tests hit `waitForURL('**/dashboard', { timeout: 30_000 })`. Under parallel describes (`mode: 'parallel'`) several timeout.
+Cycle 6 fixes resolved 5 critical findings. One new HIGH-severity bug was introduced: web-side JSON parser parity regression (C7-CR-01). Two additional latent bugs identified in HTML and OFX web parsers.
 
-### Diagnosis
+---
 
-See tracer review. Root cause: `test.describe.configure({ mode: 'parallel' })` runs all describes concurrently against a single Astro preview server. Playwright workers × each spawning a full upload pipeline → CPU + single-Node-server contention.
+## HIGH
 
-### Fix
+### D7-DBG-01: Web-side JSON parser silently corrupts refunds
 
-Change `e2e/ui-ux-review.spec.js:11` from `mode: 'parallel'` to `mode: 'serial'`.
+**File:** `apps/web/src/lib/parser/json.ts:101`
+**Confidence:** High
 
-Alternative if single-file serial is insufficient: `playwright.config.ts` set `workers: 1` globally.
+Root cause: server-side fix (commit `fcd398b`) changed `amount` from `Math.abs(amount)` to raw `amount`, but web-side was never updated. The comment at lines 98-99 incorrectly documents the old behavior as matching server-side.
 
-## D6-02 — feature cards render strict-mode violation
+Failure mode: User uploads a JSON statement with refund transactions (negative amounts). Web app shows these as positive spending, inflating totals and producing incorrect optimization results.
 
-### Repro
+Reproduction: Parse `[{date: '2024-01-15', merchant: 'Refund', amount: -15000}]` via web-side parser. Result has `amount: 15000` instead of `-15000`.
 
-`bunx playwright test e2e/ui-ux-review.spec.js -g "feature cards render"`. Test at line 67-71.
+Fix: Remove `absAmount` variable. Pass `amount` directly to RawTransaction.
 
-### Diagnosis
+---
 
-`page.getByText('최적 카드 추천')` resolves to 2 elements:
-1. `index.astro:81` — `<h3>최적 카드 추천</h3>` (how-it-works step 3)
-2. `index.astro:106` — `<h3 class="font-semibold">최적 카드 추천</h3>` (feature card)
+## MEDIUM
 
-### Fix
+### D7-DBG-02: Web-side HTML parser silently corrupts refunds
 
-Add `data-testid="feature-card-recommend"` on the feature-card div at index.astro:100, and change spec to `page.getByTestId('feature-card-recommend')`. Similar for `지출 분석` (`feature-card-analysis`) and `절약 비교` (`feature-card-savings`).
+**File:** `apps/web/src/lib/parser/html.ts:223`
+**Confidence:** High
 
-## Other bugs surfaced by the trace
+Root cause: web-side does `Math.abs(amount)` while server-side skips non-positive amounts. Different semantics produce different transaction counts and totals.
 
-### B7-01 — `uploadedFiles.reduce((sum, f) => sum + f.size, 0) > MAX_TOTAL_SIZE` sets errorMessage but keeps files
+Failure mode: HTML statements with refunds show refund amounts as positive spending.
 
-- File: FileDropzone.svelte:157-161.
-- Evidence: the warning is benign but misleading — user sees an error message and thinks the upload failed, but valid files are still staged. Comment notes "Don't set uploadStatus to 'error' — let user proceed" but `errorMessage` is still populated. The error banner at line 516 is only shown when `uploadStatus === 'error'`, so the warning text is invisible. Good.
-- Status: not a bug; working as intended.
+Fix: Align with server-side — skip non-positive amounts.
 
-## Recommendations
+### D7-DBG-03: Web-side OFX timezone truncation
 
-- Ship D6-01 serial-mode fix first (one-line, big impact).
-- Ship D6-02 testid-based selector fix next.
+**File:** `apps/web/src/lib/parser/ofx.ts:43-49`
+**Confidence:** Medium
+
+Root cause: web-side strips timezone info from OFX DTPOSTED values. Server-side converts to KST.
+
+Failure mode: A transaction at 2024-01-15T23:00:00-05:00 would be parsed as 2024-01-15 on web but 2024-01-16 on server (after KST conversion). Same file produces different dates.
+
+Fix: Share server-side `parseOFXDate` with timezone handling.
+
+---
+
+## LOW
+
+### D7-DBG-04: `FALLBACK_CATEGORY_LABELS` drift risk
+
+**File:** `apps/web/src/lib/category-labels.ts:25-103`
+**Confidence:** Low
+
+Root cause: hardcoded fallback labels that can diverge from taxonomy. If a new category is added to YAML but not to this Map, CardDetail shows raw IDs instead of Korean labels.
+
+Failure mode: Silent UI degradation when taxonomy changes.
+
+Fix: Generate fallback at build time from categories.yaml.
+
+---
+
+## Verified Fixes
+
+| Bug | Commit | Verification |
+|-----|--------|------------|
+| ParseError instanceof broken | `c55005d` | web-side now extends Error |
+| JSON negative amounts (server) | `fcd398b` | negatives preserved |
+| Path traversal via null bytes | `ea98316` | null bytes stripped |
+| Symlink traversal | `ea98316` | lstatSync.isSymbolicLink() rejects |
+| LLM consent hang | `2f3a3ee` | 30s timeout + AbortController |

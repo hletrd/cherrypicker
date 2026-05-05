@@ -1,104 +1,102 @@
-# Cycle 7 — code-reviewer
+# Cycle 7 Code Review
 
-Scope: cross-file logic, invariants, error handling, state management, idioms.
+**Date:** 2026-05-05
+**Scope:** Post-Cycle-6 fixes — parser parity, category label extraction, CLI validation
+**Reviewer:** code-reviewer
 
-## Findings
-
-### C7CR-01 — Truncation warning suppressed after reset+re-upload [MEDIUM / High]
-
-- File: `apps/web/src/lib/store.svelte.ts:367-380` (store initializer).
-- Evidence: The `persistWarningKind` at store creation is computed as `result !== null && result.transactions === undefined && _loadPersistWarningKind !== null ? _loadPersistWarningKind : null`. The guard requires `result.transactions === undefined` — but when `loadFromStorage` returns a `'corrupted'` warning, it's because transactions existed but all failed validation; in that case the returned `result.transactions` is `undefined` (line 282 returns `undefined` when `validTxs.length === 0`), so the guard holds. Good.
-- However, `reset()` at :595 sets `_loadPersistWarningKind = null` directly — but `_loadPersistWarningKind` is a module-level variable already consumed at store construction (line 379). After reset, `_loadPersistWarningKind` is already null. Touching it in reset is a no-op and misleading.
-- Concrete impact: dead code, minor maintenance hazard.
-- Fix sketch: remove lines 601-602 from `reset()` (they are already cleared at store construction).
-
-### C7CR-02 — `setResult` path skips `previousMonthSpendingOption` preservation [MEDIUM / High]
-
-- File: `apps/web/src/lib/store.svelte.ts:452-459`.
-- Evidence: `setResult(r)` writes the passed result directly. If a caller constructs an AnalysisResult without setting `previousMonthSpendingOption`, the next reoptimize will lose the user's original input. Today `setResult` has no callers in the repo (only `analyze()` and `reoptimize()` mutate `result`), but it's part of the public store surface and is a latent footgun.
-- Fix sketch: either delete `setResult` (no callers) or add a preservation guard: `if (result && r.previousMonthSpendingOption === undefined) r.previousMonthSpendingOption = result.previousMonthSpendingOption`.
-
-### C7CR-03 — Navigation timeout leaks if uploadStatus flips to 'error' mid-success [MEDIUM / Medium]
-
-- File: `apps/web/src/components/upload/FileDropzone.svelte:266-277`.
-- Evidence: `uploadStatus = 'success'` triggers `setTimeout(() => navigate, 1200)`. If between the timer set and the navigate callback, the user clicks "다시 분석하기" (there is none on this page) or the store is reset by another component, we'd still navigate to dashboard. Also, if the user triggers another file upload during the 1.2s window, `handleUpload()` is invoked again, which sets `uploadStatus = 'uploading'` — but the old timer still fires and calls `navigate`, taking the user to the dashboard mid-second-upload.
-- Concrete failure: rapid re-upload in the 1.2s window produces stale navigation.
-- Fix sketch: in `handleUpload()` entry, `if (navigateTimeout) { clearTimeout(navigateTimeout); navigateTimeout = null; }`. Already done in `handleRetry`; extend to top of `handleUpload`.
-
-### C7CR-04 — `handleUpload` does not set success→null timeout check atomically [LOW / Medium]
-
-- File: `apps/web/src/components/upload/FileDropzone.svelte:266`.
-- Evidence: `navigateTimeout = setTimeout(...)` — if the user refreshes or triggers onDestroy before the timer, `onDestroy` clears it. Good. But `navigateTimeout` is nulled only in `handleRetry`, not after the timer fires. Harmless but untidy.
-- Fix: set `navigateTimeout = null` at the end of the setTimeout callback.
-
-### C7CR-05 — `onMount` in FileDropzone installs document-level listeners with no capture [LOW / Medium]
-
-- File: `apps/web/src/components/upload/FileDropzone.svelte:39-42`.
-- Evidence: dragenter/dragleave/dragover/drop are added with no useCapture flag. The component unmount cleanup removes them. If another component (e.g., the map page) adds its own drop listeners on document, there's ordering coupling. Minor risk.
-- Fix: not needed unless cross-component interference is observed.
-
-### C7CR-06 — `parsePreviousSpending` rejects `-0` via `n >= 0` [LOW / Medium]
-
-- File: `apps/web/src/components/upload/FileDropzone.svelte:228-234`.
-- Evidence: `Math.round(Number('-0'))` → `-0`. The check `n >= 0` succeeds (Number -0 >= 0 is true). `Math.min(-0, MAX)` → -0. Passing -0 to the optimizer is harmless but inconsistent with the "reject negatives" intent.
-- Fix: `if (!(Number.isFinite(n) && n >= 0) || Object.is(n, -0)) return undefined` or normalize with `n || 0`.
-
-### C7CR-07 — Analyzer monthlyBreakdown drops transactions with dates shorter than 7 chars [LOW / Medium]
-
-- File: `apps/web/src/lib/analyzer.ts:322-333`.
-- Evidence: the `if (!tx.date || tx.date.length < 7) continue` branch silently drops malformed-date transactions from monthlyBreakdown but keeps them in `allTransactions`. This is by design (C6-01), but the drop is silent. If all dates are malformed, line 346 correctly throws. If SOME are malformed, the user sees an undercount with no warning.
-- Fix sketch: optional — count dropped rows and include as a parse error. Defer if the real fixture path doesn't produce malformed dates.
-
-### C7CR-08 — `buildCategoryLabelMap` rebuild skipped if first parse returned no categoryNodes [LOW / Low]
-
-- File: `apps/web/src/lib/analyzer.ts:299-308`.
-- Evidence: the for-loop builds `categoryLabels` only when `!categoryLabels && parsed.categoryNodes`. If the first parsed file's `categoryNodes` is defined but empty (shouldn't happen given the early guard, but defensively), `buildCategoryLabelMap([])` returns an empty map, which then sticks for all subsequent parsers. Downstream optimizer lookup fails silently.
-- Fix: `if (!categoryLabels && parsed.categoryNodes && parsed.categoryNodes.length > 0)`.
-
-### C7CR-09 — `_loadPersistWarningKind` is module-level mutable shared state [MEDIUM / High]
-
-- File: `apps/web/src/lib/store.svelte.ts:216-220, 379`.
-- Evidence: `_loadPersistWarningKind` + `_loadTruncatedTxCount` are module-scoped. The store reads them during construction then clears them. If Svelte HMR or test framework re-imports the module, the variables are re-initialised. If a test creates two stores (bypassing the `analysisStore` singleton), the second construction sees the already-null values — which is fine. But a unit test that stubs `loadFromStorage` independently may leak state between tests.
-- Fix: bind them to the return value of `loadFromStorage` (return a tuple or an object), not module-level state.
-
-### C7CR-10 — `reoptimize` snapshot guard still reads reactive result twice for error state [LOW / Medium]
-
-- File: `apps/web/src/lib/store.svelte.ts:586-591`.
-- Evidence: catch block sets error and does not return. finally sets `loading = false`. OK. The pattern is consistent.
-- Fix: none needed.
-
-### C7CR-11 — `analyzeMultipleFiles` post-conditions rely on parsed.categoryNodes being identical across files [LOW / Medium]
-
-- File: `apps/web/src/lib/analyzer.ts:305-307`.
-- Evidence: `buildCategoryLabelMap` is built once from the first parsed. If files 2+ return a different category taxonomy (they won't, but the type doesn't enforce it), we ignore their taxonomy. Acceptable.
-- Fix: add a comment locking this invariant.
-
-### C7CR-12 — File size check skipped on dropped files via page-drop handler [MEDIUM / High]
-
-- File: `apps/web/src/components/upload/FileDropzone.svelte:34-37` (page-drop) calls `addFiles` which DOES check size. OK.
-- Fix: none — verified.
-
-### C7CR-13 — `displayedSavings` animation can produce NaN with a non-finite target [LOW / Low]
-
-- File: `apps/web/src/components/dashboard/SavingsComparison.svelte:51-89`.
-- Evidence: If `opt.savingsVsSingleCard` is ever `NaN` or `Infinity` (shouldn't happen post-optimizer, but the type is `number`), the animation math propagates the non-finite value.
-- Fix: `const target = Number.isFinite(opt?.savingsVsSingleCard ?? 0) ? (opt?.savingsVsSingleCard ?? 0) : 0`.
-
-### C7CR-14 — `lastWarningGeneration` relies on generation starting at 0 [LOW / Low]
-
-- File: `apps/web/src/components/dashboard/SpendingSummary.svelte:15-22`.
-- Evidence: lastWarningGeneration starts at 0. Store now initialises generation to 1 when data is restored (C7-01). On first render, the effect fires with gen=1, lastWarningGeneration=0, so `gen !== lastWarningGeneration` and `gen > 0` — dismissed is reset to false. That's the intended path. But on subsequent re-mounts (Astro View Transition), the component's lastWarningGeneration starts at 0 again while the store keeps gen from before. Same behaviour. OK.
-- Fix: none.
-
-### C7CR-15 — `VisibilityToggle` import coverage [LOW / Low]
-
-- File: `apps/web/src/pages/dashboard.astro:122`.
-- Evidence: passes `dataContentId` and `emptyStateId`. That component was not re-read; assuming it does what the names say, it flips `.hidden` on data-content when store has data.
-
-### C7CR-16 — `results.astro` not read in this pass [N/A]
-
-- Fix: separate re-read.
+---
 
 ## Summary
 
-Most issues are LOW severity, indicating strong code-review hygiene. Three items (C7CR-01 dead code, C7CR-02 setResult footgun, C7CR-09 module-level state) are worth scheduling. C7CR-03 (timer leak on rapid re-upload) is MEDIUM but requires a specific race — defer unless the user reports it.
+Cycle 6 fixes (ParseError parity, buildCategoryLabelMap, path validation, LLM consent) are mechanically correct but introduced one HIGH-severity parity regression and left one MEDIUM finding from Cycle 6 unaddressed. All gates pass (0 failures, 10 test suites green).
+
+---
+
+## HIGH
+
+### C7-CR-01: Web-side JSON parser still takes Math.abs on negative amounts
+
+**File:** `apps/web/src/lib/parser/json.ts:101`
+**Confidence:** High
+
+The server-side JSON parser was fixed in commit `fcd398b` (Cycle 6) to preserve negative amounts (refunds/credits) instead of silently converting them to positive purchases. However, the web-side JSON parser at line 101 still does:
+
+```ts
+const absAmount = Math.abs(amount);
+// ...
+amount: absAmount,
+```
+
+The comment at lines 98-99 incorrectly claims this "accepts negative amounts by taking absolute value, matching server-side JSON parser behavior (C100-02)" — but the server-side does NOT take absolute value anymore.
+
+**Impact:** Refunds and credits in JSON-formatted statements are silently converted to purchases on the web side, corrupting spending analysis.
+
+**Fix:** Remove `Math.abs()`. Use `amount` directly, matching the server-side behavior at `packages/parser/src/json/index.ts:114-124`.
+
+---
+
+## MEDIUM
+
+### C7-CR-02: Web-side HTML parser diverges from server on negative amount handling
+
+**File:** `apps/web/src/lib/parser/html.ts:223`
+**Confidence:** High
+
+The web-side HTML parser does `amount: Math.abs(amount)` at line 223, while the server-side HTML parser (`packages/parser/src/html/index.ts:228`) uses `if (amount <= 0) continue;`. These are semantically different: the web version converts negatives to positives (keeping them as spending), while the server version skips non-positive amounts entirely.
+
+**Fix:** Align web-side with server-side — skip non-positive amounts instead of taking absolute value.
+
+### C7-CR-03: Web-side HTML parser uses `type: 'string'` for xlsx.read
+
+**File:** `apps/web/src/lib/parser/html.ts:39`
+**Confidence:** Medium
+
+Web-side passes normalized HTML as `type: 'string'` directly to xlsx.read. Server-side (`packages/parser/src/html/index.ts:46`) wraps in `Buffer.from(normalized, 'utf-8')` with `type: 'buffer'`. For non-ASCII Korean content, the string path may produce different encoding behavior than the buffer path.
+
+**Fix:** Align web-side with server-side buffer wrapping.
+
+### C7-CR-04: No tests for JSON negative amount preservation
+
+**File:** `packages/parser/__tests__/json.test.ts`
+**Confidence:** High
+
+T6-03 from Cycle 6 remains unaddressed. The server-side JSON parser now preserves negative amounts, but there are no tests verifying this behavior. A future refactor could regress this silently.
+
+**Fix:** Add a test case with `amount: -15000` asserting the output transaction has `amount: -15000`.
+
+---
+
+## LOW
+
+### C7-CR-05: `buildCategoryNamesKo` returns Record, `buildCategoryLabelMap` returns Map
+
+**File:** `packages/rules/src/category-names.ts`
+**Confidence:** Low
+
+Inconsistent return types between the old `buildCategoryNamesKo` (Record) and new `buildCategoryLabelMap` (Map). Callers must know which type they're getting. The Record version is effectively deprecated but still exported.
+
+**Fix:** Consider deprecating `buildCategoryNamesKo` explicitly or removing it if all callers have migrated.
+
+---
+
+## Verified Fixes (Cycle 6)
+
+| Issue | Commit | Status |
+|-------|--------|--------|
+| ParseError class parity | `c55005d` | Verified — web-side now uses class extending Error |
+| buildCategoryLabelMap extraction | `88836e7` | Verified — used in CLI commands and web analyzer |
+| Path validation null bytes + symlinks | `ea98316` | Verified — tests cover both cases |
+| LLM consent localization + timeout | `2f3a3ee` | Verified — Korean prompt, 30s timeout |
+| Anthropic model name | `86100a8` | Verified — `claude-3-7-sonnet-latest` |
+| JSON negative amounts (server) | `fcd398b` | Verified — preserves negatives |
+
+---
+
+## Still Open from Previous Cycles
+
+- C-CR-01: Non-KRW transactions silently dropped (`packages/core/src/calculator/reward.ts:220`)
+- F-CRI-01 / A-ARCH-01: Server/web parser structural duplication
+- S-SEC-02: HTML report `esc()` incomplete (`packages/viz/src/report/generator.ts:31-40`)
+- Regex DoS in column patterns (Cycle 4)
+- PDF three code paths (Cycle 4)
+- Missing CSP in HTML reports (Cycle 5)
