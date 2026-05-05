@@ -146,7 +146,7 @@ function parseAmount(raw: string): number | null {
   // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
   // cells may contain decimal remainders; rounding is more correct than truncation.
   const parsed = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(parsed)) return null;
+  if (Number.isNaN(parsed) || !Number.isFinite(parsed)) return null;
   return isNegative ? -parsed : parsed;
 }
 

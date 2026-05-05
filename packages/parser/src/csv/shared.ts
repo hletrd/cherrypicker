@@ -158,7 +158,7 @@ export function parseAmountString(raw: string): number | null {
   if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
   if (!cleaned) return null;
   const n = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(n)) return null;
+  if (Number.isNaN(n) || !Number.isFinite(n)) return null;
   return isNeg ? -n : n;
 }
 

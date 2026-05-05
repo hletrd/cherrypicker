@@ -157,7 +157,8 @@ function parseAmount(raw: unknown): number | null {
   if (typeof raw === 'string') {
     // Delegate string parsing to shared parseAmountString to eliminate
     // duplication across CSV, XLSX, and PDF parsers (C97-02).
-    return parseAmountString(raw);
+    const parsed = parseAmountString(raw);
+    return parsed !== null && Number.isFinite(parsed) ? parsed : null;
   }
   return null;
 }

@@ -81,7 +81,8 @@ function normalizeAmount(raw: unknown): number | null {
     return Number.isFinite(raw) ? Math.round(raw) : null;
   }
   if (typeof raw === 'string') {
-    return parseCSVAmount(raw);
+    const parsed = parseCSVAmount(raw);
+    return parsed !== null && Number.isFinite(parsed) ? parsed : null;
   }
   return null;
 }

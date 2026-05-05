@@ -109,7 +109,7 @@ function parseOFXAmount(raw: string): number | null {
   if (!raw.trim()) return null;
   const cleaned = raw.trim().replace(/,/g, '');
   const n = parseFloat(cleaned);
-  if (Number.isNaN(n)) return null;
+  if (Number.isNaN(n) || !Number.isFinite(n)) return null;
   return Math.round(n);
 }
 

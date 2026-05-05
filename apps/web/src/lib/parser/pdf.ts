@@ -269,7 +269,7 @@ function parseAmount(raw: string): number | null {
   // integers, but PDF-extracted strings may contain decimal remainders from
   // formula cells; rounding is more correct than truncation.
   const n = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(n)) return null;
+  if (Number.isNaN(n) || !Number.isFinite(n)) return null;
   return isNeg ? -n : n;
 }
 
