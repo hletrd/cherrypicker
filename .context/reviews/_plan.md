@@ -1,60 +1,44 @@
-# Cycle 98 Implementation Plan
+# Cycle 99 Implementation Plan
 
 ## Goal
-Add OFX/QFX and HTML table format support (two new modalities), fix BOM-aware content sniffing, and add comprehensive tests.
+Fix reliability gaps in HTML, OFX, and JSON parsers. Add isValidShortDate to web-side date-utils.ts. Improve HTML parser with forward-fill for merged cells. Add CREDITCARDMSGSRSV1 support to OFX parser. Fix JSON negative-amount handling.
 
 ## Plan
 
-### P1: Add 'ofx' and 'html' to FileFormat type (F-01, F-02) [MODALITY]
-**Files:** `packages/parser/src/types.ts`, `apps/web/src/lib/parser/types.ts`
-- Add `'ofx' | 'html'` to `FileFormat` union type
+### P1: Add isValidShortDate to web-side date-utils.ts + update PDF import (F1, F8) [RELIABILITY]
+**Files:** `apps/web/src/lib/parser/date-utils.ts`, `apps/web/src/lib/parser/pdf.ts`
+- Add `isValidShortDate` function to `apps/web/src/lib/parser/date-utils.ts` (copy from server-side `packages/parser/src/date-utils.ts` lines 201-221)
+- Update `apps/web/src/lib/parser/pdf.ts` to import `isValidShortDate` from `./date-utils.js` instead of defining it locally
+- Remove ~25 lines of local definition from pdf.ts
 
-### P2: Create OFX parser module (F-01) [MODALITY]
-**Files:** `packages/parser/src/ofx/index.ts` (NEW)
-- `parseOFX(content: string, bank?: BankId): ParseResult`
-- Parse SGML-style OFX 1.x (tags without closing delimiters)
-- Parse XML-style OFX 2.x (proper closing tags)
-- Extract `<DTPOSTED>`, `<NAME>`, `<TRNAMT>`, `<MEMO>`, `<TRNTYPE>` from `<STMTTRN>` blocks
-- Dates are YYYYMMDD format, use parseDateStringToISO
-- Amounts: positive = charges, negative = credits/payments (skip negatives)
-- Reuse parseAmountString for string amounts
+### P2: Add forward-fill to HTML parser (F2) [RELIABILITY]
+**Files:** `packages/parser/src/html/index.ts`
+- Add forward-fill variables (lastDate, lastMerchant, lastCategory, lastInstallments, lastMemo, lastAmount)
+- Add `isNonEmpty()` helper matching XLSX parser pattern
+- Apply forward-fill for each column before parsing, matching XLSX parser logic
+- Handle summary row contamination prevention
 
-### P3: Create HTML table parser module (F-02) [MODALITY]
-**Files:** `packages/parser/src/html/index.ts` (NEW)
-- `parseHTML(content: string, bank?: BankId): ParseResult`
-- Reuse SheetJS to parse HTML tables (same as XLSX HTML-as-XLS path)
-- Try all tables, pick the one with most transactions
-- Use shared header detection (isValidHeaderRow, findColumn)
-- Reuse parseAmountString and parseDateStringToISO
+### P3: Add CREDITCARDMSGSRSV1 support to OFX parser (F3) [RELIABILITY]
+**Files:** `packages/parser/src/ofx/index.ts`
+- Add XML extraction for `<CCSTMTTRNRS>` wrapper blocks containing `<STMTTRN>`
+- Add SGML extraction terminator `</CCSTMTRS` alongside existing `</STMTRS`
+- Extract bank name from `<ORG>` tag in OFX FI (financial institution) element
 
-### P4: Add format detection for OFX and HTML (F-01, F-02, F-03) [MODALITY+HARDER]
-**Files:** `packages/parser/src/detect.ts`, `apps/web/src/lib/parser/detect.ts`
-- Add `.ofx`/`.qfx` extension -> 'ofx' format
-- Add `.html`/`.htm` extension -> 'html' format
-- Add XML/OFX content sniffing: `<?OFX` or `<?xml` with OFX tags -> 'ofx'
-- Add HTML content sniffing: `<!DOCTYPE` or `<html` or `<table` -> 'html'
-- Fix BOM-aware content sniffing (strip BOM before JSON/XML/HTML checks)
+### P4: Fix JSON parser negative amount handling (F7) [RELIABILITY]
+**Files:** `packages/parser/src/json/index.ts`
+- Change amount filter: take abs(negative amounts) for refunds, skip zero only
+- Report negative amounts as valid transactions rather than silently dropping
 
-### P5: Wire into parseStatement (F-01, F-02) [MODALITY]
-**Files:** `packages/parser/src/index.ts`, `apps/web/src/lib/parser/index.ts`
-- Add `ofx` and `html` cases to switch statement
-- Export `parseOFX` and `parseHTML` functions
+### P5: Add tests for new behaviors
+**Files:** `packages/parser/__tests__/html.test.ts`, `packages/parser/__tests__/ofx.test.ts`, `packages/parser/__tests__/json.test.ts`
+- HTML forward-fill test with merged cell data
+- OFX CREDITCARDMSGSRSV1 credit card file test
+- JSON negative amount test
 
-### P6: Add comprehensive tests
-**Files:** `packages/parser/__tests__/ofx.test.ts` (NEW), `packages/parser/__tests__/html.test.ts` (NEW), `packages/parser/__tests__/detect.test.ts` (extend)
-- OFX tests: SGML format, XML format, date parsing, amount handling, Korean merchants, empty fields, malformed content
-- HTML tests: basic table, multiple tables, malformed tags, Korean text, no transaction table
-- Detection tests: .ofx/.qfx/.html/.htm extensions, content sniffing with BOM
-
-### P7: Web-side parity
-**Files:** `apps/web/src/lib/parser/ofx.ts` (NEW), `apps/web/src/lib/parser/html.ts` (NEW), `apps/web/src/lib/parser/types.ts`, `apps/web/src/lib/parser/index.ts`, `apps/web/src/lib/parser/detect.ts`
-- Add OFX and HTML parsers with same logic as server side
-- Wire into parseFile
-
-### P8: Quality gates
+### P6: Quality gates
 - bun test, vitest, typecheck, lint, build
 
 ## Deferred
-- D-01: Confidence scoring on ParseResult
-- D-02: Clipboard paste format
-- D-03: Recursive JSON wrapper search beyond 2 levels
+- D-01: Full server/web dedup into packages/shared/ (requires build system changes)
+- D-02: Confidence scoring on ParseResult
+- D-03: Clipboard paste format

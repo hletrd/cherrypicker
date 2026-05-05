@@ -102,12 +102,17 @@ function parseTransactionObject(
   const dateRaw = String(dateValue ?? '').trim();
   const amount = normalizeAmount(amountValue);
 
-  if (amount === null || amount <= 0) {
-    if (amount === null && String(amountValue).trim()) {
+  if (amount === null) {
+    if (String(amountValue).trim()) {
       errors.push({ line: lineIdx, message: `금액을 해석할 수 없습니다: ${String(amountValue)}` });
     }
     return null;
   }
+  // Skip zero amounts (balance inquiries) but accept negative amounts
+  // (refunds/credits) by taking absolute value, matching OFX parser
+  // behavior (C99-04).
+  if (amount === 0) return null;
+  const absAmount = Math.abs(amount);
 
   const date = parseDateStringToISO(dateRaw);
   if (!isValidISODate(date) && dateRaw) {
@@ -117,7 +122,7 @@ function parseTransactionObject(
   const tx: RawTransaction = {
     date,
     merchant: String(merchantValue ?? '').trim(),
-    amount,
+    amount: absAmount,
   };
 
   // Optional fields

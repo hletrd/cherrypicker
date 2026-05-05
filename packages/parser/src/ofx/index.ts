@@ -21,7 +21,12 @@ import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
 
 /** Extract all STMTTRN transaction blocks from OFX content.
  *  Handles both SGML-style (no closing tags) and XML-style (closing tags).
- *  Each STMTTRN block contains transaction details like date, amount, name. */
+ *  Each STMTTRN block contains transaction details like date, amount, name.
+ *
+ *  Supports both bank statements (<STMTRS>/<BANKTRANLIST>/<STMTTRN>) and
+ *  credit card statements (<CCSTMTRS>/<BANKTRANLIST>/<STMTTRN>).
+ *  Credit card OFX files use CREDITCARDMSGSRSV1 wrapper with CCSTMTTRNRS
+ *  instead of the bank statement SIGNONMSGSRSV1/STMTTRNRS path (C99-03). */
 function extractTransactionBlocks(content: string): string[] {
   const blocks: string[] = [];
   // Match STMTTRN blocks — in XML style, they have closing tags; in SGML
@@ -33,9 +38,11 @@ function extractTransactionBlocks(content: string): string[] {
     blocks.push(match[1] ?? '');
     match = xmlPattern.exec(content);
   }
-  // If no XML-style blocks found, try SGML-style extraction
+  // If no XML-style blocks found, try SGML-style extraction.
+  // Terminators include both bank (STMTRS) and credit card (CCSTMTRS)
+  // statement response wrappers, plus CREDITCARDMSGSRSV1 (C99-03).
   if (blocks.length === 0) {
-    const sgmlPattern = /<STMTTRN[^>]*>([\s\S]*?)(?=<STMTTRN|<\/BANKTRANLIST|<\/STMTRS|<\/CREDITCARDMSGSRSV1|$)/gi;
+    const sgmlPattern = /<STMTTRN[^>]*>([\s\S]*?)(?=<STMTTRN|<\/BANKTRANLIST|<\/STMTRS|<\/CCSTMTRS|<\/CREDITCARDMSGSRSV1|$)/gi;
     match = sgmlPattern.exec(content);
     while (match) {
       blocks.push(match[1] ?? '');
@@ -90,8 +97,22 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
   const errors: ParseError[] = [];
   const transactions: RawTransaction[] = [];
 
-  // Detect bank from content if not provided
-  const resolvedBank: BankId | null = bank ?? detectBank(content).bank ?? null;
+  // Detect bank from content if not provided. Also try extracting from
+  // OFX <ORG> tag which identifies the financial institution (C99-03).
+  let resolvedBank: BankId | null = bank ?? null;
+  if (!resolvedBank) {
+    resolvedBank = detectBank(content).bank;
+    // Try OFX <ORG> tag as fallback bank identification
+    if (!resolvedBank) {
+      const orgMatch = content.match(/<ORG>([^<\n]+)/i);
+      if (orgMatch) {
+        const orgResult = detectBank(orgMatch[1] ?? '');
+        if (orgResult.bank && orgResult.confidence > 0) {
+          resolvedBank = orgResult.bank;
+        }
+      }
+    }
+  }
 
   // Extract transaction blocks
   const blocks = extractTransactionBlocks(content);

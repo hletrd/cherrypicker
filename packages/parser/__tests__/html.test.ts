@@ -142,5 +142,54 @@ describe('HTML Table Parser', () => {
       const result = parseHTML(content);
       expect(result.transactions).toHaveLength(2);
     });
+
+    it('forward-fills merged cells in HTML tables (C99-02)', () => {
+      // HTML tables with merged cells (rowspan) produce empty cells
+      // in adjacent rows. The parser should forward-fill from the last
+      // non-empty value, matching XLSX parser behavior.
+      const content = `<table>
+<tr><th>이용일</th><th>이용처</th><th>이용금액</th><th>할부</th><th>비고</th></tr>
+<tr><td>2024.01.15</td><td>스타벅스</td><td>5,500</td><td></td><td></td></tr>
+<tr><td></td><td></td><td>4,500</td><td></td><td></td></tr>
+<tr><td>2024.01.20</td><td>이마트</td><td>45,000</td><td>3</td><td>온라인</td></tr>
+<tr><td></td><td></td><td>15,000</td><td></td><td></td></tr>
+</table>`;
+
+      const result = parseHTML(content);
+      expect(result.transactions).toHaveLength(4);
+      expect(result.transactions[0]!.date).toBe('2024-01-15');
+      expect(result.transactions[0]!.merchant).toBe('스타벅스');
+      expect(result.transactions[0]!.amount).toBe(5500);
+      // Second row should forward-fill date and merchant from first row
+      expect(result.transactions[1]!.date).toBe('2024-01-15');
+      expect(result.transactions[1]!.merchant).toBe('스타벅스');
+      expect(result.transactions[1]!.amount).toBe(4500);
+      // Third row has explicit values
+      expect(result.transactions[2]!.date).toBe('2024-01-20');
+      expect(result.transactions[2]!.merchant).toBe('이마트');
+      expect(result.transactions[2]!.installments).toBe(3);
+      expect(result.transactions[2]!.memo).toBe('온라인');
+      // Fourth row should forward-fill date, merchant, installments, memo
+      expect(result.transactions[3]!.date).toBe('2024-01-20');
+      expect(result.transactions[3]!.merchant).toBe('이마트');
+      expect(result.transactions[3]!.amount).toBe(15000);
+      expect(result.transactions[3]!.installments).toBe(3);
+      expect(result.transactions[3]!.memo).toBe('온라인');
+    });
+
+    it('prevents summary row values from contaminating forward-fill', () => {
+      const content = `<table>
+<tr><th>이용일</th><th>이용처</th><th>이용금액</th></tr>
+<tr><td>2024.01.15</td><td>카페</td><td>5,000</td></tr>
+<tr><td></td><td>합계</td><td>5,000</td></tr>
+<tr><td></td><td></td><td>12,000</td></tr>
+</table>`;
+
+      const result = parseHTML(content);
+      // Summary row is skipped but merchant forward-fill should still be "카페"
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]!.merchant).toBe('카페');
+      expect(result.transactions[1]!.merchant).toBe('카페');
+    });
   });
 });

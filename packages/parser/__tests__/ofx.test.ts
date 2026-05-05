@@ -217,5 +217,66 @@ VERSION:102
       expect(result.transactions).toHaveLength(1);
       expect(result.transactions[0]!.merchant).toBe('SHOPPING');
     });
+
+    it('parses credit card OFX with CREDITCARDMSGSRSV1 (C99-03)', () => {
+      // Credit card OFX files use CREDITCARDMSGSRSV1/CCSTMTTRNRS/CCSTMTRS
+      // instead of BANKMSGSRSV1/STMTTRNRS/STMTRS (C99-03).
+      const content = `OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+
+<CREDITCARDMSGSRSV1>
+<CCSTMTTRNRS>
+<CCSTMTRS>
+<BANKTRANLIST>
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20240115
+<TRNAMT>-15000.00
+<NAME>신한카드 Starbucks
+</STMTTRN>
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20240120
+<TRNAMT>-45000.00
+<NAME>이마트
+</STMTTRN>
+</BANKTRANLIST>
+</CCSTMTRS>
+</CCSTMTTRNRS>
+</CREDITCARDMSGSRSV1>`;
+
+      const result = parseOFX(content);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]!.date).toBe('2024-01-15');
+      expect(result.transactions[0]!.merchant).toBe('신한카드 Starbucks');
+      expect(result.transactions[0]!.amount).toBe(15000);
+      expect(result.transactions[1]!.merchant).toBe('이마트');
+      expect(result.transactions[1]!.amount).toBe(45000);
+    });
+
+    it('detects bank from OFX ORG tag (C99-03)', () => {
+      const content = `<OFX>
+<SIGNONMSGSRSV1>
+<SONRS>
+<FI>
+<ORG>신한카드
+<FID>12345
+</FI>
+</SONRS>
+</SIGNONMSGSRSV1>
+<BANKTRANLIST>
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20240115
+<TRNAMT>-10000
+<NAME>테스트
+</STMTTRN>
+</BANKTRANLIST>
+</OFX>`;
+
+      const result = parseOFX(content);
+      expect(result.bank).toBe('shinhan');
+    });
   });
 });

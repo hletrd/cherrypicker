@@ -1,20 +1,22 @@
-# Cycle 98 Aggregate Review
+# Cycle 99 Aggregate Review
 
 ## Summary
-After 97 cycles, 1356 bun + 306 vitest tests pass. JSON format was added in cycle 97 with shared parseAmountString and isValidShortDate extraction. This cycle targets the two major deferred modality items: OFX/QFX and HTML table support, plus BOM-aware content sniffing for reliability.
+After 98 cycles, 1389 bun + 306+ vitest tests pass. OFX/QFX and HTML table support were added in cycle 98. This cycle focuses on reliability gaps in the new parsers (HTML forward-fill, OFX credit card blocks), web-side consistency (missing isValidShortDate export), and JSON negative-amount handling.
 
-## Findings (6 actionable)
+## Findings (8)
 
 | ID | Severity | Type | Description |
 |----|----------|------|-------------|
-| F-01 | HIGH | MODALITY | No OFX/QFX format support |
-| F-02 | HIGH | MODALITY | No HTML table standalone format |
-| F-03 | MEDIUM | HARDER | No XML/OFX content sniffing for unknown extensions |
-| F-04 | LOW | RELIABILITY | No confidence score on ParseResult |
-| F-05 | LOW | HARDER | BOM-aware content sniffing missing in detectFormat |
-| F-06 | LOW | MODALITY | JSON deep wrapper search only 1 level deep |
+| F1 | Medium | RELIABILITY | Web-side date-utils.ts missing isValidShortDate export |
+| F2 | Medium | RELIABILITY | HTML parser missing forward-fill for merged cells |
+| F3 | Medium | RELIABILITY | OFX parser missing CREDITCARDMSGSRSV1 credit card block support |
+| F4 | High | ARCHITECTURE | Web-side PDF parser duplicates ~400 lines from server table-parser.ts |
+| F5 | Medium | ARCHITECTURE | Web-side column-matcher.ts is 100% copy of server-side |
+| F6 | Medium | ARCHITECTURE | Web-side detect.ts is 100% copy of server-side |
+| F7 | Low | RELIABILITY | JSON parser silently drops negative amounts without abs() |
+| F8 | Medium | RELIABILITY | Web-side PDF parser defines local isValidShortDate instead of importing |
 
 ## Deferred Items
-- D-01: Confidence scoring on ParseResult (significant feature)
-- D-02: Clipboard paste format (UI dependency)
-- D-03: Recursive JSON wrapper search beyond 2 levels
+- D-01: Full server/web dedup into packages/shared/ (requires build system changes)
+- D-02: Confidence scoring on ParseResult (significant feature, deferred from cycle 98)
+- D-03: Clipboard paste format (UI dependency)

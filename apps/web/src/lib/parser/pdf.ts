@@ -47,37 +47,9 @@ const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
 const KOREAN_SHORT_DATE_PATTERN = /\d{1,2}월\s*\d{1,2}일/;
 const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
 
-/** Validate that a SHORT_MD_DATE_PATTERN match has plausible month/day
- *  values using month-aware day limits. This prevents decimal amounts
- *  like "3.5" from being misidentified as MM.DD dates (C8-11), and
- *  also rejects impossible dates like "2/31" or "4/31".
- *  Uses daysInMonth() from date-utils.ts with current year for correct
- *  leap year handling (C44-01), matching the CSV parser's
- *  isDateLikeShort() approach which also uses daysInMonth(). */
-function isValidShortDate(cell: string): boolean {
-  // Strip trailing delimiters before matching — Korean bank exports may
-  // append a period or slash to dates (e.g., "1.15." or "1/15/") (C57-01).
-  const stripped = cell.replace(/[.\-\/．。]\s*$/, '');
-  const match = stripped.match(SHORT_MD_DATE_PATTERN);
-  if (!match) return false;
-  const parts = stripped.split(/[.\-\/．。]/);
-  const month = parseInt(parts[0] ?? '', 10);
-  const day = parseInt(parts[1] ?? '', 10);
-  if (month < 1 || month > 12) return false;
-  // Accept dates valid in any year within a 4-year window (current year back
-  // to 3 years ago). This ensures Feb 29 from leap-year statements is accepted
-  // regardless of when the parser runs, since leap years occur every 4 years.
-  // Credit card statements rarely span more than 1-2 years, so a 4-year window
-  // is more than sufficient (C88-01). Parity with server-side isValidShortDate
-  // in packages/parser/src/pdf/table-parser.ts.
-  const thisYear = new Date().getFullYear();
-  return day >= 1 && (
-    day <= daysInMonth(thisYear, month) ||
-    day <= daysInMonth(thisYear - 1, month) ||
-    day <= daysInMonth(thisYear - 2, month) ||
-    day <= daysInMonth(thisYear - 3, month)
-  );
-}
+// isValidShortDate is imported from date-utils.ts to eliminate local
+// duplication (C99-01). Parity with server-side which imports from
+// packages/parser/src/date-utils.ts (C97-03).
 // C27-01: Require either a comma (thousand separator) or minimum 5 digits
 // for bare integers. Prevents 4-digit year values like "2024" from matching
 // as amounts in findAmountCell and the fallback line scanner.
@@ -267,7 +239,7 @@ function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
 
 /** Shared date-parsing — delegates to the canonical implementation in
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
-import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, daysInMonth } from './date-utils.js';
+import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate, daysInMonth } from './date-utils.js';
 
 function parseDateToISO(raw: string, errors?: ParseError[]): string {
   const result = parseDateStringToISO(raw);

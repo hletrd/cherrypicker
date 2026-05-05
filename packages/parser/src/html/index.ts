@@ -135,6 +135,22 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     };
   }
 
+  // Track last non-empty values for merged cell forward-fill.
+  // Korean bank HTML exports commonly merge cells across rows — similar
+  // to XLSX exports. Forward-fill extends to all columns: date, merchant,
+  // category, installments, memo, and amount (C99-02).
+  let lastDate: unknown = '';
+  let lastMerchant: unknown = '';
+  let lastCategory: unknown = '';
+  let lastInstallments: unknown = '';
+  let lastMemo: unknown = '';
+  let lastAmount: unknown = '';
+
+  // Helper: check if a cell has non-empty, non-whitespace content.
+  function isNonEmpty(val: unknown): boolean {
+    return val !== '' && val != null && String(val).trim() !== '';
+  }
+
   // Parse data rows
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -143,9 +159,65 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
 
-    const dateRaw = String(row[dateCol] ?? '').trim();
-    const merchantRaw = String(row[merchantCol] ?? '').trim();
-    const amountRaw = String(row[amountCol] ?? '').trim();
+    // Forward-fill pattern for all columns (date, merchant, category,
+    // installments, memo, amount). Consistent with XLSX parser logic.
+    // Update last-value only when cell has non-empty, non-whitespace content;
+    // skip update for summary row values to prevent contamination;
+    // use last-value as fallback for empty/whitespace-only cells (C99-02).
+
+    // Date column forward-fill
+    const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
+    if (dateCol !== -1 && isNonEmpty(rawDateValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawDateValue))) {
+        lastDate = rawDateValue;
+      }
+    }
+    const dateRaw = String(dateCol !== -1 ? (isNonEmpty(rawDateValue) ? rawDateValue : lastDate) : '').trim();
+
+    // Merchant column forward-fill
+    const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
+    if (merchantCol !== -1 && isNonEmpty(rawMerchantValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawMerchantValue))) {
+        lastMerchant = rawMerchantValue;
+      }
+    }
+    const merchantRaw = String(merchantCol !== -1 ? (isNonEmpty(rawMerchantValue) ? rawMerchantValue : lastMerchant) : '').trim();
+
+    // Category column forward-fill
+    const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
+    if (categoryCol !== -1 && isNonEmpty(rawCategoryValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawCategoryValue))) {
+        lastCategory = rawCategoryValue;
+      }
+    }
+    const categoryRaw = String(categoryCol !== -1 ? (isNonEmpty(rawCategoryValue) ? rawCategoryValue : lastCategory) : '').trim();
+
+    // Installments column forward-fill
+    const rawInstallValue = installCol !== -1 ? row[installCol] : '';
+    if (installCol !== -1 && isNonEmpty(rawInstallValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawInstallValue))) {
+        lastInstallments = rawInstallValue;
+      }
+    }
+    const installRaw = String(installCol !== -1 ? (isNonEmpty(rawInstallValue) ? rawInstallValue : lastInstallments) : '').trim();
+
+    // Memo column forward-fill
+    const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
+    if (memoCol !== -1 && isNonEmpty(rawMemoValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawMemoValue))) {
+        lastMemo = rawMemoValue;
+      }
+    }
+    const memoRaw = String(memoCol !== -1 ? (isNonEmpty(rawMemoValue) ? rawMemoValue : lastMemo) : '').trim();
+
+    // Amount column forward-fill
+    const rawAmountValue = amountCol !== -1 ? row[amountCol] : '';
+    if (amountCol !== -1 && isNonEmpty(rawAmountValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawAmountValue))) {
+        lastAmount = rawAmountValue;
+      }
+    }
+    const amountRaw = String(amountCol !== -1 ? (isNonEmpty(rawAmountValue) ? rawAmountValue : lastAmount) : '').trim();
 
     if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
@@ -171,17 +243,17 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
       amount,
     };
 
-    if (installCol !== -1 && row[installCol]) {
-      const inst = parseInt(String(row[installCol]), 10);
+    if (installCol !== -1 && installRaw) {
+      const inst = parseInt(installRaw, 10);
       if (!Number.isNaN(inst) && inst > 1) tx.installments = inst;
     }
 
-    if (categoryCol !== -1 && row[categoryCol]) {
-      tx.category = String(row[categoryCol]).trim();
+    if (categoryCol !== -1 && categoryRaw) {
+      tx.category = categoryRaw;
     }
 
-    if (memoCol !== -1 && row[memoCol]) {
-      tx.memo = String(row[memoCol]).trim();
+    if (memoCol !== -1 && memoRaw) {
+      tx.memo = memoRaw;
     }
 
     transactions.push(tx);
