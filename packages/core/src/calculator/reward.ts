@@ -74,10 +74,6 @@ function findRule(rules: RewardRule[], tx: CategorizedTransaction): RewardRule |
     // gets its own separate rule (possibly with a different rate). If we
     // allowed broad rules to match subcategorized transactions, the
     // optimizer would over-count rewards for those transactions.
-    //
-    // TODO: If a future card's terms explicitly include subcategories
-    // under a broad category rule, add an `includeSubcategories: true`
-    // field to the RewardRule schema and check it here before skipping.
     if (tx.subcategory && !rule.subcategory && rule.category !== '*') return false;
     return ruleConditionsMatch(rule, tx);
   });
