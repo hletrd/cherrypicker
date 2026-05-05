@@ -98,4 +98,19 @@ describe('validateFilePath', () => {
   test('allows path with double dots in filename (not segment)', () => {
     expect(() => validateFilePath('foo..bar.csv', { mustExist: false })).not.toThrow();
   });
+
+  test('strips null bytes from path before validation', () => {
+    // Null bytes should be stripped; the cleaned path should not contain them.
+    // After stripping \x00, /tmp/file\x00.txt has no traversal and passes.
+    expect(() => validateFilePath('/tmp/file\x00.txt', { mustExist: false })).not.toThrow();
+  });
+
+  test('rejects symbolic link when mustExist is true', () => {
+    const { symlinkSync, unlinkSync } = require('node:fs');
+    const { join } = require('node:path');
+    const linkPath = join(tempDir, 'evil-link');
+    symlinkSync(tempCsv, linkPath);
+    expect(() => validateFilePath(linkPath, { mustExist: true })).toThrow('심볼릭 링크');
+    unlinkSync(linkPath);
+  });
 });
