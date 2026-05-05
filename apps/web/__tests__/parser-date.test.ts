@@ -7,7 +7,7 @@
  * added month-aware day validation (C64-01).
  */
 import { describe, test, expect } from 'bun:test';
-import { parseDateStringToISO, inferYear } from '../src/lib/parser/date-utils.js';
+import { parseDateStringToISO, inferYear, isValidISODate } from '../src/lib/parser/date-utils.js';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -119,6 +119,48 @@ describe('inferYear — look-back heuristic', () => {
     // The heuristic says: if the candidate date is > 90 days in the future,
     // use previous year. For a date 6 months out, this should be true.
     expect(futureYear).toBe(now.getFullYear() - 1);
+  });
+});
+
+describe('isValidISODate — format and range validation (C14-01)', () => {
+  test('accepts valid ISO date', () => {
+    expect(isValidISODate('2024-01-15')).toBe(true);
+  });
+
+  test('accepts leap year Feb 29', () => {
+    expect(isValidISODate('2024-02-29')).toBe(true);
+  });
+
+  test('rejects invalid month 99', () => {
+    expect(isValidISODate('2024-99-01')).toBe(false);
+  });
+
+  test('rejects invalid day 99', () => {
+    expect(isValidISODate('2024-01-99')).toBe(false);
+  });
+
+  test('rejects month 0', () => {
+    expect(isValidISODate('2024-00-01')).toBe(false);
+  });
+
+  test('rejects day 0', () => {
+    expect(isValidISODate('2024-01-00')).toBe(false);
+  });
+
+  test('rejects Feb 30', () => {
+    expect(isValidISODate('2024-02-30')).toBe(false);
+  });
+
+  test('rejects Apr 31', () => {
+    expect(isValidISODate('2024-04-31')).toBe(false);
+  });
+
+  test('rejects non-ISO format', () => {
+    expect(isValidISODate('2024.01.15')).toBe(false);
+  });
+
+  test('rejects empty string', () => {
+    expect(isValidISODate('')).toBe(false);
   });
 });
 

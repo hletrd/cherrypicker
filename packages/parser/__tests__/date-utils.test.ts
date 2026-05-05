@@ -297,6 +297,43 @@ describe('isValidISODate', () => {
   test('rejects date with extra content', () => {
     expect(isValidISODate('2024-01-15 extra')).toBe(false);
   });
+
+  // C14-01: month/day range validation
+  test('rejects invalid month 99', () => {
+    expect(isValidISODate('2024-99-01')).toBe(false);
+  });
+
+  test('rejects invalid day 99', () => {
+    expect(isValidISODate('2024-01-99')).toBe(false);
+  });
+
+  test('rejects month 0', () => {
+    expect(isValidISODate('2024-00-01')).toBe(false);
+  });
+
+  test('rejects day 0', () => {
+    expect(isValidISODate('2024-01-00')).toBe(false);
+  });
+
+  test('rejects Feb 30', () => {
+    expect(isValidISODate('2024-02-30')).toBe(false);
+  });
+
+  test('rejects Apr 31', () => {
+    expect(isValidISODate('2024-04-31')).toBe(false);
+  });
+
+  test('rejects zero year', () => {
+    expect(isValidISODate('0000-01-01')).toBe(false);
+  });
+
+  test('accepts month-aware day boundary: Jan 31', () => {
+    expect(isValidISODate('2024-01-31')).toBe(true);
+  });
+
+  test('accepts month-aware day boundary: Apr 30', () => {
+    expect(isValidISODate('2024-04-30')).toBe(true);
+  });
 });
 
 describe('isValidYYMMDD', () => {
