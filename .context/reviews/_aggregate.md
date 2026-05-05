@@ -1,23 +1,20 @@
-# Cycle 86 Aggregate Review
+# Cycle 87 Aggregate Review
 
 ## Summary
-After 85 cycles, the parser is very mature with 1244+ bun + 299+ vitest tests passing.
-This cycle identifies **5 actionable findings**: missing English keywords in HEADER_KEYWORDS and a missing `할인` summary row pattern, both affecting format diversity for English-only header rows.
+After 86 cycles, the parser is very mature with 1261+ bun tests passing. This cycle identifies **3 actionable findings**: missing standalone keywords (`desc`, `amt`, `txn`) in column patterns that cause header-detection/column-matching desync, missing keywords in HEADER_KEYWORDS, and XLSX numeric YYYYMMDD dates being rejected as errors.
 
 ## Findings
 
 | # | Severity | Area | Description | Status |
 |---|----------|------|-------------|--------|
-| F1 | MEDIUM | column-matcher | Missing 13 English date keywords in HEADER_KEYWORDS | Planned |
-| F2 | LOW | column-matcher | Missing `name` merchant keyword in HEADER_KEYWORDS | Planned |
-| F3 | LOW | column-matcher | Missing `debit`/`credit`/`net`/`netamount`/`gross` in HEADER_KEYWORDS | Planned |
-| F4 | LOW | column-matcher | Missing standalone `할인` in SUMMARY_ROW_PATTERN | Planned |
-| T1 | MEDIUM | column-matcher.test | Missing English-only header detection test coverage | Planned |
+| F1 | MEDIUM | column-matcher | Missing `desc`/`amt`/`txn` standalone in column patterns | Planned |
+| F2 | LOW | column-matcher | Missing `installment`/`install`/`remark` in HEADER_KEYWORDS | Planned |
+| F3 | MEDIUM | xlsx (server+web) | Numeric YYYYMMDD dates (20240115) rejected as errors | Planned |
+| T1 | MEDIUM | tests | Missing test coverage for `desc`/`amt`/`txn` column matching | Planned |
+| T2 | MEDIUM | tests | Missing test for numeric YYYYMMDD dates in XLSX | Planned |
 
 ## Reviewer Results
-- **code-reviewer**: 4 findings (F1-F4), keyword gaps in HEADER_KEYWORDS
-- **test-engineer**: 1 finding (T1), missing English-only header test coverage
-- **verifier**: All findings low-risk, safe to implement
+- **code-reviewer**: 3 findings (F1-F3), column pattern gaps and XLSX numeric date issue
 
 ## Deferred Items (unchanged)
 - D-01: Shared module between Bun/browser (significant refactor)

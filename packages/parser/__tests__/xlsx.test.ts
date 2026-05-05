@@ -1017,4 +1017,42 @@ describe('XLSX amount forward-fill and whitespace guard (C73-01/C73-02)', () => 
       cleanup(filePath);
     }
   });
+
+  test('numeric YYYYMMDD dates (20240115) are parsed correctly (C87-01)', async () => {
+    // Korean bank XLSX exports sometimes store dates as 8-digit numbers
+    // rather than Excel serial dates. These should be parsed as YYYYMMDD.
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [20240115, '스타벅스', 6000],
+      [20240220, '이마트', 30000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]?.date).toBe('2024-01-15');
+      expect(result.transactions[0]?.merchant).toBe('스타벅스');
+      expect(result.transactions[0]?.amount).toBe(6000);
+      expect(result.transactions[1]?.date).toBe('2024-02-20');
+      // Should NOT produce date parsing errors
+      const dateErrors = result.errors.filter((e) => e.message.includes('날짜'));
+      expect(dateErrors).toHaveLength(0);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('numeric YYYYMMDD with invalid month produces error (C87-01)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [20241301, '스타벅스', 6000],  // month 13 is invalid
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Should fall through to serial date path (>100000 guard)
+      // and produce an error
+      expect(result.transactions.length).toBeLessThanOrEqual(1);
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });

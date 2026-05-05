@@ -1,41 +1,37 @@
-# Cycle 86 Implementation Plan
+# Cycle 87 Implementation Plan
 
 ## Goal
-Add missing English keywords to HEADER_KEYWORDS, add `할인` to SUMMARY_ROW_PATTERN, and add test coverage for English-only header detection.
+Fix 3 format diversity findings and add test coverage.
 
-## Changes
+## Plan
 
-### 1. Add missing English date keywords to HEADER_KEYWORDS
-**File:** `packages/parser/src/csv/column-matcher.ts` + `apps/web/src/lib/parser/column-matcher.ts`
-- Add to HEADER_KEYWORDS: `settlementdate`, `paymentdate`, `invoicedate`, `purchasedt`, `purchase_dt`, `transdate`, `transdt`, `transactiondt`, `transaction_dt`, `txndt`, `bookdate`, `canceldate`, `refunddate`
+### P1: Add `desc`/`amt`/`txn` to column patterns (F1)
+**File**: `packages/parser/src/csv/column-matcher.ts`
+- Add `^desc$` to MERCHANT_COLUMN_PATTERN and MEMO_COLUMN_PATTERN
+- Add `^amt$` to AMOUNT_COLUMN_PATTERN
+- Add `^txn$` to MEMO_COLUMN_PATTERN
+- Parity: all changes apply to shared column patterns used by CSV/XLSX/PDF
 
-### 2. Add missing English merchant keyword to HEADER_KEYWORDS
-**File:** `packages/parser/src/csv/column-matcher.ts` + `apps/web/src/lib/parser/column-matcher.ts`
-- Add `name` to HEADER_KEYWORDS
+### P2: Add `installment`/`install`/`remark` to HEADER_KEYWORDS (F2)
+**File**: `packages/parser/src/csv/column-matcher.ts`
+- Add `'installment'`, `'install'`, `'remark'` to HEADER_KEYWORDS array
 
-### 3. Add missing English amount keywords to HEADER_KEYWORDS
-**File:** `packages/parser/src/csv/column-matcher.ts` + `apps/web/src/lib/parser/column-matcher.ts`
-- Add to HEADER_KEYWORDS: `debit`, `credit`, `net`, `netamount`, `gross`
+### P3: XLSX numeric YYYYMMDD date parsing (F3)
+**Files**: `packages/parser/src/xlsx/index.ts`, `apps/web/src/lib/parser/xlsx.ts`
+- In `parseDateToISO`, before the `> 100000` guard, check if the number is a valid YYYYMMDD (10000000-99999999, valid month/day)
+- If so, parse it as YYYY-MM-DD directly
+- Same fix on both server and web sides for parity
 
-### 4. Add standalone `할인` to SUMMARY_ROW_PATTERN
-**File:** `packages/parser/src/csv/column-matcher.ts` + `apps/web/src/lib/parser/column-matcher.ts`
-- Add `(?<![가-힣])할인(?![가-힣])(?=[\s,;]|$)` pattern for standalone discount summary rows
+### P4: Tests
+**Files**: `packages/parser/__tests__/column-matcher.test.ts`, `packages/parser/__tests__/xlsx.test.ts`
+- Test that `desc`, `amt`, `txn` headers match correct column roles
+- Test that numeric YYYYMMDD dates parse correctly in XLSX
 
-### 5. Add English-only header detection tests
-**File:** `packages/parser/__tests__/column-matcher.test.ts`
-- Test `isValidHeaderRow` with English-only header rows
-- Test `SUMMARY_ROW_PATTERN` with standalone 할인 rows
-
-### 6. Run all quality gates
-- `bun test`
-- `vitest`
-- `bun run build`
-
-## Deferred Items (STRICT)
-- D-01: Shared module between Bun/browser — **deferred** (significant refactor)
-- PDF multi-line headers — **deferred** (needs fixture data)
-- Historical amount display — **deferred** (low priority)
-- Card name suffixes — **deferred** (low priority)
-- Global config integration — **deferred** (feature work)
-- Generic parser fallback — **deferred** (needs UX decisions)
-- CSS dark mode — **deferred** (frontend work)
+## Deferred (unchanged)
+- D-01: Shared module refactor
+- PDF multi-line headers
+- Historical amount display
+- Card name suffixes
+- Global config
+- Generic parser fallback
+- CSS dark mode

@@ -230,6 +230,22 @@ function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): 
     return String(raw);
   }
   if (typeof raw === 'number') {
+    // Check for numeric YYYYMMDD dates (e.g., 20240115) before the serial
+    // date guard. Korean bank XLSX exports sometimes store dates as 8-digit
+    // numbers rather than Excel serial dates. Numbers in the 10000000-99999999
+    // range with valid month/day are parsed as YYYYMMDD dates (C87-01).
+    // Parity with server-side XLSX parser in packages/parser/src/xlsx/index.ts.
+    if (Number.isFinite(raw) && raw >= 10000000 && raw <= 99999999) {
+      const str = Math.trunc(raw).toString();
+      if (str.length === 8) {
+        const y = parseInt(str.slice(0, 4), 10);
+        const m = parseInt(str.slice(4, 6), 10);
+        const d = parseInt(str.slice(6, 8), 10);
+        if (y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && isValidDayForMonth(y, m, d)) {
+          return `${y.toString().padStart(4, '0')}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+        }
+      }
+    }
     // Guard against NaN, Infinity, and numbers that are clearly NOT dates.
     // Report error for out-of-range values (except 0 which is a common empty
     // cell default), matching server-side XLSX parser behavior (C11-02).

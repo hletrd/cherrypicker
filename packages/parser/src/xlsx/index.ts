@@ -76,6 +76,21 @@ function parseDateToISO(
     return String(raw);
   }
   if (typeof raw === 'number') {
+    // Check for numeric YYYYMMDD dates (e.g., 20240115) before the serial
+    // date guard. Korean bank XLSX exports sometimes store dates as 8-digit
+    // numbers rather than Excel serial dates. Numbers in the 10000000-99999999
+    // range with valid month/day are parsed as YYYYMMDD dates (C87-01).
+    if (Number.isFinite(raw) && raw >= 10000000 && raw <= 99999999) {
+      const str = Math.trunc(raw).toString();
+      if (str.length === 8) {
+        const y = parseInt(str.slice(0, 4), 10);
+        const m = parseInt(str.slice(4, 6), 10);
+        const d = parseInt(str.slice(6, 8), 10);
+        if (y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && isValidDayForMonth(y, m, d)) {
+          return `${y.toString().padStart(4, '0')}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+        }
+      }
+    }
     if (!Number.isFinite(raw) || raw < 1 || raw > 100000) {
       if (errors && lineIdx !== undefined && raw !== 0) {
         errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });

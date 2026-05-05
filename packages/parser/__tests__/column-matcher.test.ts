@@ -2404,3 +2404,114 @@ describe('Cycle 86: English-only header detection and format diversity', () => {
     expect(SUMMARY_ROW_PATTERN.test('할인 합계 5,000원')).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cycle 87: desc/amt/txn column patterns and HEADER_KEYWORDS gaps
+// ---------------------------------------------------------------------------
+
+describe('Cycle 87: desc/amt/txn column pattern alignment (C87-01)', () => {
+  // F1: desc should match MERCHANT and MEMO
+  it('MERCHANT_COLUMN_PATTERN matches desc (standalone)', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('desc')).toBe(true);
+  });
+
+  it('MEMO_COLUMN_PATTERN matches desc (standalone)', () => {
+    expect(MEMO_COLUMN_PATTERN.test('desc')).toBe(true);
+  });
+
+  it('findColumn detects desc as merchant column', () => {
+    const headers = ['date', 'desc', 'amount'];
+    expect(findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN)).toBe(1);
+  });
+
+  it('findColumn detects desc as memo column when merchant already found', () => {
+    const headers = ['date', 'merchant', 'amount', 'desc'];
+    // MERCHANT pattern also matches desc, so it would find index 1 first.
+    // But for MEMO pattern, desc at index 3 should match.
+    expect(findColumn(headers, undefined, MEMO_COLUMN_PATTERN)).toBe(3);
+  });
+
+  // F1: amt should match AMOUNT
+  it('AMOUNT_COLUMN_PATTERN matches amt (standalone)', () => {
+    expect(AMOUNT_COLUMN_PATTERN.test('amt')).toBe(true);
+  });
+
+  it('findColumn detects amt as amount column', () => {
+    const headers = ['date', 'merchant', 'amt'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  // F1: txn should match MEMO
+  it('MEMO_COLUMN_PATTERN matches txn (standalone)', () => {
+    expect(MEMO_COLUMN_PATTERN.test('txn')).toBe(true);
+  });
+
+  it('findColumn detects txn as memo column', () => {
+    const headers = ['date', 'merchant', 'amount', 'txn'];
+    expect(findColumn(headers, undefined, MEMO_COLUMN_PATTERN)).toBe(3);
+  });
+
+  // Integration: header with desc + date + amount should work end-to-end
+  it('isValidHeaderRow accepts date + desc + amount headers', () => {
+    expect(isValidHeaderRow(['date', 'desc', 'amount'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts date + desc + amt headers', () => {
+    expect(isValidHeaderRow(['date', 'desc', 'amt'])).toBe(true);
+  });
+
+  // AMOUNT_KEYWORDS should contain amt
+  it('AMOUNT_KEYWORDS contains amt', () => {
+    expect(AMOUNT_KEYWORDS.has('amt')).toBe(true);
+  });
+
+  // MERCHANT_KEYWORDS should contain desc
+  it('MERCHANT_KEYWORDS contains desc', () => {
+    expect(MERCHANT_KEYWORDS.has('desc')).toBe(true);
+  });
+
+  // MEMO_KEYWORDS should contain desc and txn
+  it('MEMO_KEYWORDS contains desc', () => {
+    expect(MEMO_KEYWORDS.has('desc')).toBe(true);
+  });
+
+  it('MEMO_KEYWORDS contains txn', () => {
+    expect(MEMO_KEYWORDS.has('txn')).toBe(true);
+  });
+});
+
+describe('Cycle 87: HEADER_KEYWORDS completeness (C87-02)', () => {
+  // F2: installment/install/remark should be in HEADER_KEYWORDS
+  it('HEADER_KEYWORDS contains installment', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('installment')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains install', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('install')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains remark', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('remark')).toBe(true);
+  });
+
+  // Verify installments column keywords are present
+  it('HEADER_KEYWORDS contains Korean installment keywords', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('할부')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('할부개월')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('할부기간')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('할부개월수')).toBe(true);
+  });
+
+  // isValidHeaderRow with install keyword
+  it('isValidHeaderRow accepts date + install headers (2 categories)', () => {
+    expect(isValidHeaderRow(['date', 'install', 'amount'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts date + installment headers (2 categories)', () => {
+    expect(isValidHeaderRow(['date', 'installment', 'amount'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts date + remark headers (2 categories)', () => {
+    expect(isValidHeaderRow(['date', 'remark', 'amount'])).toBe(true);
+  });
+});
