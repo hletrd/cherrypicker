@@ -1,173 +1,125 @@
-# Plan 18 — High-Priority Fixes (Cycle 10)
+# Cycle 10 High-Priority Fixes
 
-**Priority:** HIGH
-**Findings addressed:** C10-06, C10-09, C10-02
-**Status:** DONE
-
----
-
-## Task 1: Fix `handleUpload` to check `analysisStore.error` before setting success status (C10-06)
-
-**Finding:** `apps/web/src/components/upload/FileDropzone.svelte:192-211` — When `analysisStore.analyze()` is called, the store catches errors internally (setting `error` and `result = null`) without re-throwing. The `handleUpload` function always sets `uploadStatus = 'success'` and navigates to the dashboard, even when the analysis failed. This redirects the user away from the upload page with no way to retry.
-
-**Files:**
-- `apps/web/src/components/upload/FileDropzone.svelte`
-
-**Implementation:**
-1. After `await analysisStore.analyze(...)`, check `analysisStore.error` before setting success:
-```ts
-await analysisStore.analyze(uploadedFiles, {
-  bank: bank || undefined,
-  previousMonthSpending: (() => { const v = Number(previousSpending); return Number.isFinite(v) && v >= 0 ? v : undefined; })(),
-});
-
-if (analysisStore.error) {
-  errorMessage = analysisStore.error;
-  uploadStatus = 'error';
-} else {
-  uploadStatus = 'success';
-  navigateTimeout = setTimeout(() => {
-    window.location.href = import.meta.env.BASE_URL + 'dashboard';
-  }, 1200);
-}
-```
-
-**Commit:** `fix(web): 🛡️ check analysisStore.error before setting upload success status`
+**Created:** 2026-05-05  
+**Source:** cycle10 aggregate review (_aggregate.md)  
+**Status:** Completed
 
 ---
 
-## Task 2: Filter `reoptimize` transactions to latest month to match initial optimization behavior (C10-09)
+## C10-01: Fix Infinity bug in parseAmountString (shared, server-side)
+**Severity:** P0-CRITICAL  
+**File:** `packages/parser/src/csv/shared.ts:160-162`  
+**Description:** `Math.round(parseFloat(cleaned))` can return `Infinity` which passes `!Number.isNaN()` check.
+**Fix:** Add `!Number.isFinite(n)` check.
+**Code change:**
+```typescript
+// Before:
+const n = Math.round(parseFloat(cleaned));
+if (Number.isNaN(n)) return null;
 
-**Finding:** `apps/web/src/lib/analyzer.ts:266-271,293-311` — `analyzeMultipleFiles` filters to the latest month for optimization (`latestTransactions`), but `reoptimize` passes ALL months' transactions. This causes cap distortion: non-latest-month transactions consume reward caps that should be available for the latest month.
-
-**Files:**
-- `apps/web/src/lib/analyzer.ts`
-- `apps/web/src/lib/store.svelte.ts`
-
-**Implementation:**
-1. In `analyzer.ts`, export a helper that determines the latest month from a transaction list:
-```ts
-export function getLatestMonth(transactions: CategorizedTx[]): string | null {
-  if (transactions.length === 0) return null;
-  const months = new Set<string>();
-  for (const tx of transactions) {
-    if (tx.date && tx.date.length >= 7) {
-      months.add(tx.date.slice(0, 7));
-    }
-  }
-  const sorted = [...months].sort();
-  return sorted[sorted.length - 1] ?? null;
-}
+// After:
+const n = Math.round(parseFloat(cleaned));
+if (Number.isNaN(n) || !Number.isFinite(n)) return null;
 ```
-
-2. In `store.svelte.ts`, update `reoptimize` to filter transactions to the latest month before passing to `optimizeFromTransactions`:
-```ts
-async reoptimize(editedTransactions: CategorizedTx[], options?: AnalyzeOptions): Promise<void> {
-  loading = true;
-  error = null;
-  try {
-    const categoryLabels = await getCategoryLabels();
-    // Filter to the latest month to match the initial optimization behavior.
-    // analyzeMultipleFiles only optimizes the latest month; reoptimize must
-    // do the same to avoid cap distortion from non-latest-month transactions.
-    const latestMonth = getLatestMonth(editedTransactions);
-    const latestTransactions = latestMonth
-      ? editedTransactions.filter(tx => tx.date.startsWith(latestMonth))
-      : editedTransactions;
-    const optimization = await optimizeFromTransactions(latestTransactions, options, categoryLabels);
-    if (result) {
-      // Keep all months in the transactions field for display/editing,
-      // but the optimization only covers the latest month.
-      result = { ...result, transactions: editedTransactions, optimization };
-      generation++;
-      persistToStorage(result);
-      persistWarningKind = _persistWarningKind;
-    } else {
-      error = '분석 결과가 없어요. 다시 분석해 보세요.';
-    }
-  } catch (e) {
-    error = e instanceof Error ? e.message : '재계산 중 문제가 생겼어요';
-  } finally {
-    loading = false;
-  }
-},
-```
-
-**Commit:** `fix(web): 🛡️ filter reoptimize transactions to latest month to match initial optimization`
+**Tests:** Add test cases for `"1e309"`, `"1e400"`, `"-1e309"` in parser tests.
+**Status:** completed
 
 ---
 
-## Task 3: Add minimum merchant name length guard for `kw.includes(lower)` substring matching (C10-02)
+## C10-02: Fix Infinity bug in parseOFXAmount (server-side)
+**Severity:** P0-CRITICAL  
+**File:** `packages/parser/src/ofx/index.ts:111-113`  
+**Description:** Same pattern as C10-01.
+**Fix:** Add `!Number.isFinite(n)` check.
+**Code change:**
+```typescript
+// Before:
+const n = parseFloat(cleaned);
+if (Number.isNaN(n)) return null;
+return Math.round(n);
 
-**Finding:** `packages/core/src/categorizer/matcher.ts:46-55` and `packages/core/src/categorizer/taxonomy.ts:69-76` — Short merchant names (e.g., 2 CJK characters like "스타") falsely match longer keywords via `kw.includes(lower)`. An empty merchant name matches the first keyword with 0.8 confidence.
-
-**Files:**
-- `packages/core/src/categorizer/matcher.ts`
-- `packages/core/src/categorizer/taxonomy.ts`
-
-**Implementation:**
-1. In `matcher.ts`, add a guard at the beginning of `match()`:
-```ts
-match(merchantName: string, rawCategory?: string): MatchResult {
-  const lower = merchantName.toLowerCase().trim();
-
-  // Guard: empty or single-character merchant names cannot be meaningfully
-  // categorized by keyword matching. Return uncategorized immediately.
-  if (lower.length < 2) {
-    return { category: 'uncategorized', confidence: 0.0 };
-  }
-  // ... rest of method
+// After:
+const n = parseFloat(cleaned);
+if (Number.isNaN(n) || !Number.isFinite(n)) return null;
+return Math.round(n);
 ```
-
-2. In `matcher.ts`, add a minimum length check for the `kw.includes(lower)` direction at step 2:
-```ts
-// 2. Substring match against MERCHANT_KEYWORDS keys (confidence 0.8)
-let bestStaticKw: { category: string; subcategory?: string; kwLen: number } | undefined;
-for (const [kw, categoryStr] of Object.entries(ALL_KEYWORDS)) {
-  if (!isSubstringSafeKeyword(kw)) continue;
-  if (lower.includes(kw)) {
-    // merchant contains keyword — always meaningful
-    const [category, subcategory] = categoryStr.includes('.')
-      ? categoryStr.split('.') as [string, string]
-      : [categoryStr, undefined];
-    if (!bestStaticKw || kw.length > bestStaticKw.kwLen) {
-      bestStaticKw = { category, subcategory, kwLen: kw.length };
-    }
-  } else if (kw.includes(lower) && lower.length >= 3) {
-    // keyword contains merchant — only meaningful when merchant name is
-    // long enough (>= 3 chars) to avoid false positives like "스타" matching "스타벅스"
-    const [category, subcategory] = categoryStr.includes('.')
-      ? categoryStr.split('.') as [string, string]
-      : [categoryStr, undefined];
-    if (!bestStaticKw || kw.length > bestStaticKw.kwLen) {
-      bestStaticKw = { category, subcategory, kwLen: kw.length };
-    }
-  }
-}
-```
-
-3. In `taxonomy.ts`, apply the same minimum length check at step 3 (fuzzy match):
-```ts
-// 3. Fuzzy match — keyword contains merchant name (partial reverse)
-// Only apply when merchant name is >= 3 chars to avoid false positives
-let bestFuzzy: { category: string; subcategory?: string; kwLen: number } | undefined;
-if (lower.length >= 3) {
-  for (const [kw, mapping] of this.keywordMap) {
-    if (kw.includes(lower)) {
-      if (!bestFuzzy || kw.length < bestFuzzy.kwLen) {
-        bestFuzzy = { ...mapping, kwLen: kw.length };
-      }
-    }
-  }
-}
-```
-
-**Commit:** `fix(core): 🛡️ add minimum merchant name length guard for reverse substring matching`
+**Status:** completed
 
 ---
 
-## Progress
+## C10-03: Fix Infinity bug in web-side parseAmount (csv.ts)
+**Severity:** P0-CRITICAL  
+**File:** `apps/web/src/lib/parser/csv.ts:148-150`  
+**Description:** Same pattern as C10-01.
+**Fix:** Add `!Number.isFinite(n)` check.
+**Status:** completed
 
-- [x] Task 1: Fix `handleUpload` error check
-- [x] Task 2: Filter reoptimize transactions to latest month
-- [x] Task 3: Add minimum merchant name length guard
+---
+
+## C10-04: Fix Infinity bug in web-side parseAmount (pdf.ts)
+**Severity:** P0-CRITICAL  
+**File:** `apps/web/src/lib/parser/pdf.ts:271-273`  
+**Description:** Same pattern as C10-01.
+**Fix:** Add `!Number.isFinite(n)` check.
+**Status:** completed
+
+---
+
+## C10-05: Fix Infinity bug in web-side parseOFXAmount
+**Severity:** P0-CRITICAL  
+**File:** `apps/web/src/lib/parser/ofx.ts:79-81`  
+**Description:** Same pattern as C10-02.
+**Fix:** Add `!Number.isFinite(n)` check.
+**Status:** completed
+
+---
+
+## C10-06: Guard JSON normalizeAmount against Infinity (web-side)
+**Severity:** P2-MEDIUM  
+**File:** `apps/web/src/lib/parser/json.ts:67-75`  
+**Description:** `normalizeAmount` checks `Number.isFinite` for number inputs but delegates string inputs to `parseCSVAmount` which has the Infinity bug.
+**Fix:** Guard `parseCSVAmount` result:
+```typescript
+if (typeof raw === 'string') {
+  const parsed = parseCSVAmount(raw);
+  return parsed !== null && Number.isFinite(parsed) ? parsed : null;
+}
+```
+**Status:** completed
+
+---
+
+## C10-07: Guard JSON normalizeAmount against Infinity (server-side)
+**Severity:** P2-MEDIUM  
+**File:** `packages/parser/src/json/index.ts:79-87`  
+**Description:** Same as C10-06.
+**Fix:** Same guard pattern.
+**Status:** completed
+
+---
+
+## C10-08: Guard XLSX parseAmount against Infinity
+**Severity:** P2-MEDIUM  
+**File:** `packages/parser/src/xlsx/index.ts:157-160`  
+**Description:** For string inputs, delegates to `parseAmountString` without guarding.
+**Fix:** Guard the result:
+```typescript
+if (typeof raw === 'string') {
+  const parsed = parseAmountString(raw);
+  return parsed !== null && Number.isFinite(parsed) ? parsed : null;
+}
+```
+**Status:** completed
+
+---
+
+## C10-09: Add Infinity edge case tests
+**Severity:** P2-MEDIUM  
+**Files:** `packages/parser/__tests__/*`, `apps/web/__tests__/*`  
+**Description:** No existing tests cover Infinity amounts.
+**Fix:** Add test cases for:
+- `"1e309"` -> null (parse error)
+- `"1e400"` -> null
+- `"-1e309"` -> null
+- `Number.MAX_VALUE + 1` -> null (for number inputs)
+**Status:** completed
