@@ -1,28 +1,21 @@
-# Cycle 10 Aggregate Review
+# Cycle 11 Aggregate Review
 
-**Date:** 2026-05-05  
-**Cycle:** 10 of 100  
-**Reviewers:** code-reviewer, security-reviewer, debugger, verifier, architect, test-engineer, perf-reviewer, critic, tracer, document-specialist, designer
+**Date:** 2026-05-05
+**Cycle:** 11 of 100
+**Reviewers:** code-reviewer, security-reviewer, perf-reviewer, test-engineer, architect, debugger, critic, verifier, tracer, document-specialist, designer
 
 ---
 
 ## Cross-Agent Agreement (High-Signal Findings)
 
-### Infinity Bug in Amount Parsing — CONFIRMED by 5 agents
-- **code-reviewer:** P1-HIGH in `parseAmountString`, `parseOFXAmount`
-- **debugger:** P0-CRITICAL, traced across all parsers
-- **verifier:** P1-HIGH, server/web parity mismatch on fix status
-- **critic:** P1-HIGH, user impact perspective
-- **tracer:** High confidence, traced full causal chain
+### Cycle 10 Fixes Verified Correct — CONFIRMED by 6+ agents
+- **code-reviewer, debugger, verifier, tracer:** Infinity guards verified across all 8 parser paths
+- **verifier, tracer:** console.warn removal verified on server-side; web-side still present
+- **code-reviewer, verifier, designer:** aria-busy fix verified correct
+- **code-reviewer, verifier, document-specialist:** esc() fix verified correct
+- **verifier, tracer:** monthlyBreakdown recalculation verified in reoptimize
 
-**Consensus:** This is the highest-priority issue. It affects CSV, OFX, PDF, XLSX, and JSON parsers on both server and web sides.
-
-### Parser Code Duplication / Parity Drift — CONFIRMED by 3 agents
-- **architect:** P1-HIGH, calls for D-01 refactor
-- **verifier:** P2-MEDIUM, documented multiple parity gaps
-- **tracer:** High confidence, identified as root cause of recurring parity bugs
-
-**Consensus:** Structural issue causing repeated work. Long-term refactor needed.
+**Consensus:** Cycle 10 fixes are solid. No regressions introduced.
 
 ---
 
@@ -30,20 +23,38 @@
 
 | # | Severity | Category | File | Finding | Agents |
 |---|----------|----------|------|---------|--------|
-| 1 | P0-CRITICAL | Correctness | All parsers | Infinity amount propagation | debugger, code-reviewer, verifier, critic, tracer |
-| 2 | P1-HIGH | Architecture | packages/parser/, apps/web/src/lib/parser/ | Server/web parser duplication | architect, verifier, tracer |
-| 3 | P1-HIGH | Security | packages/parser/src/ofx/index.ts:61 | OFX dynamic regex ReDoS risk | security-reviewer |
-| 4 | P2-MEDIUM | Correctness | apps/web/src/lib/parser/json.ts:67-75 | JSON normalizeAmount delegates Infinity risk | code-reviewer, debugger |
-| 5 | P2-MEDIUM | Correctness | packages/parser/src/xlsx/index.ts:157-160 | XLSX parseAmount delegates Infinity risk | code-reviewer |
-| 6 | P2-MEDIUM | Security | apps/web/src/layouts/Layout.astro:46 | Missing CSP implementation | security-reviewer, document-specialist |
-| 7 | P2-MEDIUM | Testing | All parser tests | No Infinity edge case tests | test-engineer |
-| 8 | P2-MEDIUM | UX | apps/web/src/components/upload/FileDropzone.svelte | Upload button lacks aria-busy | designer |
-| 9 | P2-MEDIUM | Performance | packages/core/src/optimizer/greedy.ts | O(n*m*t) score calculation | perf-reviewer |
-| 10 | P2-MEDIUM | Correctness | packages/core/src/optimizer/greedy.ts:56 | In-place array mutation | architect |
-| 11 | P3-LOW | Quality | packages/viz/src/report/generator.ts:42 | esc() over-escapes forward slash | code-reviewer |
-| 12 | P3-LOW | Quality | packages/parser/src/csv/index.ts:101 | console.warn in production | code-reviewer |
-| 13 | P3-LOW | Docs | packages/core/src/calculator/reward.ts:78 | Stale TODO comment | document-specialist |
-| 14 | P3-LOW | UX | apps/web/src/components/upload/FileDropzone.svelte | Step indicator color-only | designer |
+| 1 | P2-MEDIUM | Security | apps/web/src/layouts/Layout.astro:50 | CSP unsafe-inline in script-src (deferred) | security-reviewer |
+| 2 | P2-MEDIUM | Architecture | packages/parser/, apps/web/src/lib/parser/ | Parser duplication D-01 (deferred) | architect |
+| 3 | P3-LOW | Quality | apps/web/src/lib/parser/csv.ts:876 | console.warn in web-side CSV adapter | code-reviewer, verifier, tracer |
+| 4 | P3-LOW | Quality | apps/web/src/lib/parser/pdf.ts:478 | console.warn in web-side PDF fallback | code-reviewer, verifier |
+| 5 | P3-LOW | UX | apps/web/src/components/upload/FileDropzone.svelte:596 | Spinner lacks prefers-reduced-motion | perf-reviewer, critic, designer |
+| 6 | P3-LOW | Correctness | apps/web/src/lib/store.svelte.ts:185 | "corrupted" label for quota errors | critic |
+| 7 | P3-LOW | Quality | apps/web/src/lib/formatters.ts:226 | formatSavingsValue strips sign unconditionally | critic |
+| 8 | P3-LOW | Testing | packages/core/__tests__/categorizer.test.ts | No tests for merchant matcher length guard | test-engineer |
+| 9 | P3-LOW | Testing | apps/web/src/lib/store.svelte.ts | No test for reoptimize monthlyBreakdown | test-engineer |
+| 10 | P3-LOW | Testing | apps/web/src/lib/parser/* | No automated parity tests for web vs server | test-engineer |
+| 11 | P3-LOW | Docs | packages/core/src/calculator/reward.ts:78 | Stale TODO comment | document-specialist |
+| 12 | P3-LOW | UX | apps/web/src/components/dashboard/*.svelte | Dashboard cards lack region roles | designer |
+
+---
+
+## Carry-overs from Previous Cycles (severity preserved)
+
+### MEDIUM-priority carry-overs
+- **D7-M13** — CSP `unsafe-inline` in script-src. MEDIUM. Requires Astro nonce upstream support.
+- **D-01** — Parser duplication (web vs packages). HIGH. Major refactor deferred.
+- **D7-M11** — Architectural refactors (A7-01/02/03). MEDIUM. Cross-cycle.
+
+### LOW-priority carry-overs
+- **D-09** — `scoreCardsForTransaction` O(n*m) performance. LOW.
+- **D-02** — README says MIT, LICENSE is Apache 2.0. LOW.
+- **D7-M5** — Silent drop of malformed-date rows in monthlyBreakdown. LOW.
+- **D7-M9** — `ui-ux-screenshots.spec.js` has no assertions. LOW. Intentional.
+- **C9-02** — ALL_BANKS duplicates parser bank signatures. LOW.
+- **C9-03** — formatIssuerNameKo duplicates issuer name data. LOW.
+- **C9-04** — getIssuerColor duplicates issuer color data. LOW.
+- **C9-05** — getCategoryIconName duplicates taxonomy icon mapping. LOW.
+- **D8-02** — Dashboard cards lack `role="region"` + `aria-labelledby`. LOW.
 
 ---
 
@@ -53,13 +64,12 @@ None. All 11 agents completed successfully.
 ---
 
 ## Recommended Priority Order
-1. Fix Infinity bug in all amount parsers (P0)
-2. Add Infinity test cases (P1)
-3. Fix JSON MEMO_ALIASES parity (P2)
-4. Address CSP TODO or remove (P2)
-5. Improve upload button accessibility (P2)
-6. Clean up esc() forward-slash (P3)
-7. Remove console.warn (P3)
-8. Plan D-01 parser shared module refactor (architectural, deferred)
+1. Remove stale TODO comment in reward.ts (P3)
+2. Remove web-side console.warn in CSV and PDF parsers (P3)
+3. Add prefers-reduced-motion for spinner (P3)
+4. Add merchant matcher length guard tests (P3)
+5. Fix "corrupted" label → "quota_exceeded" (P3)
+6. Fix formatSavingsValue sign stripping (P3)
+7. Add dashboard card region roles (P3)
 
-**Overall Verdict:** FIX AND SHIP
+**Overall Verdict:** SHIP IT — Cycle 11 is a convergence cycle. No new HIGH or MEDIUM findings. Cycle 10 fixes are complete and correct.
