@@ -168,6 +168,12 @@ export function parseDateStringToISO(raw: string): string {
     if (month >= 1 && month <= 12 && isValidDayForMonth(year, month, day)) {
       return `${koreanFull[1]}-${koreanFull[2]!.padStart(2, '0')}-${koreanFull[3]!.padStart(2, '0')}`;
     }
+    // Korean full date matched but validation failed (e.g., Feb 29 on a
+    // non-leap year). Return the raw string to reject the date. Don't fall
+    // through to the Korean short-date branch, which would match a substring
+    // (e.g., "2월 29일") and incorrectly infer the year via inferYear()
+    // (C92-01).
+    return cleaned;
   }
 
   // Korean short date: 1월 15일
