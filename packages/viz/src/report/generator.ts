@@ -29,7 +29,13 @@ function formatDate(date: Date): string {
 }
 
 function esc(str: string): string {
-  return str
+  // Pre-decode numeric entities to prevent double-encoding bypass.
+  // Input like "&#x3C;script&#x3E;" would otherwise become "&amp;#x3C;script&amp;#x3E;"
+  // which browsers decode back to "<script>" (C19-SEC01).
+  const decoded = str
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+  return decoded
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
     .replace(/\x7f/g, '')
     .replace(/￾|￿/g, '')
