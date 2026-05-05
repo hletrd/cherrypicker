@@ -1,47 +1,53 @@
-# Cycle 100 Aggregate Review (FINAL CYCLE)
+# Cycle 2 Aggregate Review
 
 ## Summary
-Final cycle (100/100). Deep review focusing on server/web parity bugs, real-world edge cases, and architecture cleanup. Found 6 new issues — 3 high severity are server/web parity bugs that cause data loss or different parsing results.
+Cycle 2 of new batch. Found 14 new issues — 5 critical/high severity, 9 medium/low. Focus on server/web parity bugs and a critical runtime bug in FileDropzone.svelte.
 
-## New Findings (6)
+## New Findings (14)
 
 | ID | Severity | Type | Description |
 |----|----------|------|-------------|
-| F1 | HIGH | RELIABILITY | Web HTML parser missing forward-fill for merged cells — data loss |
-| F2 | HIGH | RELIABILITY | Web JSON parser rejects negative amounts (server accepts + abs) |
-| F3 | HIGH | RELIABILITY | Web OFX parser missing CCSTMTRS/CREDITCARDMSGSRSV1 terminators |
-| F4 | MEDIUM | RELIABILITY | Web format detection lacks content sniffing for unknown extensions |
-| F5 | LOW | ARCHITECTURE | Duplicate normalizeHTML() in HTML and XLSX parsers |
-| F6 | LOW | TESTS | Zero test coverage for web-side parsers |
+| F-CR-01 | CRITICAL | BUG | FileDropzone.svelte `errorMessage` vs `errorMessages` ReferenceError |
+| F-CR-02 | CRITICAL | BUG | FileDropzone ACCEPTED_EXTENSIONS blocks JSON/OFX/HTML formats |
+| F-CR-03 | HIGH | RELIABILITY | Web CSV parser drops refunds (amount <= 0 filter) |
+| F-CR-04 | HIGH | RELIABILITY | Web HTML parser drops refunds |
+| F-CR-05 | HIGH | RELIABILITY | Web XLSX parser drops refunds |
+| F-CR-06 | HIGH | RELIABILITY | Web PDF parser drops refunds |
+| F-DBG-02 | MEDIUM | RELIABILITY | fetcher.ts second fetch() loses abort timeout |
+| F-TEST-01 | CRITICAL | TESTS | No tests catch FileDropzone ReferenceError |
+| F-TEST-02 | HIGH | TESTS | No tests for refund handling across parsers |
+| F-ARCH-01 | HIGH | ARCHITECTURE | Server/web parser parity gap on negative amounts |
+| F-ARCH-02 | HIGH | ARCHITECTURE | UI file types don't match parser capabilities |
+| F-SEC-01 | MEDIUM | SECURITY | fetcher.ts abort timeout lost on EUC-KR detection |
+| F-SEC-07 | LOW | SECURITY | LLM fallback truncates PDF text to 8000 chars |
+| F-CR-07 | MEDIUM | CODE_QUALITY | JSON parser handles negatives correctly but siblings don't |
 
-## Detailed Findings
+## Detailed Critical/High Findings
 
-### F1: Web HTML parser missing forward-fill [HIGH]
-- **File**: `apps/web/src/lib/parser/html.ts`
-- **Impact**: Korean bank HTML exports with merged cells lose transaction data in web app
-- **Root cause**: Server-side HTML parser was updated with forward-fill (cycle 99), web-side was not
-- **Fix**: Add forward-fill pattern matching server-side HTML parser for all 6 columns
+### F-CR-01: FileDropzone.svelte runtime ReferenceError [CRITICAL]
+- **File**: `apps/web/src/components/upload/FileDropzone.svelte` lines 251, 314, 363
+- **Impact**: Complete component crash on any error path
+- **Root cause**: Variable declared as `errorMessages` but referenced as `errorMessage`
+- **Fix**: Rename all references to match declaration
 
-### F2: Web JSON parser rejects negative amounts [HIGH]
-- **File**: `apps/web/src/lib/parser/json.ts` line 90
-- **Impact**: JSON API responses with negative amounts (refunds) produce different results server vs web
-- **Root cause**: Web-side uses `amount <= 0` filter; server-side uses `Math.abs(amount)`
-- **Fix**: Match server-side behavior — accept negative, store absolute value
+### F-CR-02: FileDropzone blocks supported formats [CRITICAL]
+- **File**: `apps/web/src/components/upload/FileDropzone.svelte` lines 97-103
+- **Impact**: Users cannot upload OFX/QFX, HTML, or JSON files
+- **Root cause**: Hardcoded ACCEPTED_EXTENSIONS only allows csv/xlsx/pdf
+- **Fix**: Extend to include json/ofx/qfx/html/htm and corresponding MIME types
 
-### F3: Web OFX parser missing CCSTMTRS terminator [HIGH]
-- **File**: `apps/web/src/lib/parser/ofx.ts` line 18
-- **Impact**: Credit card OFX files may produce incorrect results on web-side
-- **Root cause**: SGML regex only has bank statement terminators, not credit card
-- **Fix**: Add `</CCSTMTRS` and `</CREDITCARDMSGSRSV1` to SGML terminator pattern
+### F-CR-03 through F-CR-06: Web parsers drop refunds [HIGH]
+- **Files**: `apps/web/src/lib/parser/csv.ts:175`, `html.ts:212`, `xlsx.ts:617`, `pdf.ts:440`
+- **Impact**: Refund transactions silently discarded, incorrect totals
+- **Root cause**: `amount <= 0` filter instead of `amount === 0` + `Math.abs()`
+- **Fix**: Change all four to match JSON parser behavior
 
-### F4: Web format detection lacks content sniffing [MEDIUM]
-- **File**: `apps/web/src/lib/parser/detect.ts`
-- **Impact**: Files with wrong extensions default to CSV
-- **Fix**: Deferred — browser FileReader limits make this complex
+### F-ARCH-01: Server/web parity on negative amounts [HIGH]
+- **Files**: All web parsers except JSON
+- **Impact**: Same statement produces different results on web vs CLI
+- **Fix**: Extract shared `validateAmount()` utility
 
-### F5: Duplicate normalizeHTML [LOW]
-- **Files**: `packages/parser/src/html/index.ts`, `packages/parser/src/xlsx/index.ts`
-- **Fix**: Extract to shared utility
-
-### F6: No web-side parser tests [LOW]
-- **Fix**: Deferred — would require significant test infrastructure for browser environment
+### F-ARCH-02: UI/parser capability mismatch [HIGH]
+- **Files**: FileDropzone.svelte vs parser/index.ts
+- **Impact**: Parser supports formats that UI rejects
+- **Fix**: Derive accepted types from parser capability map

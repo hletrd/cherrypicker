@@ -2,52 +2,78 @@
 
 ---
 
-## F-DBG-01: Server-side XLSX parser header detection lacks category requirement
+## F-DBG-01: FileDropzone.svelte runtime ReferenceError on all error paths [CRITICAL]
+**Severity: Critical | Confidence: High**
+**File**: `apps/web/src/components/upload/FileDropzone.svelte`
+
+Variable declared as `errorMessages` (plural) but assigned/read as `errorMessage` (singular) in `clearAllFiles()`, `handleUpload()`, and `handleRetry()`. Any validation error, network error, or parsing error triggers `ReferenceError: errorMessage is not defined`, crashing the component.
+
+**Repro**: Upload a file > 50MB, or upload a corrupted CSV, or trigger a network error during upload.
+
+**Fix**: Unify naming — either rename declaration to `errorMessage` or update all references to `errorMessages`.
+
+---
+
+## F-DBG-02: fetcher.ts second fetch() loses AbortController timeout protection
+**Severity: Medium | Confidence: High**
+**File**: `tools/scraper/src/fetcher.ts` lines 50-55
+
+When EUC-KR charset is detected via meta tag, a second `fetch()` is issued without passing `controller.signal`. The 30-second timeout is lost, meaning the fetch can hang indefinitely if the server is unresponsive.
+
+```typescript
+// Bug: missing signal: controller.signal
+const buffer = await fetch(url, {
+  signal: controller.signal,  // <-- MISSING
+  headers: { 'User-Agent': USER_AGENT },
+}).then((r) => r.arrayBuffer());
+```
+
+**Fix**: Pass `signal: controller.signal` to the second fetch call.
+
+---
+
+## F-DBG-03: Server-side XLSX parser header detection lacks category requirement
 **Severity: High | Confidence: High**
 **File**: `packages/parser/src/xlsx/index.ts` lines 161-169
 
-The server-side XLSX parser checks `matchCount >= 2` for header detection but does NOT require keywords from 2+ distinct categories. The web-side parser (xlsx.ts lines 378-387) and both generic CSV parsers require categories. This means the server-side XLSX parser can match a summary row with two amount-related keywords (e.g., '이용금액' and '승인금액') as the header.
-
-**Failure scenario**: A Samsung XLSX export with a summary table above the real header containing '이용금액' and '승인금액' would be misidentified, causing all subsequent rows to be parsed incorrectly.
+Header detection checks `matchCount >= 2` but does NOT require keywords from 2+ distinct categories. Can match summary rows with two amount-related keywords.
 
 ---
 
-## F-DBG-02: Server-side XLSX `parseDateToISO` silently returns raw string for unparseable dates
+## F-DBG-04: Server-side XLSX `parseDateToISO` silently returns raw string for unparseable dates
 **Severity: Medium | Confidence: High**
 **File**: `packages/parser/src/xlsx/index.ts` lines 29-53
 
-The server-side XLSX parser's `parseDateToISO` returns `String(raw)` for unparseable dates without pushing to an error array. The web-side parser (xlsx.ts lines 187-221) pushes error messages. This means server-side users don't see warnings about malformed dates.
+Returns `String(raw)` without pushing to error array. Web-side pushes error messages.
 
 ---
 
-## F-DBG-03: PDF fallback line scanner doesn't validate month/day in short dates
+## F-DBG-05: PDF fallback line scanner validates short dates loosely
 **Severity: Medium | Confidence: High**
 **File**: `packages/parser/src/pdf/index.ts` line 188, `apps/web/src/lib/parser/pdf.ts` line 350
 
-The fallback date pattern includes `\d{1,2}[.\-\/]\d{1,2}(?![.\-\/\d])` which matches "99.99" or "13.32". While these would fail `parseDateStringToISO`'s validation, they could still trigger false-positive date matching in `filterTransactionRows`, causing non-transaction lines to be parsed.
+Pattern `\d{1,2}[.\-\/]\d{1,2}(?![.\-\/\d])` matches invalid dates like "99.99".
 
 ---
 
-## F-DBG-04: Generic CSV merchant inference can pick wrong column
+## F-DBG-06: Generic CSV merchant inference can pick wrong column
 **Severity: Medium | Confidence: High**
 **File**: `packages/parser/src/csv/generic.ts` lines 124-131
 
-When headers don't match keywords, the merchant column is inferred as "the first column that is not date and not amount." This picks the first remaining column which could be installments, category, or memo — not the actual merchant. The same issue exists in the web-side (csv.ts lines 229-236).
-
-**Fix**: When inferring merchant from data, prefer the column with the most Korean text characters.
+When inferring merchant from data, picks "first column that is not date and not amount" which could be installments, category, or memo.
 
 ---
 
-## F-DBG-05: Server-side CSV `parseCSV` may use wrong adapter for bank override
+## F-DBG-07: Server-side CSV may use wrong adapter for bank override
 **Severity: Low | Confidence: High**
 **File**: `packages/parser/src/csv/index.ts` lines 46-49
 
-When a bank is specified, the code finds the adapter by `a.bankId === resolvedBank`. But the server-side only has 10 adapters (the "big 10" Korean banks), while BankId includes 24 banks. For banks like 'kakao', 'toss', 'kbank', etc., the code falls through to the generic parser, which is correct. But there's no warning or logging for this fallthrough.
+Only 10 adapters exist for 24 BankId values. No warning when falling through to generic parser.
 
 ---
 
-## F-DBG-06: PDF `extractText` error message doesn't distinguish encrypted PDFs
+## F-DBG-08: PDF extractor doesn't distinguish encrypted PDFs
 **Severity: Low | Confidence: Medium**
 **File**: `packages/parser/src/pdf/extractor.ts` lines 4-8
 
-When `pdf-parse` fails on an encrypted PDF, it throws a generic error. The user sees "PDF 텍스트 추출 실패: [generic error]" without guidance that the PDF might be password-protected.
+Encrypted PDFs produce generic error without guidance that the PDF might be password-protected.

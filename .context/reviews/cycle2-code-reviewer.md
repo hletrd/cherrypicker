@@ -1,92 +1,120 @@
 # Cycle 2 Code Review — Code Quality, Logic, SOLID, Maintainability
 
 ## Review Scope
-Full repository with special focus on packages/parser/ and apps/web/src/lib/parser/.
+Full repository with special focus on apps/web/ components and parser parity.
 
 ---
 
-## F-CR-01: Server-side XLSX parser does not use ColumnMatcher (inline regexes drift risk)
+## F-CR-01: FileDropzone.svelte uses undeclared variable `errorMessage` [CRITICAL]
+**Severity: Critical | Confidence: High**
+**File**: `apps/web/src/components/upload/FileDropzone.svelte` lines 251, 314, 363
+
+The reactive variable is declared as `errorMessages` (plural, line 76) but referenced as `errorMessage` (singular) on lines 251, 314, and 363. This causes a `ReferenceError` at runtime whenever file validation fails, file upload fails, or retry fails.
+
+**Impact**: Complete runtime crash of the file dropzone component on any error path. Users cannot see validation errors or retry failures.
+
+**Fix**: Rename all references to `errorMessages` to match the declaration, or rename the declaration to `errorMessage`.
+
+---
+
+## F-CR-02: FileDropzone ACCEPTED_EXTENSIONS blocks supported formats [CRITICAL]
+**Severity: Critical | Confidence: High**
+**File**: `apps/web/src/components/upload/FileDropzone.svelte` lines 97-103
+
+`ACCEPTED_EXTENSIONS` is `['csv', 'xlsx', 'pdf']` and `ACCEPTED_TYPES` is `['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/pdf']`. However, `apps/web/src/lib/parser/index.ts` (lines 70-81) supports JSON, OFX, and HTML formats. The UI blocks files that the parser can handle.
+
+**Impact**: Users cannot upload OFX/QFX, HTML table, or JSON transaction files through the web UI despite full parser support.
+
+**Fix**: Extend ACCEPTED_EXTENSIONS to include `json`, `ofx`, `qfx`, `html`, `htm` and ACCEPTED_TYPES to include `application/json`, `application/ofx`, `text/html`.
+
+---
+
+## F-CR-03: Web-side CSV parser silently drops refund transactions
+**Severity: High | Confidence: High**
+**File**: `apps/web/src/lib/parser/csv.ts` line 175
+
+`isValidAmount` returns `false` for `amount <= 0`, which filters out refund/return transactions with negative amounts. The server-side generic CSV parser and the web-side JSON parser correctly handle negatives.
+
+**Impact**: Refund transactions are silently discarded from CSV uploads, causing incorrect spending totals.
+
+**Fix**: Change `if (amount <= 0) return false;` to `if (amount === 0) return false;` and store `Math.abs(amount)`.
+
+---
+
+## F-CR-04: Web-side HTML parser silently drops refund transactions
+**Severity: High | Confidence: High**
+**File**: `apps/web/src/lib/parser/html.ts` line 212
+
+`if (amount <= 0) continue;` skips rows with negative amounts. The server-side HTML parser and web-side JSON parser handle negatives correctly.
+
+**Fix**: Change to `if (amount === 0) continue;` and use `Math.abs(amount)`.
+
+---
+
+## F-CR-05: Web-side XLSX parser silently drops refund transactions
+**Severity: High | Confidence: High**
+**File**: `apps/web/src/lib/parser/xlsx.ts` line 617
+
+Same issue as F-CR-03 and F-CR-04: `if (amount <= 0) continue;` filters refunds.
+
+**Fix**: Change to `if (amount === 0) continue;` and use `Math.abs(amount)`.
+
+---
+
+## F-CR-06: Web-side PDF parser silently drops refund transactions
+**Severity: High | Confidence: High**
+**File**: `apps/web/src/lib/parser/pdf.ts` line 440
+
+Same pattern: `if (amount <= 0) continue;` filters refunds.
+
+**Fix**: Change to `if (amount === 0) continue;` and use `Math.abs(amount)`.
+
+---
+
+## F-CR-07: Web JSON parser correctly handles negatives (inconsistent with siblings)
 **Severity: Medium | Confidence: High**
-**File**: `packages/parser/src/xlsx/index.ts` lines 193-198
+**File**: `apps/web/src/lib/parser/json.ts` lines 99-100
 
-The server-side XLSX parser has its own `findCol()` function with inline regex patterns for column matching. The cycle 1 work created `column-matcher.ts` with shared pattern constants (`DATE_COLUMN_PATTERN`, `MERCHANT_COLUMN_PATTERN`, etc.) that are used by the CSV adapter-factory, but the XLSX parser duplicates these patterns inline. If a pattern is updated in one place, the other drifts silently.
+The JSON parser correctly uses `if (amount === 0) return null; const absAmount = Math.abs(amount);`. This is inconsistent with the other 4 web parsers that all use `<= 0`. All parsers should share the same amount validation logic.
 
-The web-side XLSX parser (`apps/web/src/lib/parser/xlsx.ts` lines 411-416) has the same issue with its own inline regexes.
-
-**Impact**: Pattern divergence between CSV and XLSX parsers — a date format handled by the CSV parser may not be recognized by the XLSX parser.
+**Fix**: Extract shared amount validation to a utility function used by all web parsers.
 
 ---
 
-## F-CR-02: Server-side adapter-factory header detection is weaker than generic parser
+## F-CR-08: Server-side adapter-factory header detection weaker than generic parser
 **Severity: Medium | Confidence: High**
 **File**: `packages/parser/src/csv/adapter-factory.ts` line 79
 
-The adapter-factory's header detection only checks `cells.some((c) => headerKeywords.includes(c.trim()))` — a single keyword match suffices. The generic CSV parser (both server and web) requires keywords from at least 2 distinct categories (date, merchant, amount). This means the adapter-factory can incorrectly identify a summary row or metadata row as the header if it contains any single bank-specific keyword like '이용금액'.
-
-**Failure scenario**: A Samsung CSV with a summary row containing only '이용금액' before the real header would be misidentified as the header row.
+Header detection only requires a single keyword match, while the generic parser requires 2+ distinct categories. Can misidentify summary rows as headers.
 
 ---
 
-## F-CR-03: Server-side XLSX returns first sheet with transactions, not the best
+## F-CR-09: Server-side XLSX returns first sheet with transactions, not the best
 **Severity: Low | Confidence: High**
 **File**: `packages/parser/src/xlsx/index.ts` lines 106-116
 
-The server-side XLSX parser returns the first sheet that yields any transactions. The web-side parser (`xlsx.ts` lines 314-328) correctly selects the sheet with the MOST transactions. For multi-sheet workbooks where a summary sheet appears first and has fewer transactions, the server-side would return the wrong sheet.
+Returns the first sheet with any transactions instead of the sheet with the most transactions (web-side behavior).
 
 ---
 
-## F-CR-04: Unused `isValidCSVAmount` export from shared.ts
+## F-CR-10: Unused `isValidCSVAmount` export from shared.ts
 **Severity: Low | Confidence: High**
-**File**: `packages/parser/src/csv/shared.ts` lines 51-65, `packages/parser/src/csv/adapter-factory.ts` lines 110-117
+**File**: `packages/parser/src/csv/shared.ts` lines 51-65
 
-`isValidCSVAmount` is exported from shared.ts but the adapter-factory has inline null/negative checking instead. This creates two code paths that could diverge. The adapter-factory should use the shared helper for consistency with the generic CSV parser.
+Exported but adapter-factory has inline null/negative checking instead.
 
 ---
 
-## F-CR-05: Web-side CSV adapters use exact `indexOf()` — cycle 1 deferred item still unresolved
+## F-CR-11: Web-side CSV adapters still use exact `indexOf()` — cycle 1 deferred
 **Severity: Medium | Confidence: High**
-**File**: `apps/web/src/lib/parser/csv.ts` lines 318-321, 383-387, 449-453, etc.
+**File**: `apps/web/src/lib/parser/csv.ts` lines 318-321, 383-387, 449-453
 
-All 10 web-side bank CSV adapters use `headers.indexOf('exact string')` for column matching. The server-side was fixed in cycle 1 with ColumnMatcher + adapter-factory, but the web-side was deferred. This means the web-side is still brittle against column name variations (trailing spaces, parenthetical suffixes like '이용금액(원)', alternative names).
-
-**Impact**: A user uploading a CSV with column name variations in the browser will get zero transactions while the CLI parser works correctly.
+All 10 web-side bank CSV adapters use `headers.indexOf('exact string')`. Server-side was fixed with ColumnMatcher. Web-side still brittle against column name variations.
 
 ---
 
-## F-CR-06: `parseAmount` in web-side csv.ts has different whitespace handling than server-side
-**Severity: Low | Confidence: Medium**
-**File**: `apps/web/src/lib/parser/csv.ts` line 56 vs `packages/parser/src/csv/shared.ts` line 36
-
-Both handle whitespace, but the web-side strips whitespace AFTER removing '원' and commas, while the server-side removes '원', commas, AND whitespace in one chained replace. The web-side also doesn't strip whitespace from the raw input before checking for parenthesized negatives. Both work for typical inputs, but edge cases with spaces inside parens like "( 1,234 )" would behave differently.
-
----
-
-## F-CR-07: Server-side `detectFormat` only reports bank for CSV format
+## F-CR-12: Server-side `detectFormat` only reports bank for CSV format
 **Severity: Low | Confidence: High**
 **File**: `packages/parser/src/detect.ts` lines 206-214
 
-The `detectFormat` function returns `{ bank: null, confidence: 0 }` for XLSX and PDF formats. Bank detection for those formats happens inside the individual parsers. This means callers of `detectFormat` cannot know the bank for XLSX/PDF files without invoking the full parser. The CLI tool or web app might want to display the detected bank before parsing.
-
----
-
-## F-CR-08: `splitCSVLine` in shared.ts only handles RFC 4180 for comma delimiter
-**Severity: Low | Confidence: High**
-**File**: `packages/parser/src/csv/shared.ts` lines 9-10
-
-For non-comma delimiters (tab, pipe, semicolon), the function falls back to simple `line.split(delimiter).map(v => v.trim())`. This doesn't handle quoted fields containing the delimiter character (e.g., a semicolon inside a quoted field for semicolon-delimited files). While uncommon for Korean credit card exports, this is a correctness gap.
-
----
-
-## F-CR-09: Bank adapter `detect()` methods duplicate detection patterns
-**Severity: Low | Confidence: High**
-**File**: `packages/parser/src/csv/adapter-factory.ts` lines 63-66
-
-The adapter-factory's `detect()` method correctly delegates to `detectBank()` from `detect.ts`. However, the web-side adapters in `csv.ts` have their own inline regex patterns (e.g., line 291: `/삼성카드/.test(content) || /SAMSUNG\s*CARD/i.test(content)`). This duplicates the BANK_SIGNATURES from detect.ts and can drift.
-
----
-
-## F-CR-10: Server-side `parseCSVAmount` and web-side `parseAmount` have divergent behavior
-**Severity: Low | Confidence: Medium**
-**File**: `packages/parser/src/csv/shared.ts` line 36 vs `apps/web/src/lib/parser/csv.ts` line 52
-
-The server-side shared parser strips '원' suffix and commas before checking for parenthesized negatives. The web-side checks for parens first, then strips. While both produce correct results for typical inputs, the server-side is more robust because it strips formatting before parsing.
+Returns `{ bank: null }` for XLSX and PDF formats. Bank detection for those formats happens inside individual parsers.
