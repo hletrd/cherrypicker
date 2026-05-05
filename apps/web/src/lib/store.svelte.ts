@@ -244,12 +244,15 @@ function loadFromStorage(): AnalysisResult | null {
         // to prevent TypeError crashes in CategoryBreakdown / OptimalCardMap.
         if (Array.isArray(parsed.optimization.cardResults)) {
           const validCardResults = parsed.optimization.cardResults.filter(
-            (cr: any) =>
-              cr &&
-              typeof cr === 'object' &&
-              typeof cr.cardId === 'string' &&
-              typeof cr.totalReward === 'number' &&
-              Array.isArray(cr.byCategory)
+            (cr: unknown): boolean => {
+              if (!cr || typeof cr !== 'object') return false;
+              const obj = cr as Record<string, unknown>;
+              return (
+                typeof obj.cardId === 'string' &&
+                typeof obj.totalReward === 'number' &&
+                Array.isArray(obj.byCategory)
+              );
+            }
           );
           parsed.optimization.cardResults = validCardResults;
         }
@@ -283,11 +286,14 @@ function loadFromStorage(): AnalysisResult | null {
           transactions,
           optimization: parsed.optimization,
           monthlyBreakdown: Array.isArray(parsed.monthlyBreakdown)
-            ? parsed.monthlyBreakdown.map((item: any) => ({
-                month: typeof item?.month === 'string' ? item.month : '',
-                spending: typeof item?.spending === 'number' ? item.spending : 0,
-                transactionCount: typeof item?.transactionCount === 'number' ? item.transactionCount : 0,
-              }))
+            ? parsed.monthlyBreakdown.map((item: unknown) => {
+                const obj = item && typeof item === 'object' ? item as Record<string, unknown> : null;
+                return {
+                  month: obj && typeof obj.month === 'string' ? obj.month : '',
+                  spending: obj && typeof obj.spending === 'number' ? obj.spending : 0,
+                  transactionCount: obj && typeof obj.transactionCount === 'number' ? obj.transactionCount : 0,
+                };
+              })
             : undefined,
           previousMonthSpendingOption: typeof parsed.previousMonthSpendingOption === 'number' ? parsed.previousMonthSpendingOption : undefined,
           cardIdsOption: Array.isArray(parsed.cardIdsOption) ? parsed.cardIdsOption : undefined,
