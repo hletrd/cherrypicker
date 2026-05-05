@@ -1,27 +1,25 @@
-# Cycle 88 Aggregate Review
+# Cycle 89 Aggregate Review
 
 ## Summary
-After 87 cycles, 1284 bun tests passing. Previous cycle's findings F1-F3 (desc/amt/txn patterns, HEADER_KEYWORDS gaps, XLSX numeric YYYYMMDD dates) are ALL RESOLVED. This cycle identifies **1 new actionable finding**: short date validation rejects Feb 29 in non-leap years, affecting both CSV and PDF parsers across server and web.
+After 88 cycles, 1292 bun tests + 162 vitest tests passing. Previous cycle's Feb 29 leap year fix (C88-01) is confirmed resolved. This cycle identifies **2 new actionable findings**: XLSX amount forward-fill inconsistency and missing summary row patterns.
 
 ## Findings
 
 | # | Severity | Area | Description | Status |
 |---|----------|------|-------------|--------|
-| F1 | MEDIUM | CSV+PDF (4 files) | `isDateLikeShort()`/`isValidShortDate()` rejects Feb 29 in non-leap years | Planned |
-| T1 | MEDIUM | tests | Missing leap year short date test coverage | Planned |
+| F-89-01 | MEDIUM | XLSX (server+web) | Amount forward-fill uses inconsistent pattern vs other columns; whitespace-only cells not forward-filled despite code comment claiming otherwise | Planned |
+| F-89-02 | LOW | column-matcher | Summary row pattern missing "총소비" variants (총소비금액, 총소비) | Planned |
+| F-89-03 | LOW | XLSX (server+web) | Forward-fill code has redundant condition after outer guard; tech debt cleanup | Planned |
 
 ## Previous Cycle Findings (Resolved)
-- F1 (desc/amt/txn in column patterns): Confirmed present in current code
-- F2 (installment/install/remark in HEADER_KEYWORDS): Confirmed present
-- F3 (numeric YYYYMMDD dates in XLSX): Confirmed handled in both server and web parsers
+- C88-01 (Feb 29 leap year): Confirmed fixed with 4-year window in isDateLikeShort/isValidShortDate
 
 ## Reviewer Results
-- **code-reviewer**: 1 finding (F1), leap year short date validation bug
-- **test-engineer**: 1 finding (T1), missing leap year test coverage
-- **architect**: 1 finding (F1), runtime-dependent validation anti-pattern
+- **code-reviewer**: 1 finding (F-89-01), XLSX amount forward-fill asymmetry
+- **test-engineer**: 1 finding (F-89-02), missing summary row patterns
+- **architect**: 1 finding (F-89-03), forward-fill code duplication
 - **perf-reviewer**: No issues
 - **security-reviewer**: No issues
-- **verifier**: Confirmed fix is low-risk
 
 ## Deferred Items (unchanged)
 - D-01: Shared module between Bun/browser (significant refactor)

@@ -308,13 +308,21 @@ function parseXLSXSheet(
   // Track last non-empty values for merged cell forward-fill.
   // Korean bank XLSX exports commonly merge cells across installment
   // rows — SheetJS fills merged cells with empty strings (C4-04).
-  // Forward-fill extends to date, merchant, and category columns (C5-03).
+  // Forward-fill extends to all columns: date, merchant, category,
+  // installments, memo, and amount (C5-03/C73-01).
   let lastDate: unknown = '';
   let lastMerchant: unknown = '';
   let lastCategory: unknown = '';
   let lastInstallments: unknown = '';
   let lastMemo: unknown = '';
   let lastAmount: unknown = '';
+
+  // Helper: check if a cell has non-empty, non-whitespace content.
+  // Used for consistent forward-fill logic across all columns (C89-03).
+  // Returns false for empty string, null, undefined, and whitespace-only cells.
+  function isNonEmpty(val: unknown): boolean {
+    return val !== '' && val != null && String(val).trim() !== '';
+  }
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -324,99 +332,68 @@ function parseXLSXSheet(
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
 
-    // Forward-fill date column for merged cells (C4-04).
-    // Skip forward-fill for summary row values to prevent summary text
-    // from contaminating subsequent data rows (C47-01).
-    // Treat whitespace-only cells as empty to prevent artifacts from
-    // contaminating forward-fill state (C73-02).
+    // Forward-fill pattern for all columns (date, merchant, category,
+    // installments, memo, amount). Consistent logic: update last-value
+    // only when cell has non-empty, non-whitespace content (isNonEmpty);
+    // skip update for summary row values to prevent contamination;
+    // use last-value as fallback for empty/whitespace-only cells (C89-01).
+
+    // Date column forward-fill (C4-04/C47-01/C73-02)
     const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
-    if (dateCol !== -1 && rawDateValue !== '' && rawDateValue != null && String(rawDateValue).trim() !== '') {
-      const dateStr = String(rawDateValue);
-      if (!SUMMARY_ROW_PATTERN.test(dateStr)) {
+    if (dateCol !== -1 && isNonEmpty(rawDateValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawDateValue))) {
         lastDate = rawDateValue;
       }
     }
-    const dateRaw = dateCol !== -1 ? (rawDateValue !== '' && rawDateValue != null && String(rawDateValue).trim() !== '' ? rawDateValue : lastDate) : '';
+    const dateRaw = dateCol !== -1 ? (isNonEmpty(rawDateValue) ? rawDateValue : lastDate) : '';
 
-    // Forward-fill merchant column for merged cells (C5-03).
-    // Skip forward-fill for summary row values (C47-01).
-    // Treat whitespace-only cells as empty (C73-02).
+    // Merchant column forward-fill (C5-03/C47-01/C73-02)
     const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
-    if (merchantCol !== -1 && rawMerchantValue !== '' && rawMerchantValue != null && String(rawMerchantValue).trim() !== '') {
-      const merchantStr = String(rawMerchantValue);
-      if (!SUMMARY_ROW_PATTERN.test(merchantStr)) {
+    if (merchantCol !== -1 && isNonEmpty(rawMerchantValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawMerchantValue))) {
         lastMerchant = rawMerchantValue;
       }
     }
-    const merchantRaw = merchantCol !== -1
-      ? (rawMerchantValue !== '' && rawMerchantValue != null && String(rawMerchantValue).trim() !== '' ? rawMerchantValue : lastMerchant)
-      : '';
+    const merchantRaw = merchantCol !== -1 ? (isNonEmpty(rawMerchantValue) ? rawMerchantValue : lastMerchant) : '';
 
-    // Forward-fill category column for merged cells (C5-03).
-    // Skip forward-fill for summary row values (C52-06, parity with date/merchant).
-    // Treat whitespace-only cells as empty (C73-02).
+    // Category column forward-fill (C5-03/C52-06/C73-02)
     const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
-    if (categoryCol !== -1 && rawCategoryValue !== '' && rawCategoryValue != null && String(rawCategoryValue).trim() !== '') {
-      const categoryStr = String(rawCategoryValue);
-      if (!SUMMARY_ROW_PATTERN.test(categoryStr)) {
+    if (categoryCol !== -1 && isNonEmpty(rawCategoryValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawCategoryValue))) {
         lastCategory = rawCategoryValue;
       }
     }
-    const categoryRaw = categoryCol !== -1
-      ? (rawCategoryValue !== '' && rawCategoryValue != null && String(rawCategoryValue).trim() !== '' ? rawCategoryValue : lastCategory)
-      : '';
+    const categoryRaw = categoryCol !== -1 ? (isNonEmpty(rawCategoryValue) ? rawCategoryValue : lastCategory) : '';
 
-    // Forward-fill installments column for merged cells (C10-03).
-    // Korean bank XLSX exports sometimes merge installment cells across
-    // sub-rows of the same transaction. Skip forward-fill for summary
-    // row values (C52-06, parity with date/merchant).
-    // Treat whitespace-only cells as empty (C73-02).
+    // Installments column forward-fill (C10-03/C52-06/C73-02)
     const rawInstallValue = installCol !== -1 ? row[installCol] : '';
-    if (installCol !== -1 && rawInstallValue !== '' && rawInstallValue != null && String(rawInstallValue).trim() !== '') {
-      const installStr = String(rawInstallValue);
-      if (!SUMMARY_ROW_PATTERN.test(installStr)) {
+    if (installCol !== -1 && isNonEmpty(rawInstallValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawInstallValue))) {
         lastInstallments = rawInstallValue;
       }
     }
-    const installRaw = installCol !== -1
-      ? (rawInstallValue !== '' && rawInstallValue != null && String(rawInstallValue).trim() !== '' ? rawInstallValue : lastInstallments)
-      : '';
+    const installRaw = installCol !== -1 ? (isNonEmpty(rawInstallValue) ? rawInstallValue : lastInstallments) : '';
 
-    // Forward-fill memo column for merged cells (C15-01). Korean bank
-    // XLSX exports may merge memo cells across installment sub-rows,
-    // matching the forward-fill pattern used by date, merchant, category,
-    // and installments columns. Skip forward-fill for summary row values
-    // (C52-06, parity with date/merchant).
-    // Treat whitespace-only cells as empty (C73-02).
+    // Memo column forward-fill (C15-01/C52-06/C73-02)
     const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
-    if (memoCol !== -1 && rawMemoValue !== '' && rawMemoValue != null && String(rawMemoValue).trim() !== '') {
-      const memoStr = String(rawMemoValue);
-      if (!SUMMARY_ROW_PATTERN.test(memoStr)) {
+    if (memoCol !== -1 && isNonEmpty(rawMemoValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawMemoValue))) {
         lastMemo = rawMemoValue;
       }
     }
-    const memoRaw = memoCol !== -1
-      ? (rawMemoValue !== '' && rawMemoValue != null && String(rawMemoValue).trim() !== '' ? rawMemoValue : lastMemo)
-      : '';
+    const memoRaw = memoCol !== -1 ? (isNonEmpty(rawMemoValue) ? rawMemoValue : lastMemo) : '';
 
-    // Forward-fill amount column for merged cells (C73-01). Some Korean
-    // bank XLSX exports merge amount cells across installment sub-rows.
-    // Only forward-fill whitespace-only cells (not truly empty cells) to
-    // prevent contamination from legitimately empty amount cells.
+    // Amount column forward-fill (C73-01/C52-06/C89-01).
+    // Now consistent with all other columns: whitespace-only cells
+    // forward-fill from last amount (previously returned raw whitespace
+    // which parsed to null, causing row to be skipped).
     const rawAmountValue = amountCol !== -1 ? row[amountCol] : '';
-    if (amountCol !== -1 && rawAmountValue !== '' && rawAmountValue != null && String(rawAmountValue).trim() !== '') {
-      const amountStr = String(rawAmountValue);
-      if (!SUMMARY_ROW_PATTERN.test(amountStr)) {
+    if (amountCol !== -1 && isNonEmpty(rawAmountValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawAmountValue))) {
         lastAmount = rawAmountValue;
       }
     }
-    // Whitespace-only cells are treated as merged (forward-fill from last).
-    // Truly empty cells are kept empty (no forward-fill).
-    const amountRaw = amountCol !== -1
-      ? (rawAmountValue !== '' && rawAmountValue != null && String(rawAmountValue).trim() !== ''
-        ? rawAmountValue
-        : (typeof rawAmountValue === 'string' && rawAmountValue !== '' ? lastAmount : rawAmountValue))
-      : '';
+    const amountRaw = amountCol !== -1 ? (isNonEmpty(rawAmountValue) ? rawAmountValue : lastAmount) : '';
 
     if (!dateRaw && !merchantRaw) continue;
 

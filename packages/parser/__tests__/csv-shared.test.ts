@@ -670,3 +670,46 @@ describe('parseCSVAmount - space before 원 (C72-01)', () => {
     expect(parseCSVAmount('10000 원')).toBe(10000);
   });
 });
+
+// ---------------------------------------------------------------------------
+// SUMMARY_ROW_PATTERN — 총소비 variants (C89-02)
+// ---------------------------------------------------------------------------
+
+describe('SUMMARY_ROW_PATTERN - 총소비 variants (C89-02)', () => {
+  test('matches "총소비금액" summary row', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    expect(SUMMARY_ROW_PATTERN.test('총소비금액 50,000')).toBe(true);
+  });
+
+  test('matches "총 소비금액" with space', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    expect(SUMMARY_ROW_PATTERN.test('총 소비금액 50,000')).toBe(true);
+  });
+
+  test('matches "총소비" standalone summary row', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    expect(SUMMARY_ROW_PATTERN.test('총소비 50,000')).toBe(true);
+  });
+
+  test('matches "총 소비" with space', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    expect(SUMMARY_ROW_PATTERN.test('총 소비 50,000')).toBe(true);
+  });
+
+  test('does NOT match "총소비마트" merchant name (boundary guard)', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    expect(SUMMARY_ROW_PATTERN.test('총소비마트 50,000')).toBe(false);
+  });
+
+  test('does NOT match "소비" alone (too broad)', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    expect(SUMMARY_ROW_PATTERN.test('소비마트 50,000')).toBe(false);
+  });
+
+  test('does NOT match "소비금액" without 총 prefix', () => {
+    const { SUMMARY_ROW_PATTERN } = require('../src/csv/column-matcher.js');
+    // "소비금액" without 총 prefix should NOT match since "소비" alone
+    // was removed as overly broad
+    expect(SUMMARY_ROW_PATTERN.test('소비금액')).toBe(false);
+  });
+});

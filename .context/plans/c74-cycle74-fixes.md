@@ -142,4 +142,4 @@ The following findings from this cycle's review are deferred per the repo's rule
 - [x] Task 2: Add sessionStorage schema version check
 - [x] Task 3: Refactor isHTMLContent to avoid double-decode
 - [x] Task 4: Quality gates — all pass
-- [ ] Task 5: Fix server-side PDF isValidDateCell short-date validation
+- [x] Task 5: Fix server-side PDF isValidDateCell short-date validation (C74-01)

@@ -939,9 +939,11 @@ describe('XLSX amount forward-fill and whitespace guard (C73-01/C73-02)', () => 
     }
   });
 
-  test('does NOT forward-fill amount for truly empty cells (C73-01)', async () => {
-    // Truly empty amount cells should not be forward-filled — they may
-    // represent legitimately empty data, not merged cells.
+  test('forward-fills amount for truly empty cells like all other columns (C89-01)', async () => {
+    // Truly empty amount cells now forward-fill from last amount, consistent
+    // with how date, merchant, category, installments, and memo columns
+    // handle empty cells (C89-01). Previously, truly empty amount cells were
+    // not forward-filled, creating an inconsistency with other columns.
     const filePath = createTempXLSX([
       ['이용일', '이용처', '이용금액'],
       ['2026-02-01', '이마트', 30000],
@@ -950,10 +952,12 @@ describe('XLSX amount forward-fill and whitespace guard (C73-01/C73-02)', () => 
     ]);
     try {
       const result = await parseXLSX(filePath);
-      // Row 2 has empty amount — should be skipped (no forward-fill)
-      expect(result.transactions).toHaveLength(2);
+      // Row 2 has empty amount — now forward-fills from row 1 (30000)
+      // making it consistent with all other columns
+      expect(result.transactions).toHaveLength(3);
       expect(result.transactions[0]?.amount).toBe(30000);
-      expect(result.transactions[1]?.amount).toBe(4500);
+      expect(result.transactions[1]?.amount).toBe(30000);
+      expect(result.transactions[2]?.amount).toBe(4500);
     } finally {
       cleanup(filePath);
     }
