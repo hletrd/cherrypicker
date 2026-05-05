@@ -190,20 +190,13 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
   const tier = selectTier(performanceTiers, previousMonthSpending);
   const tierId = tier?.id ?? 'none';
 
-  // Warn when the card has performance tiers but none matched — this means
-  // the user's previousMonthSpending is below the lowest tier's threshold
-  // and all rewards will be 0. This is most likely to affect CLI/standalone
-  // usage where previousMonthSpending defaults to 0.
+  // When the card has performance tiers but none matched, the user's
+  // previousMonthSpending is below the lowest tier's threshold and all
+  // rewards will be 0. This is most likely to affect CLI/standalone usage
+  // where previousMonthSpending defaults to 0.
   if (tierId === 'none' && performanceTiers.length > 0) {
-    const minRequired = performanceTiers.reduce(
-      (min, t) => Math.min(min, t.minSpending),
-      Infinity,
-    );
-    console.warn(
-      `[cherrypicker] No performance tier matched for card "${card.id}" ` +
-        `with previousMonthSpending=${previousMonthSpending}. ` +
-        `All rewards will be 0. Minimum tier requires ${minRequired} Won.`,
-    );
+    // Intentionally silent — callers should inspect the 'none' tier and
+    // zero rewards rather than receiving side-effect console output.
   }
 
   // 2. Track monthly caps per rule and global while accumulating per-category outputs
@@ -269,16 +262,9 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
     const hasFixedReward = (tierRate.fixedAmount ?? 0) > 0;
     if (normalizedRate !== null && normalizedRate > 0 && hasFixedReward) {
-      // Both rate and fixedAmount are present on the same tier — this is
-      // unusual for Korean card rules (none of the current 81 YAML files
-      // use both). Warn and use rate-based reward as the primary, since
-      // the if/else structure can only apply one. Future schema-level
-      // enforcement should make these mutually exclusive.
-      console.warn(
-        `[cherrypicker] Rule for "${buildRuleKey(rule)}" tier "${tierId}" has both rate (${tierRate.rate}) ` +
-        `and fixedAmount (${tierRate.fixedAmount}) — using rate-based reward only. ` +
-        `Make rate and fixedAmount mutually exclusive in the YAML.`
-      );
+      // Both rate and fixedAmount are present on the same tier. Korean card
+      // rules do not currently use both together. The if/else structure can
+      // only apply one, so rate-based reward takes precedence.
       const calcFn = getCalcFn(rule.type);
       const effectiveAmount = perTxCap !== null ? Math.min(tx.amount, perTxCap) : tx.amount;
       rawReward = calcFn(effectiveAmount, normalizedRate, null, 0).reward;
@@ -294,10 +280,8 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       rawReward = effectiveFixedReward;
       ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
     } else {
-      // Rule has neither rate nor fixed amount — likely a misconfiguration
-      if (rule.category !== '*') {
-        console.warn(`[cherrypicker] Rule for "${buildRuleKey(rule)}" tier "${tierId}" has no rate or fixedAmount — producing 0 reward`);
-      }
+      // Rule has neither rate nor fixed amount — produces 0 reward.
+      // Wildcard rules (category === '*') legitimately have no rate.
       rawReward = 0;
       ruleResult = applyMonthlyCap(0, monthlyCap, currentRuleMonthUsed);
     }
