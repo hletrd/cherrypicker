@@ -30,14 +30,14 @@ function formatDate(date: Date): string {
 
 function esc(str: string): string {
   return str
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
     .replace(/\\/g, '&#92;')
-    .replace(/\//g, '&#47;')
-    .replace(/\x00/g, '');
+    .replace(/\//g, '&#47;');
 }
 
 function buildSummary(result: OptimizationResult): string {
