@@ -313,7 +313,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   let headerIdx = -1;
   for (let i = 0; i < Math.min(30, lines.length); i++) {
     const cells = splitLine(lines[i] ?? '', delimiter);
-    const hasNonNumeric = cells.some((c) => /[\uac00-\ud7afa-zA-Z]/.test(c));
+    const hasNonNumeric = cells.some((c) => /[\uac00-\ud7a3a-zA-Z]/.test(c));
     if (hasNonNumeric && isValidHeaderRow(cells.map((c) => c.trim()))) {
       headerIdx = i;
       break;
