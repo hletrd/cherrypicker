@@ -115,12 +115,13 @@ function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabe
 
   return `
     <table>
+      <caption>카테고리별 지출 현황</caption>
       <thead>
         <tr>
-          <th>카테고리</th>
-          <th class="right">지출액</th>
-          <th class="right">건수</th>
-          <th class="right">비중</th>
+          <th scope="col">카테고리</th>
+          <th scope="col" class="right">지출액</th>
+          <th scope="col" class="right">건수</th>
+          <th scope="col" class="right">비중</th>
         </tr>
       </thead>
       <tbody>
@@ -160,13 +161,14 @@ function buildCardComparison(result: OptimizationResult): string {
 
   return `
     <table>
+      <caption>카드별 혜택 비교</caption>
       <thead>
         <tr>
-          <th>카드명</th>
-          <th class="right">총 혜택액</th>
-          <th class="right">유효 혜택률</th>
-          <th>전월실적 구간</th>
-          <th class="center">한도</th>
+          <th scope="col">카드명</th>
+          <th scope="col" class="right">총 혜택액</th>
+          <th scope="col" class="right">유효 혜택률</th>
+          <th scope="col">전월실적 구간</th>
+          <th scope="col" class="center">한도</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
@@ -216,14 +218,15 @@ function buildAssignments(result: OptimizationResult): string {
 
   return `
     <table>
+      <caption>카테고리별 최적 카드 배분</caption>
       <thead>
         <tr>
-          <th>카테고리</th>
-          <th>추천 카드</th>
-          <th class="right">혜택률</th>
-          <th class="right">예상 혜택</th>
-          <th class="right">지출액</th>
-          <th>대안 카드</th>
+          <th scope="col">카테고리</th>
+          <th scope="col">추천 카드</th>
+          <th scope="col" class="right">혜택률</th>
+          <th scope="col" class="right">예상 혜택</th>
+          <th scope="col" class="right">지출액</th>
+          <th scope="col">대안 카드</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
