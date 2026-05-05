@@ -502,10 +502,11 @@ function createAnalysisStore() {
           // matches the guard in analyzer.ts getLatestMonth().
           if (!tx.date || tx.date.length < 7) continue;
           const month = tx.date.slice(0, 7);
-          // Accumulate all non-zero amounts for monthlySpending. Refunds
-          // (negative amounts) reduce the net spending total, which is the
-          // convention most Korean card companies use for 전월실적 (C1-01).
-          if (tx.amount !== 0) {
+          // Only accumulate positive amounts (purchases) for monthlySpending.
+          // Korean card issuers define 전월실적 (previous month performance) as
+          // gross spending, not net. Including refunds would understate the user's
+          // performance, placing them in a lower tier with worse rewards (C1-01).
+          if (tx.amount > 0) {
             monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
           }
           monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
