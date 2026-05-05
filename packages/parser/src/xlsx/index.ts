@@ -26,7 +26,7 @@ import xlsx from 'xlsx';
 // Korean card companies often export HTML tables with .xls extension.
 // ---------------------------------------------------------------------------
 
-function isHTMLContent(buffer: Buffer): boolean {
+export function isHTMLContent(buffer: Buffer): boolean {
   // Strip UTF-8 BOM (0xEF 0xBB 0xBF) before checking HTML signatures.
   // Some Korean card exports include a BOM, which would otherwise prevent
   // the startsWith checks from matching. Parity with web-side isHTMLContent
@@ -45,7 +45,7 @@ function isHTMLContent(buffer: Buffer): boolean {
 // message than the generic "날짜를 해석할 수 없습니다" (C14-01).
 const EXCEL_ERROR_PATTERN = /^#(VALUE!|REF!|DIV\/0!|NAME\?|NULL!|NUM!|CALC!|N\/A)$/i;
 
-function parseDateToISO(
+export function parseDateToISO(
   raw: unknown,
   errors?: ParseError[],
   lineIdx?: number,
