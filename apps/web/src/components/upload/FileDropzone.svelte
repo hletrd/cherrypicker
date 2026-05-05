@@ -9,6 +9,23 @@
   let navigateTimeout: ReturnType<typeof setTimeout> | null = null;
   onDestroy(() => { if (navigateTimeout) clearTimeout(navigateTimeout); });
 
+  // Flag-based beforeunload guard: survives Astro View Transition remounts
+  // because the listener is registered once and simply checks a flag (C6UI-16).
+  let isBlockingNavigation = $state(false);
+  function beforeUnloadGuard(e: BeforeUnloadEvent): string | undefined {
+    if (!isBlockingNavigation) return;
+    const msg = '분석이 진행 중이에요. 페이지를 벗어나면 분석 결과가 사라져요.';
+    e.preventDefault();
+    e.returnValue = msg; // legacy Chromium
+    return msg;
+  }
+  onMount(() => {
+    window.addEventListener('beforeunload', beforeUnloadGuard);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnloadGuard);
+    };
+  });
+
   // Page-wide drag & drop: 화면 아무 데나 파일을 던져도 작동
   // Active guard prevents stale handlers from mutating isDragOver after
   // the component is unmounted during Astro View Transitions (C37-03).
@@ -56,7 +73,7 @@
   let primaryFileInputEl = $state<HTMLInputElement | null>(null);
   let addFileInputEl = $state<HTMLInputElement | null>(null);
   let uploadStatus = $state<'idle' | 'uploading' | 'success' | 'error'>('idle');
-  let errorMessage = $state('');
+  let errorMessages = $state<string[]>([]);
   let bank = $state('');
   let previousSpending = $state<string>('');
   let showAllBanks = $state(false);
@@ -184,14 +201,14 @@
     if (valid.length > 0) {
       uploadedFiles = [...uploadedFiles, ...valid];
       uploadStatus = 'idle';
-      errorMessage = '';
+      errorMessages = [];
       // Auto-detect bank from first file content (non-blocking)
       detectBankFromFile();
     }
     // Then check total size and show warning (but keep files)
     const totalSize = uploadedFiles.reduce((sum, f) => sum + f.size, 0);
     if (totalSize > MAX_TOTAL_SIZE) {
-      errorMessage = `전체 파일 크기가 50MB를 초과합니다. 일부 파일이 느리게 처리될 수 있어요.`;
+      errorMessages = [`전체 파일 크기가 50MB를 초과합니다. 일부 파일이 느리게 처리될 수 있어요.`];
       // Don't set uploadStatus to 'error' — let user proceed
     }
     // Show individual file errors — accumulate ALL error types so the user
@@ -208,7 +225,7 @@
       errorParts.push(`같은 이름의 파일이 이미 있어요 (제외됨: ${duplicateNames.join(', ')})`);
     }
     if (errorParts.length > 0) {
-      errorMessage = errorParts.join(' / ');
+      errorMessages = errorParts;
       uploadStatus = 'error';
     }
   }
@@ -217,7 +234,7 @@
     uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
     if (uploadedFiles.length === 0) {
       uploadStatus = 'idle';
-      errorMessage = '';
+      errorMessages = [];
       bank = '';
       previousSpending = '';
       detectedBankId = null;
@@ -291,22 +308,11 @@
     return Math.min(normalized, MAX_PREVIOUS_SPENDING_KRW);
   }
 
-  /** Guard against data loss during upload: browsers show a native
-   *  "leave site?" confirmation if beforeunload returns a non-empty value.
-   *  Installed only while uploadStatus === 'uploading' and removed in the
-   *  finally branch so routine navigation is unaffected (C6UI-16). */
-  function beforeUnloadGuard(e: BeforeUnloadEvent): string {
-    const msg = '분석이 진행 중이에요. 페이지를 벗어나면 분석 결과가 사라져요.';
-    e.preventDefault();
-    e.returnValue = msg; // legacy Chromium
-    return msg;
-  }
-
   async function handleUpload() {
     if (uploadedFiles.length === 0) return;
     uploadStatus = 'uploading';
     errorMessage = '';
-    window.addEventListener('beforeunload', beforeUnloadGuard);
+    isBlockingNavigation = true;
 
     try {
       await analysisStore.analyze(uploadedFiles, {
@@ -317,7 +323,7 @@
       // analysisStore.analyze() catches errors internally (sets error, result=null)
       // without re-throwing, so we must check analysisStore.error here.
       if (analysisStore.error) {
-        errorMessage = analysisStore.error;
+        errorMessages = [analysisStore.error];
         uploadStatus = 'error';
       } else {
         uploadStatus = 'success';
@@ -340,13 +346,14 @@
         }, 1200);
       }
     } catch (e) {
-      errorMessage = e instanceof Error ? e.message : '분석 실패';
+      errorMessages = [e instanceof Error ? e.message : '분석 실패'];
       uploadStatus = 'error';
     } finally {
-      // Always remove the beforeunload guard — success path hands off to
-      // the navigate timer, error path shows the error card. Neither should
-      // block future navigation (C6UI-16).
-      window.removeEventListener('beforeunload', beforeUnloadGuard);
+      // Clear the navigation block — success path hands off to the navigate
+      // timer, error path shows the error card. Neither should block future
+      // navigation (C6UI-16). The listener itself stays on window and checks
+      // the flag, so it survives Astro View Transition remounts.
+      isBlockingNavigation = false;
     }
   }
 
@@ -404,6 +411,11 @@
     {/each}
   </ol>
 
+  <!-- Drag status live region for screen readers -->
+  <div aria-live="polite" aria-atomic="true" class="sr-only">
+    {#if isDragOver}파일을 놓으세요{/if}
+  </div>
+
   <!-- Drop zone -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -413,9 +425,18 @@
         : uploadedFiles.length > 0
           ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
           : 'border-dashed border-[var(--color-border)] hover:border-[var(--color-primary)]/50'}"
+    role="button"
+    tabindex="0"
+    aria-label="파일 업로드 영역. 엔터나 스페이스를 눌러 파일을 선택하세요."
     ondragover={(e) => { e.preventDefault(); isDragOver = true; }}
     ondragleave={() => (isDragOver = false)}
     ondrop={handleDrop}
+    onkeydown={(e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        primaryFileInputEl?.click();
+      }
+    }}
   >
     {#if uploadStatus === 'success'}
       <!-- Success state with checkmark -->
@@ -590,7 +611,11 @@
       </svg>
       <div class="flex-1">
         <p class="font-medium">문제가 생겼어요</p>
-        <p class="mt-0.5 text-red-600">{errorMessage}</p>
+        <ul class="mt-1 list-disc list-inside space-y-0.5 text-red-600">
+          {#each errorMessages as msg}
+            <li>{msg}</li>
+          {/each}
+        </ul>
       </div>
       <button
         class="shrink-0 rounded-lg border border-red-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 transition-colors"
