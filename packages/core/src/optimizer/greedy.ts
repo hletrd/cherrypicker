@@ -51,7 +51,8 @@ function scoreCardsForTransaction(
     const before = calculateCardOutput(currentTransactions, previousMonthSpending, rule).totalReward;
     const after = calculateCardOutput([...currentTransactions, transaction], previousMonthSpending, rule).totalReward;
     const reward = Math.max(0, after - before);
-    const rate = transaction.amount > 0 ? reward / transaction.amount : 0;
+    // transaction.amount is guaranteed positive here (pre-filtered at line 198).
+    const rate = reward / transaction.amount;
 
     scores.push({
       cardId: rule.card.id,
