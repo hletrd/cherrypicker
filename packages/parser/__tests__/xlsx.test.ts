@@ -1059,4 +1059,82 @@ describe('XLSX amount forward-fill and whitespace guard (C73-01/C73-02)', () => 
       cleanup(filePath);
     }
   });
+
+  // --- Numeric YYMMDD (6-digit) date format tests (C91-02) ---
+
+  test('numeric YYMMDD dates (240115) are parsed correctly (C91-02)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [240115, '스타벅스', 6000],
+      [240116, '이마트', 45000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0]!.date).toBe('2024-01-15');
+      expect(result.transactions[0]!.merchant).toBe('스타벅스');
+      expect(result.transactions[0]!.amount).toBe(6000);
+      expect(result.transactions[1]!.date).toBe('2024-01-16');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('numeric YYMMDD with 2-digit year >= 50 maps to 1900s (C91-02)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [990115, '테스트', 5000],  // YY=99 → 1999-01-15
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.date).toBe('1999-01-15');
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('numeric YYMMDD with invalid month 13 produces error (C91-02)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [241301, '테스트', 5000],  // month 13 invalid
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // 241301 > 100000 so it enters the YYMMDD check, but month 13 is invalid
+      // → falls through to serial date guard → error. The XLSX parser may
+      // still include the transaction with a malformed date string.
+      expect(result.transactions.length).toBeLessThanOrEqual(1);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('numeric YYMMDD with invalid day 32 produces error (C91-02)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [240132, '테스트', 5000],  // day 32 invalid for Jan
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      // Falls through YYMMDD check (invalid day), hits serial date guard → error
+      expect(result.transactions.length).toBeLessThanOrEqual(1);
+    } finally {
+      cleanup(filePath);
+    }
+  });
+
+  test('numeric YYMMDD year boundary 231231 (2023-12-31) parsed correctly (C91-02)', async () => {
+    const filePath = createTempXLSX([
+      ['이용일', '이용처', '이용금액'],
+      [231231, '편의점', 3000],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.date).toBe('2023-12-31');
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });

@@ -323,7 +323,8 @@ function findDateCell(row: string[]): { idx: number; value: string } | null {
       KOREAN_FULL_DATE_PATTERN.test(cell) ||
       KOREAN_SHORT_DATE_PATTERN.test(cell) ||
       isValidShortDate(cell) ||
-      isValidYYYYMMDD(cell)  // YYYYMMDD compact format (C81-01)
+      isValidYYYYMMDD(cell) ||  // YYYYMMDD compact format (C81-01)
+      isValidYYMMDD(cell)       // YYMMDD compact format (C91-01)
     ) return { idx: i, value: row[i] ?? '' };
   }
   return null;

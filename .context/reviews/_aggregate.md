@@ -1,28 +1,29 @@
-# Cycle 90 Aggregate Review
+# Cycle 91 Aggregate Review
 
 ## Summary
-After 89 cycles, 1299 bun tests + 302 vitest tests passing. This cycle identifies **1 HIGH severity parity bug**: the server PDF fallback scanner's `isValidShortDate()` only checks the current year instead of the 4-year window used by all other 5 implementations (C88-01 fix was missed in this one location).
+After 90 cycles, 1299 bun tests passing. This cycle identifies **2 format diversity bugs** in the PDF and XLSX parsers:
+
+1. **F-91-01 (HIGH)**: PDF `findDateCell()` missing YYMMDD validation in both server and web-side parsers. The structured parser's `filterTransactionRows()` correctly identifies rows with 6-digit YYMMDD dates (e.g., "240115") via `isValidDateCell()` → `isValidYYMMDD()`, but then the structured parser's `findDateCell()` doesn't include YYMMDD validation, so it returns null and the row is skipped.
+
+2. **F-91-02 (MEDIUM)**: XLSX parser missing numeric YYMMDD date handling. 6-digit numeric dates (e.g., 240115) stored in XLSX cells hit the serial date guard (`raw > 100000`) and are rejected instead of being parsed as YYMMDD dates. Affects both server and web-side XLSX parsers.
 
 ## Findings
 
 | # | Severity | Area | Description | Status |
 |---|----------|------|-------------|--------|
-| F-90-01 | HIGH | PDF (server) | `isValidShortDate()` in `packages/parser/src/pdf/index.ts` uses current-year-only validation instead of 4-year window; rejects Feb 29 in non-leap years | Planned |
-| F-90-02 | MEDIUM | tests | No test coverage for server PDF fallback scanner Feb 29 handling | Planned |
-| F-90-03 | MEDIUM | architect | Parity violation reinforces need for D-01 shared module | Deferred |
+| F-91-01 | HIGH | PDF (server+web) | `findDateCell()` missing YYMMDD (6-digit compact date) validation — structured parser skips valid YYMMDD rows that `filterTransactionRows` accepts | Planned |
+| F-91-02 | MEDIUM | XLSX (server+web) | Numeric YYMMDD dates (6-digit, e.g., 240115) rejected by serial date guard (`raw > 100000`) instead of parsed as YYMMDD dates | Planned |
 
 ## Previous Cycle Findings (Resolved)
-- F-89-01 (XLSX amount forward-fill): Resolved in cycle 89
-- F-89-02 (Missing summary row patterns): Resolved in cycle 89
-- F-89-03 (Forward-fill code redundancy): Resolved in cycle 89
+- F-90-01 (server PDF isValidShortDate parity): Fixed in cycle 90 — now uses 4-year window
+- F-90-02 (Missing test coverage for Feb 29): Fixed in cycle 90
+- F-90-03 (D-01 shared module): Deferred (unchanged)
 
-## Reviewer Results
-- **code-reviewer**: 1 finding (F-90-01), server PDF isValidShortDate parity bug
-- **test-engineer**: 1 finding (F-90-02), missing fallback scanner Feb 29 test
-- **architect**: 1 finding (F-90-03), D-01 deferred
-- **perf-reviewer**: No issues
-- **security-reviewer**: No issues
-- **verifier**: Confirmed F-90-01 exists
+## Architecture Notes
+- Server/web parity is excellent across all parsers (CSV, XLSX, PDF)
+- All 6 isValidShortDate/isDateLikeShort implementations use 4-year window (C88-01)
+- Column matching, header detection, and summary row patterns are fully shared
+- 24 bank adapters on both server and web sides
 
 ## Deferred Items (unchanged)
 - D-01: Shared module between Bun/browser (significant refactor)
