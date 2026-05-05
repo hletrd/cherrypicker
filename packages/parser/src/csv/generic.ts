@@ -1,6 +1,6 @@
 import type { BankId, ParseError, ParseResult, RawTransaction } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
-import { parseDateStringToISO, isValidISODate, daysInMonth, isValidYYMMDD } from '../date-utils.js';
+import { parseDateStringToISO, isValidISODate, daysInMonth, isValidYYMMDD, isValidYYYYMMDD } from '../date-utils.js';
 import { splitCSVLine, splitCSVContent, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
 import {
   normalizeHeader,
@@ -95,6 +95,11 @@ function isDateLike(value: string): boolean {
   // Check isYYMMDDLike first for 6-digit strings to prevent DATE_PATTERNS'
   // /^\d{6}$/ from matching without month/day validation (C45-01).
   if (isValidYYMMDD(trimmed)) return true;
+  // Validate 8-digit YYYYMMDD strings with month/day range checks to prevent
+  // DATE_PATTERNS' /^\d{4}\d{2}\d{2}$/ from matching invalid dates like
+  // "99999999" or "20241332" (C93-01). Parity with PDF parsers which
+  // already validate via isValidYYYYMMDD() in isValidDateCell().
+  if (/^\d{8}$/.test(trimmed)) return isValidYYYYMMDD(trimmed);
   // Strip trailing delimiters before matching — Korean bank exports may
   // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
   const stripped = trimmed.replace(/[.\-\/．。]\s*$/, '');

@@ -744,6 +744,38 @@ describe('Cycle 36: New column pattern terms integration', () => {
     expect(result.transactions[1]?.date).toBe('2026-03-16');
   });
 
+  test('generic parser does not misidentify invalid 8-digit numbers as dates (C93-01)', () => {
+    // A CSV with 8-digit non-date numbers (transaction IDs, bank codes)
+    // should not cause the generic parser to pick the ID column as the date
+    // column. Invalid dates like "99999999" or "20241332" must be rejected.
+    // The parser should still correctly parse valid YYYYMMDD dates.
+    const content = [
+      '번호,이용일,이용처,이용금액',
+      '99999999,2026-03-15,편의점,5000',
+      '20241332,2026-03-16,카페,6000',
+      '00000001,2026-03-17,식당,7000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(3);
+    // Dates should come from the actual date column, not the ID column
+    expect(result.transactions[0]?.date).toBe('2026-03-15');
+    expect(result.transactions[1]?.date).toBe('2026-03-16');
+    expect(result.transactions[2]?.date).toBe('2026-03-17');
+  });
+
+  test('generic parser still recognizes valid YYYYMMDD dates (C93-01)', () => {
+    // Valid YYYYMMDD dates should still work when there's no header-based detection
+    const content = [
+      '날짜,가게,금액',
+      '20260315,편의점,5000',
+      '20260316,카페,6000',
+    ].join('\n');
+    const result = parseCSV(content);
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions[0]?.date).toBe('2026-03-15');
+    expect(result.transactions[1]?.date).toBe('2026-03-16');
+  });
+
   test('generic parser does not misidentify hyphenated strings as amounts (C45-02)', () => {
     // Strings like "12-34" should not be matched as amounts during column detection.
     // The parser should still correctly parse real amounts with commas.
