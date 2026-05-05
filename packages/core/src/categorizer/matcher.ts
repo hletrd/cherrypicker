@@ -28,6 +28,9 @@ export class MerchantMatcher {
   private readonly taxonomy: CategoryTaxonomy;
   /** Cached set of known taxonomy category IDs for O(1) rawCategory validation. */
   private readonly knownCategories: Set<string>;
+  /** LRU cache keyed by normalized merchant name + rawCategory. */
+  private readonly cache = new Map<string, MatchResult>();
+  private static readonly MAX_CACHE_SIZE = 500;
 
   constructor(categoryNodes: CategoryNode[]) {
     this.taxonomy = new CategoryTaxonomy(categoryNodes);
@@ -36,11 +39,23 @@ export class MerchantMatcher {
 
   match(merchantName: string, rawCategory?: string): MatchResult {
     const lower = merchantName.toLowerCase().trim();
+    const cacheKey = `${lower}|${rawCategory?.trim().toLowerCase() ?? ''}`;
+
+    // Check LRU cache first
+    const cached = this.cache.get(cacheKey);
+    if (cached !== undefined) {
+      // Move to end (most recently used)
+      this.cache.delete(cacheKey);
+      this.cache.set(cacheKey, cached);
+      return cached;
+    }
 
     // Guard: empty or single-character merchant names cannot be meaningfully
     // categorized by keyword matching. Return uncategorized immediately.
     if (lower.length < 2) {
-      return { category: 'uncategorized', confidence: 0.0 };
+      const result: MatchResult = { category: 'uncategorized', confidence: 0.0 };
+      this.setCache(cacheKey, result);
+      return result;
     }
 
     // 1. Exact match against static MERCHANT_KEYWORDS (confidence 1.0)
@@ -49,7 +64,9 @@ export class MerchantMatcher {
       const [category, subcategory] = staticExact.includes('.')
         ? staticExact.split('.') as [string, string]
         : [staticExact, undefined];
-      return { category, subcategory, confidence: 1.0 };
+      const result: MatchResult = { category, subcategory, confidence: 1.0 };
+      this.setCache(cacheKey, result);
+      return result;
     }
 
     // 2. Substring match against MERCHANT_KEYWORDS keys (confidence 0.8)
@@ -73,16 +90,19 @@ export class MerchantMatcher {
       }
     }
     if (bestStaticKw) {
-      return {
+      const result: MatchResult = {
         category: bestStaticKw.category,
         subcategory: bestStaticKw.subcategory,
         confidence: 0.8,
       };
+      this.setCache(cacheKey, result);
+      return result;
     }
 
     // 3. Taxonomy-based keyword search
     const taxonomyMatch = this.taxonomy.findCategory(merchantName);
     if (taxonomyMatch.confidence > 0) {
+      this.setCache(cacheKey, taxonomyMatch);
       return taxonomyMatch;
     }
 
@@ -94,11 +114,26 @@ export class MerchantMatcher {
     if (rawCategory && rawCategory.trim().length > 0) {
       const normalised = rawCategory.trim().toLowerCase().replace(/\s+/g, '_');
       if (this.knownCategories.has(normalised)) {
-        return { category: normalised, confidence: 0.5 };
+        const result: MatchResult = { category: normalised, confidence: 0.5 };
+        this.setCache(cacheKey, result);
+        return result;
       }
     }
 
     // 5. Fallback
-    return { category: 'uncategorized', confidence: 0.0 };
+    const result: MatchResult = { category: 'uncategorized', confidence: 0.0 };
+    this.setCache(cacheKey, result);
+    return result;
+  }
+
+  private setCache(key: string, result: MatchResult): void {
+    if (this.cache.size >= MerchantMatcher.MAX_CACHE_SIZE) {
+      // Evict oldest (first entry in Map iteration order)
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+    this.cache.set(key, result);
   }
 }

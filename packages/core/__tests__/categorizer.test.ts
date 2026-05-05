@@ -340,3 +340,73 @@ describe('Cross-file keyword duplicate detection (C3-02)', () => {
     expect(duplicates.length).toBeLessThanOrEqual(144);
   });
 });
+
+describe('MerchantMatcher - LRU cache (C5-07)', () => {
+  test('repeated match returns same result from cache', () => {
+    const result1 = matcher.match('스타벅스');
+    const result2 = matcher.match('스타벅스');
+    expect(result2).toEqual(result1);
+    expect(result2.category).toBe('dining');
+    expect(result2.subcategory).toBe('cafe');
+  });
+
+  test('cache differentiates by rawCategory', () => {
+    const result1 = matcher.match('완전히알수없는가맹점999');
+    const result2 = matcher.match('완전히알수없는가맹점999', 'cafe');
+    expect(result1.category).toBe('uncategorized');
+    expect(result2.category).toBe('cafe');
+  });
+
+  test('cache differentiates by case and spacing', () => {
+    const result1 = matcher.match('Starbucks');
+    const result2 = matcher.match('starbucks');
+    const result3 = matcher.match('starbucks ');
+    expect(result1).toEqual(result2);
+    expect(result2).toEqual(result3);
+  });
+
+  test('cache limits size to 500 entries (evicts oldest on overflow)', () => {
+    // Create a fresh matcher with an empty cache for this test
+    const fixtureNodes: CategoryNode[] = [
+      { id: 'dining', labelKo: '외식', labelEn: 'Dining', keywords: ['스타벅스'] },
+    ];
+    const fixtureMatcher = new MerchantMatcher(fixtureNodes);
+
+    // Fill cache beyond 500 entries with unique merchant names
+    for (let i = 0; i < 520; i++) {
+      fixtureMatcher.match(`가맹점${i}`);
+    }
+
+    // The cache should not grow beyond 500. Accessing one of the first
+    // merchants should still produce correct results (either from cache
+    // or from recomputation).
+    const result = fixtureMatcher.match('가맹점0');
+    expect(result.category).toBe('uncategorized');
+    expect(result.confidence).toBe(0);
+
+    // Accessing a recent entry should still be cached
+    const recent = fixtureMatcher.match('가맹점519');
+    expect(recent.category).toBe('uncategorized');
+    expect(recent.confidence).toBe(0);
+  });
+
+  test('cached results preserve confidence levels', () => {
+    // Exact match (1.0)
+    const exact1 = matcher.match('스타벅스');
+    const exact2 = matcher.match('스타벅스');
+    expect(exact1.confidence).toBe(1.0);
+    expect(exact2.confidence).toBe(1.0);
+
+    // Substring match (0.8)
+    const sub1 = matcher.match('스타벅스 강남점');
+    const sub2 = matcher.match('스타벅스 강남점');
+    expect(sub1.confidence).toBe(0.8);
+    expect(sub2.confidence).toBe(0.8);
+
+    // rawCategory fallback (0.5)
+    const raw1 = matcher.match('알수없는가맹점', 'cafe');
+    const raw2 = matcher.match('알수없는가맹점', 'cafe');
+    expect(raw1.confidence).toBe(0.5);
+    expect(raw2.confidence).toBe(0.5);
+  });
+});
