@@ -1,20 +1,64 @@
-# Cycle 9 — security-reviewer
+# Cycle 9 — Security Reviewer
 
-Scope: repo-wide security re-scan post cycle-8.
+**Reviewer:** security-reviewer (manual)
+**Scope:** OWASP top 10, secrets, unsafe patterns, XSS, injection
+**Date:** 2026-05-06
+
+---
 
 ## Summary
 
-No new security findings this cycle.
+No new critical security findings. Cycle 6 security improvements (LLM consent, path validation) remain intact. One MEDIUM finding from Cycle 8 (C8-05) is partially addressed but still has gaps.
 
-## Carry-overs
+---
 
-- **D7-M13** — `unsafe-inline` in script-src CSP. Severity MEDIUM / High confidence. Unchanged. Astro does not yet emit nonces for inline hydration scripts; tracking upstream.
-- **D-32** — no SRI on inline scripts. Severity LOW. Unchanged (is:inline → same-origin embed, out of supply-chain attack surface).
+## Verified Fixes
 
-## Verification of cycle-8 surface
+### S-SEC-01 FIXED: LLM transmits financial data without consent
+- `tools/cli/src/consent.ts` — explicit `--allow-remote-llm` flag required
 
-- `apps/web/src/lib/store.svelte.ts` persistence path: `persistToStorage` still uses try/catch around `sessionStorage.setItem` with QuotaExceededError handling and the `PersistWarningKind` differentiation from C7-11. No regression.
-- `apps/web/src/components/upload/FileDropzone.svelte` input validation: `parsePreviousSpending` correctly handles `-0`, `Infinity`, and exponent notation post-C4-12 + C8-02. Aria-busy added C8-03.
-- PDF LLM fallback (`packages/parser/src/pdf/llm-fallback.ts`): no new data-exfil surfaces; API key never logged (cycle-5 guardrails hold).
+### S-SEC-04 FIXED: Path traversal in CLI file args
+- `tools/cli/src/validation.ts` — rejects `..` segments, null bytes, symlinks
 
-Confidence: High. Zero new security findings.
+---
+
+## Still Open Findings
+
+### C8-05 [MEDIUM] esc() missing DEL and high-Unicode surrogates
+
+**File:** `packages/viz/src/report/generator.ts:31-41`
+**Confidence:** Medium
+
+Current esc() strips control characters `\x00-\x08\x0b\x0c\x0e-\x1f` but misses:
+- `\x7f` (DEL character) — can corrupt HTML parsing
+- U+FFFE and U+FFFF (Unicode non-characters) — can cause XML/HTML parser errors
+- U+FEFF (BOM) — already handled elsewhere but not in esc()
+
+**Impact:** Maliciously crafted merchant names or category labels containing these characters could produce malformed HTML reports. Mitigated by CSP presence but defense-in-depth warranted.
+
+**Fix:** Add `.replace(/\x7f/g, '').replace(/￾|￿/g, '')` to esc().
+
+---
+
+### S-SEC-05 [MEDIUM] Regex denial of service in column patterns
+
+**Status:** PARTIALLY FIXED
+
+`isSummaryRow` now caps input at 500 chars (C8-02). However, other regex patterns in column-matcher.ts (DATE_COLUMN_PATTERN, MERCHANT_COLUMN_PATTERN, AMOUNT_COLUMN_PATTERN) are still applied to unconstrained input lengths during column detection.
+
+**Impact:** Lower than SUMMARY_ROW_PATTERN since header rows are typically short (<100 chars), but no explicit cap exists.
+
+**Fix:** Add length caps to all regex-based column detection patterns, or document the assumption that headers are bounded.
+
+---
+
+## New Findings
+
+None this cycle.
+
+---
+
+## Verdict
+
+**FIX NOW:** C8-05 (esc() gaps — low effort, high confidence)
+**MONITOR:** Regex surface for new patterns

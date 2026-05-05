@@ -1,36 +1,87 @@
-# Cycle 9 — code-reviewer
+# Cycle 9 — Code Reviewer
 
-Scope: full repo re-scan after cycle-8 resolutions (D7-M1/3/4/10).
+**Reviewer:** code-reviewer (manual)
+**Scope:** Code quality, logic, correctness, parity
+**Date:** 2026-05-06
 
-## Verification of cycle 8 fixes (all FIXED)
+---
 
-- C8-01 / D7-M1 dead `_loadPersistWarningKind` reset: removed — verified in `apps/web/src/lib/store.svelte.ts` (no `reset()` reference to `_loadPersistWarningKind`).
-- C8-02 / D7-M4 parsePreviousSpending `-0` coercion: verified in `apps/web/src/components/upload/FileDropzone.svelte`.
-- C8-03 / D7-M10 `aria-busy` on upload form: verified.
-- C8-04 / D7-M3 `clearTimeout` defense-in-depth: verified.
-- C8-05: cycle-6 and cycle-7 plans archived to `_archive/`.
+## Verified Fixes (from Cycle 8)
 
-## New findings this cycle
+### C8-01 FIXED: Web-side PDF, XLSX, CSV negative amount handling
+- `apps/web/src/lib/parser/pdf.ts:432` — `if (amount <= 0) continue;` (was Math.abs)
+- `apps/web/src/lib/parser/xlsx.ts:611` — `if (amount <= 0) continue;` (was Math.abs)
+- `apps/web/src/lib/parser/csv.ts:433,554` — `if (amount <= 0) continue;` (was Math.abs)
 
-### C9CR-01 — `setResult` is dead code (promoted from D7-M2)
+### C8-02 FIXED: SUMMARY_ROW_PATTERN ReDoS
+- `packages/parser/src/csv/column-matcher.ts:101` — `isSummaryRow` caps input at 500 chars via `text.slice(0, 500)`
 
-- **Severity:** MEDIUM (footgun risk) — promotion rationale: exit criterion "first caller appears, or the method is deleted" is trivially satisfiable by deletion, and C8CR-01 (cache-invalidation omission) is co-resolved by deletion.
-- **Confidence:** High.
-- **File+line:** `apps/web/src/lib/store.svelte.ts:452-459`.
-- **Evidence:** `rg 'setResult' -F` across `apps/`, `e2e/`, `packages/`, `tools/` returns ONLY the definition site at `apps/web/src/lib/store.svelte.ts:452`. Remaining matches are in `.context/**` (review/plan prose only).
-- **Failure scenario:** A future contributor (or Claude in a future cycle) adds a caller, but the method bypasses `analyzeMultipleFiles` — so there is no analyzer-cache invalidation, no category-label cache clearing, no error reset on a stale analyze-failure. Result: silent stale-reward UI after a synthetic `setResult`.
-- **Fix:** Delete the method. Zero callers → zero regressions. If a caller is later needed, it should be added with proper cache hygiene.
-- **Co-resolves:** C8CR-01 (setResult skips analyzer-cache invalidation).
+### C8-03 FIXED: build-json.ts exits with code 1 on validation errors
+- `scripts/build-json.ts:292-294` — `process.exit(1)` when errors exist
 
-### C9CR-02 — no other new findings
+---
 
-Re-grepped the high-risk surfaces (store, analyzer, FileDropzone, parser adapters, optimizer). All cycle 6/7/8 fixes hold. No new regressions.
+## New Findings
 
-## Confirmed carry-overs (still deferred, exit criteria unchanged)
+### C9-01 [LOW] Web-side HTML parser imports `parseCSVAmount` instead of `parseAmountString`
 
-- D7-M5 (malformed-date drop in monthlyBreakdown) — behavioural convention, still LOW.
-- D7-M6 (module-level `_loadPersistWarningKind` pattern) — tied to A7-02 persistence extraction, unchanged.
-- D7-M7, D7-M8, D7-M11, D7-M12, D7-M13, D7-M14 — unchanged (all have their tooling or architectural exit criteria).
-- C6UI-04, C6UI-05, C6UI-23 — unchanged (axe-core gate).
+**File:** `apps/web/src/lib/parser/html.ts:10`
+**Confidence:** Medium
 
-Confidence: High. No finding silently dropped.
+The web-side HTML parser imports `parseCSVAmount` from `./csv.js` while the server-side imports `parseAmountString` from `../csv/shared.js`. These are functionally equivalent (`parseCSVAmount` is an alias for `parseAmount` which duplicates `parseAmountString` logic), but the divergence means:
+
+1. If `parseAmountString` gains new format support, the web HTML parser won't benefit
+2. Two code paths to maintain for the same functionality
+
+**Fix:** Either export `parseAmountString` from the web-side csv module, or import `parseCSVAmount` on the server side for consistency.
+
+---
+
+### C9-02 [LOW] Web-side JSON parser missing `'description'` in MEMO_ALIASES
+
+**File:** `apps/web/src/lib/parser/json.ts:51-54`
+**Confidence:** Medium
+
+Server-side JSON parser (`packages/parser/src/json/index.ts:56-59`) includes `'description' /* fallback */` in MEMO_ALIASES. The web-side JSON parser does not. While `description` is also in MERCHANT_ALIASES, the memo fallback allows it to be used when merchant is missing.
+
+**Fix:** Add `'description' /* fallback */` to web-side MEMO_ALIASES.
+
+---
+
+### C9-03 [LOW] Server-side OFX memo/merchant deduplication check uses wrong field
+
+**File:** `packages/parser/src/ofx/index.ts:189-191`
+**Confidence:** Medium
+
+```ts
+const memo = extractTag(block, 'MEMO');
+if (memo && memo !== tx.memo) {
+  tx.memo = memo;
+}
+```
+
+`tx.memo` is `undefined` at this point (not set in the initial `RawTransaction` object), so `memo !== tx.memo` is always true for non-empty memo values. When `name` is empty, `tx.merchant` falls back to the MEMO value (line 183), and then `tx.memo` is also set to the same value — duplicating the data.
+
+The web-side correctly checks `memo !== tx.merchant` (line 144).
+
+**Fix:** Change `tx.memo` to `tx.merchant` in the server-side OFX parser.
+
+---
+
+## Still Open from Previous Cycles
+
+| ID | Description | Severity | Status |
+|----|-------------|----------|--------|
+| C8-05 | esc() missing DEL (\x7f) and U+FFFE/U+FFFF | MEDIUM | **OPEN** |
+| C8-06 | build-json.ts duplicates Zod schemas from @cherrypicker/rules | MEDIUM | **OPEN** |
+| C8-07 | No web-side parser-level tests for negative amounts | MEDIUM | **OPEN** |
+| C8-04 | No parity test suite between server and web parsers | HIGH | **OPEN** |
+| C6-01 | isValidHeaderRow doesn't normalize headers before keyword matching | HIGH | **OPEN** |
+
+---
+
+## Verdict
+
+**FIX NOW:** C9-03 (OFX memo deduplication bug — one-line fix)
+**FIX SOON:** C9-01, C9-02 (parity micro-divergences)
+**MONITOR:** Parser parity drift continues despite 8+ cycles of fixes
