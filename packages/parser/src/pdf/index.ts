@@ -1,4 +1,5 @@
-import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
+import type { BankId, ParseResult, RawTransaction } from '../types.js';
+import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from '../date-utils.js';
 import { parseAmountString } from '../csv/shared.js';
@@ -200,7 +201,7 @@ function tryStructuredParse(text: string, bank: BankId | null): { transactions: 
       if (amount === null) {
         const cleaned = amountValue.replace(/원$/, '').replace(/,/g, '').trim();
         if (cleaned && !/^0+$/.test(cleaned)) {
-          parseErrors.push({ message: `금액을 해석할 수 없습니다: ${amountValue.trim()}` });
+          parseErrors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountValue.trim()}`));
         }
         continue;
       }
@@ -210,7 +211,7 @@ function tryStructuredParse(text: string, bank: BankId | null): { transactions: 
       // Report unparseable dates as parse errors, matching web-side behavior
       // (C39-01). All other parsers report malformed dates.
       if (!isValidISODate(dateStr) && (row[dateIdx] ?? '').trim()) {
-        parseErrors.push({ message: `날짜를 해석할 수 없습니다: ${(row[dateIdx] ?? '').trim()}` });
+        parseErrors.push(new ParseError(`날짜를 해석할 수 없습니다: ${(row[dateIdx] ?? '').trim()}`));
       }
 
       const tx: RawTransaction = {
@@ -279,7 +280,7 @@ export async function parsePDF(
       bank: bank ?? null,
       format: 'pdf',
       transactions: [],
-      errors: [{ message: `PDF 텍스트 추출 실패: ${err instanceof Error ? err.message : String(err)}` }],
+      errors: [new ParseError(`PDF 텍스트 추출 실패: ${err instanceof Error ? err.message : String(err)}`)],
     };
   }
 
@@ -357,7 +358,7 @@ export async function parsePDF(
       if (between) {
         const amountRaw = amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6] ?? amountMatch[7];
         if (amountRaw === undefined) {
-          errors.push({ message: `금액을 추출할 수 없습니다: ${amountMatch[0].trim()}` });
+          errors.push(new ParseError(`금액을 추출할 수 없습니다: ${amountMatch[0].trim()}`));
           continue;
         }
         const amount = parseAmount(amountRaw);
@@ -366,7 +367,7 @@ export async function parsePDF(
         if (amount === null) {
           const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
           if (cleaned && !/^0+$/.test(cleaned)) {
-            errors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
+            errors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountRaw.trim()}`));
           }
         } else if (amount > 0) {
           // Only include positive-amount transactions (C42-01).
@@ -376,7 +377,7 @@ export async function parsePDF(
           // Report unparseable dates as parse errors, matching web-side
           // fallback scanner behavior (C39-01).
           if (!isValidISODate(fallbackDate) && dateMatch[1]!.trim()) {
-            errors.push({ message: `날짜를 해석할 수 없습니다: ${dateMatch[1]!.trim()}` });
+            errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateMatch[1]!.trim()}`));
           }
           fallbackTransactions.push({
             date: fallbackDate,
@@ -398,10 +399,11 @@ export async function parsePDF(
   }
 
   if (!options.allowRemoteLLM) {
-    errors.push({
-      message:
+    errors.push(
+      new ParseError(
         '구조화된 PDF 파싱에 실패했습니다. 원격 LLM 폴백은 기본적으로 비활성화되어 있습니다. 명시적으로 허용하려면 --allow-remote-llm 플래그를 사용하세요.',
-    });
+      ),
+    );
     return {
       bank: resolvedBank,
       format: 'pdf',
@@ -410,7 +412,7 @@ export async function parsePDF(
     };
   }
 
-  errors.push({ message: '구조화된 파싱 실패, 명시적으로 허용된 LLM 폴백을 시도합니다...' });
+  errors.push(new ParseError('구조화된 파싱 실패, 명시적으로 허용된 LLM 폴백을 시도합니다...'));
 
   // Tier 3: LLM fallback
   try {
@@ -422,9 +424,7 @@ export async function parsePDF(
       errors,
     };
   } catch (err) {
-    errors.push({
-      message: `LLM 폴백 실패: ${err instanceof Error ? err.message : String(err)}`,
-    });
+    errors.push(new ParseError(`LLM 폴백 실패: ${err instanceof Error ? err.message : String(err)}`));
     return {
       bank: resolvedBank,
       format: 'pdf',

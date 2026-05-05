@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import type { BankId, ParseResult } from './types.js';
+import { ParseError } from './types.js';
 import { detectFormat, detectEncoding, decodeBuffer } from './detect.js';
 import { parseCSV } from './csv/index.js';
 import { parseXLSX } from './xlsx/index.js';
@@ -36,6 +37,16 @@ export interface ParseOptions {
  * @param options - Optional: specify bank ID to skip auto-detection
  * @returns ParseResult with transactions and any errors encountered
  */
+function enrichErrors(result: ParseResult, filePath: string): ParseResult {
+  for (const err of result.errors) {
+    if (err instanceof ParseError) {
+      if (!err.file) err.file = filePath;
+      if (!err.format) err.format = result.format;
+    }
+  }
+  return result;
+}
+
 export async function parseStatement(filePath: string, options?: ParseOptions): Promise<ParseResult> {
   const detection = await detectFormat(filePath);
   const bank = options?.bank ?? detection.bank ?? undefined;
@@ -47,31 +58,34 @@ export async function parseStatement(filePath: string, options?: ParseOptions): 
       // CP949 byte-pattern analysis, and BOM detection (C7-02/C7-03).
       const encoding = detection.encoding ?? detectEncoding(buffer);
       const content = decodeBuffer(buffer, encoding);
-      return parseCSV(content, bank);
+      return enrichErrors(parseCSV(content, bank), filePath);
     }
 
     case 'xlsx':
-      return parseXLSX(filePath, bank);
+      return enrichErrors(await parseXLSX(filePath, bank), filePath);
 
     case 'pdf':
-      return parsePDF(filePath, bank, { allowRemoteLLM: options?.allowRemoteLLM ?? false });
+      return enrichErrors(
+        await parsePDF(filePath, bank, { allowRemoteLLM: options?.allowRemoteLLM ?? false }),
+        filePath,
+      );
 
     case 'json': {
       const buffer = await readFile(filePath);
       const content = buffer.toString('utf-8');
-      return parseJSON(content, bank);
+      return enrichErrors(parseJSON(content, bank), filePath);
     }
 
     case 'ofx': {
       const buffer = await readFile(filePath);
       const content = buffer.toString('utf-8');
-      return parseOFX(content, bank);
+      return enrichErrors(parseOFX(content, bank), filePath);
     }
 
     case 'html': {
       const buffer = await readFile(filePath);
       const content = buffer.toString('utf-8');
-      return parseHTML(content, bank);
+      return enrichErrors(parseHTML(content, bank), filePath);
     }
 
     default: {
@@ -80,7 +94,7 @@ export async function parseStatement(filePath: string, options?: ParseOptions): 
         bank: bank ?? null,
         format: detection.format,
         transactions: [],
-        errors: [{ message: `지원하지 않는 파일 형식입니다: ${exhaustive}` }],
+        errors: [new ParseError(`지원하지 않는 파일 형식입니다: ${exhaustive}`, { file: filePath, format: detection.format })],
       };
     }
   }

@@ -1,4 +1,5 @@
-import type { BankId, ParseError, ParseResult, RawTransaction } from '../types.js';
+import type { BankId, ParseResult, RawTransaction } from '../types.js';
+import { ParseError } from '../types.js';;
 import { detectCSVDelimiter } from '../detect.js';
 import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from '../date-utils.js';
 import { splitCSVLine, splitCSVContent, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
@@ -94,7 +95,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   const transactions: RawTransaction[] = [];
 
   if (lines.length === 0) {
-    return { bank, format: 'csv', transactions: [], errors: [{ message: '빈 파일입니다.' }] };
+    return { bank, format: 'csv', transactions: [], errors: [new ParseError('빈 파일입니다.')] };
   }
 
   // Find header row — scan up to 30 rows for Korean bank exports that have
@@ -115,7 +116,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
 
   // No valid header row found — return error instead of defaulting to row 0
   if (headerIdx === -1) {
-    return { bank, format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
+    return { bank, format: 'csv', transactions: [], errors: [new ParseError('헤더 행을 찾을 수 없습니다.')] };
   }
 
   const headers = splitCSVLine(lines[headerIdx] ?? '', delimiter);
@@ -201,7 +202,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     const missing: string[] = [];
     if (dateCol === -1) missing.push('날짜');
     if (amountCol === -1) missing.push('금액');
-    errors.push({ message: `필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}` });
+    errors.push(new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`));
   }
 
   // Parse data rows
@@ -239,7 +240,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     // transactions have malformed dates, matching the web-side parser
     // behavior in apps/web/src/lib/parser/csv.ts (C71-04).
     if (!isValidISODate(parsedDate) && dateRaw.trim()) {
-      errors.push({ line: i + 1, message: `날짜를 해석할 수 없습니다: ${dateRaw.trim()}` });
+      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw.trim()}`, { line: i + 1 }));
     }
 
     const tx: RawTransaction = {

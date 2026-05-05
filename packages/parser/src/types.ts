@@ -27,10 +27,23 @@ export interface ParseResult {
   errors: ParseError[];
 }
 
-export interface ParseError {
+export class ParseError extends Error {
   line?: number;
-  message: string;
   raw?: string;
+  file?: string;
+  format?: FileFormat;
+
+  constructor(
+    message: string,
+    options?: { line?: number; raw?: string; file?: string; format?: FileFormat },
+  ) {
+    super(message);
+    this.name = 'ParseError';
+    this.line = options?.line;
+    this.raw = options?.raw;
+    this.file = options?.file;
+    this.format = options?.format;
+  }
 }
 
 export interface BankAdapter {

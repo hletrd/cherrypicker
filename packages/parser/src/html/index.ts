@@ -7,7 +7,8 @@
  *  detection path in the XLSX parser (C98-02). This provides consistent
  *  handling of merged cells, forward-fill, and header detection. */
 
-import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
+import type { BankId, ParseResult, RawTransaction } from '../types.js';
+import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
 import { parseAmountString, normalizeHTML } from '../csv/shared.js';
@@ -48,12 +49,12 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
       bank: resolvedBank,
       format: 'html',
       transactions: [],
-      errors: [{ message: `HTML 테이블을 읽을 수 없습니다: ${err instanceof Error ? err.message : String(err)}` }],
+      errors: [new ParseError(`HTML 테이블을 읽을 수 없습니다: ${err instanceof Error ? err.message : String(err)}`)],
     };
   }
 
   if (workbook.SheetNames.length === 0) {
-    return { bank: resolvedBank, format: 'html', transactions: [], errors: [{ message: 'HTML에서 테이블을 찾을 수 없습니다.' }] };
+    return { bank: resolvedBank, format: 'html', transactions: [], errors: [new ParseError('HTML에서 테이블을 찾을 수 없습니다.')] };
   }
 
   // Try all sheets, select the one with the most transactions
@@ -73,7 +74,7 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
     }
   }
 
-  return bestResult ?? { bank: resolvedBank, format: 'html', transactions: [], errors: [{ message: 'HTML 테이블에서 데이터를 읽을 수 없습니다.' }] };
+  return bestResult ?? { bank: resolvedBank, format: 'html', transactions: [], errors: [new ParseError('HTML 테이블에서 데이터를 읽을 수 없습니다.')] };
 }
 
 /** Parse a single HTML sheet (table) for transactions. */
@@ -83,7 +84,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
   const transactions: RawTransaction[] = [];
 
   if (rows.length === 0) {
-    return { bank, format: 'html', transactions: [], errors: [{ message: '빈 테이블입니다.' }] };
+    return { bank, format: 'html', transactions: [], errors: [new ParseError('빈 테이블입니다.')] };
   }
 
   // Find header row — scan up to 30 rows
@@ -106,7 +107,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
       bank,
       format: 'html',
       transactions: [],
-      errors: [{ message: '헤더 행을 찾을 수 없습니다.' }],
+      errors: [new ParseError('헤더 행을 찾을 수 없습니다.')],
     };
   }
 
@@ -126,7 +127,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
       bank,
       format: 'html',
       transactions: [],
-      errors: [{ message: `필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}` }],
+      errors: [new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`)],
     };
   }
 
@@ -220,7 +221,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     const amount = parseAmountString(amountRaw);
     if (amount === null) {
       if (amountRaw) {
-        errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}`, raw: rowText });
+        errors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountRaw}`, { line: i + 1, raw: rowText  }));
       }
       continue;
     }
@@ -229,7 +230,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     // Parse date
     const date = parseDateStringToISO(dateRaw);
     if (!isValidISODate(date) && dateRaw) {
-      errors.push({ line: i + 1, message: `날짜를 해석할 수 없습니다: ${dateRaw}`, raw: rowText });
+      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw}`, { line: i + 1, raw: rowText  }));
     }
 
     const tx: RawTransaction = {

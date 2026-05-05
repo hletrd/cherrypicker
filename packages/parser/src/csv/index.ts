@@ -1,4 +1,5 @@
 import type { BankId, ParseResult, BankAdapter } from '../types.js';
+import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { parseGenericCSV } from './generic.js';
 import {
@@ -80,9 +81,9 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
       } catch (err) {
         // Fall through to generic parser, but record the failure
         const fallbackResult = parseGenericCSV(cleanContent, resolvedBank);
-        fallbackResult.errors.unshift({
-          message: `${resolvedBank} 어댑터 파싱 실패: ${err instanceof Error ? err.message : String(err)}`,
-        });
+        fallbackResult.errors.unshift(
+          new ParseError(`${resolvedBank} 어댑터 파싱 실패: ${err instanceof Error ? err.message : String(err)}`),
+        );
         return fallbackResult;
       }
     }
@@ -110,7 +111,7 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
     const result = parseGenericCSV(cleanContent, resolvedBank);
     // Collect any signature-detection adapter failures into the result
     for (const msg of signatureFailures) {
-      result.errors.unshift({ message: msg });
+      result.errors.unshift(new ParseError(msg));
     }
     return result;
   } catch (err) {
@@ -119,8 +120,8 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
       format: 'csv',
       transactions: [],
       errors: [
-        ...signatureFailures.map(msg => ({ message: msg })),
-        { message: `제네릭 파서 실패: ${err instanceof Error ? err.message : String(err)}` },
+        ...signatureFailures.map(msg => new ParseError(msg)),
+        new ParseError(`제네릭 파서 실패: ${err instanceof Error ? err.message : String(err)}`),
       ],
     };
   }

@@ -3,7 +3,8 @@
  *  factory function that creates a BankAdapter from a config object (C1-03).
  *  Uses ColumnMatcher for flexible header matching instead of exact indexOf. */
 
-import type { BankAdapter, BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
+import type { BankAdapter, BankId, ParseResult, RawTransaction } from '../types.js';
+import { ParseError } from '../types.js';;
 import { detectCSVDelimiter } from '../detect.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
@@ -100,7 +101,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
         }
       }
       if (headerIdx === -1) {
-        return { bank: bankId, format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
+        return { bank: bankId, format: 'csv', transactions: [], errors: [new ParseError('헤더 행을 찾을 수 없습니다.')] };
       }
 
       const headers = splitCSVLine(lines[headerIdx] ?? '', delimiter);
@@ -121,7 +122,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
         const missing: string[] = [];
         if (dateCol === -1) missing.push('날짜');
         if (amountCol === -1) missing.push('금액');
-        errors.push({ message: `필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}` });
+        errors.push(new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`));
       }
 
       for (let i = headerIdx + 1; i < lines.length; i++) {
@@ -155,7 +156,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
         // transactions have malformed dates, matching the generic CSV parser
         // behavior in csv/generic.ts (C12-01/C12-06).
         if (!isValidISODate(parsedDate) && dateRaw.trim()) {
-          errors.push({ line: i + 1, message: `날짜를 해석할 수 없습니다: ${dateRaw.trim()}` });
+          errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw.trim()}`, { line: i + 1 }));
         }
 
         const tx: RawTransaction = {

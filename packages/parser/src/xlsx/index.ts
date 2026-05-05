@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import type { BankId, ParseResult } from '../types.js';
+import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
 import { parseDateStringToISO, isValidDayForMonth, isValidISODate } from '../date-utils.js';
@@ -46,14 +47,14 @@ const EXCEL_ERROR_PATTERN = /^#(VALUE!|REF!|DIV\/0!|NAME\?|NULL!|NUM!|CALC!|N\/A
 
 function parseDateToISO(
   raw: unknown,
-  errors?: import('../types.js').ParseError[],
+  errors?: ParseError[],
   lineIdx?: number,
 ): string {
   // Detect Excel formula error strings early — produce a specific error
   // message rather than trying to parse them as dates (C14-01).
   if (typeof raw === 'string' && EXCEL_ERROR_PATTERN.test(raw.trim())) {
     if (errors && lineIdx !== undefined) {
-      errors.push({ line: lineIdx + 1, message: `셀 수식 오류: ${raw.trim()}` });
+      errors.push(new ParseError(`셀 수식 오류: ${raw.trim()}`, { line: lineIdx + 1 }));
     }
     return raw.trim();
   }
@@ -67,7 +68,7 @@ function parseDateToISO(
       return `${y}-${m}-${d}`;
     }
     if (errors && lineIdx !== undefined) {
-      errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${String(raw)}` });
+      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${String(raw)}`, { line: lineIdx + 1 }));
     }
     return String(raw);
   }
@@ -105,7 +106,7 @@ function parseDateToISO(
     }
     if (!Number.isFinite(raw) || raw < 1 || raw > 100000) {
       if (errors && lineIdx !== undefined && raw !== 0) {
-        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });
+        errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw}`, { line: lineIdx + 1 }));
       }
       return String(raw);
     }
@@ -125,7 +126,7 @@ function parseDateToISO(
       // the caller can detect the malformed value, matching the web-side
       // parser behavior in apps/web/src/lib/parser/xlsx.ts (C5-01).
       if (errors && lineIdx !== undefined) {
-        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });
+        errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw}`, { line: lineIdx + 1 }));
       }
       return String(raw);
     }
@@ -136,13 +137,13 @@ function parseDateToISO(
     // transactions have malformed dates, matching the web-side behavior
     // in apps/web/src/lib/parser/xlsx.ts (C71-04).
     if (!isValidISODate(result) && raw.trim() && errors && lineIdx !== undefined) {
-      errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
+      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw.trim()}`, { line: lineIdx + 1 }));
     }
     return result;
   }
   const str = String(raw ?? '');
   if (str && errors && lineIdx !== undefined) {
-    errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${str}` });
+    errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${str}`, { line: lineIdx + 1 }));
   }
   return str;
 }
@@ -190,12 +191,12 @@ export async function parseXLSX(filePath: string, bank?: BankId): Promise<ParseR
       bank: bank ?? null,
       format: 'xlsx',
       transactions: [],
-      errors: [{ message: `XLSX 파일을 읽을 수 없습니다: ${err instanceof Error ? err.message : String(err)}` }],
+      errors: [new ParseError(`XLSX 파일을 읽을 수 없습니다: ${err instanceof Error ? err.message : String(err)}`)],
     };
   }
 
   if (workbook.SheetNames.length === 0) {
-    return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트를 찾을 수 없습니다.' }] };
+    return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [new ParseError('시트를 찾을 수 없습니다.')] };
   }
 
   // Try all sheets, select the one with the most transactions (matches
@@ -216,7 +217,7 @@ export async function parseXLSX(filePath: string, bank?: BankId): Promise<ParseR
     }
   }
 
-  return bestResult ?? { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트 데이터를 읽을 수 없습니다.' }] };
+  return bestResult ?? { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [new ParseError('시트 데이터를 읽을 수 없습니다.')] };
 }
 
 // Header keyword vocabulary and category Sets are imported from the shared
@@ -231,7 +232,7 @@ function parseXLSXSheet(
   const rows: unknown[][] = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
 
   if (rows.length === 0) {
-    return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '빈 파일입니다.' }] };
+    return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [new ParseError('빈 파일입니다.')] };
   }
 
   // Detect bank from header rows if not provided
@@ -275,7 +276,7 @@ function parseXLSXSheet(
       bank: resolvedBank,
       format: 'xlsx',
       transactions: [],
-      errors: [{ message: '헤더 행을 찾을 수 없습니다.' }],
+      errors: [new ParseError('헤더 행을 찾을 수 없습니다.')],
     };
   }
 
@@ -392,17 +393,11 @@ function parseXLSXSheet(
       if (String(amountRaw ?? '').trim()) {
         // Detect Excel formula error strings for specific error messages (C73-04)
         if (typeof amountRaw === 'string' && EXCEL_ERROR_PATTERN.test(amountRaw.trim())) {
-          errors.push({
-            line: i + 1,
-            message: `셀 수식 오류: ${amountRaw.trim()}`,
-            raw: rowText,
-          });
+          errors.push(new ParseError(`셀 수식 오류: ${amountRaw.trim()}`, { line: i + 1, raw: rowText,
+           }));
         } else {
-          errors.push({
-            line: i + 1,
-            message: `금액을 해석할 수 없습니다: ${String(amountRaw)}`,
-            raw: rowText,
-          });
+          errors.push(new ParseError(`금액을 해석할 수 없습니다: ${String(amountRaw)}`, { line: i + 1, raw: rowText,
+           }));
         }
       }
       continue;
@@ -425,11 +420,8 @@ function parseXLSXSheet(
         (e) => e.line === i + 1 && e.message.includes('날짜를 해석할 수 없습니다'),
       );
       if (!alreadyReported) {
-        errors.push({
-          line: i + 1,
-          message: `날짜를 해석할 수 없습니다: ${String(dateRaw).trim()}`,
-          raw: rowText,
-        });
+        errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${String(dateRaw).trim()}`, { line: i + 1, raw: rowText,
+         }));
       }
     }
 

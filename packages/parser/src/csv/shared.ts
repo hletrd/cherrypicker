@@ -1,3 +1,5 @@
+import { ParseError } from '../types.js';
+
 /** Shared utilities for CSV parsers.
  *  Extracted from 10 bank-specific adapters and the generic parser to
  *  eliminate duplicated splitLine/parseAmount/installment-parsing code
@@ -109,11 +111,11 @@ export function isValidCSVAmount(
   amount: number | null,
   amountRaw: string,
   lineIdx: number,
-  errors: { line?: number; message: string; raw?: string }[],
+  errors: ParseError[],
 ): amount is number {
   if (amount === null) {
     if (amountRaw.trim()) {
-      errors.push({ line: lineIdx + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}` });
+      errors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountRaw}`, { line: lineIdx + 1 }));
     }
     return false;
   }
