@@ -186,7 +186,7 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
 
     // Extract optional memo field
     const memo = extractTag(block, 'MEMO');
-    if (memo && memo !== tx.memo) {
+    if (memo && memo !== tx.merchant) {
       tx.memo = memo;
     }
 
