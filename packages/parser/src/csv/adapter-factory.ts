@@ -5,8 +5,7 @@
 
 import type { BankAdapter, BankId, ParseResult, RawTransaction } from '../types.js';
 import { ParseError } from '../types.js';
-import { detectCSVDelimiter } from '../detect.js';
-import { detectBank } from '../detect.js';
+import { detectCSVDelimiter, detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
 import { splitCSVLine, splitCSVContent, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
 import {
