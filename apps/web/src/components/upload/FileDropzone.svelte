@@ -585,6 +585,7 @@
       <button
         onclick={handleUpload}
         disabled={uploadStatus === 'uploading'}
+        aria-busy={uploadStatus === 'uploading'}
         class="w-full rounded-xl py-3 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed disabled:opacity-60
           {uploadStatus === 'uploading'
             ? 'bg-[var(--color-primary)]/80'
