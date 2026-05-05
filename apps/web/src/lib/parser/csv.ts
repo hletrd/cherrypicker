@@ -10,7 +10,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
-  SUMMARY_ROW_PATTERN,
+  isSummaryRow,
   isValidHeaderRow,
 } from './column-matcher.js';
 
@@ -408,7 +408,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     if (!line.trim()) continue;
 
     // Skip summary/total rows
-    if (SUMMARY_ROW_PATTERN.test(line)) continue;
+    if (isSummaryRow(line)) continue;
 
     const cells = splitLine(line, delimiter);
 
@@ -533,7 +533,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i] ?? '';
         if (!line.trim()) continue;
-        if (SUMMARY_ROW_PATTERN.test(line)) continue;
+        if (isSummaryRow(line)) continue;
         const cells = splitLine(line, delimiter);
 
         const dateRaw = dateCol !== -1 ? (cells[dateCol] ?? '') : '';

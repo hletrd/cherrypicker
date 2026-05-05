@@ -9,7 +9,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
-  SUMMARY_ROW_PATTERN,
+  isSummaryRow,
   isValidHeaderRow,
 } from './column-matcher.js';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -317,7 +317,7 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
     for (const row of txRows) {
       // Skip summary/total rows that happen to have date+amount patterns
       const rowText = row.join(' ');
-      if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
+      if (isSummaryRow(rowText)) continue;
 
       let dateIdx: number;
       let amountIdx: number;

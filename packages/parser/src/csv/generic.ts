@@ -12,7 +12,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
-  SUMMARY_ROW_PATTERN,
+  isSummaryRow,
   HEADER_KEYWORDS,
   isValidHeaderRow,
 } from './column-matcher.js';
@@ -211,7 +211,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     if (!line.trim()) continue;
 
     // Skip summary/total rows
-    if (SUMMARY_ROW_PATTERN.test(line)) continue;
+    if (isSummaryRow(line)) continue;
 
     const cells = splitCSVLine(line, delimiter);
 

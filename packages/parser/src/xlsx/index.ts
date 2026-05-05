@@ -13,7 +13,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
-  SUMMARY_ROW_PATTERN,
+  isSummaryRow,
   HEADER_KEYWORDS,
   isValidHeaderRow,
 } from '../csv/column-matcher.js';
@@ -321,7 +321,7 @@ function parseXLSXSheet(
 
     // Skip summary/total rows
     const rowText = row.map((c) => String(c ?? '')).join(' ');
-    if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
+    if (isSummaryRow(rowText)) continue;
 
     // Forward-fill pattern for all columns (date, merchant, category,
     // installments, memo, amount). Consistent logic: update last-value
@@ -332,7 +332,7 @@ function parseXLSXSheet(
     // Date column forward-fill (C4-04/C47-01/C73-02)
     const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
     if (dateCol !== -1 && isNonEmpty(rawDateValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawDateValue))) {
+      if (!isSummaryRow(String(rawDateValue))) {
         lastDate = rawDateValue;
       }
     }
@@ -341,7 +341,7 @@ function parseXLSXSheet(
     // Merchant column forward-fill (C5-03/C47-01/C73-02)
     const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
     if (merchantCol !== -1 && isNonEmpty(rawMerchantValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawMerchantValue))) {
+      if (!isSummaryRow(String(rawMerchantValue))) {
         lastMerchant = rawMerchantValue;
       }
     }
@@ -350,7 +350,7 @@ function parseXLSXSheet(
     // Category column forward-fill (C5-03/C52-06/C73-02)
     const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
     if (categoryCol !== -1 && isNonEmpty(rawCategoryValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawCategoryValue))) {
+      if (!isSummaryRow(String(rawCategoryValue))) {
         lastCategory = rawCategoryValue;
       }
     }
@@ -359,7 +359,7 @@ function parseXLSXSheet(
     // Installments column forward-fill (C10-03/C52-06/C73-02)
     const rawInstallValue = installCol !== -1 ? row[installCol] : '';
     if (installCol !== -1 && isNonEmpty(rawInstallValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawInstallValue))) {
+      if (!isSummaryRow(String(rawInstallValue))) {
         lastInstallments = rawInstallValue;
       }
     }
@@ -368,7 +368,7 @@ function parseXLSXSheet(
     // Memo column forward-fill (C15-01/C52-06/C73-02)
     const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
     if (memoCol !== -1 && isNonEmpty(rawMemoValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawMemoValue))) {
+      if (!isSummaryRow(String(rawMemoValue))) {
         lastMemo = rawMemoValue;
       }
     }
@@ -380,7 +380,7 @@ function parseXLSXSheet(
     // which parsed to null, causing row to be skipped).
     const rawAmountValue = amountCol !== -1 ? row[amountCol] : '';
     if (amountCol !== -1 && isNonEmpty(rawAmountValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawAmountValue))) {
+      if (!isSummaryRow(String(rawAmountValue))) {
         lastAmount = rawAmountValue;
       }
     }

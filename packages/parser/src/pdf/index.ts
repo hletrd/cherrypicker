@@ -5,7 +5,7 @@ import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, i
 import { parseAmountString } from '../csv/shared.js';
 import { extractText } from './extractor.js';
 import { parseTable, filterTransactionRows, detectHeaderRow, getHeaderColumns } from './table-parser.js';
-import { SUMMARY_ROW_PATTERN } from '../csv/column-matcher.js';
+import { SUMMARY_ROW_PATTERN, isSummaryRow } from '../csv/column-matcher.js';
 import { parsePDFWithLLM } from './llm-fallback.js';
 
 export interface PDFParseOptions {
@@ -86,7 +86,7 @@ function tryStructuredParse(text: string, bank: BankId | null): { transactions: 
     for (const row of txRows) {
       // Skip summary/total rows that happen to have date+amount patterns
       const rowText = row.join(' ');
-      if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
+      if (isSummaryRow(rowText)) continue;
 
       // Use header-aware column positions when available, falling back
       // to positional heuristics for PDFs without recognizable headers.

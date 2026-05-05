@@ -16,7 +16,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
-  SUMMARY_ROW_PATTERN,
+  isSummaryRow,
   isValidHeaderRow,
 } from './column-matcher.js';
 
@@ -142,7 +142,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     if (row.every((c) => !c)) continue;
 
     const rowText = row.map((c) => String(c ?? '')).join(' ');
-    if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
+    if (isSummaryRow(rowText)) continue;
 
     // Forward-fill for all columns — update last-value only when cell has
     // non-empty content; skip summary row values; use last-value as fallback.
@@ -151,7 +151,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     // Date column forward-fill
     const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
     if (dateCol !== -1 && isNonEmpty(rawDateValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawDateValue))) {
+      if (!isSummaryRow(String(rawDateValue))) {
         lastDate = rawDateValue;
       }
     }
@@ -160,7 +160,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     // Merchant column forward-fill
     const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
     if (merchantCol !== -1 && isNonEmpty(rawMerchantValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawMerchantValue))) {
+      if (!isSummaryRow(String(rawMerchantValue))) {
         lastMerchant = rawMerchantValue;
       }
     }
@@ -169,7 +169,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     // Category column forward-fill
     const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
     if (categoryCol !== -1 && isNonEmpty(rawCategoryValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawCategoryValue))) {
+      if (!isSummaryRow(String(rawCategoryValue))) {
         lastCategory = rawCategoryValue;
       }
     }
@@ -178,7 +178,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     // Installments column forward-fill
     const rawInstallValue = installCol !== -1 ? row[installCol] : '';
     if (installCol !== -1 && isNonEmpty(rawInstallValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawInstallValue))) {
+      if (!isSummaryRow(String(rawInstallValue))) {
         lastInstallments = rawInstallValue;
       }
     }
@@ -187,7 +187,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     // Memo column forward-fill
     const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
     if (memoCol !== -1 && isNonEmpty(rawMemoValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawMemoValue))) {
+      if (!isSummaryRow(String(rawMemoValue))) {
         lastMemo = rawMemoValue;
       }
     }
@@ -196,7 +196,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     // Amount column forward-fill
     const rawAmountValue = amountCol !== -1 ? row[amountCol] : '';
     if (amountCol !== -1 && isNonEmpty(rawAmountValue)) {
-      if (!SUMMARY_ROW_PATTERN.test(String(rawAmountValue))) {
+      if (!isSummaryRow(String(rawAmountValue))) {
         lastAmount = rawAmountValue;
       }
     }

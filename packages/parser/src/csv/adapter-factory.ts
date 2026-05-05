@@ -18,7 +18,7 @@ import {
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
-  SUMMARY_ROW_PATTERN,
+  isSummaryRow,
   DATE_KEYWORDS,
   MERCHANT_KEYWORDS,
   AMOUNT_KEYWORDS,
@@ -128,7 +128,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i] ?? '';
         if (!line.trim()) continue;
-        if (SUMMARY_ROW_PATTERN.test(line)) continue;
+        if (isSummaryRow(line)) continue;
         const cells = splitCSVLine(line, delimiter);
 
         const dateRaw = dateCol !== -1 ? (cells[dateCol] ?? '') : '';
