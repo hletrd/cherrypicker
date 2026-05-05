@@ -94,7 +94,7 @@ function splitByColumns(line: string, columns: Column[]): string[] {
   return columns.map((col) => line.slice(col.start, col.end).trim());
 }
 
-function parseTable(text: string): string[][] {
+export function parseTable(text: string): string[][] {
   const lines = text.split('\n');
   const result: string[][] = [];
 
@@ -158,7 +158,7 @@ function parseTable(text: string): string[][] {
  *  decimal amounts like "3.5" from being misidentified as dates. Parity
  *  with server-side PDF parser's isValidDateCell in
  *  packages/parser/src/pdf/table-parser.ts (C75-02). */
-function isValidDateCell(cell: string): boolean {
+export function isValidDateCell(cell: string): boolean {
   // Strip trailing delimiters before matching — Korean bank exports may
   // append a period or slash to dates (e.g., "2024. 1. 15.") (C57-01).
   const trimmed = cell.trim().replace(/[.\-\/．。]\s*$/, '');
@@ -230,7 +230,7 @@ function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
 // Structured parser (ported from packages/parser/src/pdf/index.ts)
 // ---------------------------------------------------------------------------
 
-function parseDateToISO(raw: string, errors?: ParseError[]): string {
+export function parseDateToISO(raw: string, errors?: ParseError[]): string {
   const result = parseDateStringToISO(raw);
   // Report unparseable dates as parse errors so users can see which
   // transactions have malformed dates (C71-04/C56-04).
@@ -243,7 +243,7 @@ function parseDateToISO(raw: string, errors?: ParseError[]): string {
 /** Parse an amount string from PDF text. Returns null for unparseable inputs
  *  so callers can distinguish between genuinely zero amounts and parse failures,
  *  matching the CSV parser's isValidAmount() pattern (C33-03). */
-function parseAmount(raw: string): number | null {
+export function parseAmount(raw: string): number | null {
   let cleaned = raw
     .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
     .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
