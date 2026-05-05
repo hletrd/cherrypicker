@@ -31,6 +31,8 @@ function formatDate(date: Date): string {
 function esc(str: string): string {
   return str
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
+    .replace(/\x7f/g, '')
+    .replace(/￾|￿/g, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
