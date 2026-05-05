@@ -7,6 +7,7 @@ import type { BankId, ParseResult, RawTransaction } from './types.js';
 import { ParseError } from './types.js';
 import { detectBank } from './detect.js';
 import { parseDateStringToISO, isValidISODate } from './date-utils.js';
+import { parseAmountString } from './csv.js';
 
 /** Extract all STMTTRN transaction blocks from OFX content. */
 function extractTransactionBlocks(content: string): string[] {
@@ -73,12 +74,10 @@ function parseOFXDate(raw: string): string {
 }
 
 /** Parse an OFX amount string. In OFX: negative = charges, positive = credits. */
+/** Parse an OFX amount string. In OFX: negative = charges, positive = credits.
+ *  Reuses parseAmountString for full-width digit and format normalization. */
 function parseOFXAmount(raw: string): number | null {
-  if (!raw.trim()) return null;
-  const cleaned = raw.trim().replace(/,/g, '');
-  const n = parseFloat(cleaned);
-  if (Number.isNaN(n) || !Number.isFinite(n)) return null;
-  return Math.round(n);
+  return parseAmountString(raw);
 }
 
 /** Parse OFX content and extract transactions. */
