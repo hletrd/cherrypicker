@@ -5,7 +5,8 @@ import { parseFile } from './parser/index.js';
 import type { RawTransaction } from './parser/types.js';
 import type { BankId } from './parser/types.js';
 import { getAllCardRules, loadCategories } from './cards.js';
-import type { CardRuleSet, CategoryNode } from './cards.js';
+import type { CardRuleSet } from '@cherrypicker/rules';
+import type { CategoryNode } from './cards.js';
 import { buildCategoryLabelMap } from './category-labels.js';
 import type { AnalysisResult, AnalyzeOptions } from './store.svelte.js';
 

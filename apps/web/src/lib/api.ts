@@ -1,7 +1,7 @@
 import { getCardList, getCardById } from './cards.js';
 
 // Re-export types that components currently import
-export type { CardSummary, CardDetail, PerformanceTier, RewardTier, RewardEntry } from './cards.js';
+export type { CardSummary, CardDetail, RewardTier, RewardEntry } from './cards.js';
 
 
 export async function getCards(filters?: {
