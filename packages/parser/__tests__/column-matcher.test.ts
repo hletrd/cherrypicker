@@ -2327,3 +2327,80 @@ describe('Cycle 85: New column pattern keywords', () => {
     expect(findColumn(headers, undefined, DATE_COLUMN_PATTERN)).toBe(0);
   });
 });
+
+describe('Cycle 86: English-only header detection and format diversity', () => {
+  it('isValidHeaderRow accepts English-only headers: Date, Merchant, Amount', () => {
+    expect(isValidHeaderRow(['Date', 'Merchant', 'Amount'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts English-only headers: Transaction Date, Description, Total', () => {
+    expect(isValidHeaderRow(['Transaction Date', 'Description', 'Total'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts English-only headers: Date, Debit, Credit', () => {
+    expect(isValidHeaderRow(['Date', 'Debit', 'Credit'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts English-only headers: Purchase Date, Name, Amount', () => {
+    expect(isValidHeaderRow(['Purchase Date', 'Name', 'Amount'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts English-only headers: Settlement Date, Payee, Net Amount', () => {
+    expect(isValidHeaderRow(['Settlement Date', 'Payee', 'Net Amount'])).toBe(true);
+  });
+
+  it('isValidHeaderRow accepts English-only headers: Date, Details, Amount', () => {
+    expect(isValidHeaderRow(['Date', 'Details', 'Amount'])).toBe(true);
+  });
+
+  it('MERCHANT_COLUMN_PATTERN matches details', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('details')).toBe(true);
+  });
+
+  it('MERCHANT_COLUMN_PATTERN matches reference', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('reference')).toBe(true);
+  });
+
+  it('MERCHANT_COLUMN_PATTERN matches transaction', () => {
+    expect(MERCHANT_COLUMN_PATTERN.test('transaction')).toBe(true);
+  });
+
+  it('MERCHANT_KEYWORDS includes details, reference, transaction', () => {
+    expect(MERCHANT_KEYWORDS.has('details')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('reference')).toBe(true);
+    expect(MERCHANT_KEYWORDS.has('transaction')).toBe(true);
+  });
+
+  it('MEMO_COLUMN_PATTERN matches details', () => {
+    expect(MEMO_COLUMN_PATTERN.test('details')).toBe(true);
+  });
+
+  it('MEMO_COLUMN_PATTERN matches reference', () => {
+    expect(MEMO_COLUMN_PATTERN.test('reference')).toBe(true);
+  });
+
+  it('MEMO_KEYWORDS includes details, reference', () => {
+    expect(MEMO_KEYWORDS.has('details')).toBe(true);
+    expect(MEMO_KEYWORDS.has('reference')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS includes details, reference, transaction', () => {
+    expect((HEADER_KEYWORDS as string[]).includes('details')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('reference')).toBe(true);
+    expect((HEADER_KEYWORDS as string[]).includes('transaction')).toBe(true);
+  });
+
+  it('SUMMARY_ROW_PATTERN matches standalone 할인 summary rows', () => {
+    expect(SUMMARY_ROW_PATTERN.test('할인 1,234원')).toBe(true);
+    expect(SUMMARY_ROW_PATTERN.test('할인')).toBe(true);
+  });
+
+  it('SUMMARY_ROW_PATTERN does not match 할인 inside merchant name', () => {
+    expect(SUMMARY_ROW_PATTERN.test('할인마트')).toBe(false);
+    expect(SUMMARY_ROW_PATTERN.test('할인중')).toBe(false);
+  });
+
+  it('SUMMARY_ROW_PATTERN still matches 할인 합계', () => {
+    expect(SUMMARY_ROW_PATTERN.test('할인 합계 5,000원')).toBe(true);
+  });
+});

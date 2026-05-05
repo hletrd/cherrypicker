@@ -1,30 +1,29 @@
-# Cycle 84 Aggregate Review
+# Cycle 86 Aggregate Review
 
 ## Summary
-After 83 cycles, the parser is very mature with 1231 bun + 296 vitest tests passing.
-This cycle identifies **2 actionable findings**: a format diversity gap in CSV column
-inference and a minor parity fix.
+After 85 cycles, the parser is very mature with 1244+ bun + 299+ vitest tests passing.
+This cycle identifies **5 actionable findings**: missing English keywords in HEADER_KEYWORDS and a missing `할인` summary row pattern, both affecting format diversity for English-only header rows.
 
-## Findings by Priority
+## Findings
 
-### MEDIUM (implement this cycle)
-| ID | Area | Finding |
-|----|------|---------|
-| F84-01 | CSV Generic | Full-width digit amounts not detected during column inference |
-| F84-02 | CSV Web | parseAmount missing explicit empty-string early return (parity) |
+| # | Severity | Area | Description | Status |
+|---|----------|------|-------------|--------|
+| F1 | MEDIUM | column-matcher | Missing 13 English date keywords in HEADER_KEYWORDS | Planned |
+| F2 | LOW | column-matcher | Missing `name` merchant keyword in HEADER_KEYWORDS | Planned |
+| F3 | LOW | column-matcher | Missing `debit`/`credit`/`net`/`netamount`/`gross` in HEADER_KEYWORDS | Planned |
+| F4 | LOW | column-matcher | Missing standalone `할인` in SUMMARY_ROW_PATTERN | Planned |
+| T1 | MEDIUM | column-matcher.test | Missing English-only header detection test coverage | Planned |
 
-## No Regressions
-All 1231 bun tests and 296 vitest tests passing.
-
-## Server/Web Parity
-CONFIRMED: All column patterns, summary row pattern, header keywords, amount/date
-parsing algorithms, XLSX bank adapter configs identical between server and web.
+## Reviewer Results
+- **code-reviewer**: 4 findings (F1-F4), keyword gaps in HEADER_KEYWORDS
+- **test-engineer**: 1 finding (T1), missing English-only header test coverage
+- **verifier**: All findings low-risk, safe to implement
 
 ## Deferred Items (unchanged)
-- PDF multi-line header support
-- Historical amount display format
-- Card name suffixes
-- Global config integration
-- Generic parser fallback behavior
-- CSS dark mode
-- D-01 shared module refactor
+- D-01: Shared module between Bun/browser (significant refactor)
+- PDF multi-line header support (needs fixture data)
+- Historical amount display (low priority)
+- Card name suffixes (low priority)
+- Global config integration (feature work)
+- Generic parser fallback (needs UX decisions)
+- CSS dark mode (frontend work)
