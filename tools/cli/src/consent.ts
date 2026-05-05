@@ -12,19 +12,34 @@ function isNonInteractive(yesFlag: boolean): boolean {
 }
 
 /** Prompt the user for LLM fallback consent interactively.
- *  Returns true if user confirms, false otherwise. */
+ *  Returns true if user confirms, false otherwise.
+ *  Times out after 30 seconds to prevent hung processes in piped/Ci environments. */
 async function promptConsent(): Promise<boolean> {
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
-  return new Promise((resolve) => {
-    rl.question('This will send up to 8000 chars to Anthropic. Continue? (y/N) ', (answer) => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
       rl.close();
-      const normalized = answer.trim().toLowerCase();
-      resolve(normalized === 'y' || normalized === 'yes');
-    });
+      reject(
+        new Error(
+          'LLM 동의 확인 시간이 초과되었습니다 (30초).\n' +
+            '비대화형 모드에서 실행하려면 --yes 옵션을 사용하세요.',
+        ),
+      );
+    }, 30000);
+
+    rl.question(
+      'PDF 파싱을 위해 최대 8000자의 데이터가 Anthropic API로 전송됩니다. 계속하시겠습니까? (y/N) ',
+      (answer) => {
+        clearTimeout(timer);
+        rl.close();
+        const normalized = answer.trim().toLowerCase();
+        resolve(normalized === 'y' || normalized === 'yes');
+      },
+    );
   });
 }
 
