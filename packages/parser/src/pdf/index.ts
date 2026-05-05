@@ -256,12 +256,9 @@ function tryStructuredParse(text: string, bank: BankId | null): { transactions: 
 
     return transactions.length > 0 ? { transactions, errors: parseErrors } : null;
   } catch (err) {
-    // Log structured parse failure for diagnostics — the fallback line scanner
-    // will still attempt recovery, but the structured parse failure should be
-    // visible in the console for debugging malformed PDFs.
+    // Structured parse failed — silently fall back to line scanner.
     // Catch all errors and return null to allow fallback, matching web-side
     // behavior in apps/web/src/lib/parser/pdf.ts (C25-06).
-    console.warn('[cherrypicker] Structured PDF table parse failed, falling back to line scan:', err instanceof Error ? err.message : String(err));
     return null;
   }
 }
@@ -358,7 +355,11 @@ export async function parsePDF(
         between = line.slice(amountEnd, dateStart).trim();
       }
       if (between) {
-        const amountRaw = (amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6] ?? amountMatch[7])!;
+        const amountRaw = amountMatch[1] ?? amountMatch[2] ?? amountMatch[3] ?? amountMatch[4] ?? amountMatch[5] ?? amountMatch[6] ?? amountMatch[7];
+        if (amountRaw === undefined) {
+          errors.push({ message: `금액을 추출할 수 없습니다: ${amountMatch[0].trim()}` });
+          continue;
+        }
         const amount = parseAmount(amountRaw);
         // parseAmount returns null for unparseable inputs — skip the row
         // rather than silently treating it as 0 (C34-01).
