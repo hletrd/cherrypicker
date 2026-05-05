@@ -142,7 +142,7 @@ export function parseAmountString(raw: string): number | null {
   let cleaned = raw.trim()
     .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts
     .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits ０-９ -> 0-9
-    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
+    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-').replace(/＋/g, '+') // full-width comma/dot/minus/plus -> ASCII
     .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
     .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix
     .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
@@ -178,5 +178,6 @@ export function parseCSVInstallments(raw: string | undefined): number | undefine
  *  exports. Shared between HTML and XLSX parsers to eliminate duplication
  *  (C100-04). */
 export function normalizeHTML(html: string): string {
-  return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>');
+  return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>')
+    .replace(/<\/([a-z][a-z0-9]*)\s+>/gi, '</$1>');
 }

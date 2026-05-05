@@ -25,7 +25,8 @@ import * as xlsx from 'xlsx';
 
 /** Fix malformed closing tags like </td   > */
 export function normalizeHTML(html: string): string {
-  return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>');
+  return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>')
+    .replace(/<\/([a-z][a-z0-9]*)\s+>/gi, '</$1>');
 }
 
 /** Parse HTML content and extract transactions from tables. */
