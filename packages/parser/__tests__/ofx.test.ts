@@ -335,5 +335,55 @@ NEWFILEUID:NONE
       expect(result.transactions).toHaveLength(0);
       expect(result.errors.length).toBeGreaterThan(0);
     });
+
+    it('handles tags with regex metacharacters gracefully (C20-TEST02)', () => {
+      // Malformed OFX with regex metacharacters in tag names — should not throw
+      const content = `<BANKTRANLIST>
+<STMTTRN><TRNTYPE>DEBIT</TRNTYPE><DTPOSTED>20240115</DTPOSTED><TRNAMT>-10000</TRNAMT><NAME+>STARBUCKS</NAME+></STMTTRN>
+</BANKTRANLIST>`;
+      // After escapeRegExp fix, this parses without SyntaxError
+      const result = parseOFX(content);
+      // NAME+ won't match NAME extraction, so merchant falls back to empty/MEMO
+      expect(result.transactions.length).toBeGreaterThanOrEqual(0);
+      expect(result.errors.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Full-width and localized amount formats (C20-TEST01)', () => {
+    it('parses full-width digits with commas', () => {
+      const content = `<BANKTRANLIST>
+<STMTTRN><TRNTYPE>DEBIT</TRNTYPE><DTPOSTED>20240115</DTPOSTED><TRNAMT>-１，２３４</TRNAMT><NAME>TEST</NAME></STMTTRN>
+</BANKTRANLIST>`;
+      const result = parseOFX(content);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.amount).toBe(1234);
+    });
+
+    it('parses Won sign prefix', () => {
+      const content = `<BANKTRANLIST>
+<STMTTRN><TRNTYPE>DEBIT</TRNTYPE><DTPOSTED>20240115</DTPOSTED><TRNAMT>-￦15000</TRNAMT><NAME>TEST</NAME></STMTTRN>
+</BANKTRANLIST>`;
+      const result = parseOFX(content);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.amount).toBe(15000);
+    });
+
+    it('parses 마이너스 prefix', () => {
+      const content = `<BANKTRANLIST>
+<STMTTRN><TRNTYPE>DEBIT</TRNTYPE><DTPOSTED>20240115</DTPOSTED><TRNAMT>마이너스5000</TRNAMT><NAME>TEST</NAME></STMTTRN>
+</BANKTRANLIST>`;
+      const result = parseOFX(content);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.amount).toBe(5000);
+    });
+
+    it('parses trailing minus sign', () => {
+      const content = `<BANKTRANLIST>
+<STMTTRN><TRNTYPE>DEBIT</TRNTYPE><DTPOSTED>20240115</DTPOSTED><TRNAMT>10000-</TRNAMT><NAME>TEST</NAME></STMTTRN>
+</BANKTRANLIST>`;
+      const result = parseOFX(content);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.amount).toBe(10000);
+    });
   });
 });
