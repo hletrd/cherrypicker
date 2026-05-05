@@ -174,10 +174,23 @@ export function parseCSVInstallments(raw: string | undefined): number | undefine
   return inst > 1 ? inst : undefined;
 }
 
-/** Fix malformed closing tags like </td   > commonly found in Korean card
- *  exports. Shared between HTML and XLSX parsers to eliminate duplication
- *  (C100-04). */
+/** Fix malformed closing tags and strip dangerous content before SheetJS parsing.
+ *  Removes script tags, event handlers, iframe/object/embed tags, and style blocks
+ *  to prevent entity expansion bombs and unexpected SheetJS behavior (C20-SEC02).
+ *  Shared between HTML and XLSX parsers to eliminate duplication (C100-04). */
 export function normalizeHTML(html: string): string {
-  return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>')
+  return html
+    // Strip script tags and their contents
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    // Strip style tags and their contents
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    // Strip iframe, object, embed tags
+    .replace(/<(iframe|object|embed)[\s\S]*?<\/\1>/gi, '')
+    .replace(/<(iframe|object|embed)[^>]*>/gi, '')
+    // Remove event handler attributes (onclick, onerror, etc.)
+    .replace(/\son\w+=["'][^"']*["']/gi, '')
+    .replace(/\son\w+=\w+/gi, '')
+    // Fix malformed closing tags
+    .replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>')
     .replace(/<\/([a-z][a-z0-9]*)\s+>/gi, '</$1>');
 }
