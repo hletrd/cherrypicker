@@ -289,6 +289,10 @@ if (warnings.length > 0) {
   }
 }
 
+if (errors.length > 0) {
+  process.exit(1);
+}
+
 // ── Build organized output ──
 
 // Group by issuer
