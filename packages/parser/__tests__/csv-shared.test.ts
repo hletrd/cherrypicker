@@ -778,4 +778,17 @@ describe('parseAmountString', () => {
     expect(parseCSVAmount('1,234')).toBe(1234);
     expect(parseCSVAmount('₩500')).toBe(500);
   });
+
+  // C10-01: Infinity edge cases
+  test('returns null for values that overflow to Infinity', () => {
+    expect(parseAmountString('1e309')).toBeNull();
+    expect(parseAmountString('1e400')).toBeNull();
+    expect(parseAmountString('-1e309')).toBeNull();
+    expect(parseAmountString('9e999')).toBeNull();
+  });
+
+  test('returns null for Infinity literal', () => {
+    expect(parseAmountString('Infinity')).toBeNull();
+    expect(parseAmountString('-Infinity')).toBeNull();
+  });
 });

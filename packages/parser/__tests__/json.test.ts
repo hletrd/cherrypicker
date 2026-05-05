@@ -188,4 +188,17 @@ describe('parseJSON', () => {
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]!.merchant).toBe('OK');
   });
+
+  it('skips Infinity string amounts as unparseable (C10-07)', () => {
+    const input = JSON.stringify([{ date: '2024-01-01', merchant: 'Test', amount: '1e309' }]);
+    const result = parseJSON(input);
+    expect(result.transactions).toHaveLength(0);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+
+  it('skips Infinity number amounts as unparseable (C10-07)', () => {
+    const input = JSON.stringify([{ date: '2024-01-01', merchant: 'Test', amount: Infinity }]);
+    const result = parseJSON(input);
+    expect(result.transactions).toHaveLength(0);
+  });
 });

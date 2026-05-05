@@ -304,5 +304,36 @@ VERSION:102
       const result = parseOFX(content);
       expect(result.bank).toBe('shinhan');
     });
+
+    it('skips Infinity amounts as unparseable (C10-02)', () => {
+      const content = `OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+<OFX>
+<BANKMSGSRSV1>
+<STMTTRNRS>
+<STMTRS>
+<BANKTRANLIST>
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20240115
+<TRNAMT>1e309
+<NAME>테스트</NAME>
+</STMTTRN>
+</BANKTRANLIST>
+</STMTRS>
+</STMTTRNRS>
+</BANKMSGSRSV1>
+</OFX>`;
+      const result = parseOFX(content);
+      expect(result.transactions).toHaveLength(0);
+      expect(result.errors.length).toBeGreaterThan(0);
+    });
   });
 });
