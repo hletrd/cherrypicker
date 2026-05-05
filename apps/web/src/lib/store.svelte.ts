@@ -112,7 +112,7 @@ const STORAGE_VERSION = 1;
  *  run BEFORE validation so the validation logic sees the current schema shape.
  *  Example: when STORAGE_VERSION becomes 2, add: `1: (data) => ({ ...data, newField: data.newField ?? defaultValue })`
  *  (C75-03). */
-const MIGRATIONS: Record<number, (data: any) => any> = {
+const MIGRATIONS: Record<number, (data: unknown) => unknown> = {
   // No migrations yet -- v1 is the first versioned schema
 };
 
