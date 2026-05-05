@@ -39,13 +39,37 @@ function extractTag(block: string, tagName: string): string {
   return '';
 }
 
-/** Parse OFX YYYYMMDD date to ISO format. */
+/** Parse OFX YYYYMMDD date to ISO format.
+ *  OFX uses YYYYMMDD format optionally followed by time: 20240115120000[0:GMT].
+ *  If a timezone offset is present, convert to KST (UTC+9) before extracting
+ *  the date so cross-midnight offsets don't produce the wrong local date. */
 function parseOFXDate(raw: string): string {
-  const dateStr = raw.replace(/[^0-9].*$/, '').slice(0, 8);
-  if (/^\d{8}$/.test(dateStr)) {
-    return parseDateStringToISO(dateStr);
+  // Match: YYYYMMDD[HHMMSS[.sss][+offset:TZ]]]
+  const m = raw.match(/^(\d{4})(\d{2})(\d{2})(?:(\d{2})(\d{2})(\d{2})(?:\.\d+)?(?:\[([+-]?\d+):[A-Z]+\])?)?/);
+  if (!m) {
+    const fallback = raw.replace(/[^0-9].*$/, '').slice(0, 8);
+    return /^\d{8}$/.test(fallback) ? parseDateStringToISO(fallback) : raw;
   }
-  return raw;
+
+  const year = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10) - 1;
+  const day = parseInt(m[3], 10);
+
+  // No time component — just return the date as-is
+  if (!m[4]) {
+    return parseDateStringToISO(`${m[1]}${m[2]}${m[3]}`);
+  }
+
+  const hour = parseInt(m[4], 10);
+  const minute = parseInt(m[5], 10);
+  const second = parseInt(m[6], 10);
+  const tzOffset = m[7] ? parseInt(m[7], 10) : 0;
+
+  // Convert to KST (UTC+9): local time - tzOffset = UTC; UTC + 9 = KST
+  const utcMs = Date.UTC(year, month, day, hour, minute, second) - tzOffset * 3600000;
+  const kst = new Date(utcMs + 9 * 3600000);
+
+  return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`;
 }
 
 /** Parse an OFX amount string. In OFX: negative = charges, positive = credits. */

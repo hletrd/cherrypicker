@@ -94,11 +94,9 @@ function parseTransactionObject(
     }
     return null;
   }
-  // Skip zero amounts (balance inquiries) but accept negative amounts
-  // (refunds/credits) by taking absolute value, matching server-side
-  // JSON parser behavior (C100-02).
+  // Skip zero amounts (balance inquiries). Negative amounts (refunds/credits)
+  // are preserved — the optimizer's positive-only filter handles them.
   if (amount === 0) return null;
-  const absAmount = Math.abs(amount);
 
   const date = parseDateStringToISO(dateRaw);
   if (!isValidISODate(date) && dateRaw) {
@@ -108,7 +106,7 @@ function parseTransactionObject(
   const tx: RawTransaction = {
     date,
     merchant: String(merchantValue ?? '').trim(),
-    amount: absAmount,
+    amount,
   };
 
   const installValue = findField(obj, INSTALLMENTS_ALIASES);

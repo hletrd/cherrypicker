@@ -36,7 +36,8 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
 
   let workbook: xlsx.WorkBook;
   try {
-    workbook = xlsx.read(normalized, { type: 'string', cellDates: false });
+    const encoder = new TextEncoder();
+    workbook = xlsx.read(encoder.encode(normalized), { type: 'array', cellDates: false });
   } catch (err) {
     return {
       bank: resolvedBank,
@@ -210,7 +211,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
       }
       continue;
     }
-    if (amount === 0) continue;
+    if (amount <= 0) continue;
 
     const date = parseDateStringToISO(dateRaw);
     if (!isValidISODate(date) && dateRaw) {
@@ -220,7 +221,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     const tx: RawTransaction = {
       date,
       merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-      amount: Math.abs(amount),
+      amount,
     };
 
     if (installCol !== -1 && installRaw) {
