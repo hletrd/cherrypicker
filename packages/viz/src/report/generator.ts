@@ -38,7 +38,7 @@ function esc(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
-    .replace(/\\/g, '&#92;');
+  ;
 }
 
 function buildSummary(result: OptimizationResult): string {
