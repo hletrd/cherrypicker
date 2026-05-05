@@ -1,37 +1,89 @@
-# Document Specialist — Cycle 4 Findings
+# Document Specialist — cherrypicker (Cycle 5)
+
+**Reviewer:** document-specialist (sonnet)
+**Scope:** Documentation completeness, API contracts, env vars
+**Date:** 2026-05-05
+
+---
 
 ## Summary
-5 findings on documentation completeness and API contracts. 1 critical, 2 high, 2 medium.
 
-## Findings
+4 findings from cycle 4 remain open. No new documentation was added in cycle 5 despite significant new features (JSON, OFX, HTML parsers, web-side parity fixes). The gap between code velocity and documentation velocity is widening.
+
+---
+
+## Previously Reported — Status
 
 ### F-DOC-01 [CRITICAL] No API contract between parser and optimizer
-- **Files**: `packages/parser/src/types.ts` vs `packages/core/src/models/transaction.ts`
-- **Issue**: `RawTransaction` (parser output) and `Transaction` (optimizer input) are separate types with no documented mapping. Fields like `installments` exist in one but not the other with unclear semantics.
-- **Fix**: Document transformation pipeline: `RawTransaction → Transaction → CategorizedTransaction`.
+
+**Status:** OPEN
+**Evidence:** `RawTransaction` (parser output) and `Transaction` (optimizer input) are still separate types with no documented mapping. The `installments` field exists in `RawTransaction` but not in `Transaction` with no explanation of where it is consumed.
+
+---
 
 ### F-DOC-02 [HIGH] Card rule YAML schema undocumented
-- **Files**: `packages/rules/data/cards/*.yaml`
-- **Issue**: No human-readable documentation of what fields are available, what `condition.type` values exist, or how caps work.
-- **Fix**: Add `RULES_SCHEMA.md` with examples for each rule type.
+
+**Status:** OPEN
+**Evidence:** No `RULES_SCHEMA.md` exists. New rule types (e.g., `condition.type` values) must be inferred from existing YAML files.
+
+---
 
 ### F-DOC-03 [HIGH] No architecture documentation
-- **Files**: Entire repo
-- **Issue**: No `ARCHITECTURE.md` or `CONTRIBUTING.md`. New developers must reverse-engineer package boundaries.
-- **Fix**: Create `ARCHITECTURE.md` with package diagram and data flow.
+
+**Status:** OPEN
+**Evidence:** No `ARCHITECTURE.md` or `CONTRIBUTING.md`. Package boundaries are understood only by reading source code.
+
+---
 
 ### F-DOC-04 [MEDIUM] LLM fallback behavior undocumented
-- **File**: `packages/parser/src/pdf/llm-fallback.ts`
-- **Issue**: No docs explain when LLM fallback triggers, what model is used, cost implications, or rate limits.
-- **Fix**: Add section to `packages/parser/README.md`.
+
+**Status:** OPEN
+**Evidence:** No docs explain when LLM fallback triggers, what model is used, cost implications, or rate limits. The model name was recently updated to `claude-sonnet-4-6` but this is only visible in source.
+
+---
 
 ### F-DOC-05 [MEDIUM] Environment variables undocumented
-- **Files**: `tools/scraper/`, `packages/parser/`
-- **Issue**: `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` mentioned in code but not in README.
-- **Fix**: Add `.env.example` and document all env vars.
 
-## Recommendations
-1. Create `ARCHITECTURE.md` at repo root
-2. Add `RULES_SCHEMA.md` in `packages/rules/`
-3. Add `.env.example` files in all tool packages
-4. Generate API docs from TypeScript types
+**Status:** OPEN
+**Evidence:** `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` mentioned in code but not in README or `.env.example`.
+
+---
+
+## New Findings (Cycle 5)
+
+### [P2-MEDIUM] New parser formats (JSON, OFX, HTML) completely undocumented
+
+**Files:** `packages/parser/src/json/`, `packages/parser/src/ofx/`, `packages/parser/src/html/`
+**Confidence:** High
+
+JSON, OFX, and HTML parsers were added in recent commits. No README updates, no format documentation, no expected schema examples.
+
+**Fix:** Add `packages/parser/README.md` section documenting each supported format with sample input/output.
+
+---
+
+### [P2-MEDIUM] No changelog or release notes
+
+**Files:** Entire repo
+**Confidence:** Medium
+
+No `CHANGELOG.md` or release notes exist. Users cannot know what formats are supported, what bugs were fixed, or what features were added.
+
+**Fix:** Add `CHANGELOG.md` following Keep a Changelog format.
+
+---
+
+### [P3-LOW] Deferred-fix tracking is fragmented
+
+**Files:** `.context/plans/`
+**Confidence:** Medium
+
+20+ plan files with no single deferred-fix registry. Exit criteria for deferred items are scattered across per-cycle files.
+
+**Fix:** Create `.context/reviews/DEFERRED.md` with columns: ID, Finding, First Cycle, Severity, Reason, Exit Criterion, Status.
+
+---
+
+## Verdict
+
+**FIX AND SHIP** — Add `ARCHITECTURE.md` and `RULES_SCHEMA.md`. Document new parser formats. These are writing tasks that do not affect runtime behavior.

@@ -1,48 +1,62 @@
-# Architect — Cycle 4 Findings
+# Architecture Review — cherrypicker (Cycle 6)
+
+**Reviewer:** architect
+**Scope:** System boundaries, data flow, long-term maintainability
+**Date:** 2026-05-06
+
+---
 
 ## Summary
-7 findings on system boundaries, data flow, and long-term maintainability. 2 critical, 3 high, 2 medium.
 
-## Findings
+Cycle 6 delivered two structural improvements: removal of hardcoded CATEGORY_NAMES_KO (A-ARCH-02 fixed) and ParseError class with contextual enrichment. However, the fundamental server/web parser duplication remains unaddressed after 5 cycles, and a new duplication pattern emerged: categoryLabels Map construction is copy-pasted across 5+ call sites.
 
-### A-ARCH-01 [CRITICAL] Server/web parser code duplication
-- **Files**: `packages/parser/src/` vs `apps/web/src/lib/parser/`
-- **Issue**: Two copies of every parser. The web versions (csv.ts, xlsx.ts, pdf.ts, html.ts) are hand-maintained duplicates. This is the single largest architectural debt in the repo.
-- **Options**: (a) Make `packages/parser` isomorphic (remove Bun-only APIs), (b) Extract shared post-processing to `packages/shared/`, (c) Generate web parsers from server parsers.
-- **Recommended**: Option (b) — extract `normalizeTransactions()` and `validateAmount()` to shared package. Keep format-specific extraction in each environment.
+---
 
-### A-ARCH-02 [CRITICAL] CATEGORY_NAMES_KO hardcoded in optimizer
-- **File**: `packages/core/src/optimizer/greedy.ts` lines 11-89
-- **Issue**: Category taxonomy lives in YAML but optimizer hardcodes Korean labels. Build-time generation or runtime load needed.
-- **Fix**: Load categories from YAML at startup, cache in optimizer.
+## Verified Fixed
 
-### A-ARCH-03 [HIGH] Card rules type duplicated in web app
-- **File**: `apps/web/src/lib/cards.ts` lines 14-52
-- **Issue**: Web app redefines `CardRuleSet` instead of importing from `@cherrypicker/rules`. Schema evolution requires manual sync across packages.
-- **Fix**: Export shared types from `packages/rules` and import in web.
+| Finding | Commit | Evidence |
+|---------|--------|----------|
+| A-ARCH-02: CATEGORY_NAMES_KO hardcoded | e8351ee | `categoryLabels` is now a required parameter; all call sites pass dynamically built maps |
+| R-TRA-01: Parser errors lack context | 87aa83a | `ParseError` class with `file`, `format`, `line`, `raw`; `enrichErrors()` backfills |
 
-### A-ARCH-04 [HIGH] No clear boundary between parser and categorizer
-- **Files**: `packages/parser/src/` vs `packages/core/src/categorizer/`
-- **Issue**: Parsers return raw transactions; categorizer runs separately. But some parser logic (e.g., merchant normalization) could inform categorization.
-- **Fix**: Define clear contract: parser outputs `{ date, merchant, amount }[]`; categorizer takes that and returns `CategorizedTransaction[]`. Document in ARCHITECTURE.md.
+---
 
-### A-ARCH-05 [HIGH] Web store persists to sessionStorage with no schema versioning
-- **File**: `apps/web/src/lib/store.svelte.ts`
-- **Issue**: `STORAGE_VERSION = 1` exists but no migration logic. If schema changes, stale storage causes silent failures.
-- **Fix**: Add migration runner and versioned storage schema.
+## New Findings (Cycle 6)
 
-### A-ARCH-06 [MEDIUM] Monorepo workspace boundaries are soft
-- **Files**: Root `package.json`, workspace configs
-- **Issue**: No enforced dependency rules. `apps/web` could accidentally import Bun-only packages.
-- **Fix**: Add Nx or custom lint rule enforcing package boundaries.
+### [A6-01-HIGH] categoryLabels Map construction duplicated across CLI, viz, and web
 
-### A-ARCH-07 [MEDIUM] Scraping pipeline has no orchestration layer
-- **Files**: `tools/scraper/src/`
-- **Issue**: Single-file extraction with no queue, retry, or rate limiting. Card rule updates are manual one-offs.
-- **Fix**: Add simple queue with exponential backoff and rate limiter.
+**Files:** `tools/cli/src/commands/analyze.ts:88-97`, `tools/cli/src/commands/optimize.ts:95-104`, `tools/cli/src/commands/report.ts`, `packages/viz/src/terminal/summary.ts`, `apps/web/src/lib/analyzer.ts:242-247`
+**Confidence:** High
 
-## Recommendations
-1. Create `packages/shared/` for isomorphic utilities (amount validation, date parsing)
-2. Add `ARCHITECTURE.md` documenting package boundaries
-3. Consider Nx or Turborepo for workspace enforcement
-4. Build category loading from YAML into `packages/core` initialization
+The same logic for building `Map<string, string>` from `CategoryNode[]` is repeated in at least 5 locations. This is the same anti-pattern that led to CATEGORY_NAMES_KO hardcoding — when the taxonomy structure evolves (e.g., adding a third nesting level), every call site must be updated independently.
+
+**Fix:** Extract `buildCategoryLabelMap(nodes: CategoryNode[]): Map<string, string>` into `packages/rules/src/category-names.ts` (which already exists and exports `CATEGORY_NAMES_KO` for backward compatibility). Re-export from there and import in all call sites. Remove inline duplication.
+
+---
+
+### [A6-02-MEDIUM] Web-side ParseError type diverges from server-side class
+
+**Files:** `apps/web/src/lib/parser/types.ts:30-34` vs `packages/parser/src/types.ts:30-47`
+**Confidence:** High
+
+Web-side `ParseError` is an interface; server-side is a class extending Error. This breaks:
+1. Structural typing — web-side errors lack `file` and `format` fields
+2. Runtime behavior — `instanceof ParseError` fails for web-side errors
+3. Enrichment — `enrichErrors()` in `parseStatement()` cannot backfill web errors
+
+This is a direct consequence of maintaining two separate parser trees instead of sharing a single implementation.
+
+**Fix:** Short-term: align web-side types.ts with server-side class definition. Long-term: share the types module between server and web (extract to `@cherrypicker/parser` types that both import).
+
+---
+
+## Still Open from Cycle 5
+
+| ID | Description | Severity | Status |
+|----|-------------|----------|--------|
+| A-ARCH-01 | Server/web parser duplication | CRITICAL | **OPEN** |
+| A-ARCH-03 | Card rules type duplicated in web app | HIGH | **OPEN** |
+| A-ARCH-05 | No workspace boundary enforcement | MEDIUM | **OPEN** |
+| A-ARCH-06 | Monorepo workspace boundaries are soft | MEDIUM | **OPEN** |
+| A-ARCH-07 | Scraping pipeline has no orchestration | MEDIUM | **OPEN** |
+| F-CRI-03 | Deferred-fix tracking fragmented | MEDIUM | **OPEN** |

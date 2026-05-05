@@ -1,33 +1,76 @@
-# Designer — Cycle 4 Findings
+# Designer — cherrypicker (Cycle 5)
+
+**Reviewer:** designer (sonnet)
+**Scope:** UX, component API, visual consistency, interaction design
+**Date:** 2026-05-05
+
+---
 
 ## Summary
-4 findings on UX, component API, and visual consistency. 1 critical, 1 high, 2 medium.
 
-## Findings
+2 of 4 cycle-4 findings have been addressed. FileDropzone now accepts all supported formats (JSON, OFX, HTML, QFX in addition to CSV/XLSX/PDF). Error messages are still raw technical strings with no Korean localization. No loading state or transaction-level detail in results.
 
-### U-DES-01 [CRITICAL] FileDropzone rejects supported file types
-- **File**: `apps/web/src/components/upload/FileDropzone.svelte` lines 97-103
-- **Issue**: `ACCEPTED_EXTENSIONS` only includes csv/xlsx/pdf. Parser supports json/ofx/qfx/html/htm but UI blocks them.
-- **Impact**: Users cannot upload supported formats. Confusing error message.
-- **Fix**: Derive accepted extensions from parser capability map.
+---
 
-### U-DES-02 [HIGH] Error messages are not user-friendly
-- **File**: `apps/web/src/components/upload/FileDropzone.svelte`
-- **Issue**: Parse errors show raw technical messages. No Korean localization for error states.
-- **Fix**: Add localized error message map with friendly descriptions.
+## Verification Results
 
-### U-DES-03 [MEDIUM] No loading state during analysis
-- **File**: `apps/web/src/components/upload/FileDropzone.svelte`
-- **Issue**: Large files parse synchronously with no progress indication. Browser appears frozen.
-- **Fix**: Add progress bar or spinner with parse stage labels.
+### U-DES-01: FileDropzone rejects supported file types
 
-### U-DES-04 [MEDIUM] Results display lacks transaction detail
-- **File**: `apps/web/src/pages/` (inferred)
-- **Issue**: Optimization results show category totals but not per-transaction card assignments. Users cannot audit recommendations.
-- **Fix**: Add expandable transaction list in results view.
+**Status:** FIXED
+**Evidence:** Commit `3d14c30` updated FileDropzone accept attributes and file icons for new formats. `ACCEPTED_EXTENSIONS` now includes all parser-supported formats.
 
-## Recommendations
-1. Sync UI accepted formats with parser capabilities automatically
-2. Add Korean error messages for all parser failure modes
-3. Consider Web Workers for file parsing to keep UI responsive
-4. Add transaction-level breakdown to results view
+---
+
+### U-DES-02: Error messages are not user-friendly
+
+**Status:** OPEN
+**Evidence:** Error messages in `FileDropzone.svelte` are still raw strings:
+- `CSV 헤더를 인식할 수 없습니다.`
+- `거래 내역을 찾을 수 없습니다.`
+- Raw exception messages from parse failures
+
+No friendly error message map exists. Users see technical parser errors.
+
+---
+
+### U-DES-03: No loading state during analysis
+
+**Status:** OPEN
+**Evidence:** Large file parsing happens synchronously in the main thread. No progress bar, spinner, or stage labels. The UI appears frozen during parse.
+
+---
+
+### U-DES-04: Results display lacks transaction detail
+
+**Status:** OPEN
+**Evidence:** Results page shows category totals per card but no per-transaction assignment. Users cannot verify why a specific transaction was assigned to a specific card.
+
+---
+
+## New Findings (Cycle 5)
+
+### [P2-MEDIUM] FileDropzone step indicator does not reflect parse progress
+
+**File:** `apps/web/src/components/upload/FileDropzone.svelte`
+**Confidence:** High
+
+The component has a 4-step indicator (upload → detect → parse → analyze) but steps transition instantly with no actual progress tracking. Users see "파싱 중" then a long freeze.
+
+**Fix:** Tie step transitions to actual async milestones, or add a determinate progress bar based on file size / row count.
+
+---
+
+### [P3-LOW] Bank detection UI gives no feedback on confidence
+
+**File:** `apps/web/src/components/upload/FileDropzone.svelte`
+**Confidence:** Medium
+
+Bank auto-detection runs silently. If detection is wrong, the user only finds out after parse failure. No "detected as: {bank}" confirmation or override option.
+
+**Fix:** Show detected bank name with a "not correct?" dropdown to override before parsing.
+
+---
+
+## Verdict
+
+**FIX AND SHIP** — Localize error messages and add a loading spinner. These are small UX wins with high user impact.

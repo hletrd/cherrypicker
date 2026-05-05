@@ -1,50 +1,86 @@
-# Test Engineer — Cycle 4 Findings
+# Test Engineer — cherrypicker (Cycle 6)
+
+**Reviewer:** test-engineer
+**Scope:** Test coverage, gaps, regression risks for changes since Cycle 5
+**Date:** 2026-05-06
+
+---
 
 ## Summary
-6 findings. 2 critical test gaps, 2 high, 2 medium.
 
-## Findings
+Cycle 6 added tests for ParseError (structural), LRU cache (correctness + eviction), path validation (traversal + existence), and LLM consent (flag enforcement). These are well-written and cover the happy path. However, gaps remain in error-path coverage, edge cases, and cross-package parity verification.
 
-### T-TE-01 [CRITICAL] Missing test for FileDropzone error path
-- **File**: `apps/web/src/components/upload/FileDropzone.svelte`
-- **Issue**: `errorMessage` vs `errorMessages` ReferenceError (C-CR-03) not caught by any existing test. The component test file only tests happy path.
-- **Fix**: Add tests for: invalid file type, oversized file, parse failure, duplicate file.
+---
 
-### T-TE-02 [CRITICAL] No parser parity test suite
-- **Files**: `packages/parser/src/` vs `apps/web/src/lib/parser/`
-- **Issue**: Server and web parsers diverge silently. Cycle 2 found negative amount divergence; cycle 4 may find more.
-- **Fix**: Create `__tests__/parity/` with fixtures run through both parser stacks.
+## Verified Fixed
 
-### T-TE-03 [HIGH] Missing refund transaction test fixtures
-- **Files**: All parser `__tests__/` directories
-- **Issue**: No fixtures include negative amounts or refund rows. Parser behavior on refunds is untested.
-- **Fix**: Add `refund.csv`, `refund.xlsx`, `refund.pdf.txt`, etc. to fixtures.
+| Finding | Commit | Evidence |
+|---------|--------|----------|
+| T-TE-01: No web component tests | — | Out of scope for cycle 6; still open |
+| T-TE-02: No parity tests | — | Still open; see T6-02 below |
+| T-TE-03: No CLI integration tests | ce91407, 41fb34c | New tests in `commands.test.ts` cover validation and consent |
 
-### T-TE-04 [HIGH] Optimizer has no performance regression tests
-- **File**: `packages/core/src/optimizer/greedy.ts`
-- **Issue**: O(n^2 log n) sort (P-PR-01) has no benchmark baseline. Performance could regress silently.
-- **Fix**: Add `benchmark/greedy.bench.ts` with 10/50/100 card scenarios.
+---
 
-### T-TE-05 [MEDIUM] No integration test for full CLI pipeline
-- **File**: `tools/cli/src/commands/optimize.ts`
-- **Issue**: CLI entry point is untested. Argument parsing, file reading, and output formatting not exercised.
-- **Fix**: Add `__tests__/cli.integration.test.ts` using temporary files.
+## New Findings (Cycle 6)
 
-### T-TE-06 [MEDIUM] No test for LLM fallback parsing
-- **File**: `packages/parser/src/pdf/llm-fallback.ts`
-- **Issue**: LLM-dependent code is untestable without API key. No mock-based unit tests.
-- **Fix**: Inject Anthropic client as dependency for testability.
+### [T6-01-MEDIUM] ParseError test is vacuous — does not verify actual parser usage
 
-## Test Coverage Gaps
-| Module | Lines | Covered | Gap |
-|--------|-------|---------|-----|
-| FileDropzone.svelte | ~400 | ~120 (happy path) | Error paths |
-| Web parsers | ~800 | ~400 | Refunds, edge cases |
-| Optimizer | ~200 | ~150 | Performance, large N |
-| CLI | ~150 | ~0 | Entire module |
-| LLM fallback | ~100 | ~0 | Entire module |
+**File:** `packages/parser/__tests__/parse-error.test.ts:34-43`
+**Confidence:** High
 
-## Recommendations
-1. Add error-path Svelte component tests with `@testing-library/svelte`
-2. Create shared test fixtures in `packages/parser/__tests__/fixtures/`
-3. Add benchmark suite to CI (run on PR, not blocking)
+The test "used by at least 3 parsers" only verifies that dynamic imports resolve. It does NOT verify that OFX, HTML, or JSON parsers actually construct `new ParseError(...)` instances. A parser could import `ParseError` but construct plain `{ message: ... }` objects, and this test would still pass.
+
+**Fix:** Replace with behavioral tests: parse malformed input through each of the 3 parsers and assert `err instanceof ParseError` on returned errors.
+
+```ts
+test('OFX parser returns ParseError instances for malformed content', async () => {
+  const result = parseOFX('not xml', null);
+  expect(result.errors.length).toBeGreaterThan(0);
+  expect(result.errors[0]).toBeInstanceOf(ParseError);
+});
+```
+
+---
+
+### [T6-02-HIGH] No parity tests between server-side and web-side parsers
+
+**Files:** `packages/parser/src/` vs `apps/web/src/lib/parser/`
+**Confidence:** High
+
+With 7 parser formats (CSV, XLSX, PDF, JSON, OFX, HTML) now implemented on both sides, there are 14 parser implementations. Any divergence in behavior (e.g., web-side JSON parser takes `Math.abs()` of amounts while server-side doesn't, or web-side HTML parser lacks forward-fill) produces inconsistent user experiences.
+
+**Fix:** Add a parity test suite that runs the same fixture files through both server-side and web-side parsers and compares `ParseResult` outputs. Use shared test fixtures in `packages/parser/__tests__/fixtures/`.
+
+---
+
+### [T6-03-MEDIUM] No tests for JSON parser negative amount handling
+
+**File:** `packages/parser/src/json/index.ts:116`
+**Confidence:** High
+
+The JSON parser takes `Math.abs(amount)` for all amounts, including negative values that represent refunds. There are no tests covering this behavior. A test with `{ "amount": -50000 }` would reveal the silent conversion.
+
+**Fix:** Add tests for negative amounts, zero amounts, and large values in `json.test.ts`.
+
+---
+
+### [T6-04-MEDIUM] LRU cache tests don't cover concurrent access
+
+**File:** `packages/core/__tests__/categorizer.test.ts`
+**Confidence:** Medium
+
+The LRU cache tests verify sequential correctness and eviction, but not concurrent access. In a web app context where multiple `MerchantMatcher` instances might be created, or where async operations overlap, race conditions on the shared `Map` could corrupt cache state.
+
+**Fix:** Add a test that creates multiple matchers, calls `match()` concurrently, and verifies results are still correct.
+
+---
+
+## Still Open from Cycle 5
+
+| ID | Description | Severity | Status |
+|----|-------------|----------|--------|
+| T-TE-01 | No web component tests for FileDropzone | HIGH | **OPEN** |
+| T-TE-04 | No optimizer benchmark or perf regression tests | MEDIUM | **OPEN** |
+| T-TE-05 | LLM fallback untestable without API key | MEDIUM | **OPEN** |
+| V-VER-01 | FileDropzone error path coverage unverified | MEDIUM | **OPEN** |

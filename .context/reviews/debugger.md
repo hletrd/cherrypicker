@@ -1,51 +1,91 @@
-# Debugger — Cycle 4 Findings
+# Debugger — cherrypicker (Cycle 5)
+
+**Reviewer:** debugger (sonnet)
+**Scope:** Root-cause analysis, edge cases, failure modes
+**Date:** 2026-05-05
+
+---
 
 ## Summary
-5 findings on error handling, edge cases, and failure modes. 2 critical, 2 high, 1 medium.
 
-## Findings
+3 of 5 cycle-4 findings have been fixed. The FileDropzone ReferenceError is resolved. The PDF non-null assertion is partially fixed. The OFX timezone bug and HTML forward-fill mutation remain. No new critical failure modes were found in cycle 5.
 
-### D-DEB-01 [CRITICAL] FileDropzone crashes on error due to ReferenceError
-- **File**: `apps/web/src/components/upload/FileDropzone.svelte` lines 251, 314, 363
-- **Issue**: Variable `errorMessages` declared but `errorMessage` referenced. Any error path throws `ReferenceError: errorMessage is not defined`, breaking the entire upload flow.
-- **Reproduction**: Upload any non-matching file type or trigger parse error.
-- **Fix**: Rename all `errorMessage` references to `errorMessages`.
+---
 
-### D-DEB-02 [CRITICAL] Non-null assertion in PDF fallback scanner
-- **File**: `packages/parser/src/pdf/index.ts` line 361
-- **Issue**: `(amountMatch[1] ?? ... ?? amountMatch[7])!` will throw if all groups are undefined. Happens when regex matches but captures nothing.
-- **Reproduction**: PDF with malformed amount line (e.g., "금액: " with no number).
-- **Fix**: Add explicit undefined check and throw descriptive error.
+## Verification Results
 
-### D-DEB-03 [HIGH] OFX date parser corrupts timezone data
-- **File**: `packages/parser/src/ofx/index.ts` lines 73-80
-- **Issue**: `replace(/[^0-9].*$/, '')` strips timezone offset. "20240115120000[-5:EST]" becomes "20240115120000", shifting the date.
-- **Reproduction**: Parse OFX with timezone-aware timestamps.
-- **Fix**: Parse full string including timezone, convert to UTC.
+### D-DEB-01: FileDropzone `errorMessage` vs `errorMessages` ReferenceError
 
-### D-DEB-04 [HIGH] AbortController timeout not cleared on success path
-- **File**: `packages/parser/src/pdf/llm-fallback.ts` lines 50-67
-- **Issue**: Timeout is in `finally` block, which is correct. But the abort signal is passed to `client.messages.create`, and if the call succeeds quickly, the timeout still fires (harmless but leaks timer).
-- **Fix**: Use `clearTimeout` in success path before `finally`, or use `AbortSignal.timeout()`.
+**Status:** FIXED
+**Evidence:** `apps/web/src/components/upload/FileDropzone.svelte:76` declares `let errorMessages = $state<string[]>([])`. All 9 references (lines 208, 215, 232, 241, 255, 318, 330, 353, 367, 619) use `errorMessages`. No `errorMessage` references.
+**Root cause addressed:** Template variable name mismatch in Svelte 5. TypeScript cannot catch template variable names.
 
-### D-DEB-05 [MEDIUM] HTML forward-fill mutates array during iteration
-- **File**: `packages/parser/src/html/index.ts` lines 137-215
-- **Issue**: Forward-fill modifies `rows` in place while iterating. If a later row depends on an earlier row that gets filled, behavior depends on iteration order.
-- **Fix**: Make forward-fill idempotent by using two-pass approach or cloning.
+---
+
+### D-DEB-02: PDF non-null assertion on amount match
+
+**Status:** PARTIALLY FIXED
+**Evidence:** `packages/parser/src/pdf/index.ts:358` no longer has `!` after the nullish coalescing chain. However, if ALL capture groups are undefined, `amountRaw` becomes `undefined` and the code falls through to line 360 which pushes an error rather than throwing. This is safer but still a silent failure.
+**Root cause partially addressed:** The `!` operator was removed, but the fallback to error-push means malformed amounts are silently skipped rather than loudly failing.
+
+---
+
+### D-DEB-03: OFX date parser strips timezone
+
+**Status:** OPEN
+**Evidence:** `packages/parser/src/ofx/index.ts` still uses `replace(/[^0-9].*$/, '')` to strip non-digit characters from dates. Timezone-aware timestamps like `20240115120000[-5:EST]` become `20240115120000`.
+**Root cause not addressed:** The regex-based strip assumes all dates are local Korean time.
+
+---
+
+### D-DEB-04: AbortController timeout in LLM fallback
+
+**Status:** FIXED
+**Evidence:** The `finally` block clears the timeout. The abort signal is properly passed to `client.messages.create`.
+
+---
+
+### D-DEB-05: HTML forward-fill mutates array during iteration
+
+**Status:** OPEN
+**Evidence:** `packages/parser/src/html/index.ts` lines 137-215 still modify `rows` in place during forward-fill. A two-pass or cloned approach was not implemented.
+
+---
+
+## New Findings (Cycle 5)
+
+### [P2-MEDIUM] Web parsers may drop refunds on amount <= 0 filter
+
+**File:** `apps/web/src/lib/parser/csv.ts` (and others)
+**Confidence:** Medium
+
+Recent commit `dbb871e` fixed "web parsers silently dropping refund transactions." Need to verify the fix is comprehensive across all web parser formats (CSV, XLSX, PDF, JSON, OFX, HTML).
+
+**Fix:** Add test fixtures for refund transactions in each format and verify they parse correctly.
+
+---
+
+### [P3-LOW] `normalizeHeader` regex may ReDoS on crafted input
+
+**File:** `packages/parser/src/csv/column-matcher.ts`
+**Confidence:** Low
+
+Large alternation regexes with hundreds of branches. While headers are typically short (<50 chars), no explicit length cap exists before regex application.
+**Fix:** Cap header string length at 200 chars before regex matching.
+
+---
 
 ## Root Cause Analysis
 
-### Why FileDropzone bug persists
-- Component tests only cover happy path
-- TypeScript cannot catch Svelte template variable names
-- No e2e test exercises file rejection
+### Why parser bugs recur
 
-### Why PDF scanner non-null assertion exists
-- Regex was tested with well-formed data only
-- No fuzz testing on parser inputs
-- TypeScript `!` operator suppresses compile-time safety
+1. No fuzz testing — all tests use well-formed fixtures
+2. No parity tests — web parser bugs don't trigger server parser tests
+3. Template variables (Svelte) escape TypeScript checking
+4. Regex assumptions are not validated against edge cases
 
-## Recommendations
-1. Add Svelte template linting (if available)
-2. Fuzz-test all parsers with random/malformed inputs
-3. Review all `!` non-null assertions in parser code
+---
+
+## Verdict
+
+**FIX AND SHIP** — OFX timezone handling and HTML forward-fill idempotency are bounded fixes that close known failure modes.
