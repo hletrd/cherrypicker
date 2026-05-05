@@ -771,6 +771,12 @@ describe('parseAmountString', () => {
     expect(parseAmountString('+1,234')).toBe(1234);
   });
 
+  // C21-TEST01: Full-width plus sign (U+FF0B)
+  test('parses full-width plus sign prefix', () => {
+    expect(parseAmountString('＋1,234')).toBe(1234);
+    expect(parseAmountString('＋10000')).toBe(10000);
+  });
+
   test('parses fullwidth digits', () => {
     expect(parseAmountString('１，２３４')).toBe(1234);
     expect(parseAmountString('１２３４５')).toBe(12345);
