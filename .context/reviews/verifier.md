@@ -1,4 +1,4 @@
-# Verifier — cherrypicker (Cycle 5)
+# Verifier — cherrypicker (Cycle 20)
 
 **Reviewer:** verifier (sonnet)
 **Scope:** Evidence-based correctness check
@@ -8,83 +8,43 @@
 
 ## Summary
 
-Verification of previously reported issues shows a mixed picture: some critical bugs were fixed (FileDropzone ReferenceError, fetcher abort timeout, store migration), while structural issues remain unaddressed. No new critical correctness bugs were found in this cycle.
+Verification of cycle 19 fixes shows all 3 high-priority items were correctly implemented. The codebase passes lint, typecheck, and tests. No new critical correctness bugs were found in cycle 20 review.
 
 ---
 
 ## Verification Results
 
-### C-CR-03 / D-DEB-01: FileDropzone `errorMessage` vs `errorMessages`
+### C19-CR01: Monthly spending uses gross (positive-only) in reoptimize
 
 **Status:** FIXED
-**Evidence:** `apps/web/src/components/upload/FileDropzone.svelte:76` declares `let errorMessages = $state<string[]>([])`. All 9 references in the file use `errorMessages` (lines 208, 215, 232, 241, 255, 318, 330, 353, 367). No `errorMessage` references found.
+**Evidence:** `apps/web/src/lib/store.svelte.ts:509` uses `tx.amount > 0`. Matches `analyzer.ts:340` behavior.
 
----
-
-### P-PR-01: Greedy optimizer `rules.indexOf` O(n^2 log n)
+### C19-CR02: BankId runtime validation
 
 **Status:** FIXED
-**Evidence:** `grep -n "rules.indexOf" packages/core/src/optimizer/greedy.ts` returns no matches. The sort at lines 90-94 now uses a pure specificity comparison with no index lookup.
+**Evidence:** `apps/web/src/lib/analyzer.ts:110` validates `options.bank` against `VALID_BANK_IDS` before passing to parseFile.
 
----
-
-### S-SEC-02: Fetcher abort timeout lost on EUC-KR retry
+### C19-SEC01: esc() double-encoding bypass
 
 **Status:** FIXED
-**Evidence:** `tools/scraper/src/fetcher.ts:50-51` shows the second `fetch(url, { signal: controller.signal, ... })` properly propagates the abort signal.
+**Evidence:** `packages/viz/src/report/generator.ts:35-47` pre-decodes numeric entities before HTML escaping.
 
 ---
 
-### A-ARCH-05 / F-CRI-08: Store sessionStorage with no eviction
+## New Findings
 
-**Status:** FIXED
-**Evidence:** `apps/web/src/lib/store.svelte.ts:132` defines `MAX_PERSIST_SIZE = 4 * 1024 * 1024`. Lines 169-179 implement truncation logic. Lines 114-116 add migration support. Lines 239-256 handle version migration.
+### [C20-VER01-MEDIUM] Server-side OFX amount parsing not parity-tested against web-side
 
----
+**Files:** `packages/parser/src/ofx/index.ts:108-114` vs `apps/web/src/lib/parser/ofx.ts:79-81`
+**Confidence:** High
 
-### C-CR-02 / D-DEB-02: PDF non-null assertion on amount match
+The server-side OFX parser uses a simpler `parseOFXAmount` than the web-side's `parseAmountString`. No parity test verifies both parsers produce identical results for the same OFX content.
 
-**Status:** PARTIALLY FIXED
-**Evidence:** `packages/parser/src/pdf/index.ts:358` no longer has `!` after the nullish coalescing chain. However, if ALL capture groups are undefined, `amountRaw` becomes `undefined` and the code falls through to line 360 which pushes an error. This is better than throwing but still a silent failure.
-
----
-
-### C-CR-05 / A-ARCH-02 / F-CRI-02: CATEGORY_NAMES_KO hardcoded
-
-**Status:** OPEN
-**Evidence:** `packages/core/src/optimizer/greedy.ts:11-90` still contains 79 lines of hardcoded `CATEGORY_NAMES_KO`. The TODO comment at line 8 remains.
+**Verification:** Created a mental test case — OFX with `<TRNAMT>１，２３４</TRNAMT>` (full-width). Server-side: `parseFloat("１，２３４")` returns NaN, skipped. Web-side: `parseAmountString` handles full-width, returns 1234. **Confirmed divergence.**
 
 ---
 
-### F-CRI-01 / A-ARCH-01: Server/web parser duplication
-
-**Status:** OPEN
-**Evidence:** `apps/web/src/lib/parser/csv.ts`, `pdf.ts`, `xlsx.ts`, `html.ts`, `json.ts`, `ofx.ts`, `date-utils.ts`, `column-matcher.ts`, `detect.ts` all exist as separate implementations. File sizes and line counts match server versions closely but are not shared.
-
----
-
-### F-CRI-04 / A-ARCH-03: Card rules type duplicated in web app
-
-**Status:** OPEN
-**Evidence:** `apps/web/src/lib/cards.ts:14-52` defines `CardRuleSet` inline. Does not import from `@cherrypicker/rules`.
-
----
-
-### V-VER-01 / T-TE-01: FileDropzone error path test coverage
-
-**Status:** UNVERIFIED
-**Evidence:** No test files for FileDropzone.svelte found in the repository. Component test coverage cannot be assessed.
-
----
-
-### V-VER-02 / T-TE-02: Parser parity test suite
-
-**Status:** OPEN
-**Evidence:** No `__tests__/parity/` directory exists. No fixtures are shared between server and web parsers.
-
----
-
-## Gate Check
+### [C20-VER02-LOW] Gate check — all green
 
 | Gate | Result |
 |------|--------|
@@ -96,4 +56,4 @@ Verification of previously reported issues shows a mixed picture: some critical 
 
 ## Verdict
 
-**5 FIXED, 6 OPEN, 1 UNVERIFIED** — The bug-fix velocity is good but structural issues are accumulating. Recommend prioritizing the parser unification and CATEGORY_NAMES_KO generation.
+**FIX AND SHIP** — C20-VER01 confirms the C20-01 parity gap.

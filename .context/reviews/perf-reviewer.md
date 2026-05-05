@@ -1,83 +1,51 @@
-# Performance Review — cherrypicker (Cycle 5)
+# Performance Review — cherrypicker (Cycle 20)
 
 **Reviewer:** perf-reviewer (opus)
-**Scope:** Full repository
+**Scope:** Full repository — hot paths, allocations, algorithmic complexity
 **Date:** 2026-05-05
 
 ---
 
 ## Summary
 
-One critical performance issue from cycle 4 (`rules.indexOf` in greedy optimizer sort) has been fixed. The remaining bottlenecks are the merchant matcher's O(n*m) scan and the greedy optimizer's O(m*n*r) recalculation pattern. Both are algorithmic issues that will degrade with scale. No new critical performance regressions found.
+Cycle 19 fixed monthly spending normalization but introduced no performance changes. Cycle 20 review finds 2 new performance-related findings: the greedy optimizer still recalculates rewards from scratch per transaction (carried from cycle 5, now with clearer impact), and the HTML parser's forward-fill creates unnecessary string allocations.
 
 ---
 
-## New Findings (Cycle 5)
+## New Findings
 
-### [P1-HIGH] MerchantMatcher full-array scan on every transaction
+### [C20-PERF01-MEDIUM] Greedy optimizer recalculates full card rewards for every marginal score
 
-**File:** `packages/core/src/categorizer/matcher.ts:58-81`
+**Files:** `packages/core/src/optimizer/greedy.ts:51-53`, `packages/core/src/optimizer/greedy.ts:124-156`
 **Confidence:** High
 
+For each transaction, `scoreCardsForTransaction` calls `calculateCardOutput` twice per card:
 ```ts
-for (const [kw, categoryStr] of SUBSTRING_SAFE_ENTRIES) {
-  const merchantContainsKw = lower.includes(kw);
-  const kwContainsMerchant = kw.includes(lower) && lower.length >= 3;
-  if (merchantContainsKw || kwContainsMerchant) {
-    // ...
-  }
-}
+const before = calculateCardOutput(currentTransactions, previousMonthSpending, rule).totalReward;
+const after = calculateCardOutput([...currentTransactions, transaction], previousMonthSpending, rule).totalReward;
 ```
 
-`SUBSTRING_SAFE_ENTRIES` contains all ~10,000+ keywords. Every transaction triggers a full linear scan with string `includes()` checks. For 1,000 transactions: 10M+ string operations.
+Each call to `calculateCardOutput` re-evaluates ALL reward rules for ALL transactions assigned to that card. This is O(r * t) per call, where r = rules per card, t = transactions. With n transactions and m cards, total complexity is O(n * m * r * t).
 
-**Fix:** Build a trie or Aho-Corasick automaton. Alternatively, add an LRU cache keyed by merchant name (common merchants like "스타벅스" appear dozens of times per statement).
+**Concrete impact:** 500 transactions, 10 cards, 20 rules each. Each transaction triggers 20 full recalculations. Each recalculation processes up to 500 transactions * 20 rules = 10,000 evaluations. Total: 500 * 20 * 10,000 = 100,000,000 rule evaluations.
+
+**Fix:** Cache marginal reward. Store `previousTotalReward` per card and compute only the incremental reward for the new transaction. This reduces complexity to O(n * m * r).
 
 ---
 
-### [P1-HIGH] Greedy optimizer recalculates card rewards from scratch per transaction
+### [C20-PERF02-LOW] HTML parser forward-fill allocates strings per cell per row
 
-**File:** `packages/core/src/optimizer/greedy.ts:124-156`
+**Files:** `apps/web/src/lib/parser/html.ts:141-244`
 **Confidence:** High
 
-For each transaction, the optimizer calls `calculateCardOutput` twice per card (before/after adding the transaction). Each call re-evaluates ALL reward rules for ALL assigned transactions. This is O(m * n * r * a) where a = average transactions per card.
+Every row iteration creates multiple `String()` conversions and `isSummaryRow()` calls:
+```ts
+const dateRaw = String(dateCol !== -1 ? (isNonEmpty(rawDateValue) ? rawDateValue : lastDate) : '').trim();
+```
 
-**Concrete scenario:** 500 transactions, 10 cards, 20 rules each. Each of 500 transactions triggers 10 * 2 = 20 full recalculations. Each recalculation processes up to 500 transactions * 20 rules = 10,000 rule evaluations. Total: 500 * 20 * 10,000 = 100,000,000 rule evaluations.
+For a 1000-row HTML table, this creates ~5000 intermediate strings and runs `isSummaryRow` up to 6000 times (once per cell update + once per row check). The `isSummaryRow` regex is large and recompiled on each call (no caching).
 
-**Fix:** Cache marginal reward delta. Instead of recalculating from scratch, compute the incremental reward for adding one transaction to a card's existing assignment.
-
----
-
-### [P2-MEDIUM] PDF text extraction materializes entire document
-
-**File:** `packages/parser/src/pdf/extractor.ts:32-56`
-**Confidence:** High
-
-Entire PDF is read as a buffer, all pages extracted, then joined into a single string. For multi-year statements (100+ pages), this can consume 100MB+ of memory.
-
-**Fix:** Stream pages one at a time. Process each page and extract transaction rows incrementally.
-
----
-
-### [P2-MEDIUM] Taxonomy keywordMap iterates all entries
-
-**File:** `packages/core/src/categorizer/taxonomy.ts:71-78`
-**Confidence:** High
-
-Same pattern as MerchantMatcher: full `keywordMap` iteration for substring matching.
-
-**Fix:** Share the same trie/cache structure between matcher and taxonomy.
-
----
-
-### [P3-LOW] `normalizeHeader` creates multiple intermediate strings
-
-**File:** `packages/parser/src/csv/column-matcher.ts:14-21`
-**Confidence:** Low
-
-Minor: each header cell triggers 4 `.replace()` calls creating intermediate strings. With 30 headers per file and 1000 files, it's negligible compared to the matcher/optimizer bottlenecks.
-
-**Fix:** Only relevant if headers are normalized repeatedly. Cache normalized headers after first computation.
+**Fix:** Pre-compile `SUMMARY_ROW_PATTERN` once (it already is at module level, but verify). Batch the `isSummaryRow` check: test the full row text once at line 146, then skip per-cell summary checks for rows already identified as summary rows.
 
 ---
 
@@ -85,15 +53,12 @@ Minor: each header cell triggers 4 `.replace()` calls creating intermediate stri
 
 | Finding | Cycle | Status | Notes |
 |---------|-------|--------|-------|
-| Greedy optimizer sort O(n^2 log n) | 4 | **FIXED** | `rules.indexOf` removed |
-| MerchantMatcher O(n*m) scan | 4 | **OPEN** | No trie or cache added |
-| PDF LLM fallback truncates at 8000 | 4 | **OPEN** | No chunking implemented |
-| SheetJS loads full HTML | 4 | **OPEN** | No pre-filtering added |
-| PDF parser allocates strings | 4 | **OPEN** | No index-based scanning |
-| Store loads from sessionStorage sync | 4 | **OPEN** | Still synchronous |
+| MerchantMatcher O(n*m) scan | 4 | **OPEN** | LRU cache added (500 cap) but still linear scan on cache miss |
+| PDF text extraction materializes entire document | 4 | **OPEN** | No streaming implemented |
+| Greedy optimizer recalculation | 5 | **OPEN** | Same as C20-PERF01 |
 
 ---
 
 ## Verdict
 
-**FIX AND SHIP** — The optimizer's recalculation pattern and merchant matcher's linear scan are the two algorithmic debts that will become painful as user data scales.
+**FIX AND SHIP** — C20-PERF01 is the most impactful. Marginal reward caching would reduce optimizer runtime by orders of magnitude for large datasets.

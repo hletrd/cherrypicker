@@ -1,62 +1,63 @@
-# Architecture Review — cherrypicker (Cycle 6)
+# Architecture Review — cherrypicker (Cycle 20)
 
 **Reviewer:** architect
 **Scope:** System boundaries, data flow, long-term maintainability
-**Date:** 2026-05-06
+**Date:** 2026-05-05
 
 ---
 
 ## Summary
 
-Cycle 6 delivered two structural improvements: removal of hardcoded CATEGORY_NAMES_KO (A-ARCH-02 fixed) and ParseError class with contextual enrichment. However, the fundamental server/web parser duplication remains unaddressed after 5 cycles, and a new duplication pattern emerged: categoryLabels Map construction is copy-pasted across 5+ call sites.
+Cycle 19 fixed consistency issues but the fundamental architectural debt remains: server/web parser duplication continues to expand (now 6 formats duplicated), and the analyzer cache invalidation strategy has a latent bug. No structural refactoring was attempted.
 
 ---
 
-## Verified Fixed
+## New Findings
 
-| Finding | Commit | Evidence |
-|---------|--------|----------|
-| A-ARCH-02: CATEGORY_NAMES_KO hardcoded | e8351ee | `categoryLabels` is now a required parameter; all call sites pass dynamically built maps |
-| R-TRA-01: Parser errors lack context | 87aa83a | `ParseError` class with `file`, `format`, `line`, `raw`; `enrichErrors()` backfills |
+### [C20-ARCH01-MEDIUM] Analyzer cache not keyed by cardIds filter
 
----
-
-## New Findings (Cycle 6)
-
-### [A6-01-HIGH] categoryLabels Map construction duplicated across CLI, viz, and web
-
-**Files:** `tools/cli/src/commands/analyze.ts:88-97`, `tools/cli/src/commands/optimize.ts:95-104`, `tools/cli/src/commands/report.ts`, `packages/viz/src/terminal/summary.ts`, `apps/web/src/lib/analyzer.ts:242-247`
+**Files:** `apps/web/src/lib/analyzer.ts:55-86`
 **Confidence:** High
 
-The same logic for building `Map<string, string>` from `CategoryNode[]` is repeated in at least 5 locations. This is the same anti-pattern that led to CATEGORY_NAMES_KO hardcoding — when the taxonomy structure evolves (e.g., adding a third nesting level), every call site must be updated independently.
+The `cachedCoreRules` is a single global cache. When `optimizeFromTransactions` is called with `options.cardIds`, it filters AFTER retrieving from cache:
+```ts
+let coreRules: CoreCardRuleSet[] = cachedCoreRules ?? transformed ?? [];
+if (options?.cardIds && options.cardIds.length > 0) {
+  coreRules = coreRules.filter(r => idSet.has(r.card.id));
+}
+```
 
-**Fix:** Extract `buildCategoryLabelMap(nodes: CategoryNode[]): Map<string, string>` into `packages/rules/src/category-names.ts` (which already exists and exports `CATEGORY_NAMES_KO` for backward compatibility). Re-export from there and import in all call sites. Remove inline duplication.
+This means:
+1. First call without cardIds: caches ALL rules
+2. Second call WITH cardIds: retrieves ALL rules from cache, then filters
+
+This is functionally correct but means filtered calls pay the cost of filtering every time instead of caching the filtered result. More importantly, if a caller alternates between filtered and unfiltered calls, the cache is constantly invalidated and rebuilt (though in practice the web app doesn't do this).
+
+**Fix:** Key the cache by cardIds hash (or tuple), or accept that the current pattern is adequate given the web app's single-session usage pattern.
 
 ---
 
-### [A6-02-MEDIUM] Web-side ParseError type diverges from server-side class
+### [C20-ARCH02-LOW] Web-side parser duplication expanded to 6 formats
 
-**Files:** `apps/web/src/lib/parser/types.ts:30-34` vs `packages/parser/src/types.ts:30-47`
+**Files:** `apps/web/src/lib/parser/` vs `packages/parser/src/`
 **Confidence:** High
 
-Web-side `ParseError` is an interface; server-side is a class extending Error. This breaks:
-1. Structural typing — web-side errors lack `file` and `format` fields
-2. Runtime behavior — `instanceof ParseError` fails for web-side errors
-3. Enrichment — `enrichErrors()` in `parseStatement()` cannot backfill web errors
+The server/web parser duplication now covers: CSV, XLSX, PDF, JSON, OFX, HTML. Each format has independent implementations with parity comments (e.g., "Parity with server-side packages/parser/src/ofx/index.ts (C98-01)"). This is manual synchronization — every bug fix must be applied twice.
 
-This is a direct consequence of maintaining two separate parser trees instead of sharing a single implementation.
-
-**Fix:** Short-term: align web-side types.ts with server-side class definition. Long-term: share the types module between server and web (extract to `@cherrypicker/parser` types that both import).
+**Fix:** Same as previous cycles. Extract isomorphic parsing logic to a shared pure-TS module. Server adds file I/O. Web adds File/blob handling. Both consume the same core logic.
 
 ---
 
-## Still Open from Cycle 5
+## Previously Reported — Status
 
 | ID | Description | Severity | Status |
 |----|-------------|----------|--------|
-| A-ARCH-01 | Server/web parser duplication | CRITICAL | **OPEN** |
-| A-ARCH-03 | Card rules type duplicated in web app | HIGH | **OPEN** |
+| A-ARCH-01 | Server/web parser duplication | CRITICAL | **OPEN** — expanded to 6 formats |
+| A-ARCH-03 | Card rules type duplicated in web app | HIGH | **OPEN** — `toCoreCardRuleSets` still bridges the gap |
 | A-ARCH-05 | No workspace boundary enforcement | MEDIUM | **OPEN** |
-| A-ARCH-06 | Monorepo workspace boundaries are soft | MEDIUM | **OPEN** |
-| A-ARCH-07 | Scraping pipeline has no orchestration | MEDIUM | **OPEN** |
-| F-CRI-03 | Deferred-fix tracking fragmented | MEDIUM | **OPEN** |
+
+---
+
+## Verdict
+
+**FIX AND SHIP** — C20-ARCH01 is a bounded fix. C20-ARCH02 is structural debt that requires a dedicated refactoring cycle.

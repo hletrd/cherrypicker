@@ -1,4 +1,4 @@
-# Designer — cherrypicker (Cycle 5)
+# Designer — cherrypicker (Cycle 20)
 
 **Reviewer:** designer (sonnet)
 **Scope:** UX, component API, visual consistency, interaction design
@@ -8,69 +8,47 @@
 
 ## Summary
 
-2 of 4 cycle-4 findings have been addressed. FileDropzone now accepts all supported formats (JSON, OFX, HTML, QFX in addition to CSV/XLSX/PDF). Error messages are still raw technical strings with no Korean localization. No loading state or transaction-level detail in results.
+No new UI components were added in cycle 19. Cycle 20 review identifies a small UX gap in error message consistency and a potential accessibility issue in the HTML report generator.
 
 ---
 
-## Verification Results
+## New Findings
 
-### U-DES-01: FileDropzone rejects supported file types
+### [C20-UI01-LOW] HTML report lacks semantic table structure for screen readers
 
-**Status:** FIXED
-**Evidence:** Commit `3d14c30` updated FileDropzone accept attributes and file icons for new formats. `ACCEPTED_EXTENSIONS` now includes all parser-supported formats.
-
----
-
-### U-DES-02: Error messages are not user-friendly
-
-**Status:** OPEN
-**Evidence:** Error messages in `FileDropzone.svelte` are still raw strings:
-- `CSV 헤더를 인식할 수 없습니다.`
-- `거래 내역을 찾을 수 없습니다.`
-- Raw exception messages from parse failures
-
-No friendly error message map exists. Users see technical parser errors.
-
----
-
-### U-DES-03: No loading state during analysis
-
-**Status:** OPEN
-**Evidence:** Large file parsing happens synchronously in the main thread. No progress bar, spinner, or stage labels. The UI appears frozen during parse.
-
----
-
-### U-DES-04: Results display lacks transaction detail
-
-**Status:** OPEN
-**Evidence:** Results page shows category totals per card but no per-transaction assignment. Users cannot verify why a specific transaction was assigned to a specific card.
-
----
-
-## New Findings (Cycle 5)
-
-### [P2-MEDIUM] FileDropzone step indicator does not reflect parse progress
-
-**File:** `apps/web/src/components/upload/FileDropzone.svelte`
-**Confidence:** High
-
-The component has a 4-step indicator (upload → detect → parse → analyze) but steps transition instantly with no actual progress tracking. Users see "파싱 중" then a long freeze.
-
-**Fix:** Tie step transitions to actual async milestones, or add a determinate progress bar based on file size / row count.
-
----
-
-### [P3-LOW] Bank detection UI gives no feedback on confidence
-
-**File:** `apps/web/src/components/upload/FileDropzone.svelte`
+**Files:** `packages/viz/src/report/generator.ts:75-136`
 **Confidence:** Medium
 
-Bank auto-detection runs silently. If detection is wrong, the user only finds out after parse failure. No "detected as: {bank}" confirmation or override option.
+The generated HTML tables use `<table>`, `<thead>`, `<tbody>`, `<th>` elements — good. But there are no `scope="col"` attributes on header cells, no `caption` elements, and no `aria-label` on the tables. Screen readers may struggle with multi-column data tables.
 
-**Fix:** Show detected bank name with a "not correct?" dropdown to override before parsing.
+**Fix:** Add `scope="col"` to `<th>` elements and `caption` to each table.
+
+---
+
+### [C20-UI02-LOW] Error messages mix technical and user-friendly Korean
+
+**Files:** `apps/web/src/lib/parser/` (all formats)
+**Confidence:** Medium
+
+Parser error messages are in Korean but use technical terms:
+- "금액을 해석할 수 없습니다" (good)
+- "헤더 행을 찾을 수 없습니다" (technical — "header row" is jargon)
+- "OFX 파일에서 거래 내역을 찾을 수 없습니다" (mixes English "OFX" with Korean)
+
+**Fix:** Standardize error messages. Use "파일" instead of format names. Use "첫 줄" instead of "헤더 행".
+
+---
+
+## Previously Reported — Status
+
+| ID | Description | Status |
+|----|-------------|--------|
+| U-DES-02 | Error messages not user-friendly | **OPEN** |
+| U-DES-03 | No loading state during analysis | **OPEN** |
+| U-DES-04 | Results display lacks transaction detail | **OPEN** |
 
 ---
 
 ## Verdict
 
-**FIX AND SHIP** — Localize error messages and add a loading spinner. These are small UX wins with high user impact.
+**FIX AND SHIP** — C20-UI01 is bounded. C20-UI02 is part of the ongoing U-DES-02 effort.

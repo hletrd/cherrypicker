@@ -1,69 +1,69 @@
-# Security Review — cherrypicker (Cycle 6)
+# Security Review — cherrypicker (Cycle 20)
 
 **Reviewer:** security-reviewer
-**Scope:** Changes since Cycle 5 + residual security posture
-**Date:** 2026-05-06
+**Scope:** OWASP Top 10, injection vectors, unsafe patterns, secrets
+**Date:** 2026-05-05
 
 ---
 
 ## Summary
 
-Cycle 6 made meaningful security improvements: explicit LLM consent flow (addresses S-SEC-01) and path traversal validation (addresses S-SEC-04). Two HIGH findings from Cycle 5 remain open, and one new MEDIUM finding was introduced.
+Cycle 19 fixed the esc() double-encoding bypass (C19-SEC01). Cycle 20 review identifies 2 security-related findings: dynamic regex construction in OFX parsing (latent ReDoS) and insufficient input validation in the HTML parser's SheetJS path.
+
+---
+
+## New Findings
+
+### [C20-SEC01-MEDIUM] Dynamic RegExp construction in OFX extractTag without escaping
+
+**Files:** `packages/parser/src/ofx/index.ts:59-69`, `apps/web/src/lib/parser/ofx.ts:33-40`
+**Confidence:** High
+**OWASP Category:** A03:2021 – Injection (Regex Injection)
+
+```ts
+const xmlRe = new RegExp(`<${tagName}[^>]*>\\s*([^<]+?)\\s*</${tagName}>`, 'i');
+```
+
+While `tagName` is currently hardcoded to safe values (`'DTPOSTED'`, `'TRNAMT'`, `'NAME'`, `'MEMO'`, `'TRNTYPE'`, `'ORG'`), this pattern is fragile. If future maintenance adds dynamic tag extraction from parsed content (e.g., supporting custom OFX extensions), unescaped tag names containing regex metacharacters would cause:
+1. Unexpected ReDoS from `.` or `+` in tag names
+2. Syntax errors from unbalanced `[` or `(`
+3. Unintended match behavior from `$` or `^`
+
+**Fix:** Apply `escapeRegExp` to `tagName` before interpolation. This is defense-in-depth even with current hardcoded values.
+
+---
+
+### [C20-SEC02-LOW] HTML parser passes unsanitized content to SheetJS
+
+**Files:** `apps/web/src/lib/parser/html.ts:38-42`, `packages/parser/src/html/index.ts`
+**Confidence:** Medium
+**OWASP Category:** A03:2021 – Injection (HTML/XXE)
+
+The HTML parser normalizes malformed closing tags then passes the content directly to `xlsx.read()`:
+```ts
+workbook = xlsx.read(encoder.encode(normalized), { type: 'array', cellDates: false });
+```
+
+SheetJS parses HTML tables by converting them to an internal representation. While SheetJS is not a full browser DOM and doesn't execute JavaScript, passing unsanitized HTML content to any parser carries risk. A malicious HTML file could contain:
+1. Entity expansion bombs (`&#x3C;` repeated millions of times) causing memory exhaustion
+2. Nested table structures causing deep recursion in SheetJS
+3. `<iframe>` or `<object>` tags that SheetJS might handle unexpectedly
+
+The `normalizeHTML` function only fixes spacing in closing tags — it does NOT strip script tags, event handlers, or other dangerous content.
+
+**Fix:** Pre-process HTML to strip `<script>`, `<style>`, event handlers (`on*=` attributes), and `<iframe>`/`<object>` tags before passing to SheetJS. This is a lightweight sanitization step that doesn't need a full HTML parser.
 
 ---
 
 ## Verified Fixed
 
-| Finding | Commit | Evidence |
+| Finding | Status | Evidence |
 |---------|--------|----------|
-| S-SEC-01: LLM transmits financial data without consent | 41fb34c | `requireRemoteLLMConsent()` enforces `--allow-remote-llm`; interactive prompt for confirmation |
-| S-SEC-04: Path traversal in CLI file args | ce91407 | `validateFilePath()` rejects `..` segments; tests cover `../foo`, `foo/../bar`, `/tmp/../etc/passwd` |
+| C19-SEC01: esc() double-encoding bypass | FIXED | Pre-decodes numeric entities before escaping |
+| C19-SEC02: Dynamic regex in OFX | PARTIAL | Still present; pattern unchanged from cycle 19 |
 
 ---
 
-## New Findings (Cycle 6)
+## Verdict
 
-### [S6-01-MEDIUM] Path validation gaps: null bytes, symlinks, URL-encoded traversal
-
-**File:** `tools/cli/src/validation.ts:7-29`
-**Confidence:** High
-
-`validateFilePath()` blocks `..` segments but has three gaps:
-
-1. **Null byte injection:** `path.replace(/\\/g, '/')` does not strip null bytes (`\x00`). On Linux, `open("/etc/passwd\x00.txt")` resolves to `/etc/passwd` due to C-string null termination. A path like `/tmp/evil\x00../etc/passwd` would pass validation.
-
-2. **Symlink traversal:** No `lstat()` or `realpath()` check. A path like `/tmp/legit/evil-symlink -> /etc/passwd` passes both `..` checks and existence checks.
-
-3. **URL-encoded traversal:** A path containing `%2e%2e%2f` (URL-encoded `../`) is not decoded before checking.
-
-**Failure scenario:** An attacker creates a symlink in a directory the user is expected to access, pointing to sensitive files. The user runs `cherrypicker analyze /tmp/legit/evil-symlink`. Validation passes, and the file is read.
-
-**Fix:** Add null-byte stripping (`path.replace(/\x00/g, '')`), and use `realpath()` or `lstat()` to detect symlinks. Consider adding a `--no-symlinks` flag or always rejecting symlinks with a clear error.
-
----
-
-### [S6-02-MEDIUM] LLM consent prompt has no timeout — process hangs on piped stdin
-
-**File:** `tools/cli/src/consent.ts:16-28`
-**Confidence:** Medium
-
-If stdin is redirected from a file or pipe that does not contain a newline (e.g., `echo -n '' | cherrypicker analyze file.pdf --allow-remote-llm`), the process hangs indefinitely. In CI pipelines or scripted environments, this causes build/job timeouts rather than clean errors.
-
-**Fix:** Add a timeout to the readline prompt, defaulting to 30 seconds. Reject with a clear error message when the timeout fires.
-
----
-
-## Still Open from Cycle 5
-
-| ID | Description | Severity | Status |
-|----|-------------|----------|--------|
-| S-SEC-02 | HTML report `esc()` only handles 7 entities — XSS risk | HIGH | **OPEN** |
-| S-SEC-03 | API key format validation before use | MEDIUM | **PARTIAL** — `llm-fallback.ts:42-46` validates `sk-ant-` prefix and length >= 20 |
-| S-SEC-05 | Regex denial of service in column patterns | MEDIUM | **OPEN** |
-| S-SEC-06 | Missing CSP in generated HTML reports | MEDIUM | **OPEN** |
-
----
-
-## Notes
-
-The `ANTHROPIC_API_KEY` validation (`sk-ant-` prefix, length >= 20) is a good first step but insufficient. Anthropic API keys are longer (typically 100+ chars). Consider adding a more precise length check (e.g., >= 80) and documenting the expected format.
+**FIX AND SHIP** — Address C20-SEC01 with escape helper. C20-SEC02 is defense-in-depth; prioritize if HTML files come from untrusted sources.

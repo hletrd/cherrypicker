@@ -1,4 +1,4 @@
-# Debugger — cherrypicker (Cycle 5)
+# Debugger — cherrypicker (Cycle 20)
 
 **Reviewer:** debugger (sonnet)
 **Scope:** Root-cause analysis, edge cases, failure modes
@@ -8,84 +8,62 @@
 
 ## Summary
 
-3 of 5 cycle-4 findings have been fixed. The FileDropzone ReferenceError is resolved. The PDF non-null assertion is partially fixed. The OFX timezone bug and HTML forward-fill mutation remain. No new critical failure modes were found in cycle 5.
+Cycle 19 fixed BankId validation and monthly spending consistency. Cycle 20 review finds 3 new failure modes: OFX amount parsing divergence between server and web, a potential regex exception in tag extraction, and a stale forward-fill edge case in HTML parsing.
 
 ---
 
-## Verification Results
+## New Findings
 
-### D-DEB-01: FileDropzone `errorMessage` vs `errorMessages` ReferenceError
+### [C20-DB01-MEDIUM] Server/web OFX amount parsing diverges on edge cases
 
-**Status:** FIXED
-**Evidence:** `apps/web/src/components/upload/FileDropzone.svelte:76` declares `let errorMessages = $state<string[]>([])`. All 9 references (lines 208, 215, 232, 241, 255, 318, 330, 353, 367, 619) use `errorMessages`. No `errorMessage` references.
-**Root cause addressed:** Template variable name mismatch in Svelte 5. TypeScript cannot catch template variable names.
+**Files:** `packages/parser/src/ofx/index.ts:108-114` vs `apps/web/src/lib/parser/ofx.ts:79-81`
+**Confidence:** High
 
----
+Server-side OFX amount parsing is minimal (strip commas, parseFloat). Web-side uses full `parseAmountString` which handles full-width digits, Won signs, 마이너스 prefix, etc. A malformed OFX with full-width amounts would parse differently between server and web.
 
-### D-DEB-02: PDF non-null assertion on amount match
+**Failure scenario:** User exports OFX from a legacy Korean bank that uses full-width digits. Web app parses correctly. CLI tool (server-side) fails to parse amounts, returning null and skipping transactions silently.
 
-**Status:** PARTIALLY FIXED
-**Evidence:** `packages/parser/src/pdf/index.ts:358` no longer has `!` after the nullish coalescing chain. However, if ALL capture groups are undefined, `amountRaw` becomes `undefined` and the code falls through to line 360 which pushes an error rather than throwing. This is safer but still a silent failure.
-**Root cause partially addressed:** The `!` operator was removed, but the fallback to error-push means malformed amounts are silently skipped rather than loudly failing.
+**Fix:** Unify on `parseAmountString` in both parsers.
 
 ---
 
-### D-DEB-03: OFX date parser strips timezone
+### [C20-DB02-MEDIUM] Regex syntax error if OFX tag contains metacharacters
 
-**Status:** OPEN
-**Evidence:** `packages/parser/src/ofx/index.ts` still uses `replace(/[^0-9].*$/, '')` to strip non-digit characters from dates. Timezone-aware timestamps like `20240115120000[-5:EST]` become `20240115120000`.
-**Root cause not addressed:** The regex-based strip assumes all dates are local Korean time.
-
----
-
-### D-DEB-04: AbortController timeout in LLM fallback
-
-**Status:** FIXED
-**Evidence:** The `finally` block clears the timeout. The abort signal is properly passed to `client.messages.create`.
-
----
-
-### D-DEB-05: HTML forward-fill mutates array during iteration
-
-**Status:** OPEN
-**Evidence:** `packages/parser/src/html/index.ts` lines 137-215 still modify `rows` in place during forward-fill. A two-pass or cloned approach was not implemented.
-
----
-
-## New Findings (Cycle 5)
-
-### [P2-MEDIUM] Web parsers may drop refunds on amount <= 0 filter
-
-**File:** `apps/web/src/lib/parser/csv.ts` (and others)
+**Files:** `packages/parser/src/ofx/index.ts:59-69`
 **Confidence:** Medium
 
-Recent commit `dbb871e` fixed "web parsers silently dropping refund transactions." Need to verify the fix is comprehensive across all web parser formats (CSV, XLSX, PDF, JSON, OFX, HTML).
+```ts
+const xmlRe = new RegExp(`<${tagName}[^>]*>\\s*([^<]+?)\\s*</${tagName}>`, 'i');
+```
 
-**Fix:** Add test fixtures for refund transactions in each format and verify they parse correctly.
+If an OFX file contains `<DTPOSTED+20240115>` (malformed but possible), the regex construction throws `SyntaxError: Invalid regular expression`. The parser catches no exceptions around this line, so the entire parse would fail with an unhandled exception.
 
----
-
-### [P3-LOW] `normalizeHeader` regex may ReDoS on crafted input
-
-**File:** `packages/parser/src/csv/column-matcher.ts`
-**Confidence:** Low
-
-Large alternation regexes with hundreds of branches. While headers are typically short (<50 chars), no explicit length cap exists before regex application.
-**Fix:** Cap header string length at 200 chars before regex matching.
+**Fix:** Wrap regex construction in try/catch, or escape tagName before interpolation.
 
 ---
 
-## Root Cause Analysis
+### [C20-DB03-LOW] HTML forward-fill may propagate summary row values to merged cells
 
-### Why parser bugs recur
+**Files:** `apps/web/src/lib/parser/html.ts:141-244`
+**Confidence:** Medium
 
-1. No fuzz testing — all tests use well-formed fixtures
-2. No parity tests — web parser bugs don't trigger server parser tests
-3. Template variables (Svelte) escape TypeScript checking
-4. Regex assumptions are not validated against edge cases
+If the first data row after a header is a summary row (e.g., "총합계" with an amount), the forward-fill `lastAmount` gets set to the summary amount. Subsequent merged cells in the same column would forward-fill this summary value.
+
+**Failure scenario:** Malformed HTML export where a subtotal row appears immediately after the header, before actual data rows. Merged cells below would inherit the subtotal amount.
+
+**Fix:** Guard the fallback path with `isSummaryRow` check, as suggested in code-reviewer C20-04.
+
+---
+
+## Previously Reported — Status
+
+| ID | Status | Notes |
+|----|--------|-------|
+| D-DEB-03: OFX date parser strips timezone | **OPEN** | Still uses `replace(/[^0-9].*$/, '')` |
+| D-DEB-05: HTML forward-fill mutates array | **OPEN** | Still in-place mutation |
 
 ---
 
 ## Verdict
 
-**FIX AND SHIP** — OFX timezone handling and HTML forward-fill idempotency are bounded fixes that close known failure modes.
+**FIX AND SHIP** — C20-DB01 and C20-DB02 are bounded, high-confidence fixes.

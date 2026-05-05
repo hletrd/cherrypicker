@@ -1,88 +1,77 @@
-# Tracer — cherrypicker (Cycle 5)
+# Tracer — cherrypicker (Cycle 20)
 
 **Reviewer:** tracer (sonnet)
-**Scope:** Observability, traceability, debugging context
+**Scope:** Causal tracing of suspicious flows, competing hypotheses
 **Date:** 2026-05-05
 
 ---
 
 ## Summary
 
-4 findings focused on runtime observability gaps. The recent fix velocity is high (FileDropzone, PDF scanner, reward calculator), but every fix was driven by manual inspection or user report rather than telemetry. No structured logging, no execution traces, no usage metrics.
+Traced the OFX amount parsing path and confirmed a server/web divergence. Traced the HTML forward-fill path and identified a summary-row propagation edge case. Traced the analyzer cache invalidation and confirmed correct behavior for the web app's usage pattern.
 
 ---
 
-## New Findings (Cycle 5)
+## Traced Flows
 
-### [P1-HIGH] Parser errors still lack file/format/line context
+### Flow 1: OFX amount parsing divergence
 
-**Files:** `packages/parser/src/*/index.ts`
-**Confidence:** High
+**Path:** `parseOFX` → `extractTag(block, 'TRNAMT')` → `parseOFXAmount(raw)`
 
-Despite being flagged in cycle 4, parser errors are still plain `Error` or `throw new Error(string)` with no structured context. When `parseStatement()` fails in the web app, the caught error has no `format` or `filename` field to help the UI show a useful message.
+**Server-side:**
+```
+parseOFXAmount("-15000.00") -> parseFloat("-15000.00") -> -15000
+parseOFXAmount("１，２３４") -> parseFloat("１，２３４") -> NaN -> null
+```
 
-**Evidence:**
-- `packages/parser/src/pdf/index.ts:360` — pushes plain string to errors array: `errors.push('거래 내역을 찾을 수 없습니다.')`
-- `packages/parser/src/csv/index.ts:89` — `throw new Error('CSV 헤더를 인식할 수 없습니다.')` with no file name
-- `packages/parser/src/html/index.ts:56` — `throw new Error('표를 찾을 수 없습니다.')` with no URL or table index
+**Web-side:**
+```
+parseOFXAmount("-15000.00") -> parseAmountString("-15000.00") -> -15000
+parseOFXAmount("１，２３４") -> parseAmountString("１，２３４") -> 1234
+```
 
-**Fix:** Define `ParseError` class extending Error with `{ file, format, line, raw }` fields. Wrap all parser throws.
-
----
-
-### [P1-HIGH] LLM fallback provides zero usage telemetry
-
-**File:** `packages/parser/src/pdf/llm-fallback.ts:33-128`
-**Confidence:** High
-
-The LLM fallback sends text to Anthropic but returns only parsed transactions. No model name, no token count, no truncation flag, no latency. If costs spike, there is no data to investigate.
-
-**Evidence:**
-- Return type is `Promise<RawTransaction[]>` — no metadata wrapper
-- `client.messages.create()` response (`message`) is discarded after extracting content
-- Truncation at 8000 chars is silent — caller has no way to know data was lost
-
-**Fix:** Change return to `{ transactions: RawTransaction[]; meta: { model, inputTokens, outputTokens, wasTruncated, durationMs } }`.
+**Hypothesis:** The web-side's use of `parseAmountString` was intentional (to handle full-width). But it was never backported to server-side.
+**Evidence:** Commit C100-03 added the web-side `parseAmountString` delegation with comment "Reuses parseAmountString for full-width digit and format normalization."
+**Conclusion:** Intentional improvement on web-side that was not propagated. Parity gap.
 
 ---
 
-### [P2-MEDIUM] Optimizer returns no assignment rationale
+### Flow 2: HTML forward-fill summary propagation
 
-**File:** `packages/core/src/optimizer/greedy.ts`
-**Confidence:** High
+**Path:** `parseHTMLSheet` → forward-fill loop → `lastAmount` update
 
-The optimizer produces `OptimizationResult` with per-card totals but no trace of why each transaction was assigned to its card. Users (and developers) cannot audit the decision.
+**Scenario:** Header row → Summary row ("총합계", amount=999999) → Merged data rows
 
-**Evidence:**
-- `OptimizationResult` only contains `assignments: Record<string, Transaction[]>` and `totals`
-- Per-transaction marginal reward comparison is computed at lines 124-156 but discarded
+**Trace:**
+1. Summary row passes `isSummaryRow(rowText)` → skipped at line 146
+2. But summary row has `row.every((c) => !c)` = false (has cells)
+3. The loop reaches amount forward-fill section
+4. `rawAmountValue` = summary amount cell = "999999"
+5. `isSummaryRow(String(rawAmountValue))` = `isSummaryRow("999999")` → false (no summary keywords)
+6. `lastAmount` = "999999"
+7. Next merged data row: `amountRaw` falls back to `lastAmount` = "999999"
 
-**Fix:** Add optional `trace?: AssignmentTrace[]` to `OptimizationResult` showing per-transaction candidate scores.
-
----
-
-### [P2-MEDIUM] No correlation IDs across async boundaries
-
-**Files:** Entire repo
-**Confidence:** Medium
-
-Multiple async operations (file upload → parse → categorize → optimize → report) have no shared correlation ID. Debugging a user-reported issue requires manual log correlation.
-
-**Fix:** Introduce lightweight `Logger` interface with `traceId`. Pass logger through pipeline stages.
+**Hypothesis:** Summary rows with numeric-only amounts would poison forward-fill.
+**Evidence:** `isSummaryRow` only matches text patterns, not bare numbers.
+**Conclusion:** Confirmed edge case. Numeric summary amounts propagate through forward-fill.
 
 ---
 
-## Previously Reported — Status
+### Flow 3: Analyzer cache invalidation
 
-| Finding | Cycle | Status | Notes |
-|---------|-------|--------|-------|
-| Parser errors lack file context | 4 | **OPEN** | Still plain Error throws |
-| LLM fallback no token visibility | 4 | **OPEN** | No metadata returned |
-| No structured logging | 4 | **OPEN** | No Logger interface introduced |
-| Scraper no progress indication | 4 | **OPEN** | No progress callbacks added |
+**Path:** `analyzeMultipleFiles` → `optimizeFromTransactions` → `cachedCoreRules`
+
+**Trace:**
+1. First call: `cachedCoreRules` is null → transforms rules → caches
+2. Second call with `cardIds`: retrieves cached (ALL rules) → filters
+3. No invalidation of filtered result
+
+**Hypothesis:** Alternating filtered/unfiltered calls would cause cache misses or stale data.
+**Evidence:** Web app always calls `analyze()` first (unfiltered), then `reoptimize()` with same cardIds. No alternation.
+**Conclusion:** Not a bug in practice, but a latent issue if the calling pattern changes.
 
 ---
 
 ## Verdict
 
-**FIX AND SHIP** — Add `ParseError` structured errors and LLM usage metadata. These are low-effort, high-value observability wins.
+**FIX AND SHIP** — Flow 1 and Flow 2 confirm real bugs. Flow 3 is defensive.
