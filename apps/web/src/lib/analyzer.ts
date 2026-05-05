@@ -5,6 +5,12 @@ import { parseFile } from './parser/index.js';
 import type { RawTransaction } from './parser/types.js';
 import type { BankId } from './parser/types.js';
 import { getAllCardRules, loadCategories } from './cards.js';
+
+const VALID_BANK_IDS: Set<string> = new Set([
+  'hyundai', 'kb', 'ibk', 'woori', 'samsung', 'shinhan', 'lotte', 'hana', 'nh', 'bc',
+  'kakao', 'toss', 'kbank', 'bnk', 'dgb', 'suhyup', 'jb', 'kwangju', 'jeju', 'sc',
+  'mg', 'cu', 'kdb', 'epost',
+]);
 import type { CardRuleSet } from '@cherrypicker/rules';
 import type { CategoryNode } from './cards.js';
 import { buildCategoryLabelMap } from './category-labels.js';
@@ -100,7 +106,11 @@ export async function parseAndCategorize(
   matcher?: MerchantMatcher,
   categoryNodes?: CategoryNode[],
 ): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string }[]; categoryNodes: CategoryNode[] }> {
-  const parseResult = await parseFile(file, options?.bank as BankId | undefined);
+  const resolvedBank: BankId | undefined =
+    options?.bank && VALID_BANK_IDS.has(options.bank)
+      ? (options.bank as BankId)
+      : undefined;
+  const parseResult = await parseFile(file, resolvedBank);
   if (parseResult.transactions.length === 0) {
     throw new Error('거래 내역을 찾을 수 없어요');
   }
