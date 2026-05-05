@@ -221,9 +221,17 @@ export function isValidShortDate(cell: string): boolean {
 }
 
 /** Check if a string is a valid ISO 8601 date (YYYY-MM-DD).
+ *  Validates format AND month/day ranges to reject impossible dates
+ *  like "2024-99-99" that parseDateStringToISO may return as-is when
+ *  no known format matches (C14-01).
  *  Used by parsers to detect unparseable dates returned by
  *  parseDateStringToISO() and report them as parse errors.
  *  Parity with web-side apps/web/src/lib/parser/date-utils.ts. */
 export function isValidISODate(date: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(date);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const year = parseInt(date.slice(0, 4), 10);
+  const month = parseInt(date.slice(5, 7), 10);
+  const day = parseInt(date.slice(8, 10), 10);
+  if (month < 1 || month > 12) return false;
+  return day >= 1 && day <= daysInMonth(year, month);
 }
