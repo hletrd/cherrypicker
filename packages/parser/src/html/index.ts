@@ -10,7 +10,7 @@
 import type { BankId, ParseResult, RawTransaction, ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
-import { parseAmountString } from '../csv/shared.js';
+import { parseAmountString, normalizeHTML } from '../csv/shared.js';
 import {
   findColumn,
   DATE_COLUMN_PATTERN,
@@ -25,11 +25,6 @@ import {
 
 // SheetJS is imported as a CommonJS module
 import xlsx from 'xlsx';
-
-/** Fix malformed closing tags like </td   > commonly found in Korean exports */
-function normalizeHTML(html: string): string {
-  return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>');
-}
 
 /** Parse HTML content and extract transactions from tables.
  *  Uses SheetJS to parse HTML tables, then applies the same header

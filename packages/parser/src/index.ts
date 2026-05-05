@@ -20,7 +20,7 @@ export { parseGenericCSV } from './csv/generic.js';
 export { findColumn, normalizeHeader, DATE_COLUMN_PATTERN, MERCHANT_COLUMN_PATTERN, AMOUNT_COLUMN_PATTERN, INSTALLMENTS_COLUMN_PATTERN, CATEGORY_COLUMN_PATTERN, MEMO_COLUMN_PATTERN, SUMMARY_ROW_PATTERN, HEADER_KEYWORDS, DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS, isValidHeaderRow } from './csv/column-matcher.js';
 export { createBankAdapter, kakaoAdapter, tossAdapter, kbankAdapter, bnkAdapter, dgbAdapter, suhyupAdapter, jbAdapter, kwangjuAdapter, jejuAdapter, scAdapter, mgAdapter, cuAdapter, kdbAdapter, epostAdapter } from './csv/adapter-factory.js';
 export { isValidISODate, isValidShortDate } from './date-utils.js';
-export { parseAmountString } from './csv/shared.js';
+export { parseAmountString, normalizeHTML } from './csv/shared.js';
 
 export interface ParseOptions {
   bank?: BankId;

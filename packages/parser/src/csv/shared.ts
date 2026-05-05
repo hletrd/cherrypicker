@@ -171,3 +171,10 @@ export function parseCSVInstallments(raw: string | undefined): number | undefine
   if (Number.isNaN(inst)) return undefined;
   return inst > 1 ? inst : undefined;
 }
+
+/** Fix malformed closing tags like </td   > commonly found in Korean card
+ *  exports. Shared between HTML and XLSX parsers to eliminate duplication
+ *  (C100-04). */
+export function normalizeHTML(html: string): string {
+  return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>');
+}

@@ -1,7 +1,7 @@
 /** HTML table transaction parser — web-side.
  *  Parity with server-side packages/parser/src/html/index.ts (C98-02).
  *  Uses SheetJS to parse HTML tables, then applies shared header detection
- *  and column matching. */
+ *  and column matching. Includes forward-fill for merged cells (C100-01). */
 
 import type { BankId, ParseResult, RawTransaction, ParseError } from './types.js';
 import { detectBank } from './detect.js';
@@ -70,7 +70,9 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
   return bestResult ?? { bank: resolvedBank, format: 'html', transactions: [], errors: [{ message: 'HTML 테이블에서 데이터를 읽을 수 없습니다.' }] };
 }
 
-/** Parse a single HTML sheet for transactions. */
+/** Parse a single HTML sheet for transactions.
+ *  Includes forward-fill for merged cells — Korean bank HTML exports
+ *  commonly merge cells across rows (C100-01, parity with server-side). */
 function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult {
   const rows: unknown[][] = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
   const errors: ParseError[] = [];
@@ -122,6 +124,19 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     };
   }
 
+  // Forward-fill tracking for merged cells (C100-01, parity with server-side).
+  let lastDate: unknown = '';
+  let lastMerchant: unknown = '';
+  let lastCategory: unknown = '';
+  let lastInstallments: unknown = '';
+  let lastMemo: unknown = '';
+  let lastAmount: unknown = '';
+
+  // Helper: check if a cell has non-empty, non-whitespace content.
+  function isNonEmpty(val: unknown): boolean {
+    return val !== '' && val != null && String(val).trim() !== '';
+  }
+
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
     if (row.every((c) => !c)) continue;
@@ -129,9 +144,63 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (SUMMARY_ROW_PATTERN.test(rowText)) continue;
 
-    const dateRaw = String(row[dateCol] ?? '').trim();
-    const merchantRaw = String(row[merchantCol] ?? '').trim();
-    const amountRaw = String(row[amountCol] ?? '').trim();
+    // Forward-fill for all columns — update last-value only when cell has
+    // non-empty content; skip summary row values; use last-value as fallback.
+    // Matches server-side HTML parser logic (C100-01).
+
+    // Date column forward-fill
+    const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
+    if (dateCol !== -1 && isNonEmpty(rawDateValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawDateValue))) {
+        lastDate = rawDateValue;
+      }
+    }
+    const dateRaw = String(dateCol !== -1 ? (isNonEmpty(rawDateValue) ? rawDateValue : lastDate) : '').trim();
+
+    // Merchant column forward-fill
+    const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
+    if (merchantCol !== -1 && isNonEmpty(rawMerchantValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawMerchantValue))) {
+        lastMerchant = rawMerchantValue;
+      }
+    }
+    const merchantRaw = String(merchantCol !== -1 ? (isNonEmpty(rawMerchantValue) ? rawMerchantValue : lastMerchant) : '').trim();
+
+    // Category column forward-fill
+    const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
+    if (categoryCol !== -1 && isNonEmpty(rawCategoryValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawCategoryValue))) {
+        lastCategory = rawCategoryValue;
+      }
+    }
+    const categoryRaw = String(categoryCol !== -1 ? (isNonEmpty(rawCategoryValue) ? rawCategoryValue : lastCategory) : '').trim();
+
+    // Installments column forward-fill
+    const rawInstallValue = installCol !== -1 ? row[installCol] : '';
+    if (installCol !== -1 && isNonEmpty(rawInstallValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawInstallValue))) {
+        lastInstallments = rawInstallValue;
+      }
+    }
+    const installRaw = String(installCol !== -1 ? (isNonEmpty(rawInstallValue) ? rawInstallValue : lastInstallments) : '').trim();
+
+    // Memo column forward-fill
+    const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
+    if (memoCol !== -1 && isNonEmpty(rawMemoValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawMemoValue))) {
+        lastMemo = rawMemoValue;
+      }
+    }
+    const memoRaw = String(memoCol !== -1 ? (isNonEmpty(rawMemoValue) ? rawMemoValue : lastMemo) : '').trim();
+
+    // Amount column forward-fill
+    const rawAmountValue = amountCol !== -1 ? row[amountCol] : '';
+    if (amountCol !== -1 && isNonEmpty(rawAmountValue)) {
+      if (!SUMMARY_ROW_PATTERN.test(String(rawAmountValue))) {
+        lastAmount = rawAmountValue;
+      }
+    }
+    const amountRaw = String(amountCol !== -1 ? (isNonEmpty(rawAmountValue) ? rawAmountValue : lastAmount) : '').trim();
 
     if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
@@ -155,17 +224,17 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
       amount,
     };
 
-    if (installCol !== -1 && row[installCol]) {
-      const inst = parseInt(String(row[installCol]), 10);
+    if (installCol !== -1 && installRaw) {
+      const inst = parseInt(installRaw, 10);
       if (!Number.isNaN(inst) && inst > 1) tx.installments = inst;
     }
 
-    if (categoryCol !== -1 && row[categoryCol]) {
-      tx.category = String(row[categoryCol]).trim();
+    if (categoryCol !== -1 && categoryRaw) {
+      tx.category = categoryRaw;
     }
 
-    if (memoCol !== -1 && row[memoCol]) {
-      tx.memo = String(row[memoCol]).trim();
+    if (memoCol !== -1 && memoRaw) {
+      tx.memo = memoRaw;
     }
 
     transactions.push(tx);

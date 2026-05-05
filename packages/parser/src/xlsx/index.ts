@@ -3,7 +3,7 @@ import type { BankId, ParseResult } from '../types.js';
 import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
 import { parseDateStringToISO, isValidDayForMonth, isValidISODate } from '../date-utils.js';
-import { parseAmountString } from '../csv/shared.js';
+import { parseAmountString, normalizeHTML } from '../csv/shared.js';
 import {
   findColumn,
   DATE_COLUMN_PATTERN,
@@ -32,11 +32,6 @@ function isHTMLContent(buffer: Buffer): boolean {
   // in apps/web/src/lib/parser/xlsx.ts (C75-01).
   const head = buffer.slice(0, 512).toString('utf-8').replace(/^﻿/, '').trimStart().toLowerCase();
   return head.startsWith('<!doctype') || head.startsWith('<html') || /<table[\s>]/.test(head);
-}
-
-/** Fix malformed closing tags like </td   > commonly found in Korean card exports */
-function normalizeHTML(html: string): string {
-  return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>');
 }
 
 // ---------------------------------------------------------------------------

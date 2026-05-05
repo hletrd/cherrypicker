@@ -1,44 +1,35 @@
-# Cycle 99 Implementation Plan
+# Cycle 100 Implementation Plan (FINAL CYCLE)
 
 ## Goal
-Fix reliability gaps in HTML, OFX, and JSON parsers. Add isValidShortDate to web-side date-utils.ts. Improve HTML parser with forward-fill for merged cells. Add CREDITCARDMSGSRSV1 support to OFX parser. Fix JSON negative-amount handling.
+Fix 3 high-severity server/web parity bugs and 2 lower issues. Ensure the web-side parsers produce identical results to server-side parsers.
 
-## Plan
+## Fixes (ordered by priority)
 
-### P1: Add isValidShortDate to web-side date-utils.ts + update PDF import (F1, F8) [RELIABILITY]
-**Files:** `apps/web/src/lib/parser/date-utils.ts`, `apps/web/src/lib/parser/pdf.ts`
-- Add `isValidShortDate` function to `apps/web/src/lib/parser/date-utils.ts` (copy from server-side `packages/parser/src/date-utils.ts` lines 201-221)
-- Update `apps/web/src/lib/parser/pdf.ts` to import `isValidShortDate` from `./date-utils.js` instead of defining it locally
-- Remove ~25 lines of local definition from pdf.ts
+### FIX 1: Web HTML parser — add forward-fill [F1, HIGH]
+- **File**: `apps/web/src/lib/parser/html.ts`
+- **Action**: Port the forward-fill pattern from `packages/parser/src/html/index.ts` into the web-side `parseHTMLSheet()` function
+- **Details**: Add last-value tracking for all 6 columns (date, merchant, category, installments, memo, amount) with isNonEmpty() helper and SUMMARY_ROW_PATTERN guard
 
-### P2: Add forward-fill to HTML parser (F2) [RELIABILITY]
-**Files:** `packages/parser/src/html/index.ts`
-- Add forward-fill variables (lastDate, lastMerchant, lastCategory, lastInstallments, lastMemo, lastAmount)
-- Add `isNonEmpty()` helper matching XLSX parser pattern
-- Apply forward-fill for each column before parsing, matching XLSX parser logic
-- Handle summary row contamination prevention
+### FIX 2: Web JSON parser — accept negative amounts [F2, HIGH]
+- **File**: `apps/web/src/lib/parser/json.ts`
+- **Action**: Change `amount <= 0` to `amount === 0`, add `Math.abs()` for negative values
+- **Details**: Match server-side behavior: skip zero, accept negative (store absolute)
 
-### P3: Add CREDITCARDMSGSRSV1 support to OFX parser (F3) [RELIABILITY]
-**Files:** `packages/parser/src/ofx/index.ts`
-- Add XML extraction for `<CCSTMTTRNRS>` wrapper blocks containing `<STMTTRN>`
-- Add SGML extraction terminator `</CCSTMTRS` alongside existing `</STMTRS`
-- Extract bank name from `<ORG>` tag in OFX FI (financial institution) element
+### FIX 3: Web OFX parser — add CCSTMTRS terminators [F3, HIGH]
+- **File**: `apps/web/src/lib/parser/ofx.ts`
+- **Action**: Add `</CCSTMTRS` and `</CREDITCARDMSGSRSV1` to the SGML terminator pattern
+- **Details**: Match server-side SGML regex exactly
 
-### P4: Fix JSON parser negative amount handling (F7) [RELIABILITY]
-**Files:** `packages/parser/src/json/index.ts`
-- Change amount filter: take abs(negative amounts) for refunds, skip zero only
-- Report negative amounts as valid transactions rather than silently dropping
-
-### P5: Add tests for new behaviors
-**Files:** `packages/parser/__tests__/html.test.ts`, `packages/parser/__tests__/ofx.test.ts`, `packages/parser/__tests__/json.test.ts`
-- HTML forward-fill test with merged cell data
-- OFX CREDITCARDMSGSRSV1 credit card file test
-- JSON negative amount test
-
-### P6: Quality gates
-- bun test, vitest, typecheck, lint, build
+### FIX 4: Shared normalizeHTML utility [F5, LOW]
+- **Action**: Extract `normalizeHTML()` to `packages/parser/src/csv/shared.ts` (already a shared utilities module)
+- **Files affected**: `packages/parser/src/html/index.ts`, `packages/parser/src/xlsx/index.ts`, `packages/parser/src/csv/shared.ts`
 
 ## Deferred
-- D-01: Full server/web dedup into packages/shared/ (requires build system changes)
-- D-02: Confidence scoring on ParseResult
-- D-03: Clipboard paste format
+- F4 (web content sniffing): Complex browser API work, low impact
+- F6 (web parser tests): Requires significant test infrastructure
+
+## Quality Gates
+- `bun test` in packages/parser
+- `bun run build` for full monorepo
+- TypeScript typecheck
+- Lint

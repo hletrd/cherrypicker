@@ -1,5 +1,7 @@
 /** OFX (Open Financial Exchange) transaction parser — web-side.
- *  Parity with server-side packages/parser/src/ofx/index.ts (C98-01). */
+ *  Parity with server-side packages/parser/src/ofx/index.ts (C98-01).
+ *  Supports both bank statements (STMTRS) and credit card statements
+ *  (CCSTMTRS) with proper SGML terminator patterns (C100-03). */
 
 import type { BankId, ParseResult, RawTransaction, ParseError } from './types.js';
 import { detectBank } from './detect.js';
@@ -15,7 +17,7 @@ function extractTransactionBlocks(content: string): string[] {
     match = xmlPattern.exec(content);
   }
   if (blocks.length === 0) {
-    const sgmlPattern = /<STMTTRN[^>]*>([\s\S]*?)(?=<STMTTRN|<\/BANKTRANLIST|<\/STMTRS|<\/CREDITCARDMSGSRSV1|$)/gi;
+    const sgmlPattern = /<STMTTRN[^>]*>([\s\S]*?)(?=<STMTTRN|<\/BANKTRANLIST|<\/STMTRS|<\/CCSTMTRS|<\/CREDITCARDMSGSRSV1|$)/gi;
     match = sgmlPattern.exec(content);
     while (match) {
       blocks.push(match[1] ?? '');
@@ -58,7 +60,21 @@ function parseOFXAmount(raw: string): number | null {
 export function parseOFX(content: string, bank?: BankId): ParseResult {
   const errors: ParseError[] = [];
   const transactions: RawTransaction[] = [];
-  const resolvedBank: BankId | null = bank ?? detectBank(content).bank ?? null;
+  // Detect bank from content if not provided. Also try extracting from
+  // OFX <ORG> tag which identifies the financial institution (C100-03).
+  let resolvedBank: BankId | null = bank ?? null;
+  if (!resolvedBank) {
+    resolvedBank = detectBank(content).bank;
+    if (!resolvedBank) {
+      const orgMatch = content.match(/<ORG>([^<\n]+)/i);
+      if (orgMatch) {
+        const orgResult = detectBank(orgMatch[1] ?? '');
+        if (orgResult.bank && orgResult.confidence > 0) {
+          resolvedBank = orgResult.bank;
+        }
+      }
+    }
+  }
 
   const blocks = extractTransactionBlocks(content);
   if (blocks.length === 0) {
