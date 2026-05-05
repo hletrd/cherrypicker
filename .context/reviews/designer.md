@@ -1,32 +1,33 @@
-# Designer (UI/UX) — Cycle 1 (Fresh Review 2026-04-24)
+# Designer — Cycle 4 Findings
 
-## Inventory of Reviewed Files
+## Summary
+4 findings on UX, component API, and visual consistency. 1 critical, 1 high, 2 medium.
 
-- `apps/web/src/components/upload/FileDropzone.svelte` — Upload form
-- `apps/web/src/components/dashboard/SavingsComparison.svelte` — Savings display
-- `apps/web/src/components/dashboard/CategoryBreakdown.svelte` — Category chart
-- `apps/web/src/components/dashboard/OptimalCardMap.svelte` — Card map table
-- `apps/web/src/components/dashboard/SpendingSummary.svelte` — Summary cards
-- `apps/web/src/components/dashboard/TransactionReview.svelte` — Category editing
-- `apps/web/src/components/cards/CardDetail.svelte` — Card detail page
-- `apps/web/src/app.css` — Global styles
+## Findings
 
-## New Findings
+### U-DES-01 [CRITICAL] FileDropzone rejects supported file types
+- **File**: `apps/web/src/components/upload/FileDropzone.svelte` lines 97-103
+- **Issue**: `ACCEPTED_EXTENSIONS` only includes csv/xlsx/pdf. Parser supports json/ofx/qfx/html/htm but UI blocks them.
+- **Impact**: Users cannot upload supported formats. Confusing error message.
+- **Fix**: Derive accepted extensions from parser capability map.
 
-### U1-01: CardDetail shows raw category IDs when categories fetch is aborted
-- **File:** `apps/web/src/components/cards/CardDetail.svelte:28-38`
-- **Severity:** MEDIUM
-- **Confidence:** High
-- **Description:** UX impact of C1-01. When `loadCategories` returns `[]` (AbortError during View Transition), the rewards table shows raw English category IDs like "dining.cafe" instead of Korean labels. Confusing for Korean users. TransactionReview has a hardcoded fallback; CardDetail should too.
-- **Fix:** Add a fallback category label map (same as TransactionReview's `FALLBACK_CATEGORIES`) or skip rendering the rewards table until labels are loaded.
+### U-DES-02 [HIGH] Error messages are not user-friendly
+- **File**: `apps/web/src/components/upload/FileDropzone.svelte`
+- **Issue**: Parse errors show raw technical messages. No Korean localization for error states.
+- **Fix**: Add localized error message map with friendly descriptions.
 
-### U1-02: FileDropzone `<input type="number">` shows stepper arrows on mobile
-- **File:** `apps/web/src/components/upload/FileDropzone.svelte:494-503`
-- **Severity:** LOW
-- **Confidence:** High
-- **Description:** The previous month spending input uses `<input type="number">` which shows native stepper arrows on mobile. For Korean Won amounts, stepper arrows are useless (incrementing by 1 won is meaningless). The `parsePreviousSpending` function handles edge cases like scientific notation, but the mobile UX is confusing.
-- **Fix:** Add CSS to hide stepper arrows (`appearance: textfield`) and consider using `inputmode="numeric"` with `type="text"` for better mobile keyboard control.
+### U-DES-03 [MEDIUM] No loading state during analysis
+- **File**: `apps/web/src/components/upload/FileDropzone.svelte`
+- **Issue**: Large files parse synchronously with no progress indication. Browser appears frozen.
+- **Fix**: Add progress bar or spinner with parse stage labels.
 
-## Previously Deferred (Acknowledged)
+### U-DES-04 [MEDIUM] Results display lacks transaction detail
+- **File**: `apps/web/src/pages/` (inferred)
+- **Issue**: Optimization results show category totals but not per-transaction card assignments. Users cannot audit recommendations.
+- **Fix**: Add expandable transaction list in results view.
 
-D7-M8 (no axe-core gate), D8-01 (no prefers-reduced-motion for spinner), D8-02 (dashboard cards lack role="region"), C6UI-04/C6UI-05 (WCAG 1.4.11 non-text contrast), C6UI-23 (target size), D-38/D-104 (dashboard empty state + data divs), D-39 (loading skeleton for card list).
+## Recommendations
+1. Sync UI accepted formats with parser capabilities automatically
+2. Add Korean error messages for all parser failure modes
+3. Consider Web Workers for file parsing to keep UI responsive
+4. Add transaction-level breakdown to results view

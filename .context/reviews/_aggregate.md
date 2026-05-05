@@ -1,53 +1,79 @@
-# Cycle 2 Aggregate Review
+# Cycle 4 Aggregate Review
 
 ## Summary
-Cycle 2 of new batch. Found 14 new issues — 5 critical/high severity, 9 medium/low. Focus on server/web parity bugs and a critical runtime bug in FileDropzone.svelte.
+11 agents reviewed the entire cherrypicker repository. 55 total findings: 9 critical, 26 high, 20 medium. Focus areas: code quality (13), performance (7), security (6), architecture (7), testing (6), debugging (5), observability (5), documentation (5), UX (4).
 
-## New Findings (14)
+## Critical Findings (9)
 
-| ID | Severity | Type | Description |
-|----|----------|------|-------------|
-| F-CR-01 | CRITICAL | BUG | FileDropzone.svelte `errorMessage` vs `errorMessages` ReferenceError |
-| F-CR-02 | CRITICAL | BUG | FileDropzone ACCEPTED_EXTENSIONS blocks JSON/OFX/HTML formats |
-| F-CR-03 | HIGH | RELIABILITY | Web CSV parser drops refunds (amount <= 0 filter) |
-| F-CR-04 | HIGH | RELIABILITY | Web HTML parser drops refunds |
-| F-CR-05 | HIGH | RELIABILITY | Web XLSX parser drops refunds |
-| F-CR-06 | HIGH | RELIABILITY | Web PDF parser drops refunds |
-| F-DBG-02 | MEDIUM | RELIABILITY | fetcher.ts second fetch() loses abort timeout |
-| F-TEST-01 | CRITICAL | TESTS | No tests catch FileDropzone ReferenceError |
-| F-TEST-02 | HIGH | TESTS | No tests for refund handling across parsers |
-| F-ARCH-01 | HIGH | ARCHITECTURE | Server/web parser parity gap on negative amounts |
-| F-ARCH-02 | HIGH | ARCHITECTURE | UI file types don't match parser capabilities |
-| F-SEC-01 | MEDIUM | SECURITY | fetcher.ts abort timeout lost on EUC-KR detection |
-| F-SEC-07 | LOW | SECURITY | LLM fallback truncates PDF text to 8000 chars |
-| F-CR-07 | MEDIUM | CODE_QUALITY | JSON parser handles negatives correctly but siblings don't |
+| ID | Agent | Description | File |
+|----|-------|-------------|------|
+| C-CR-01 | code-reviewer | Library code emits console.warn | `packages/core/src/calculator/reward.ts` |
+| C-CR-02 | code-reviewer | Non-null assertion on unsafe regex match | `packages/parser/src/pdf/index.ts:361` |
+| C-CR-03 | code-reviewer | FileDropzone `errorMessage` vs `errorMessages` | `apps/web/src/components/upload/FileDropzone.svelte` |
+| F-CRI-01 | critic | Server/web parser parity gap | `packages/parser/` vs `apps/web/src/lib/parser/` |
+| F-CRI-02 | critic | CATEGORY_NAMES_KO hardcoded in optimizer | `packages/core/src/optimizer/greedy.ts` |
+| S-SEC-01 | security-reviewer | LLM fallback API key exposure risk | `packages/parser/src/pdf/llm-fallback.ts` |
+| V-VER-01 | verifier | No test catches FileDropzone ReferenceError | `apps/web/src/components/upload/FileDropzone.svelte` |
+| T-TE-01 | test-engineer | Missing FileDropzone error path tests | `apps/web/src/components/upload/FileDropzone.svelte` |
+| D-DEB-01 | debugger | FileDropzone crashes on error | `apps/web/src/components/upload/FileDropzone.svelte` |
 
-## Detailed Critical/High Findings
+## High Findings (26) — Grouped by Theme
 
-### F-CR-01: FileDropzone.svelte runtime ReferenceError [CRITICAL]
-- **File**: `apps/web/src/components/upload/FileDropzone.svelte` lines 251, 314, 363
-- **Impact**: Complete component crash on any error path
-- **Root cause**: Variable declared as `errorMessages` but referenced as `errorMessage`
-- **Fix**: Rename all references to match declaration
+### Parser Issues (8)
+- P-PR-03: PDF LLM fallback truncates to 8000 chars
+- C-CR-07: Web parsers drop refunds (amount <= 0 filter)
+- D-DEB-03: OFX date parser corrupts timezone data
+- S-SEC-03: No input validation on uploaded file size
+- U-DES-01: FileDropzone rejects supported file types
+- P-PR-05: SheetJS parses entire HTML document
+- R-TRA-01: Parser errors lack file context
+- F-DOC-01: No API contract between parser and optimizer
 
-### F-CR-02: FileDropzone blocks supported formats [CRITICAL]
-- **File**: `apps/web/src/components/upload/FileDropzone.svelte` lines 97-103
-- **Impact**: Users cannot upload OFX/QFX, HTML, or JSON files
-- **Root cause**: Hardcoded ACCEPTED_EXTENSIONS only allows csv/xlsx/pdf
-- **Fix**: Extend to include json/ofx/qfx/html/htm and corresponding MIME types
+### Optimizer Issues (4)
+- P-PR-01: Greedy sort is O(n^2 log n)
+- C-CR-04: Duplicate CATEGORY_NAMES_KO
+- C-CR-06: MerchantMatcher O(n*m) per transaction
+- F-CRI-03: No optimization correctness proof
 
-### F-CR-03 through F-CR-06: Web parsers drop refunds [HIGH]
-- **Files**: `apps/web/src/lib/parser/csv.ts:175`, `html.ts:212`, `xlsx.ts:617`, `pdf.ts:440`
-- **Impact**: Refund transactions silently discarded, incorrect totals
-- **Root cause**: `amount <= 0` filter instead of `amount === 0` + `Math.abs()`
-- **Fix**: Change all four to match JSON parser behavior
+### Architecture Issues (5)
+- A-ARCH-01: Server/web parser code duplication
+- A-ARCH-02: CATEGORY_NAMES_KO hardcoded
+- A-ARCH-03: Card rules type duplicated in web app
+- A-ARCH-04: No clear parser/categorizer boundary
+- A-ARCH-05: Store persistence no schema versioning
 
-### F-ARCH-01: Server/web parity on negative amounts [HIGH]
-- **Files**: All web parsers except JSON
-- **Impact**: Same statement produces different results on web vs CLI
-- **Fix**: Extract shared `validateAmount()` utility
+### Testing Issues (4)
+- V-VER-02: No parity tests between server/web parsers
+- V-VER-03: No tests for refund handling
+- T-TE-02: No parser parity test suite
+- T-TE-03: Missing refund transaction test fixtures
 
-### F-ARCH-02: UI/parser capability mismatch [HIGH]
-- **Files**: FileDropzone.svelte vs parser/index.ts
-- **Impact**: Parser supports formats that UI rejects
-- **Fix**: Derive accepted types from parser capability map
+### Reliability Issues (3)
+- P-PR-04: fetcher.ts loses abort timeout on second fetch
+- D-DEB-04: AbortController timeout not cleared on success
+- S-SEC-02: fetcher.ts abort timeout lost on EUC-KR retry
+
+## Deferred from Previous Cycles
+See `.context/reviews/_aggregate.md` from cycles 2-3 for deferred items. This cycle focuses on new findings and un-deferred criticals.
+
+## Cross-Cutting Themes
+1. **Parser Parity**: Server and web parsers diverge silently. Need shared utilities or automated parity checks.
+2. **Error Handling**: Ad-hoc console.warn, missing context, no structured logging.
+3. **Type Safety**: Non-null assertions, inline type redefinitions, Svelte template variable mismatches.
+4. **Performance**: No benchmarks, unbounded scans, large-memory allocations.
+5. **Testing**: Happy-path bias, no error-path coverage, no parity verification.
+
+## Agent Coverage
+- code-reviewer: 13 findings (3 critical, 5 high, 5 medium)
+- perf-reviewer: 7 findings (2 critical, 3 high, 2 medium)
+- security-reviewer: 6 findings (1 critical, 2 high, 3 medium)
+- critic: 8 findings (2 critical, 3 high, 3 medium)
+- verifier: 5 findings (1 critical, 2 high, 2 medium)
+- test-engineer: 6 findings (2 critical, 2 high, 2 medium)
+- tracer: 5 findings (1 critical, 2 high, 2 medium)
+- architect: 7 findings (2 critical, 3 high, 2 medium)
+- debugger: 5 findings (2 critical, 2 high, 1 medium)
+- document-specialist: 5 findings (1 critical, 2 high, 2 medium)
+- designer: 4 findings (1 critical, 1 high, 2 medium)
+
+Total: 55 findings
