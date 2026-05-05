@@ -140,6 +140,7 @@
     const name = file.name.toLowerCase();
     if (name.endsWith('.pdf')) return 'document-text';
     if (name.endsWith('.xlsx') || name.endsWith('.xls')) return 'table-cells';
+    if (name.endsWith('.json') || name.endsWith('.ofx') || name.endsWith('.qfx') || name.endsWith('.html') || name.endsWith('.htm')) return 'document-chart';
     return 'document-text';
   }
 
@@ -484,7 +485,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             파일 추가
-            <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf" multiple onchange={handleFileInput} bind:this={addFileInputEl} />
+            <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf,.json,.ofx,.qfx,.html,.htm" multiple onchange={handleFileInput} bind:this={addFileInputEl} />
           </label>
           <button
             class="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:border-red-300 hover:text-red-500 transition-colors"
@@ -500,10 +501,10 @@
           <Icon name={isDragOver ? 'folder-open' : 'arrow-up-tray'} size={40} />
         </div>
         <p class="mt-1 text-base font-medium">카드 명세서를 끌어다 놓으세요</p>
-        <p class="text-sm text-[var(--color-text-muted)]">CSV, Excel, PDF 지원 · 여러 파일 동시 업로드 가능</p>
+        <p class="text-sm text-[var(--color-text-muted)]">CSV, Excel, PDF, JSON, OFX, HTML 지원 · 여러 파일 동시 업로드 가능</p>
         <label class="mt-3 inline-block cursor-pointer rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[var(--color-primary-dark)] transition-colors">
           파일 선택
-          <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf" multiple onchange={handleFileInput} bind:this={primaryFileInputEl} />
+          <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf,.json,.ofx,.qfx,.html,.htm" multiple onchange={handleFileInput} bind:this={primaryFileInputEl} />
         </label>
       </div>
     {/if}
