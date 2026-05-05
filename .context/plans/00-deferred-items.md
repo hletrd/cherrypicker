@@ -1632,3 +1632,57 @@ Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings*
 - **File+line:** All Svelte components
 - **Reason for deferral:** Major feature requiring translation keys, ICU message format, and locale management. Out of scope for parser-focused cycle.
 - **Exit criterion:** Create i18n RFC and implement incrementally.
+
+---
+
+## Deferred Findings (Cycle 20, May 2026)
+
+### C20-PERF01: Greedy optimizer marginal reward caching
+- **Original finding:** C20-PERF01 (perf-reviewer)
+- **Severity:** MEDIUM
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/greedy.ts:51-53`
+- **Reason for deferral:** Algorithmic redesign required. `calculateCardOutput` is called twice per card per transaction, each time re-evaluating all rules for all transactions. Marginal reward caching would require tracking per-card state across the greedy loop, a significant architectural change to the pure function design. Already deferred as D-09 (cycle 1), D-51 (cycle 6), D-86 (cycle 11), D-C10-02.
+- **Exit criterion:** If performance becomes an issue for > 1000 transactions, implement incremental scoring with per-card `previousTotalReward` cache.
+- **Maps to:** D-09, D-51, D-86, D-C10-02
+
+### C20-ARCH02: Parser duplication now spans 6 formats
+- **Original finding:** C20-ARCH02 (architect)
+- **Severity:** LOW (structural)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/` vs `packages/parser/src/`
+- **Reason for deferral:** Same as D-01 (cycle 1) and D-C10-01. Requires extracting isomorphic parsing logic to a shared pure-TS module. Each new format (JSON, OFX, HTML added in cycles 98-100) must be implemented twice with manual parity comments.
+- **Exit criterion:** Schedule a dedicated refactoring sprint with design doc, then extract shared core logic format by format.
+- **Maps to:** D-01, D-C10-01
+
+### C20-PERF02: HTML parser string allocation optimization
+- **Original finding:** C20-PERF02 (perf-reviewer)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/html.ts:141-244`
+- **Reason for deferral:** Micro-optimization. Per-cell `String()` conversions and `isSummaryRow()` calls are already fast enough for typical HTML tables (< 1000 rows). The `SUMMARY_ROW_PATTERN` is compiled at module level.
+- **Exit criterion:** If HTML tables exceed 5000 rows and parsing becomes slow, batch `isSummaryRow` checks and reduce intermediate string allocations.
+
+### C20-DOC01: Shared C1-01 convention comment extraction
+- **Original finding:** C20-DOC01 (document-specialist)
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/analyzer.ts:339-341`, `apps/web/src/lib/store.svelte.ts:506-508`
+- **Reason for deferral:** Requires creating `docs/conventions.md` and updating all inline references. The comments are correct and identical, just duplicated. Low impact maintenance task.
+- **Exit criterion:** When any convention-related code is changed, extract the comment to a shared location first.
+
+### C20-UI02: Parser error message standardization
+- **Original finding:** C20-UI02 (designer)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/parser/` (all formats)
+- **Reason for deferral:** Part of ongoing U-DES-02 effort (deferred since cycle 3). Error messages are functional but mix technical terms ("header row", "OFX") with user-friendly Korean. Standardizing requires a pass across all 6 parser formats.
+- **Exit criterion:** When U-DES-02 is scheduled, include parser error messages in the standardization pass.
+
+### C20-SEC02: HTML sanitization before SheetJS
+- **Original finding:** C20-SEC02 (security-reviewer)
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/parser/html.ts:38-42`
+- **Reason for deferral:** Defense-in-depth, not an active vulnerability. SheetJS does not execute JavaScript. The risk is entity expansion bombs or nested tables causing memory issues. The `normalizeHTML` function currently only fixes spacing in closing tags.
+- **Exit criterion:** If HTML files come from untrusted sources, add pre-processing to strip `<script>`, `<style>`, event handlers, and `<iframe>`/`<object>` tags before passing to SheetJS.
