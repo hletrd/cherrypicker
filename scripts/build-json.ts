@@ -430,4 +430,22 @@ await writeFile(categoriesJsonPath, JSON.stringify(categoriesRaw, null, 2), 'utf
 console.log(`   ${join(webPublicDir, 'cards.json')} (web public)`);
 console.log(`   ${categoriesJsonPath} (web public)`);
 
+// Generate fallback category labels TypeScript module for web app (C7-04)
+// This eliminates the hardcoded duplication anti-pattern by generating the
+// fallback directly from the canonical categories.yaml source.
+const fallbackEntries: string[] = [];
+for (const node of categoriesRaw.categories as Array<{ id: string; labelKo: string; subcategories?: Array<{ id: string; labelKo: string }> }>) {
+  fallbackEntries.push(`    ['${node.id}', '${node.labelKo}'],`);
+  if (node.subcategories) {
+    for (const sub of node.subcategories) {
+      fallbackEntries.push(`    ['${sub.id}', '${sub.labelKo}'],`);
+      fallbackEntries.push(`    ['${node.id}.${sub.id}', '${sub.labelKo}'],`);
+    }
+  }
+}
+const fallbackModule = `/** Auto-generated from categories.yaml by scripts/build-json.ts\n *  Do not edit manually — run 'node --experimental-strip-types scripts/build-json.ts' to regenerate.\n */\nexport const FALLBACK_CATEGORY_LABELS: ReadonlyMap<string, string> = new Map([\n${fallbackEntries.join('\n')}\n  ]);\n`;
+const fallbackPath = join(ROOT, 'apps/web/src/lib/category-labels-fallback.ts');
+await writeFile(fallbackPath, fallbackModule, 'utf-8');
+console.log(`   ${fallbackPath} (auto-generated fallback labels)`);
+
 console.log('\n✨ Done!');
