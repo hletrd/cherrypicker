@@ -3,7 +3,8 @@
  *  Parses JSON arrays of transaction objects from banking APIs, mobile app
  *  exports, and financial tools. */
 
-import type { BankId, ParseResult, RawTransaction, ParseError } from './types.js';
+import type { BankId, ParseResult, RawTransaction } from './types.js';
+import { ParseError } from './types.js';
 import { parseCSVAmount } from './csv.js';
 import { parseDateStringToISO, isValidISODate } from './date-utils.js';
 
@@ -89,7 +90,7 @@ function parseTransactionObject(
 
   if (amount === null) {
     if (String(amountValue).trim()) {
-      errors.push({ line: lineIdx, message: `금액을 해석할 수 없습니다: ${String(amountValue)}` });
+      errors.push(new ParseError(`금액을 해석할 수 없습니다: ${String(amountValue)}`, { line: lineIdx }));
     }
     return null;
   }
@@ -101,7 +102,7 @@ function parseTransactionObject(
 
   const date = parseDateStringToISO(dateRaw);
   if (!isValidISODate(date) && dateRaw) {
-    errors.push({ line: lineIdx, message: `날짜를 해석할 수 없습니다: ${dateRaw}` });
+    errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw}`, { line: lineIdx }));
   }
 
   const tx: RawTransaction = {
@@ -141,7 +142,7 @@ export function parseJSON(content: string, bank?: BankId): ParseResult {
       bank: bank ?? null,
       format: 'json',
       transactions: [],
-      errors: [{ message: `JSON 파싱 실패: ${err instanceof Error ? err.message : String(err)}` }],
+      errors: [new ParseError(`JSON 파싱 실패: ${err instanceof Error ? err.message : String(err)}`) ],
     };
   }
 
@@ -174,7 +175,7 @@ export function parseJSON(content: string, bank?: BankId): ParseResult {
         bank: bank ?? null,
         format: 'json',
         transactions: [],
-        errors: [{ message: 'JSON에서 거래 배열을 찾을 수 없습니다.' }],
+        errors: [new ParseError('JSON에서 거래 배열을 찾을 수 없습니다.')],
       };
     }
   } else {
@@ -182,7 +183,7 @@ export function parseJSON(content: string, bank?: BankId): ParseResult {
       bank: bank ?? null,
       format: 'json',
       transactions: [],
-      errors: [{ message: 'JSON 데이터 형식이 올바르지 않습니다.' }],
+      errors: [new ParseError('JSON 데이터 형식이 올바르지 않습니다.')],
     };
   }
 

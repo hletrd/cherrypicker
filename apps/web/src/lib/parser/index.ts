@@ -1,4 +1,5 @@
 import type { ParseResult, BankId } from './types.js';
+import { ParseError } from './types.js';
 import { detectFormatFromFile, detectBankFromText } from './detect.js';
 import { parseCSV } from './csv.js';
 import { parseXLSX } from './xlsx.js';
@@ -7,7 +8,8 @@ import { parseJSON } from './json.js';
 import { parseOFX } from './ofx.js';
 import { parseHTML } from './html.js';
 
-export type { FileFormat, BankId, DetectionResult, RawTransaction, ParseResult, ParseError, BankAdapter } from './types.js';
+export type { FileFormat, BankId, DetectionResult, RawTransaction, ParseResult, BankAdapter } from './types.js';
+export { ParseError } from './types.js';
 export { detectFormatFromFile, detectBank, detectBankFromText, detectCSVDelimiter } from './detect.js';
 export { parseCSV } from './csv.js';
 export { parseXLSX } from './xlsx.js';
@@ -53,9 +55,9 @@ export async function parseFile(file: File, bank?: BankId): Promise<ParseResult>
       const result = parseCSV(content, detectedBank ?? undefined);
       // Warn if encoding detection produced many replacement characters
       if (bestReplacements > 50) {
-        result.errors.unshift({
-          message: `파일 인코딩을 정확히 감지하지 못했어요. 일부 가맹점명이 깨질 수 있습니다.`,
-        });
+        result.errors.unshift(new ParseError(
+          `파일 인코딩을 정확히 감지하지 못했어요. 일부 가맹점명이 깨질 수 있습니다.`,
+        ));
       }
       return result;
     }

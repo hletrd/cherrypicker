@@ -3,7 +3,8 @@
  *  Supports both bank statements (STMTRS) and credit card statements
  *  (CCSTMTRS) with proper SGML terminator patterns (C100-03). */
 
-import type { BankId, ParseResult, RawTransaction, ParseError } from './types.js';
+import type { BankId, ParseResult, RawTransaction } from './types.js';
+import { ParseError } from './types.js';
 import { detectBank } from './detect.js';
 import { parseDateStringToISO, isValidISODate } from './date-utils.js';
 
@@ -82,7 +83,7 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
       bank: resolvedBank,
       format: 'ofx',
       transactions: [],
-      errors: [{ message: 'OFX 파일에서 거래 내역을 찾을 수 없습니다.' }],
+      errors: [new ParseError('OFX 파일에서 거래 내역을 찾을 수 없습니다.')],
     };
   }
 
@@ -96,13 +97,13 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
 
     const date = parseOFXDate(dtPosted);
     if (!isValidISODate(date) && dtPosted) {
-      errors.push({ line: i + 1, message: `날짜를 해석할 수 없습니다: ${dtPosted}` });
+      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dtPosted}`, { line: i + 1 }));
     }
 
     const rawAmount = parseOFXAmount(trnAmt);
     if (rawAmount === null) {
       if (trnAmt.trim()) {
-        errors.push({ line: i + 1, message: `금액을 해석할 수 없습니다: ${trnAmt}` });
+        errors.push(new ParseError(`금액을 해석할 수 없습니다: ${trnAmt}`, { line: i + 1 }));
       }
       continue;
     }

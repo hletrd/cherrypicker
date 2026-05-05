@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
-import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js';
+import type { BankId, ParseResult, RawTransaction } from './types.js';
+import { ParseError } from './types.js';
 import { detectBank } from './detect.js';
 import { normalizeHTML } from './html.js';
 import {
@@ -211,7 +212,7 @@ function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): 
   // message rather than trying to parse them as dates (C14-01).
   if (typeof raw === 'string' && EXCEL_ERROR_PATTERN.test(raw.trim())) {
     if (errors && lineIdx !== undefined) {
-      errors.push({ line: lineIdx + 1, message: `셀 수식 오류: ${raw.trim()}` });
+      errors.push(new ParseError(`셀 수식 오류: ${raw.trim()}`, { line: lineIdx + 1 }));
     }
     return raw.trim();
   }
@@ -225,7 +226,7 @@ function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): 
       return `${y}-${m}-${d}`;
     }
     if (errors && lineIdx !== undefined) {
-      errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${String(raw)}` });
+      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${String(raw)}`, { line: lineIdx + 1 }));
     }
     return String(raw);
   }
@@ -268,7 +269,7 @@ function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): 
     // cell default), matching server-side XLSX parser behavior (C11-02).
     if (!Number.isFinite(raw) || raw < 1 || raw > 100000) {
       if (errors && lineIdx !== undefined && raw !== 0) {
-        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });
+        errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw}`, { line: lineIdx + 1 }));
       }
       return String(raw);
     }
@@ -287,7 +288,7 @@ function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): 
       // Invalid date from serial number — return as-is so the caller can detect
       // the malformed value, matching the string-path fallback behavior.
       if (errors && lineIdx !== undefined) {
-        errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw}` });
+        errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw}`, { line: lineIdx + 1 }));
       }
       return String(raw);
     }
@@ -297,7 +298,7 @@ function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): 
     // Report unparseable dates as parse errors so users can see which
     // transactions have malformed dates (C71-04/C56-04).
     if (!isValidISODate(result) && raw.trim() && errors && lineIdx !== undefined) {
-      errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
+      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw.trim()}`, { line: lineIdx + 1 }));
     }
     return result;
   }
@@ -398,7 +399,7 @@ export function parseXLSX(buffer: ArrayBuffer, bank?: BankId): ParseResult {
   }
 
   if (workbook.SheetNames.length === 0) {
-    return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트를 찾을 수 없습니다.' }] };
+    return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [new ParseError('시트를 찾을 수 없습니다.')] };
   }
 
   // Try all sheets, select the one with the most transactions (C50-07).
@@ -421,7 +422,7 @@ export function parseXLSX(buffer: ArrayBuffer, bank?: BankId): ParseResult {
     }
   }
 
-  return bestResult ?? { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '시트 데이터를 읽을 수 없습니다.' }] };
+  return bestResult ?? { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [new ParseError('시트 데이터를 읽을 수 없습니다.')] };
 }
 
 function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: BankId | null): ParseResult {
@@ -429,7 +430,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   const rows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
 
   if (rows.length === 0) {
-    return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [{ message: '빈 파일입니다.' }] };
+    return { bank: bank ?? null, format: 'xlsx', transactions: [], errors: [new ParseError('빈 파일입니다.')] };
   }
 
   // Detect bank from header rows if not provided
@@ -474,7 +475,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       bank: resolvedBank,
       format: 'xlsx',
       transactions: [],
-      errors: [{ message: '헤더 행을 찾을 수 없습니다.' }],
+      errors: [new ParseError('헤더 행을 찾을 수 없습니다.')],
     };
   }
 
@@ -591,17 +592,15 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       if (String(amountRaw ?? '').trim()) {
         // Detect Excel formula error strings for specific error messages (C73-04)
         if (typeof amountRaw === 'string' && EXCEL_ERROR_PATTERN.test(amountRaw.trim())) {
-          errors.push({
-            line: i + 1,
-            message: `셀 수식 오류: ${amountRaw.trim()}`,
-            raw: rowText,
-          });
+          errors.push(new ParseError(
+            `셀 수식 오류: ${amountRaw.trim()}`,
+            { line: i + 1, raw: rowText },
+          ));
         } else {
-          errors.push({
-            line: i + 1,
-            message: `금액을 해석할 수 없습니다: ${String(amountRaw)}`,
-            raw: rowText,
-          });
+          errors.push(new ParseError(
+            `금액을 해석할 수 없습니다: ${String(amountRaw)}`,
+            { line: i + 1, raw: rowText },
+          ));
         }
       }
       continue;
@@ -621,11 +620,10 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
         (e) => e.line === i + 1 && e.message.includes('날짜를 해석할 수 없습니다'),
       );
       if (!alreadyReported) {
-        errors.push({
-          line: i + 1,
-          message: `날짜를 해석할 수 없습니다: ${String(dateRaw).trim()}`,
-          raw: rowText,
-        });
+        errors.push(new ParseError(
+          `날짜를 해석할 수 없습니다: ${String(dateRaw).trim()}`,
+          { line: i + 1, raw: rowText },
+        ));
       }
     }
 

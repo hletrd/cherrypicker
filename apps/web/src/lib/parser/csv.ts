@@ -1,4 +1,5 @@
-import type { BankAdapter, BankId, ParseError, ParseResult, RawTransaction } from './types.js';
+import type { BankAdapter, BankId, ParseResult, RawTransaction } from './types.js';
+import { ParseError } from './types.js';
 import { detectBank, detectCSVDelimiter } from './detect.js';
 import {
   findColumn,
@@ -109,7 +110,7 @@ function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): s
   // Report unparseable dates as parse errors so users can see which
   // transactions have malformed dates (C71-04/C56-04).
   if (!isValidISODate(result) && raw.trim() && errors && lineIdx !== undefined) {
-    errors.push({ line: lineIdx + 1, message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
+    errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw.trim()}`, { line: lineIdx + 1 }));
   }
   return result;
 }
@@ -165,7 +166,7 @@ export const parseCSVAmount = parseAmount;
 function isValidAmount(amount: number | null, amountRaw: string, lineIdx: number, errors: ParseError[]): amount is number {
   if (amount === null) {
     if (amountRaw.trim()) {
-      errors.push({ line: lineIdx + 1, message: `금액을 해석할 수 없습니다: ${amountRaw}` });
+      errors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountRaw}`, { line: lineIdx + 1 }));
     }
     return false;
   }
@@ -300,7 +301,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   const transactions: RawTransaction[] = [];
 
   if (lines.length === 0) {
-    return { bank, format: 'csv', transactions: [], errors: [{ message: '빈 파일입니다.' }] };
+    return { bank, format: 'csv', transactions: [], errors: [new ParseError('빈 파일입니다.')] };
   }
 
   // Find header row — uses shared isValidHeaderRow from column-matcher
@@ -319,7 +320,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   // falling back to row 0 (which is likely a metadata row). This matches
   // the behavior of bank-specific adapters (C78-03).
   if (headerIdx === -1) {
-    return { bank, format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
+    return { bank, format: 'csv', transactions: [], errors: [new ParseError('헤더 행을 찾을 수 없습니다.')] };
   }
 
   const headers = splitLine(lines[headerIdx] ?? '', delimiter);
@@ -399,7 +400,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     const missing: string[] = [];
     if (dateCol === -1) missing.push('날짜');
     if (amountCol === -1) missing.push('금액');
-    errors.push({ message: `필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}` });
+    errors.push(new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`));
   }
 
   for (let i = headerIdx + 1; i < lines.length; i++) {
@@ -509,7 +510,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
         }
       }
       if (headerIdx === -1) {
-        return { bank: bankId, format: 'csv', transactions: [], errors: [{ message: '헤더 행을 찾을 수 없습니다.' }] };
+        return { bank: bankId, format: 'csv', transactions: [], errors: [new ParseError('헤더 행을 찾을 수 없습니다.')] };
       }
 
       const headers = splitLine(lines[headerIdx] ?? '', delimiter);
@@ -525,7 +526,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
         const missing: string[] = [];
         if (dateCol === -1) missing.push('날짜');
         if (amountCol === -1) missing.push('금액');
-        errors.push({ message: `필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}` });
+        errors.push(new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`));
       }
 
       for (let i = headerIdx + 1; i < lines.length; i++) {
@@ -851,9 +852,9 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
         // Fall through to generic parser, but record the failure in the result
         // (matching the server-side pattern in packages/parser/src/csv/index.ts)
         const fallbackResult = parseGenericCSV(cleanContent, resolvedBank);
-        fallbackResult.errors.unshift({
-          message: `${adapter.bankId} 어댑터 파싱 실패: ${err instanceof Error ? err.message : String(err)}`,
-        });
+        fallbackResult.errors.unshift(new ParseError(
+          `${adapter.bankId} 어댑터 파싱 실패: ${err instanceof Error ? err.message : String(err)}`,
+        ));
         return fallbackResult;
       }
     }
@@ -879,7 +880,7 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
     const result = parseGenericCSV(cleanContent, resolvedBank);
     // Collect any signature-detection adapter failures into the result
     for (const msg of signatureFailures) {
-      result.errors.unshift({ message: msg });
+      result.errors.unshift(new ParseError(msg));
     }
     return result;
   } catch (err) {
@@ -888,8 +889,8 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
       format: 'csv',
       transactions: [],
       errors: [
-        ...signatureFailures.map(msg => ({ message: msg })),
-        { message: `제네릭 파서 실패: ${err instanceof Error ? err.message : String(err)}` },
+        ...signatureFailures.map(msg => new ParseError(msg)),
+        new ParseError(`제네릭 파서 실패: ${err instanceof Error ? err.message : String(err)}`),
       ],
     };
   }

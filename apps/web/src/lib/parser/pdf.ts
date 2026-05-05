@@ -1,4 +1,5 @@
-import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js';
+import type { BankId, ParseResult, RawTransaction } from './types.js';
+import { ParseError } from './types.js';
 import { detectBank } from './detect.js';
 import {
   findColumn,
@@ -234,7 +235,7 @@ function parseDateToISO(raw: string, errors?: ParseError[]): string {
   // Report unparseable dates as parse errors so users can see which
   // transactions have malformed dates (C71-04/C56-04).
   if (!isValidISODate(result) && raw.trim() && errors) {
-    errors.push({ message: `날짜를 해석할 수 없습니다: ${raw.trim()}` });
+    errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw.trim()}`));
   }
   return result;
 }
@@ -421,7 +422,7 @@ function tryStructuredParse(text: string, _bank: BankId | null): { transactions:
       if (amount === null) {
         const cleaned = amountValue.replace(/원$/, '').replace(/,/g, '').trim();
         if (cleaned && !/^0+$/.test(cleaned)) {
-          parseErrors.push({ message: `금액을 해석할 수 없습니다: ${amountValue.trim()}` });
+          parseErrors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountValue.trim()}`));
         }
         continue;
       }
@@ -530,7 +531,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
       bank: bank ?? null,
       format: 'pdf',
       transactions: [],
-      errors: [{ message: `PDF 텍스트 추출 실패: ${err instanceof Error ? err.message : String(err)}` }],
+      errors: [new ParseError(`PDF 텍스트 추출 실패: ${err instanceof Error ? err.message : String(err)}`) ],
     };
   }
 
@@ -607,7 +608,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
         if (amount === null) {
           const cleaned = amountRaw.replace(/원$/, '').replace(/,/g, '').trim();
           if (cleaned && !/^0+$/.test(cleaned)) {
-            errors.push({ message: `금액을 해석할 수 없습니다: ${amountRaw.trim()}` });
+            errors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountRaw.trim()}`));
           }
           // Skip unparseable amounts
         } else if (amount !== 0) {
@@ -634,7 +635,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
   }
 
   // No transactions found at all
-  errors.push({ message: 'PDF에서 거래를 찾지 못했어요. CSV나 Excel 파일로 다시 시도해 보세요.' });
+  errors.push(new ParseError('PDF에서 거래를 찾지 못했어요. CSV나 Excel 파일로 다시 시도해 보세요.'));
 
   return {
     bank: resolvedBank,
