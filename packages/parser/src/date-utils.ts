@@ -232,6 +232,7 @@ export function isValidISODate(date: string): boolean {
   const year = parseInt(date.slice(0, 4), 10);
   const month = parseInt(date.slice(5, 7), 10);
   const day = parseInt(date.slice(8, 10), 10);
+  if (year < 1900 || year > 2100) return false;
   if (month < 1 || month > 12) return false;
   return day >= 1 && day <= daysInMonth(year, month);
 }
