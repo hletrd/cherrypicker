@@ -1,3 +1,3 @@
-# Cycle 90 Verification
+# Cycle 95 Verification
 
-All existing tests pass: 1299 bun + 302 vitest. F-90-01 is a confirmed parity bug in `packages/parser/src/pdf/index.ts` that the current test suite does not catch because the fallback line scanner path for Feb 29 is untested.
+All existing tests pass: 1314 bun + 306 vitest. F-95-01 through F-95-03 are keyword/pattern parity bugs that affect header detection for specific Korean bank column names. The fixes are safe additive changes to keyword Sets and column patterns.

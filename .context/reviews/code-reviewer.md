@@ -1,27 +1,34 @@
-# Cycle 90 Code Review
+# Code Reviewer -- Cycle 95
 
-## Previous cycle status
-Cycle 89 findings F-89-01/F-89-02/F-89-03 (XLSX forward-fill consistency, summary row patterns, code duplication) were all resolved in cycle 89. The 4-year window for Feb 29 (C88-01) was applied to all 5 `isValidShortDate`/`isDateLikeShort` implementations... except one.
+## Summary
+After 94 cycles, parser handles extensive format diversity. This review identifies keyword/pattern parity bugs between column regex patterns and the keyword Sets used by `isValidHeaderRow()`.
 
-## F-90-01: Server PDF isValidShortDate() missing 4-year window (BUG)
+## Findings
 
-**Severity**: HIGH
-**File**: `packages/parser/src/pdf/index.ts` line 47
+### F-95-01: MERCHANT_KEYWORDS Set missing 3 entries from MERCHANT_COLUMN_PATTERN (BUG)
+**Severity: Medium** -- `isValidHeaderRow()` requires keywords from 2+ categories. Missing keywords cause header detection failure for banks using these terms.
 
-The `isValidShortDate()` function only validates day against the current year:
-```ts
-return day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
-```
+Missing from `MERCHANT_KEYWORDS` but present in `MERCHANT_COLUMN_PATTERN`:
+- `구매내용` (purchase description)
+- `취소가맹점` (cancelled merchant)
+- `가게` (store/shop)
 
-Every other implementation correctly uses a 4-year window:
-- `packages/parser/src/csv/generic.ts` isDateLikeShort() -- 4-year window (C88-01)
-- `packages/parser/src/pdf/table-parser.ts` isValidShortDate() -- 4-year window (C88-01)
-- `apps/web/src/lib/parser/csv.ts` isDateLikeShort() -- 4-year window (C88-01)
-- `apps/web/src/lib/parser/pdf.ts` isValidShortDate() -- 4-year window (C88-01)
+File: `packages/parser/src/csv/column-matcher.ts` line 111
 
-**Impact**: The fallback line scanner in the server-side PDF parser rejects Feb 29 dates when running in a non-leap year. This is the path taken when structured table parsing fails.
+### F-95-02: CATEGORY_KEYWORDS Set missing 2 entries from CATEGORY_COLUMN_PATTERN (BUG)
+**Severity: Low** -- Same parity issue for category keywords.
 
-**Fix**: Add the same 4-year window used in all other implementations.
+Missing from `CATEGORY_KEYWORDS` but present in `CATEGORY_COLUMN_PATTERN`:
+- `가맹점유형` (merchant type)
+- `매장유형` (store type)
 
-## No other new findings
-After 89 cycles, format coverage is comprehensive. Server/web parity is maintained across CSV, XLSX, and PDF parsers except for F-90-01.
+File: `packages/parser/src/csv/column-matcher.ts` line 113
+
+### F-95-03: AMOUNT_COLUMN_PATTERN missing "원금" (FORMAT DIVERSITY)
+**Severity: Low** -- "원금" means "principal amount" and is used by some Korean bank exports. Not in `AMOUNT_COLUMN_PATTERN` or `AMOUNT_KEYWORDS`.
+
+File: `packages/parser/src/csv/column-matcher.ts` lines 74, 112
+
+## Deferred Items
+- D-01: PDF multi-line header support (architectural)
+- D-02: Shared module refactor for duplicated parseAmount/isValidShortDate

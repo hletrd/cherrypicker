@@ -558,6 +558,19 @@ describe('AMOUNT_COLUMN_PATTERN expanded keywords (C31)', () => {
     expect(HEADER_KEYWORDS).toContain('결제액');
   });
 
+  it('findColumn detects 원금 as amount column (C95-03)', () => {
+    const headers = ['이용일', '이용처', '원금'];
+    expect(findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN)).toBe(2);
+  });
+
+  it('AMOUNT_KEYWORDS contains 원금 (C95-03)', () => {
+    expect(AMOUNT_KEYWORDS.has('원금')).toBe(true);
+  });
+
+  it('HEADER_KEYWORDS contains 원금 (C95-03)', () => {
+    expect(HEADER_KEYWORDS).toContain('원금');
+  });
+
   it('isValidHeaderRow accepts headers with new amount keywords', () => {
     expect(isValidHeaderRow(['이용일', '이용처', '취소금액'])).toBe(true);
     expect(isValidHeaderRow(['거래일', '가맹점', '환불금액'])).toBe(true);
