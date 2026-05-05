@@ -153,6 +153,9 @@ function parseAmount(raw: string): number | null {
 /** Exported alias for parseAmount — used by the JSON parser (C97-01). */
 export const parseCSVAmount = parseAmount;
 
+/** Exported alias for parseAmount — used by the HTML parser (C9-01). */
+export const parseAmountString = parseAmount;
+
 /** Check if a parsed amount is valid (not null, not zero). Pushes an error
  *  and returns false if the amount is null (unparseable), so the caller can
  *  skip the transaction. Zero-amount rows are also skipped (balance inquiries,

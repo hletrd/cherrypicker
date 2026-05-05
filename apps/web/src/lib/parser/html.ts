@@ -7,7 +7,7 @@ import type { BankId, ParseResult, RawTransaction } from './types.js';
 import { ParseError } from './types.js';
 import { detectBank } from './detect.js';
 import { parseDateStringToISO, isValidISODate } from './date-utils.js';
-import { parseCSVAmount } from './csv.js';
+import { parseAmountString } from './csv.js';
 import {
   findColumn,
   DATE_COLUMN_PATTERN,
@@ -204,7 +204,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
 
     if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
-    const amount = parseCSVAmount(amountRaw);
+    const amount = parseAmountString(amountRaw);
     if (amount === null) {
       if (amountRaw) {
         errors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountRaw}`, { line: i + 1, raw: rowText }));
