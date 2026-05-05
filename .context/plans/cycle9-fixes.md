@@ -2,59 +2,63 @@
 
 **Date:** 2026-05-06
 **Source reviews:** `.context/reviews/cycle9-*.md`, `.context/reviews/_aggregate.md`
-**Status:** IN PROGRESS
+**Status:** COMPLETED
 
 ---
 
 ## Tasks
 
-### Task 1: Fix server-side OFX memo deduplication check [C9-03] — PENDING
+### Task 1: Fix server-side OFX memo deduplication check [C9-03] — DONE
 
 - **Severity:** LOW
 - **Confidence:** High
 - **Files:** `packages/parser/src/ofx/index.ts:189-191`
+- **Commit:** `95483e7`
 - **Description:** When `<NAME>` is empty, `tx.merchant` falls back to `<MEMO>`. The subsequent memo deduplication check uses `memo !== tx.memo` where `tx.memo` is `undefined`, so it's always true. This duplicates the merchant fallback value into `tx.memo`. The web-side correctly checks `memo !== tx.merchant`.
 - **Fix:**
-  1. Change `if (memo && memo !== tx.memo)` to `if (memo && memo !== tx.merchant)`
-- **Verification:** Parse OFX with empty NAME but non-empty MEMO. `tx.merchant` should equal MEMO, `tx.memo` should NOT be set (since memo === merchant fallback).
+  1. Changed `if (memo && memo !== tx.memo)` to `if (memo && memo !== tx.merchant)`
+- **Verification:** All gates pass (0 errors, 0 warnings, 1403 tests pass).
 
 ---
 
-### Task 2: Harden esc() against DEL and high-Unicode surrogates [C8-05] — PENDING
+### Task 2: Harden esc() against DEL and high-Unicode surrogates [C8-05] — DONE
 
 - **Severity:** MEDIUM
 - **Confidence:** Medium
 - **Files:** `packages/viz/src/report/generator.ts:31-41`
+- **Commit:** `37f4615`
 - **Description:** esc() strips `\x00-\x08\x0b\x0c\x0e-\x1f` but misses `\x7f` (DEL) and U+FFFE/U+FFFF (Unicode non-characters).
 - **Fix:**
-  1. Add `.replace(/\x7f/g, '')` after the control char strip
-  2. Add `.replace(/￾|￿/g, '')` for Unicode non-characters
-- **Verification:** esc() test with DEL and U+FFFE/U+FFFF inputs should strip them.
+  1. Added `.replace(/\x7f/g, '')` after the control char strip
+  2. Added `.replace(/￾|￿/g, '')` for Unicode non-characters
+- **Verification:** All gates pass (0 errors, 0 warnings).
 
 ---
 
-### Task 3: Fix web-side HTML parser amount import parity [C9-01] — PENDING
+### Task 3: Fix web-side HTML parser amount import parity [C9-01] — DONE
 
 - **Severity:** LOW
 - **Confidence:** Medium
 - **Files:** `apps/web/src/lib/parser/html.ts:10`, `apps/web/src/lib/parser/csv.ts`
+- **Commit:** `99648bc`
 - **Description:** Web-side HTML imports `parseCSVAmount` from `./csv.js` while server-side imports `parseAmountString` from `../csv/shared.js`. Functionally equivalent alias but creates divergence.
 - **Fix:**
-  1. Export `parseAmountString` as an alias from `apps/web/src/lib/parser/csv.ts`
-  2. Change import in `html.ts` from `parseCSVAmount` to `parseAmountString`
-- **Verification:** HTML parser tests pass; import resolves correctly.
+  1. Exported `parseAmountString` as an alias from `apps/web/src/lib/parser/csv.ts`
+  2. Changed import in `html.ts` from `parseCSVAmount` to `parseAmountString`
+- **Verification:** All gates pass (0 errors, 0 warnings).
 
 ---
 
-### Task 4: Add missing `'description'` to web-side JSON MEMO_ALIASES [C9-02] — PENDING
+### Task 4: Add missing `'description'` to web-side JSON MEMO_ALIASES [C9-02] — DONE
 
 - **Severity:** LOW
 - **Confidence:** Medium
 - **Files:** `apps/web/src/lib/parser/json.ts:51-54`
+- **Commit:** `0bc88c9`
 - **Description:** Server-side JSON parser includes `'description' /* fallback */` in MEMO_ALIASES. Web-side does not.
 - **Fix:**
-  1. Add `'description' /* fallback */` to the MEMO_ALIASES array in web-side JSON parser
-- **Verification:** Parse JSON with `{ "description": "memo text" }` and verify it maps to memo field.
+  1. Added `'description' /* fallback */` to the MEMO_ALIASES array in web-side JSON parser
+- **Verification:** All gates pass (0 errors, 0 warnings).
 
 ---
 
