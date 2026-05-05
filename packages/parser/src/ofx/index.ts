@@ -19,6 +19,7 @@ import type { BankId, ParseResult, RawTransaction } from '../types.js';
 import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
+import { parseAmountString } from '../csv/shared.js';
 
 /** Extract all STMTTRN transaction blocks from OFX content.
  *  Handles both SGML-style (no closing tags) and XML-style (closing tags).
@@ -53,16 +54,22 @@ function extractTransactionBlocks(content: string): string[] {
   return blocks;
 }
 
+/** Escape regex metacharacters in a string for safe interpolation into RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** Extract a tag value from a transaction block.
  *  Handles both SGML-style (`<TAG>value`) and XML-style (`<TAG>value</TAG>`).
  *  Returns the trimmed value, or empty string if not found. */
 function extractTag(block: string, tagName: string): string {
+  const safeTag = escapeRegExp(tagName);
   // Try XML-style first (with closing tag)
-  const xmlRe = new RegExp(`<${tagName}[^>]*>\\s*([^<]+?)\\s*</${tagName}>`, 'i');
+  const xmlRe = new RegExp(`<${safeTag}[^>]*>\\s*([^<]+?)\\s*</${safeTag}>`, 'i');
   const xmlMatch = block.match(xmlRe);
   if (xmlMatch) return (xmlMatch[1] ?? '').trim();
   // Try SGML-style (no closing tag — value extends to end of line or next tag)
-  const sgmlRe = new RegExp(`<${tagName}[^>]*>\\s*([^<\\n\\r]+)`, 'i');
+  const sgmlRe = new RegExp(`<${safeTag}[^>]*>\\s*([^<\\n\\r]+)`, 'i');
   const sgmlMatch = block.match(sgmlRe);
   if (sgmlMatch) return (sgmlMatch[1] ?? '').trim();
   return '';
@@ -104,13 +111,11 @@ function parseOFXDate(raw: string): string {
 /** Parse an OFX amount string. OFX amounts use decimal format (e.g., "-15000.00").
  *  Korean Won amounts should be integers — round to nearest won.
  *  In OFX: negative amounts = charges/debits (money out), positive = credits.
- *  Returns the raw value (may be negative) so the caller can filter. */
+ *  Returns the raw value (may be negative) so the caller can filter.
+ *  NOTE: Uses parseAmountString for parity with web-side (C20-01),
+ *  handling full-width digits, Won signs, and 마이너스 prefix. */
 function parseOFXAmount(raw: string): number | null {
-  if (!raw.trim()) return null;
-  const cleaned = raw.trim().replace(/,/g, '');
-  const n = parseFloat(cleaned);
-  if (Number.isNaN(n) || !Number.isFinite(n)) return null;
-  return Math.round(n);
+  return parseAmountString(raw);
 }
 
 /** Parse OFX content and extract transactions.

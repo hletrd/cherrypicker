@@ -29,12 +29,18 @@ function extractTransactionBlocks(content: string): string[] {
   return blocks;
 }
 
+/** Escape regex metacharacters in a string for safe interpolation into RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** Extract a tag value from a transaction block. */
 function extractTag(block: string, tagName: string): string {
-  const xmlRe = new RegExp(`<${tagName}[^>]*>\\s*([^<]+?)\\s*</${tagName}>`, 'i');
+  const safeTag = escapeRegExp(tagName);
+  const xmlRe = new RegExp(`<${safeTag}[^>]*>\\s*([^<]+?)\\s*</${safeTag}>`, 'i');
   const xmlMatch = block.match(xmlRe);
   if (xmlMatch) return (xmlMatch[1] ?? '').trim();
-  const sgmlRe = new RegExp(`<${tagName}[^>]*>\\s*([^<\\n\\r]+)`, 'i');
+  const sgmlRe = new RegExp(`<${safeTag}[^>]*>\\s*([^<\\n\\r]+)`, 'i');
   const sgmlMatch = block.match(sgmlRe);
   if (sgmlMatch) return (sgmlMatch[1] ?? '').trim();
   return '';
