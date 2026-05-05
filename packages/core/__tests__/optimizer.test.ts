@@ -104,11 +104,22 @@ const broadDiningFixture: CardRuleSet = {
   },
 };
 
+const DEFAULT_CATEGORY_LABELS = new Map<string, string>([
+  ['uncategorized', '미분류'],
+  ['dining', '외식'],
+  ['cafe', '카페'],
+  ['convenience_store', '편의점'],
+  ['entertainment', '엔터테인먼트'],
+  ['telecom', '통신'],
+  ['dining.cafe', '카페'],
+]);
+
 function makeConstraints(
   transactions: CategorizedTransaction[],
   previousMonthSpending: Map<string, number>,
+  categoryLabels: Map<string, string> = DEFAULT_CATEGORY_LABELS,
 ) {
-  return buildConstraints(transactions, previousMonthSpending);
+  return buildConstraints(transactions, previousMonthSpending, categoryLabels);
 }
 
 describe('greedyOptimize - basic', () => {
@@ -315,7 +326,7 @@ describe('buildConstraints', () => {
       ['shinhan-simple-plan', 300000],
       ['shinhan-mr-life', 500000],
     ]);
-    const constraints = buildConstraints(txs, prevSpending);
+    const constraints = buildConstraints(txs, prevSpending, DEFAULT_CATEGORY_LABELS);
     expect(constraints.cards).toHaveLength(2);
     const simplePlanCard = constraints.cards.find((c) => c.cardId === 'shinhan-simple-plan');
     expect(simplePlanCard?.previousMonthSpending).toBe(300000);
@@ -326,7 +337,7 @@ describe('buildConstraints', () => {
       makeTx('t1', 'dining', 12000, '메가커피 강남', false, 'cafe'),
       makeTx('t2', 'dining', 18000, '스타벅스 강남', false, 'cafe'),
     ];
-    const constraints = buildConstraints(txs, new Map([['fixture-subcategory-card', 0]]));
+    const constraints = buildConstraints(txs, new Map([['fixture-subcategory-card', 0]]), DEFAULT_CATEGORY_LABELS);
     expect(constraints.transactions).toEqual(txs);
   });
 

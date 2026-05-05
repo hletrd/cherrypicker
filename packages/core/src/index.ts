@@ -24,4 +24,3 @@ export type { CalculationInput, CalculationOutput } from './calculator/types.js'
 // Optimizer
 export { optimize, greedyOptimize, buildConstraints } from './optimizer/index.js';
 export type { OptimizationConstraints, OptimizeOptions, OptimizeMethod } from './optimizer/index.js';
-export { CATEGORY_NAMES_KO } from './optimizer/greedy.js';

@@ -50,9 +50,11 @@ const transactions: CategorizedTransaction[] = [
   },
 ];
 
+const categoryLabels = new Map([['uncategorized', '미분류']]);
+
 describe('generateHTMLReport', () => {
   test('renders summary values and escapes transaction content', () => {
-    const html = generateHTMLReport(optimization, transactions);
+    const html = generateHTMLReport(optimization, transactions, categoryLabels);
 
     expect(html).toContain('100,000원');
     expect(html).toContain('1,000원');
@@ -77,7 +79,7 @@ describe('generateHTMLReport', () => {
         },
       ],
     };
-    const html = generateHTMLReport(evilOptimization, transactions);
+    const html = generateHTMLReport(evilOptimization, transactions, categoryLabels);
     expect(html).toContain('O&#39;Brien');   // single quote escaped
     expect(html).toContain('&#47;');         // forward slash escaped
     expect(html).toContain('&#92;');         // backslash escaped

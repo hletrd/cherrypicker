@@ -1,7 +1,6 @@
 import Table from 'cli-table3';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import type { CardRewardResult } from '@cherrypicker/core';
-import { CATEGORY_NAMES_KO } from '@cherrypicker/core';
 
 function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
@@ -22,7 +21,7 @@ interface CategorySummary {
   count: number;
 }
 
-export function printSpendingSummary(transactions: CategorizedTransaction[], categoryLabels?: Map<string, string>): void {
+export function printSpendingSummary(transactions: CategorizedTransaction[], categoryLabels: Map<string, string>): void {
   // Aggregate by category
   const byCategory = new Map<string, CategorySummary>();
   let grandTotal = 0;
@@ -42,7 +41,7 @@ export function printSpendingSummary(transactions: CategorizedTransaction[], cat
     } else {
       byCategory.set(categoryKey, {
         categoryId: categoryKey,
-        labelKo: categoryLabels?.get(categoryKey) ?? categoryLabels?.get(tx.category) ?? CATEGORY_NAMES_KO[categoryKey] ?? CATEGORY_NAMES_KO[tx.category] ?? categoryKey,
+        labelKo: categoryLabels.get(categoryKey) ?? categoryLabels.get(tx.category) ?? categoryKey,
         total: tx.amount,
         count: 1,
       });

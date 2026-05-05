@@ -3,13 +3,13 @@ import type { CategorizedTransaction } from '../models/transaction.js';
 export interface OptimizationConstraints {
   cards: { cardId: string; previousMonthSpending: number }[];
   transactions: CategorizedTransaction[];
-  categoryLabels?: Map<string, string>;   // Optional: category ID → Korean label
+  categoryLabels: Map<string, string>;   // Required: category ID → Korean label
 }
 
 export function buildConstraints(
   transactions: CategorizedTransaction[],
   cardPreviousSpending: Map<string, number>,
-  categoryLabels?: Map<string, string>,
+  categoryLabels: Map<string, string>,
 ): OptimizationConstraints {
   // The greedy optimizer only reads from the transactions array (never mutates),
   // so a shallow copy is unnecessary. If a future optimizer needs to mutate,

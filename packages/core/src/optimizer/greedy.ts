@@ -4,91 +4,6 @@ import type { OptimizationResult, CardAssignment, CardRewardResult, CategoryRewa
 import type { OptimizationConstraints } from './constraints.js';
 import { calculateRewards, buildCategoryKey } from '../calculator/reward.js';
 
-// TODO(C64-03): CATEGORY_NAMES_KO can silently drift from the YAML taxonomy in
-// packages/rules/data/categories.yaml. When the taxonomy is updated, this map
-// must be updated in lockstep. The correct long-term fix is to import labels
-// from the rules package at CLI startup instead of maintaining a duplicate here.
-export const CATEGORY_NAMES_KO: Record<string, string> = {
-  // Parent categories
-  dining: '외식',
-  restaurant: '음식점',
-  cafe: '카페',
-  fast_food: '패스트푸드',
-  delivery: '배달',
-  grocery: '식료품/마트',
-  supermarket: '대형마트',
-  traditional_market: '전통시장',
-  online_grocery: '온라인식품',
-  convenience_store: '편의점',
-  online_shopping: '온라인쇼핑',
-  offline_shopping: '오프라인쇼핑',
-  department_store: '백화점',
-  fashion: '패션',
-  public_transit: '대중교통',
-  subway: '지하철',
-  bus: '버스',
-  taxi: '택시',
-  transportation: '교통/주유',
-  fuel: '주유',
-  parking: '주차',
-  toll: '고속도로통행료',
-  telecom: '통신',
-  insurance: '보험',
-  medical: '의료',
-  hospital: '병원',
-  pharmacy: '약국',
-  education: '교육',
-  academy: '학원',
-  books: '도서',
-  entertainment: '여가/문화',
-  movie: '영화',
-  streaming: '스트리밍',
-  subscription: '구독',
-  'subscription.general': '전체',
-  travel: '여행',
-  hotel: '호텔/숙박',
-  airline: '항공',
-  travel_agency: '여행사',
-  utilities: '공과금',
-  electricity: '전기요금',
-  gas: '가스요금',
-  water: '수도요금',
-  apartment_mgmt: '관리비',
-  uncategorized: '기타',
-
-  // Subcategory keys (dot notation) — fallback for CLI/standalone usage
-  // when categoryLabels Map is not provided
-  'dining.restaurant': '일반음식점',
-  'dining.cafe': '카페',
-  'dining.fast_food': '패스트푸드',
-  'dining.delivery': '배달',
-  'grocery.supermarket': '대형마트',
-  'grocery.traditional_market': '전통시장',
-  'grocery.online_grocery': '온라인식품',
-  'online_shopping.general': '종합쇼핑몰',
-  'online_shopping.fashion': '패션',
-  'offline_shopping.department_store': '백화점',
-  'public_transit.bus': '버스',
-  'public_transit.subway': '지하철',
-  'public_transit.taxi': '택시',
-  'transportation.fuel': '주유',
-  'transportation.parking': '주차',
-  'transportation.toll': '고속도로통행료',
-  'medical.hospital': '병원',
-  'medical.pharmacy': '약국',
-  'education.academy': '학원',
-  'education.books': '도서',
-  'entertainment.movie': '영화',
-  'entertainment.streaming': '스트리밍',
-  'travel.airline': '항공',
-  'travel.hotel': '호텔/숙박',
-  'travel.travel_agency': '여행사',
-  'utilities.electricity': '전기요금',
-  'utilities.gas': '가스요금',
-  'utilities.water': '수도요금',
-  'utilities.apartment_mgmt': '관리비',
-};
-
 interface CardScore {
   cardId: string;
   cardName: string;
@@ -155,7 +70,7 @@ function scoreCardsForTransaction(
   return scores.sort((a, b) => b.reward - a.reward);
 }
 
-function buildAssignments(txAssignments: TxAssignment[], categoryLabels?: Map<string, string>): CardAssignment[] {
+function buildAssignments(txAssignments: TxAssignment[], categoryLabels: Map<string, string>): CardAssignment[] {
   const assignmentMap = new Map<string, CardAssignment>();
   const alternativeRewardMap = new Map<string, Map<string, { cardName: string; reward: number }>>();
 
@@ -177,7 +92,7 @@ function buildAssignments(txAssignments: TxAssignment[], categoryLabels?: Map<st
     } else {
       assignmentMap.set(key, {
         category: categoryKey,
-        categoryNameKo: categoryLabels?.get(categoryKey) ?? categoryLabels?.get(assignment.tx.category) ?? CATEGORY_NAMES_KO[categoryKey] ?? CATEGORY_NAMES_KO[assignment.tx.category] ?? categoryKey,
+        categoryNameKo: categoryLabels.get(categoryKey) ?? categoryLabels.get(assignment.tx.category) ?? categoryKey,
         assignedCardId: assignment.assignedCardId,
         assignedCardName: assignment.assignedCardName,
         spending: assignment.tx.amount,
@@ -225,7 +140,7 @@ function buildCardResults(
   cardRules: CardRuleSet[],
   cardPreviousSpending: Map<string, number>,
   assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
-  categoryLabels?: Map<string, string>,
+  categoryLabels: Map<string, string>,
 ): CardRewardResult[] {
   const cardResults: CardRewardResult[] = [];
 
@@ -246,7 +161,7 @@ function buildCardResults(
     // to the raw categoryKey (e.g. "dining.cafe"); we want "카페" instead.
     const byCategory: CategoryReward[] = output.rewards.map(r => ({
       ...r,
-      categoryNameKo: categoryLabels?.get(r.category) ?? CATEGORY_NAMES_KO[r.category] ?? r.categoryNameKo,
+      categoryNameKo: categoryLabels.get(r.category) ?? r.categoryNameKo,
     }));
     const capsHit: CapInfo[] = output.capsHit;
 

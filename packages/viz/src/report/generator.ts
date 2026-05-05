@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import type { OptimizationResult, CategorizedTransaction } from '@cherrypicker/core';
-import { CATEGORY_NAMES_KO } from '@cherrypicker/core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -66,7 +65,7 @@ function buildSummary(result: OptimizationResult): string {
   `;
 }
 
-function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabels?: Map<string, string>): string {
+function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabels: Map<string, string>): string {
   const byCategory = new Map<string, { labelKo: string; total: number; count: number }>();
   let grandTotal = 0;
   let includedCount = 0;
@@ -83,7 +82,7 @@ function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabe
       existing.count += 1;
     } else {
       byCategory.set(categoryKey, {
-        labelKo: categoryLabels?.get(categoryKey) ?? categoryLabels?.get(tx.category) ?? CATEGORY_NAMES_KO[categoryKey] ?? CATEGORY_NAMES_KO[tx.category] ?? categoryKey,
+        labelKo: categoryLabels.get(categoryKey) ?? categoryLabels.get(tx.category) ?? categoryKey,
         total: tx.amount,
         count: 1,
       });
@@ -229,7 +228,7 @@ function buildAssignments(result: OptimizationResult): string {
 export function generateHTMLReport(
   result: OptimizationResult,
   transactions: CategorizedTransaction[],
-  categoryLabels?: Map<string, string>,
+  categoryLabels: Map<string, string>,
 ): string {
   const templatePath = join(__dirname, 'templates', 'report.html');
   const template = readFileSync(templatePath, 'utf-8');

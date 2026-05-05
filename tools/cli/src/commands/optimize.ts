@@ -81,6 +81,18 @@ export async function runOptimize(args: string[]): Promise<void> {
   const categories = await loadCategories(catPath);
   const matcher = new MerchantMatcher(categories);
 
+  // Build category labels map for the optimizer
+  const categoryLabels = new Map<string, string>();
+  for (const node of categories) {
+    categoryLabels.set(node.id, node.labelKo);
+    if (node.subcategories) {
+      for (const sub of node.subcategories) {
+        categoryLabels.set(sub.id, sub.labelKo);
+        categoryLabels.set(`${node.id}.${sub.id}`, sub.labelKo);
+      }
+    }
+  }
+
   const categorized: CategorizedTransaction[] = parseResult.transactions.map((tx: RawTransaction, idx: number) => {
     const match = matcher.match(tx.merchant, tx.category);
     return {
@@ -114,7 +126,7 @@ export async function runOptimize(args: string[]): Promise<void> {
       cardPreviousSpending.set(rule.card.id, prevSpending);
     }
   }
-  const constraints = buildConstraints(categorized, cardPreviousSpending);
+  const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
   const result = optimize(constraints, cardRules);
 
   printCardComparison(result.cardResults);
