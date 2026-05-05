@@ -120,6 +120,6 @@
 
 ## Progress
 
-- [ ] Task 1: Unify web-side XLSX parseAmount with parseAmountString
-- [ ] Task 2: Add content sniffing to web format detection
-- [ ] Task 3: Add full-width plus sign handling to web CSV parser
+- [x] Task 1: Unify web-side XLSX parseAmount with parseAmountString
+- [x] Task 2: Add content sniffing to web format detection
+- [x] Task 3: Add full-width plus sign handling to web CSV parser

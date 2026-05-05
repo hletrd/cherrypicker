@@ -83,7 +83,7 @@ Create tests for:
 
 ## Progress
 
-- [ ] Task 1: Add full-width plus sign test
-- [ ] Task 2: Add XLSX parser tests
-- [ ] Task 3: Add PDF parser pure function tests
-- [ ] Task 4: Add format detection tests
+- [x] Task 1: Add full-width plus sign test
+- [x] Task 2: Add XLSX parser tests
+- [x] Task 3: Add PDF parser pure function tests
+- [x] Task 4: Add format detection tests
