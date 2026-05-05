@@ -49,7 +49,7 @@ const CATEGORY_ALIASES = [
 ];
 
 const MEMO_ALIASES = [
-  'memo', 'note', 'notes', 'remarks', 'remark',
+  'memo', 'note', 'notes', 'remarks', 'remark', 'description' /* fallback */,
   '비고', '적요', '메모', '내용', '설명', '참고', '상세내역', '승인번호',
 ];
 
