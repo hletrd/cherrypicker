@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { ParseError } from '../src/types.js';
+import { parseJSON } from '../src/json/index.js';
+import { parseOFX } from '../src/ofx/index.js';
+import { parseHTML } from '../src/html/index.js';
 
 describe('ParseError', () => {
   test('extends Error (instanceof compatible)', () => {
@@ -31,14 +34,23 @@ describe('ParseError', () => {
     expect(err.format).toBeUndefined();
   });
 
-  test('used by at least 3 parsers (OFX, HTML, JSON)', () => {
-    // Structural verification: these parsers import ParseError as a value
-    // and construct instances instead of plain objects.
-    const ofx = import('../src/ofx/index.js');
-    const html = import('../src/html/index.js');
-    const json = import('../src/json/index.js');
-    expect(ofx).toBeDefined();
-    expect(html).toBeDefined();
-    expect(json).toBeDefined();
+  test('JSON parser constructs ParseError for invalid input', () => {
+    const result = parseJSON('not valid json');
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors[0]).toBeInstanceOf(ParseError);
+    expect(result.errors[0].message).toContain('JSON');
+  });
+
+  test('OFX parser constructs ParseError for invalid input', () => {
+    const result = parseOFX('not valid ofx');
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors[0]).toBeInstanceOf(ParseError);
+    expect(result.errors[0].message).toContain('OFX');
+  });
+
+  test('HTML parser constructs ParseError for invalid input', () => {
+    const result = parseHTML('not valid html');
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors[0]).toBeInstanceOf(ParseError);
   });
 });
