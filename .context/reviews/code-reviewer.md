@@ -1,25 +1,27 @@
-# Cycle 88 Code Review
+# Cycle 90 Code Review
 
 ## Previous cycle status
-Cycle 87 findings F1-F3 (desc/amt/txn patterns, HEADER_KEYWORDS gaps, XLSX numeric YYYYMMDD dates) are ALL RESOLVED in current code.
+Cycle 89 findings F-89-01/F-89-02/F-89-03 (XLSX forward-fill consistency, summary row patterns, code duplication) were all resolved in cycle 89. The 4-year window for Feb 29 (C88-01) was applied to all 5 `isValidShortDate`/`isDateLikeShort` implementations... except one.
 
-## Findings
+## F-90-01: Server PDF isValidShortDate() missing 4-year window (BUG)
 
-### F1 (MEDIUM): isValidShortDate/isDateLikeShort rejects Feb 29 in non-leap years — BUG
-**Files**:
-- `packages/parser/src/csv/generic.ts` (isDateLikeShort, line ~46)
-- `packages/parser/src/pdf/table-parser.ts` (isValidShortDate, line ~168)
-- `apps/web/src/lib/parser/csv.ts` (isDateLikeShort, line ~221)
-- `apps/web/src/lib/parser/pdf.ts` (isValidShortDate, line ~57)
+**Severity**: HIGH
+**File**: `packages/parser/src/pdf/index.ts` line 47
 
-All four implementations validate short MM.DD dates using `daysInMonth(new Date().getFullYear(), month)`. When the parser runs in a non-leap year (e.g., 2026), Feb 29 dates from leap-year statements (e.g., 2024, 2028) are rejected as invalid.
+The `isValidShortDate()` function only validates day against the current year:
+```ts
+return day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
+```
 
-**Consequences**:
-1. CSV: `isDateLike()` returns false for "2/29", potentially preventing date column detection
-2. PDF: `isValidDateCell()` returns false for "2.29", dropping transaction rows
-3. `parseDateStringToISO()` -> `inferYear()` -> `isValidDayForMonth()` also rejects "2.29" in non-leap years
+Every other implementation correctly uses a 4-year window:
+- `packages/parser/src/csv/generic.ts` isDateLikeShort() -- 4-year window (C88-01)
+- `packages/parser/src/pdf/table-parser.ts` isValidShortDate() -- 4-year window (C88-01)
+- `apps/web/src/lib/parser/csv.ts` isDateLikeShort() -- 4-year window (C88-01)
+- `apps/web/src/lib/parser/pdf.ts` isValidShortDate() -- 4-year window (C88-01)
 
-**Fix**: Modify validation to check both current year AND previous year (2-year window). This covers the realistic range of statement dates and aligns with `inferYear()`'s 3-month look-back heuristic.
+**Impact**: The fallback line scanner in the server-side PDF parser rejects Feb 29 dates when running in a non-leap year. This is the path taken when structured table parsing fails.
 
-### No other new findings
-After 87 cycles of refinement, parsers handle: 24 banks, RFC 4180 CSV, all delimiters, BOM/encoding, XLSX (HTML-as-XLS, multi-sheet, forward-fill, formula errors, numeric YYYYMMDD), PDF (header-aware columns, boundary detection, YYMMDD/YYYYMMDD, merchant extraction, reversed column order), and comprehensive amount patterns (parenthesized, 마이너스, trailing minus, Won sign, KRW, full-width, leading plus).
+**Fix**: Add the same 4-year window used in all other implementations.
+
+## No other new findings
+After 89 cycles, format coverage is comprehensive. Server/web parity is maintained across CSV, XLSX, and PDF parsers except for F-90-01.

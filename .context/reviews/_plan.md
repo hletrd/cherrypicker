@@ -1,41 +1,21 @@
-# Cycle 88 Implementation Plan
+# Cycle 90 Implementation Plan
 
 ## Goal
-Fix leap year short date validation bug in 4 parser files and add test coverage.
+Fix the server PDF fallback scanner's `isValidShortDate()` to use a 4-year window (parity with all other 5 implementations) and add test coverage.
 
 ## Plan
 
-### P1: Fix `isDateLikeShort()` in server CSV parser
-**File**: `packages/parser/src/csv/generic.ts`
-- Modify `isDateLikeShort()` to validate month/day against both current year AND previous year
-- Currently: `day <= daysInMonth(new Date().getFullYear(), month)`
-- Fix: `day <= daysInMonth(new Date().getFullYear(), month) || day <= daysInMonth(new Date().getFullYear() - 1, month)`
-- This ensures Feb 29 from leap-year statements is accepted regardless of current year
+### P1: Fix isValidShortDate() in server PDF index
+**File**: `packages/parser/src/pdf/index.ts`
+- Line 47: Replace `return day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);`
+  with the 4-year window check matching table-parser.ts, web/pdf.ts, generic.ts, web/csv.ts
+- Add comment referencing C88-01 and parity with other implementations
 
-### P2: Fix `isValidShortDate()` in server PDF parser
-**File**: `packages/parser/src/pdf/table-parser.ts`
-- Same 2-year window fix in `isValidShortDate()`
-
-### P3: Fix `isDateLikeShort()` in web CSV parser
-**File**: `apps/web/src/lib/parser/csv.ts`
-- Same 2-year window fix for server/web parity
-
-### P4: Fix `isValidShortDate()` in web PDF parser
-**File**: `apps/web/src/lib/parser/pdf.ts`
-- Same 2-year window fix for server/web parity
-
-### P5: Tests
-**File**: `packages/parser/__tests__/date-utils.test.ts`
-- Test that `parseDateStringToISO("2.29")` returns valid ISO date (will use inferYear which checks if date is in future)
-- Test that `parseDateStringToISO("2/29")` handles Feb 29
-
+### P2: Add test for server PDF fallback scanner Feb 29 handling
 **File**: `packages/parser/__tests__/table-parser.test.ts`
-- Test that `filterTransactionRows` accepts rows with "2.29" dates
+- Add test that verifies the server PDF parser's `isValidShortDate` accepts Feb 29
 
-**File**: `packages/parser/__tests__/csv.test.ts`
-- Test that generic CSV parsing accepts "2.29" as a valid date column value
-
-### P6: Quality gates
+### P3: Quality gates
 - Run `bun test packages/parser/__tests__/`
 - Run `npx vitest run`
 - Run typecheck
