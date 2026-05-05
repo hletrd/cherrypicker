@@ -167,7 +167,8 @@ function persistToStorage(data: AnalysisResult): PersistResult {
         _v: STORAGE_VERSION,
       };
       const serialized = JSON.stringify(persisted);
-      if (serialized.length > MAX_PERSIST_SIZE) {
+      const byteSize = new Blob([serialized]).size;
+      if (byteSize > MAX_PERSIST_SIZE) {
         // Transactions are the largest field — omit them if over budget.
         // Record how many were lost so the warning can inform the user (C22-03).
         const txCount = data.transactions?.length ?? 0;
