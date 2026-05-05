@@ -173,9 +173,10 @@ function isValidAmount(amount: number | null, amountRaw: string, lineIdx: number
     }
     return false;
   }
-  // Skip zero-amount rows (balance inquiries) but accept negative amounts
-  // (refunds/credits) by letting callers take absolute value (C100-02).
-  if (amount === 0) return false;
+  // Skip zero-amount rows (balance inquiries, declined transactions).
+  // Also skip negative amounts (refunds/credits) — matching server-side
+  // isValidCSVAmount behavior (C20-03).
+  if (amount <= 0) return false;
   return true;
 }
 
@@ -432,8 +433,6 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
       }
       continue;
     }
-    // Skip negative amounts (refunds/credits), matching server-side behavior (C8-01).
-    if (amount <= 0) continue;
 
     const tx: RawTransaction = {
       date: parseDateToISO(dateRaw, errors, i),
@@ -553,8 +552,6 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
           }
           continue;
         }
-        // Skip negative amounts (refunds/credits), matching server-side behavior (C8-01).
-        if (amount <= 0) continue;
 
         const tx: RawTransaction = {
           date: parseDateToISO(dateRaw, errors, i),
