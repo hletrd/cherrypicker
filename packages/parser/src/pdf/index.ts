@@ -44,7 +44,19 @@ function isValidShortDate(cell: string): boolean {
   const month = parseInt(parts[0] ?? '', 10);
   const day = parseInt(parts[1] ?? '', 10);
   if (month < 1 || month > 12) return false;
-  return day >= 1 && day <= daysInMonth(new Date().getFullYear(), month);
+  // Accept dates valid in any year within a 4-year window (current year back
+  // to 3 years ago). This ensures Feb 29 from leap-year statements is accepted
+  // regardless of when the parser runs, since leap years occur every 4 years.
+  // Credit card statements rarely span more than 1-2 years, so a 4-year window
+  // is more than sufficient (C88-01). Parity with table-parser.ts, web/pdf.ts,
+  // generic.ts, and web/csv.ts isValidShortDate/isDateLikeShort implementations.
+  const thisYear = new Date().getFullYear();
+  return day >= 1 && (
+    day <= daysInMonth(thisYear, month) ||
+    day <= daysInMonth(thisYear - 1, month) ||
+    day <= daysInMonth(thisYear - 2, month) ||
+    day <= daysInMonth(thisYear - 3, month)
+  );
 }
 
 // Date string parsing delegated to shared parseDateStringToISO from
