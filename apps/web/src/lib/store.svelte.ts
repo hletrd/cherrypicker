@@ -137,7 +137,7 @@ const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
  *  - 'error': unexpected non-quota persistence failure (e.g., circular reference)
  *  Read by the store to inform the user that their data may not survive a tab close.
  *  Distinguishes quota errors from unexpected failures for better diagnostics (C66-04/C69). */
-type PersistWarningKind = 'truncated' | 'corrupted' | 'error' | null;
+type PersistWarningKind = 'truncated' | 'corrupted' | 'quota_exceeded' | 'error' | null;
 
 /** Result of persisting analysis data to sessionStorage.
  *  - kind: 'truncated' (transactions omitted), 'corrupted' (save failed), or null (success)
@@ -182,7 +182,7 @@ function persistToStorage(data: AnalysisResult): PersistResult {
     // QuotaExceededError is expected in private browsing or with very large data
     if (typeof DOMException !== 'undefined' && err instanceof DOMException &&
         (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-      return { kind: 'corrupted', truncatedTxCount: null };
+      return { kind: 'quota_exceeded', truncatedTxCount: null };
     }
     // Non-quota errors (e.g., circular reference in JSON.stringify) are unexpected
     // and should be logged for diagnostics. Return 'error' instead of 'corrupted'
