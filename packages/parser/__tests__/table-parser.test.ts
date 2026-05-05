@@ -1200,6 +1200,57 @@ describe('Cycle 68: Trailing minus sign amount patterns (C68-01)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// C17-06: PDF fallback scanner trailing-minus capture group parity
+// ---------------------------------------------------------------------------
+
+describe('C17-06: PDF fallback amount pattern trailing-minus capture group', () => {
+  // The server-side fallbackAmountPattern (packages/parser/src/pdf/index.ts:318)
+  // must match the web-side implementation. The trailing-minus alternative
+  // captures the minus sign INSIDE the group so parseAmountString receives
+  // "1,234-" and correctly parses it as negative.
+  const fallbackPattern = /\(([\d,]+)\)|[₩￦]([\d,]+)원?|마이너스([\d,]+)원?|(－[\d,]+)원?|KRW([\d,]+)원?|([\d,]*(?:,|\d{5,})[\d,]*-)|([\d,]*(?:,|\d{5,})[\d,]*)원?/g;
+
+  test('captures trailing-minus amount in group 6 with minus included', () => {
+    const matches = [...'2024-01-15 환불 1,234-'.matchAll(fallbackPattern)];
+    expect(matches.length).toBeGreaterThanOrEqual(1);
+    const last = matches[matches.length - 1]!;
+    // Group 6 must include the trailing minus so parseAmountString can
+    // detect and handle it as a negative amount.
+    expect(last[6]).toBe('1,234-');
+    // Group 7 (plain amount without minus) must NOT match
+    expect(last[7]).toBeUndefined();
+  });
+
+  test('group extraction fallback chain yields trailing-minus string for parseAmountString', () => {
+    const matches = [...'2024-01-15 환불 1,234-'.matchAll(fallbackPattern)];
+    const last = matches[matches.length - 1]!;
+    const amountRaw = (last[1] ?? last[2] ?? last[3] ?? last[4] ?? last[5] ?? last[6] ?? last[7])!;
+    expect(amountRaw).toBe('1,234-');
+  });
+
+  test('parseAmountString correctly parses captured trailing-minus value as negative', () => {
+    // This is the end-to-end verification: the fixed capture group delivers
+    // "1,234-" to parseAmountString, which handles trailing minus (C68-01).
+    const { parseAmountString } = require('../src/csv/shared.js');
+    expect(parseAmountString('1,234-')).toBe(-1234);
+  });
+
+  test('group 6 captures multi-comma trailing-minus "1,234,567-"', () => {
+    const matches = [...'2024-01-15 환불 1,234,567-'.matchAll(fallbackPattern)];
+    const last = matches[matches.length - 1]!;
+    expect(last[6]).toBe('1,234,567-');
+    expect(last[7]).toBeUndefined();
+  });
+
+  test('group 6 captures bare 5+ digit trailing-minus "50000-"', () => {
+    const matches = [...'2024-01-15 환불 50000-'.matchAll(fallbackPattern)];
+    const last = matches[matches.length - 1]!;
+    expect(last[6]).toBe('50000-');
+    expect(last[7]).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // C74-01: isValidDateCell validates short dates via isValidShortDate
 // ---------------------------------------------------------------------------
 

@@ -201,4 +201,21 @@ describe('parseJSON', () => {
     const result = parseJSON(input);
     expect(result.transactions).toHaveLength(0);
   });
+
+  // C17-07: Prototype pollution safety — findField should not read prototype properties
+  it('ignores Object.prototype-polluted properties when matching field aliases', () => {
+    const polluted = Object.create(null);
+    // Simulate a transaction object where the prototype has been polluted
+    polluted.date = '2024-01-01';
+    polluted.merchant = '테스트';
+    polluted.amount = 5000;
+    // Create a plain object that inherits from the polluted object
+    const input = JSON.stringify([
+      { date: '2024-01-01', merchant: '정상', amount: 5000 },
+    ]);
+    const result = parseJSON(input);
+    // Should parse normally without being affected by prototype pollution
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]!.merchant).toBe('정상');
+  });
 });

@@ -36,6 +36,34 @@ describe('HTML Table Parser', () => {
       expect(result.transactions[0]!.merchant).toBe('CU 편의점');
     });
 
+    // C17-09: normalizeHTML handles broader tag set (div, span, p)
+    it('handles HTML with malformed div and span closing tags', () => {
+      const content = `<div>
+<table>
+<tr><th>이용일</th><th>이용처</th><th>이용금액</th></tr>
+<tr><td>2024.01.15</td><td>카페</td><td>5,000</td></tr>
+</table>
+</div   >
+<span   >footer</span   >`;
+
+      const result = parseHTML(content);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.merchant).toBe('카페');
+    });
+
+    it('handles HTML with malformed p closing tags', () => {
+      const content = `<p>header</p   >
+<table>
+<tr><th>이용일</th><th>이용처</th><th>이용금액</th></tr>
+<tr><td>2024.01.15</td><td>식당</td><td>12,000</td></tr>
+</table>
+<p>footer</p   >`;
+
+      const result = parseHTML(content);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.merchant).toBe('식당');
+    });
+
     it('picks the table with most transactions from multiple tables', () => {
       const content = `<html>
 <body>

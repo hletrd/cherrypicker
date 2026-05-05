@@ -540,6 +540,19 @@ describe('parseCSVAmount - leading plus sign (C66-02)', () => {
   test('strips leading + with fullwidth plus and Won sign', () => {
     expect(parseCSVAmount('+₩30,000')).toBe(30000);
   });
+
+  // C17-08: Full-width plus sign (U+FF0B)
+  test('parses full-width plus sign ＋1,234 as 1234', () => {
+    expect(parseCSVAmount('＋1,234')).toBe(1234);
+  });
+
+  test('parses full-width plus with Won suffix ＋6,500원', () => {
+    expect(parseCSVAmount('＋6,500원')).toBe(6500);
+  });
+
+  test('parses full-width plus with comma ＋12,345', () => {
+    expect(parseCSVAmount('＋12,345')).toBe(12345);
+  });
 });
 
 // ---------------------------------------------------------------------------
