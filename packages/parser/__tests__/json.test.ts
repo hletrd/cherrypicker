@@ -103,16 +103,16 @@ describe('parseJSON', () => {
     expect(result.transactions[1]!.amount).toBe(1500);
   });
 
-  it('accepts negative amounts as refunds and skips zero amounts', () => {
+  it('preserves negative amounts as refunds and skips zero amounts', () => {
     const input = JSON.stringify([
       { date: '2024-11-01', merchant: '환불', amount: -5000 },
       { date: '2024-11-02', merchant: '잔액조회', amount: 0 },
       { date: '2024-11-03', merchant: '정상', amount: 10000 },
     ]);
     const result = parseJSON(input);
-    // Negative amounts are accepted as refunds (abs value), zero is skipped
+    // Negative amounts (refunds) are preserved; zero amounts are skipped
     expect(result.transactions).toHaveLength(2);
-    expect(result.transactions[0]!.amount).toBe(5000);
+    expect(result.transactions[0]!.amount).toBe(-5000);
     expect(result.transactions[1]!.amount).toBe(10000);
   });
 
