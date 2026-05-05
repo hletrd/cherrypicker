@@ -246,6 +246,10 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
     format = 'pdf';
   } else if (ext === '.json') {
     format = 'json';
+  } else if (ext === '.ofx' || ext === '.qfx') {
+    format = 'ofx';
+  } else if (ext === '.html' || ext === '.htm') {
+    format = 'html';
   } else {
     // Try to sniff from first bytes
     sniffBuffer = await readFile(filePath);
@@ -263,16 +267,33 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
     else if (header[0] === 0xd0 && header[1] === 0xcf) {
       format = 'xlsx';
     }
-    // Check for JSON content: first non-whitespace char is [ or {
     else {
-      const head = sniffBuffer.slice(0, 256).toString('utf-8').trimStart();
-      if (head.startsWith('[') || head.startsWith('{')) {
+      // Strip BOM before content sniffing — UTF-8 BOM (EF BB BF) would
+      // prevent startsWith checks from matching JSON/XML/HTML content (C98-05).
+      const head = sniffBuffer.slice(0, 1024).toString('utf-8')
+        .replace(/^﻿/, '')  // Strip UTF-8/UTF-16 BOM
+        .trimStart();
+
+      // Check for OFX content: <?OFX header (OFX 1.x SGML or 2.x XML)
+      if (/^<\?OFX/i.test(head)) {
+        format = 'ofx';
+      }
+      // Check for HTML content: <!DOCTYPE html, <html, or <table
+      else if (/^<!doctype\s+html/i.test(head) || /^<html/i.test(head) || /<table[\s>]/i.test(head)) {
+        format = 'html';
+      }
+      // Check for JSON content: first non-whitespace char is [ or {
+      else if (head.startsWith('[') || head.startsWith('{')) {
         try {
-          JSON.parse(sniffBuffer.toString('utf-8'));
+          JSON.parse(sniffBuffer.toString('utf-8').replace(/^﻿/, ''));
           format = 'json';
         } catch {
           format = 'csv';
         }
+      }
+      // Check for XML with OFX content (OFX 2.x with XML declaration)
+      else if (/^<\?xml/i.test(head) && /<OFX|<BANKTRANLIST|<STMTTRN/i.test(head)) {
+        format = 'ofx';
       } else {
         // Default to CSV for text-like content
         format = 'csv';

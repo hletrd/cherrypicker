@@ -104,11 +104,13 @@ const BANK_SIGNATURES: BankSignature[] = [
   },
 ];
 
-export function detectFormatFromFile(file: File): 'csv' | 'xlsx' | 'pdf' | 'json' {
+export function detectFormatFromFile(file: File): 'csv' | 'xlsx' | 'pdf' | 'json' | 'ofx' | 'html' {
   const ext = file.name.split('.').pop()?.toLowerCase();
   if (ext === 'xlsx' || ext === 'xls') return 'xlsx';
   if (ext === 'pdf') return 'pdf';
   if (ext === 'json') return 'json';
+  if (ext === 'ofx' || ext === 'qfx') return 'ofx';
+  if (ext === 'html' || ext === 'htm') return 'html';
   // Both .csv and .tsv are handled by the CSV parser — delimiter detection
   // in detectCSVDelimiter() auto-detects tabs vs commas (parity with server-side
   // packages/parser/src/detect.ts which handles .tsv explicitly).

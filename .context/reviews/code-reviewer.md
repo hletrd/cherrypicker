@@ -1,64 +1,61 @@
-# Cycle 97 Deep Code Review -- code-reviewer
+# Cycle 98 Deep Code Review -- code-reviewer
 
 ## Review Scope
-Full review of packages/parser/src/ focusing on harder edge cases, more flexibility, more modality, and more reliability after 96 cycles.
+Full review of packages/parser/src/ focusing on deferred items and remaining edge cases after 97 cycles.
 
-## Baseline: 1317 bun + 306 vitest tests passing
+## Baseline: 1356 bun + 306 vitest tests passing
 
 ---
 
-## Finding F-01: No JSON Transaction Format Support [MODALITY]
+## Finding F-01: No OFX/QFX Format Support [MODALITY]
 **Severity: HIGH**
 **Files:** `types.ts`, `detect.ts`, `index.ts`
 
-The parser only supports CSV, XLSX, and PDF. JSON transaction exports from banking APIs, mobile apps, and financial tools are completely unsupported. Many Korean banking apps (Kakao, Toss) offer JSON exports. The `FileFormat` type is `'csv' | 'xlsx' | 'pdf'` with no extension path.
+OFX (Open Financial Exchange) is the de facto standard for bank statement exports. Korean banks (Shinhan, KB, Woori, etc.) offer OFX downloads alongside CSV/XLSX. The `FileFormat` type has no `'ofx'` variant, `detectFormat` doesn't recognize `.ofx`/`.qfx` extensions, and there's no parser module.
 
-**Impact:** Users with JSON exports cannot use the tool without manual conversion.
+OFX format: SGML-like tagged format with `<?OFX` header, `<BANKTRANLIST>` containing `<STMTTRN>` elements with `<DTPOSTED>`, `<NAME>`, `<TRNAMT>`, `<TRNTYPE>`. Dates are YYYYMMDD. Amounts are decimal with `.` separator.
+
+**Impact:** Users with OFX exports (a very common format) cannot use the tool.
 
 ---
 
-## Finding F-02: Duplicated parseAmount Across 3 Parsers [RELIABILITY]
+## Finding F-02: No HTML Table Standalone Format [MODALITY]
+**Severity: HIGH**
+**Files:** `types.ts`, `detect.ts`, `index.ts`
+
+Korean bank websites often export statements as HTML tables (.html/.htm). While the XLSX parser handles HTML-as-XLS (HTML content with .xls extension via `isHTMLContent`), standalone `.html` files are not supported. They fall through to the "unknown extension" path in `detectFormat` and default to CSV, which fails because HTML tables are not CSV.
+
+**Impact:** Users downloading from bank websites get HTML files that fail to parse.
+
+---
+
+## Finding F-03: No XML Content Sniffing for Unknown Extensions [HARDER]
 **Severity: MEDIUM**
-**Files:** `csv/shared.ts`, `xlsx/index.ts`, `pdf/index.ts`
+**Files:** `detect.ts`
 
-The amount parsing logic (fullwidth normalization, KRW prefix, Won sign, 마이너스, trailing minus, parenthesized negatives, Math.round) is copy-pasted across all three parsers with identical logic (~25 lines each).
-
-**Risk:** Bug fixes in one copy don't propagate. The XLSX `parseAmount` could diverge from CSV's `parseCSVAmount` or PDF's `parseAmount`.
-
-**Fix:** Extract to a shared `parseAmountString()` in `shared.ts` used by all three parsers.
+The unknown-extension sniff path checks for PDF magic, ZIP/XLSX magic, XLS magic, and JSON, but doesn't check for XML/OFX signatures (`<?OFX`, `<?xml`). If a user renames an OFX file or receives one without an extension, it falls through to CSV default.
 
 ---
 
-## Finding F-03: Duplicated isValidShortDate/isDateLikeShort Across 4 Files [RELIABILITY]
-**Severity: MEDIUM**
-**Files:** `csv/generic.ts`, `pdf/index.ts`, `pdf/table-parser.ts`
+## Finding F-04: No Confidence Score on ParseResult [RELIABILITY]
+**Severity: LOW**
+**Files:** `types.ts`
 
-Short-date validation logic (MM.DD format with month/day range checks, 4-year leap year window) is duplicated in 3 files.
+`DetectionResult` has confidence but `ParseResult` does not. A partial parse (e.g., 3 of 50 rows parsed) looks identical to a complete parse. Adding confidence to ParseResult would help the UI show warnings.
 
-**Fix:** Extract to a shared function in `date-utils.ts`.
-
----
-
-## Finding F-04: CSV Parser Silent Skip on Short Rows [HARDER]
-**Severity: LOW-MEDIUM**
-**Files:** `csv/generic.ts`, `csv/adapter-factory.ts`
-
-When a data row has fewer columns than the header, `cells[dateCol]` returns undefined and the row is silently skipped. No diagnostic for column-count mismatches.
-
-**Fix:** Add bounds checking that explicitly handles short rows, logging a debug message.
+**Deferred:** Significant feature, defer to future cycle.
 
 ---
 
-## Finding F-05: Web-Side Parser Also Missing JSON Support [MODALITY]
-**Severity: MEDIUM**
-**Files:** `apps/web/src/lib/parser/`
+## Finding F-05: BOM-Aware Content Sniffing Missing in detectFormat [HARDER]
+**Severity: LOW**
+**Files:** `detect.ts`
 
-Web-side parser has the same limitation — no JSON support. `parseFile` only handles csv/xlsx/pdf.
+When `detectFormat` reads an unknown-extension file, it decodes with `toString('utf-8')` without stripping BOM. The JSON check `head.startsWith('[') || head.startsWith('{')` fails if there's a UTF-8 BOM prefix. OFX/XML checks would similarly fail.
 
 ---
 
 ## Deferred Items
-- D-01: OFX/QFX format support (complex SGML-like format)
-- D-02: HTML table as standalone format (handled by XLSX HTML-as-XLS detection)
-- D-03: Clipboard paste format (depends on UI)
-- D-04: Confidence scoring for parsed transactions (significant feature)
+- D-01: Confidence scoring on ParseResult (significant feature, requires UI changes)
+- D-02: Clipboard paste format (depends on UI layer)
+- D-03: Recursive JSON wrapper search beyond 2 levels

@@ -252,3 +252,108 @@ describe('decodeBuffer', () => {
     expect(decodeBuffer(utf8)).toBe('거래일시,가맹점명');
   });
 });
+
+// ---------------------------------------------------------------------------
+// OFX/HTML format detection tests (C98-03/C98-05)
+// ---------------------------------------------------------------------------
+
+describe('detectFormat - OFX', () => {
+  const { writeFile, mkdir } = require('fs/promises');
+  const { join: pathJoin } = require('path');
+  const tmpDir = pathJoin(import.meta.dir, '__tmp_ofx');
+
+  test('detects OFX from .ofx extension', async () => {
+    await mkdir(tmpDir, { recursive: true });
+    const filePath = pathJoin(tmpDir, 'test.ofx');
+    await writeFile(filePath, 'OFXHEADER:100\nDATA:OFXSGML\n');
+    const result = await detectFormat(filePath);
+    expect(result.format).toBe('ofx');
+  });
+
+  test('detects OFX from .qfx extension', async () => {
+    const filePath = pathJoin(tmpDir, 'test.qfx');
+    await writeFile(filePath, 'OFXHEADER:100\nDATA:OFXSGML\n');
+    const result = await detectFormat(filePath);
+    expect(result.format).toBe('ofx');
+  });
+
+  test('detects OFX from content sniffing (<?OFX header)', async () => {
+    const filePath = pathJoin(tmpDir, 'test.txt');
+    await writeFile(filePath, '<?OFX OFXHEADER="200" VERSION="220"?>\n<OFX>\n</OFX>');
+    const result = await detectFormat(filePath);
+    expect(result.format).toBe('ofx');
+  });
+
+  test('detects OFX 2.x from XML content with OFX tags', async () => {
+    const filePath = pathJoin(tmpDir, 'test.xml');
+    await writeFile(filePath, '<?xml version="1.0"?>\n<OFX>\n<BANKTRANLIST>\n</BANKTRANLIST>\n</OFX>');
+    const result = await detectFormat(filePath);
+    expect(result.format).toBe('ofx');
+  });
+});
+
+describe('detectFormat - HTML', () => {
+  const { writeFile, mkdir } = require('fs/promises');
+  const { join: pathJoin } = require('path');
+  const tmpDir = pathJoin(import.meta.dir, '__tmp_html');
+
+  test('detects HTML from .html extension', async () => {
+    await mkdir(tmpDir, { recursive: true });
+    const filePath = pathJoin(tmpDir, 'test.html');
+    await writeFile(filePath, '<html><body><table><tr><td>test</td></tr></table></body></html>');
+    const result = await detectFormat(filePath);
+    expect(result.format).toBe('html');
+  });
+
+  test('detects HTML from .htm extension', async () => {
+    const filePath = pathJoin(tmpDir, 'test.htm');
+    await writeFile(filePath, '<html><body><table><tr><td>test</td></tr></table></body></html>');
+    const result = await detectFormat(filePath);
+    expect(result.format).toBe('html');
+  });
+
+  test('detects HTML from content sniffing (<table tag)', async () => {
+    const filePath = pathJoin(tmpDir, 'test.txt');
+    await writeFile(filePath, '<table><tr><td>test</td></tr></table>');
+    const result = await detectFormat(filePath);
+    expect(result.format).toBe('html');
+  });
+
+  test('detects HTML from <!DOCTYPE html content', async () => {
+    const filePath = pathJoin(tmpDir, 'test.dat');
+    await writeFile(filePath, '<!DOCTYPE html>\n<html><body>test</body></html>');
+    const result = await detectFormat(filePath);
+    expect(result.format).toBe('html');
+  });
+});
+
+describe('detectFormat - BOM-aware content sniffing', () => {
+  const { writeFile, mkdir, rm } = require('fs/promises');
+  const { join: pathJoin } = require('path');
+  const tmpDir = pathJoin(import.meta.dir, '__tmp_bom');
+
+  test('detects JSON with UTF-8 BOM prefix', async () => {
+    await mkdir(tmpDir, { recursive: true });
+    const filePath = pathJoin(tmpDir, 'bom.json');
+    // UTF-8 BOM + valid JSON
+    const content = Buffer.concat([
+      Buffer.from([0xEF, 0xBB, 0xBF]),
+      Buffer.from('[{"date":"2024-01-15","amount":10000}]'),
+    ]);
+    await writeFile(filePath, content);
+    const result = await detectFormat(filePath);
+    expect(result.format).toBe('json');
+  });
+
+  test('detects OFX with BOM prefix', async () => {
+    const filePath = pathJoin(tmpDir, 'bom.ofx');
+    const content = Buffer.concat([
+      Buffer.from([0xEF, 0xBB, 0xBF]),
+      Buffer.from('<?OFX OFXHEADER="200"?>'),
+    ]);
+    await writeFile(filePath, content);
+    const result = await detectFormat(filePath);
+    // .ofx extension takes precedence over content sniffing
+    expect(result.format).toBe('ofx');
+  });
+});

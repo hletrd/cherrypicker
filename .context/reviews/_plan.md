@@ -1,57 +1,60 @@
-# Cycle 97 Implementation Plan
+# Cycle 98 Implementation Plan
 
 ## Goal
-Add JSON transaction format support (new modality), extract shared parseAmountString to eliminate duplication, and extract shared isValidShortDate.
+Add OFX/QFX and HTML table format support (two new modalities), fix BOM-aware content sniffing, and add comprehensive tests.
 
 ## Plan
 
-### P1: Add 'json' to FileFormat type and detection (F-01, F-05) [MODALITY]
+### P1: Add 'ofx' and 'html' to FileFormat type (F-01, F-02) [MODALITY]
 **Files:** `packages/parser/src/types.ts`, `apps/web/src/lib/parser/types.ts`
-- Add `'json'` to `FileFormat` union type
+- Add `'ofx' | 'html'` to `FileFormat` union type
 
-### P2: Create JSON parser module (F-01) [MODALITY]
-**Files:** `packages/parser/src/json/index.ts` (NEW)
-- `parseJSON(content: string, bank?: BankId): ParseResult`
-- Parse arrays of transaction objects with flexible field name mapping
-- Handle nested `{ transactions: [...] }` wrappers
-- Reuse existing `parseCSVAmount` for amount normalization
-- Handle various date formats via `parseDateStringToISO`
+### P2: Create OFX parser module (F-01) [MODALITY]
+**Files:** `packages/parser/src/ofx/index.ts` (NEW)
+- `parseOFX(content: string, bank?: BankId): ParseResult`
+- Parse SGML-style OFX 1.x (tags without closing delimiters)
+- Parse XML-style OFX 2.x (proper closing tags)
+- Extract `<DTPOSTED>`, `<NAME>`, `<TRNAMT>`, `<MEMO>`, `<TRNTYPE>` from `<STMTTRN>` blocks
+- Dates are YYYYMMDD format, use parseDateStringToISO
+- Amounts: positive = charges, negative = credits/payments (skip negatives)
+- Reuse parseAmountString for string amounts
 
-### P3: Add JSON detection to detectFormat (F-06) [MODALITY]
+### P3: Create HTML table parser module (F-02) [MODALITY]
+**Files:** `packages/parser/src/html/index.ts` (NEW)
+- `parseHTML(content: string, bank?: BankId): ParseResult`
+- Reuse SheetJS to parse HTML tables (same as XLSX HTML-as-XLS path)
+- Try all tables, pick the one with most transactions
+- Use shared header detection (isValidHeaderRow, findColumn)
+- Reuse parseAmountString and parseDateStringToISO
+
+### P4: Add format detection for OFX and HTML (F-01, F-02, F-03) [MODALITY+HARDER]
 **Files:** `packages/parser/src/detect.ts`, `apps/web/src/lib/parser/detect.ts`
-- Add `.json` extension detection
-- Add content sniffing: first non-whitespace char is `[` or `{` and content parses as JSON
+- Add `.ofx`/`.qfx` extension -> 'ofx' format
+- Add `.html`/`.htm` extension -> 'html' format
+- Add XML/OFX content sniffing: `<?OFX` or `<?xml` with OFX tags -> 'ofx'
+- Add HTML content sniffing: `<!DOCTYPE` or `<html` or `<table` -> 'html'
+- Fix BOM-aware content sniffing (strip BOM before JSON/XML/HTML checks)
 
-### P4: Wire JSON into parseStatement (F-01) [MODALITY]
+### P5: Wire into parseStatement (F-01, F-02) [MODALITY]
 **Files:** `packages/parser/src/index.ts`, `apps/web/src/lib/parser/index.ts`
-- Add `json` case to switch statement
-- Export `parseJSON` function
+- Add `ofx` and `html` cases to switch statement
+- Export `parseOFX` and `parseHTML` functions
 
-### P5: Extract shared parseAmountString (F-02) [RELIABILITY]
-**Files:** `packages/parser/src/csv/shared.ts`, `packages/parser/src/xlsx/index.ts`, `packages/parser/src/pdf/index.ts`
-- Extract common amount parsing to `parseAmountString(raw: string): number | null` in shared.ts
-- Replace duplicated logic in XLSX and PDF parsers with import
+### P6: Add comprehensive tests
+**Files:** `packages/parser/__tests__/ofx.test.ts` (NEW), `packages/parser/__tests__/html.test.ts` (NEW), `packages/parser/__tests__/detect.test.ts` (extend)
+- OFX tests: SGML format, XML format, date parsing, amount handling, Korean merchants, empty fields, malformed content
+- HTML tests: basic table, multiple tables, malformed tags, Korean text, no transaction table
+- Detection tests: .ofx/.qfx/.html/.htm extensions, content sniffing with BOM
 
-### P6: Extract shared isValidShortDate to date-utils (F-03) [RELIABILITY]
-**Files:** `packages/parser/src/date-utils.ts`, `packages/parser/src/csv/generic.ts`, `packages/parser/src/pdf/index.ts`, `packages/parser/src/pdf/table-parser.ts`
-- Extract `isValidShortDate(cell: string): boolean` to date-utils.ts
-- Replace all local implementations with import
-
-### P7: Add tests
-**Files:** `packages/parser/__tests__/json.test.ts` (NEW), `packages/parser/__tests__/csv-shared.test.ts`
-- Tests for JSON parsing: array format, nested format, various field names, malformed entries
-- Tests for shared parseAmountString
-
-### P8: Web-side parity
-**Files:** `apps/web/src/lib/parser/json.ts` (NEW), `apps/web/src/lib/parser/types.ts`, `apps/web/src/lib/parser/index.ts`
-- Add JSON parser with same logic as server side
+### P7: Web-side parity
+**Files:** `apps/web/src/lib/parser/ofx.ts` (NEW), `apps/web/src/lib/parser/html.ts` (NEW), `apps/web/src/lib/parser/types.ts`, `apps/web/src/lib/parser/index.ts`, `apps/web/src/lib/parser/detect.ts`
+- Add OFX and HTML parsers with same logic as server side
 - Wire into parseFile
 
-### P9: Quality gates
+### P8: Quality gates
 - bun test, vitest, typecheck, lint, build
 
 ## Deferred
-- D-01: OFX/QFX format support
-- D-02: HTML table as standalone format
-- D-03: Clipboard paste format
-- D-04: Confidence scoring
+- D-01: Confidence scoring on ParseResult
+- D-02: Clipboard paste format
+- D-03: Recursive JSON wrapper search beyond 2 levels

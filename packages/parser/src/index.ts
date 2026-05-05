@@ -5,6 +5,8 @@ import { parseCSV } from './csv/index.js';
 import { parseXLSX } from './xlsx/index.js';
 import { parsePDF } from './pdf/index.js';
 import { parseJSON } from './json/index.js';
+import { parseOFX } from './ofx/index.js';
+import { parseHTML } from './html/index.js';
 
 export type { FileFormat, BankId, DetectionResult, RawTransaction, ParseResult, ParseError, BankAdapter } from './types.js';
 export { detectFormat, detectBank, detectCSVDelimiter, detectEncoding, decodeBuffer } from './detect.js';
@@ -12,6 +14,8 @@ export { parseCSV } from './csv/index.js';
 export { parseXLSX } from './xlsx/index.js';
 export { parsePDF } from './pdf/index.js';
 export { parseJSON } from './json/index.js';
+export { parseOFX } from './ofx/index.js';
+export { parseHTML } from './html/index.js';
 export { parseGenericCSV } from './csv/generic.js';
 export { findColumn, normalizeHeader, DATE_COLUMN_PATTERN, MERCHANT_COLUMN_PATTERN, AMOUNT_COLUMN_PATTERN, INSTALLMENTS_COLUMN_PATTERN, CATEGORY_COLUMN_PATTERN, MEMO_COLUMN_PATTERN, SUMMARY_ROW_PATTERN, HEADER_KEYWORDS, DATE_KEYWORDS, MERCHANT_KEYWORDS, AMOUNT_KEYWORDS, isValidHeaderRow } from './csv/column-matcher.js';
 export { createBankAdapter, kakaoAdapter, tossAdapter, kbankAdapter, bnkAdapter, dgbAdapter, suhyupAdapter, jbAdapter, kwangjuAdapter, jejuAdapter, scAdapter, mgAdapter, cuAdapter, kdbAdapter, epostAdapter } from './csv/adapter-factory.js';
@@ -56,6 +60,18 @@ export async function parseStatement(filePath: string, options?: ParseOptions): 
       const buffer = await readFile(filePath);
       const content = buffer.toString('utf-8');
       return parseJSON(content, bank);
+    }
+
+    case 'ofx': {
+      const buffer = await readFile(filePath);
+      const content = buffer.toString('utf-8');
+      return parseOFX(content, bank);
+    }
+
+    case 'html': {
+      const buffer = await readFile(filePath);
+      const content = buffer.toString('utf-8');
+      return parseHTML(content, bank);
     }
 
     default: {
