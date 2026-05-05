@@ -19,7 +19,7 @@ export { parseOFX } from './ofx.js';
 export { parseHTML } from './html.js';
 
 export async function parseFile(file: File, bank?: BankId): Promise<ParseResult> {
-  const format = detectFormatFromFile(file);
+  const format = await detectFormatFromFile(file);
 
   switch (format) {
     case 'csv': {
