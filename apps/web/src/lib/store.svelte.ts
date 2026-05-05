@@ -192,11 +192,12 @@ function persistToStorage(data: AnalysisResult): PersistResult {
   return { kind: null, truncatedTxCount: null };
 }
 
-/** Validate that a transaction is suitable for spending optimization.
+/** Validate that a transaction is suitable for display and optimization.
  *  Zero-amount entries (e.g., balance inquiries, declined transactions)
- *  are excluded because they don't contribute to optimization — they are
- *  not "invalid" per se, just not optimizable. Renamed from isOptimizableTx
- *  to clarify the filtering intent (C19-07). */
+ *  are excluded because they don't contribute to optimization. Negative
+ *  amounts (refunds/credits) are preserved — they are displayable even if
+ *  not optimizable. Renamed from isOptimizableTx to clarify the filtering
+ *  intent (C19-07). */
 function isOptimizableTx(tx: unknown): tx is CategorizedTx {
   if (!tx || typeof tx !== 'object') return false;
   const obj = tx as Record<string, unknown>;
@@ -206,7 +207,7 @@ function isOptimizableTx(tx: unknown): tx is CategorizedTx {
     typeof obj.merchant === 'string' &&
     typeof obj.amount === 'number' &&
     Number.isFinite(obj.amount) &&
-    obj.amount > 0 &&
+    obj.amount !== 0 &&
     typeof obj.category === 'string' && obj.category.length > 0
   );
 }
@@ -514,9 +515,10 @@ function createAnalysisStore() {
           // matches the guard in analyzer.ts getLatestMonth().
           if (!tx.date || tx.date.length < 7) continue;
           const month = tx.date.slice(0, 7);
-          // Only accumulate positive amounts for monthlySpending to match
-          // Korean 전월실적 (gross spending) convention (C1-01).
-          if (tx.amount > 0) {
+          // Accumulate all non-zero amounts for monthlySpending. Refunds
+          // (negative amounts) reduce the net spending total, which is the
+          // convention most Korean card companies use for 전월실적 (C1-01).
+          if (tx.amount !== 0) {
             monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
           }
           monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
