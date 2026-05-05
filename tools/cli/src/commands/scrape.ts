@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
+import { validateFilePath } from '../validation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -38,6 +39,10 @@ function parseArgs(args: string[]): {
 
 export async function runScrape(args: string[]): Promise<void> {
   const { issuer, url, output } = parseArgs(args);
+
+  if (output) {
+    validateFilePath(output, { mustExist: false, label: '출력 디렉토리' });
+  }
 
   // Build args for the scraper CLI
   const scraperArgs: string[] = ['--issuer', issuer];

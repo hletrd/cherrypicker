@@ -6,6 +6,7 @@ import { loadCategories, loadAllCardRules } from '@cherrypicker/rules';
 import type { RawTransaction } from '@cherrypicker/parser';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import { printOptimizationResult, printSpendingSummary, generateHTMLReport } from '@cherrypicker/viz';
+import { validateFilePath } from '../validation.js';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
   new URL('../../../..', import.meta.url).pathname,
@@ -68,6 +69,9 @@ function parseArgs(args: string[]): {
 
 export async function runReport(args: string[]): Promise<void> {
   const { file, output, cardsDir, prevSpending, bank, categoriesPath, allowRemoteLLM } = parseArgs(args);
+
+  validateFilePath(file, { mustExist: true, label: '명세서 파일' });
+  validateFilePath(output, { mustExist: false, label: '출력 파일' });
 
   console.log(`파일 분석 중: ${file}`);
 
