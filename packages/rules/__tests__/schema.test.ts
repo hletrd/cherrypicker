@@ -196,6 +196,32 @@ describe('cardRuleSetSchema - invalid data', () => {
     const result = cardRuleSetSchema.safeParse(bad);
     expect(result.success).toBe(false);
   });
+
+  test('rejects tier with both rate and fixedAmount (mutual exclusion)', () => {
+    const bad = structuredClone(validCardRuleSet);
+    bad.rewards[0]!.tiers[0]!.rate = 5;
+    bad.rewards[0]!.tiers[0]!.fixedAmount = 100;
+    const result = cardRuleSetSchema.safeParse(bad);
+    expect(result.success).toBe(false);
+  });
+
+  test('allows tier with rate=0 and fixedAmount>0', () => {
+    const ok = structuredClone(validCardRuleSet);
+    ok.rewards[0]!.tiers[0]!.rate = 0;
+    ok.rewards[0]!.tiers[0]!.fixedAmount = 100;
+    const result = cardRuleSetSchema.safeParse(ok);
+    expect(result.success).toBe(true);
+    expect(result.data!.rewards[0]!.tiers[0]!.fixedAmount).toBe(100);
+  });
+
+  test('allows tier with rate>0 and fixedAmount=0', () => {
+    const ok = structuredClone(validCardRuleSet);
+    ok.rewards[0]!.tiers[0]!.rate = 5;
+    ok.rewards[0]!.tiers[0]!.fixedAmount = 0;
+    const result = cardRuleSetSchema.safeParse(ok);
+    expect(result.success).toBe(true);
+    expect(result.data!.rewards[0]!.tiers[0]!.rate).toBe(5);
+  });
 });
 
 describe('loadCardRule', () => {
