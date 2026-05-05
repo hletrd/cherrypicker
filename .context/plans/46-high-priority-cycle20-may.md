@@ -237,9 +237,9 @@ let cachedCoreRules: CoreCardRuleSet[] | null = null;
 
 ## Progress
 
-- [ ] Task 1: Unify server-side OFX amount parsing
-- [ ] Task 2: Add regex escape helper to OFX extractTag
-- [ ] Task 3: Fix isValidAmount comment and align rejection logic
-- [ ] Task 4: Guard HTML forward-fill against summary rows
-- [ ] Task 5: Add parity comment to OFX parser
-- [ ] Task 6: Document analyzer cache strategy
+- [x] Task 1: Unify server-side OFX amount parsing
+- [x] Task 2: Add regex escape helper to OFX extractTag
+- [x] Task 3: Fix isValidAmount comment and align rejection logic
+- [x] Task 4: Guard HTML forward-fill against summary rows
+- [x] Task 5: Add parity comment to OFX parser
+- [x] Task 6: Document analyzer cache strategy

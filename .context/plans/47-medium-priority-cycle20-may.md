@@ -315,10 +315,10 @@ Update all three `build*` table functions. For each table:
 
 ## Progress
 
-- [ ] Task 1: Add full-width OFX amount tests
-- [ ] Task 2: Add metacharacter tag defensive test
-- [ ] Task 3: Add HTML summary row forward-fill test
-- [ ] Task 4: Add accessibility attributes to HTML report tables
-- [ ] Task 5: Sanitize HTML before SheetJS
-- [ ] Task 6: Archive completed plan files
-- [ ] Task 7: Update deferred items registry
+- [x] Task 1: Add full-width OFX amount tests
+- [x] Task 2: Add metacharacter tag defensive test
+- [x] Task 3: Add HTML summary row forward-fill test
+- [x] Task 4: Add accessibility attributes to HTML report tables
+- [x] Task 5: Sanitize HTML before SheetJS
+- [x] Task 6: Archive completed plan files
+- [x] Task 7: Update deferred items registry
