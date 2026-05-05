@@ -3,6 +3,7 @@ import type { BankId, ParseResult, RawTransaction } from './types.js';
 import { ParseError } from './types.js';
 import { detectBank } from './detect.js';
 import { normalizeHTML } from './html.js';
+import { parseAmountString } from './csv.js';
 import {
   findColumn,
   DATE_COLUMN_PATTERN,
@@ -190,10 +191,6 @@ function getBankColumnConfig(bankId: BankId): ColumnConfig {
 // recreating Sets on every parse call. Matches server-side XLSX parser.
 // Keyword category Sets removed — now imported from column-matcher.ts (C4-07).
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 /** Shared date-parsing — delegates string values to the canonical
  *  implementation in date-utils.ts to avoid triplicating the logic
  *  across parsers (C19-01). The xlsx parser additionally handles
@@ -207,7 +204,7 @@ import { parseDateStringToISO, isValidDayForMonth, isValidISODate } from './date
 // XLSX parser in packages/parser/src/xlsx/index.ts (C14-01).
 const EXCEL_ERROR_PATTERN = /^#(VALUE!|REF!|DIV\/0!|NAME\?|NULL!|NUM!|CALC!|N\/A)$/i;
 
-function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): string {
+export function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): string {
   // Detect Excel formula error strings early — produce a specific error
   // message rather than trying to parse them as dates (C14-01).
   if (typeof raw === 'string' && EXCEL_ERROR_PATTERN.test(raw.trim())) {
@@ -305,42 +302,6 @@ function parseDateToISO(raw: unknown, errors?: ParseError[], lineIdx?: number): 
   return String(raw ?? '');
 }
 
-function parseAmount(raw: unknown): number | null {
-  if (typeof raw === 'number') {
-    // Korean Won amounts must be integers — round to prevent decimal
-    // values (e.g., from formula cells) from polluting reward math.
-    return Number.isFinite(raw) ? Math.round(raw) : null;
-  }
-  if (typeof raw === 'string') {
-    let cleaned = raw.trim()
-      .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
-      .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
-      .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-') // full-width comma/dot/minus -> ASCII
-      .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
-      .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
-      .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-    // Handle "마이너스" prefix — some Korean bank exports use this instead of
-    // a negative sign or parentheses (parity with server-side parseCSVAmount
-    // in packages/parser/src/csv/shared.ts C33-03).
-    const isManeuners = /^마이너스/.test(cleaned);
-    if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
-    // Handle trailing minus sign — some Korean bank exports use "1,234-"
-    // instead of "-1,234" for negative amounts (C68-01).
-    const hasTrailingMinus = /\d-$/.test(cleaned);
-    if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
-    const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
-    if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
-    if (!cleaned) return null;
-    // Use Math.round(parseFloat(...)) to match the numeric path's rounding
-    // behavior (C20-01). Korean Won amounts are always integers, but
-    // formula cells may render as strings with decimal remainders.
-    const parsed = Math.round(parseFloat(cleaned));
-    if (Number.isNaN(parsed)) return null;
-    return isNegative ? -parsed : parsed;
-  }
-  return null;
-}
-
 function parseInstallments(raw: unknown): number | undefined {
   if (typeof raw === 'number') return raw > 1 ? raw : undefined;
   if (typeof raw === 'string') {
@@ -363,7 +324,7 @@ function parseInstallments(raw: unknown): number | undefined {
  *  HTML is detected. TextDecoder doesn't support partial streaming in all
  *  browsers, so the 512-byte overlap is accepted as minor overhead bounded
  *  by the file size limit (C75-01/C74-03). */
-function isHTMLContent(buffer: ArrayBuffer): boolean {
+export function isHTMLContent(buffer: ArrayBuffer): boolean {
   // Decode first 512 bytes as UTF-8. Strip UTF-8 BOM (0xEF 0xBB 0xBF) if
   // present — some Korean card exports include a BOM, which would otherwise
   // prevent the startsWith checks from matching.
@@ -587,7 +548,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
 
     if (!dateRaw && !merchantRaw) continue;
 
-    const amount = parseAmount(amountRaw);
+    const amount = parseAmountString(String(amountRaw ?? ''));
     if (amount === null) {
       if (String(amountRaw ?? '').trim()) {
         // Detect Excel formula error strings for specific error messages (C73-04)
