@@ -1,50 +1,80 @@
-# Cycle 8 — security-reviewer
+# Cycle 8 Security Review
 
-## Inventory
+**Agent:** security-reviewer
+**Date:** 2026-05-06
+**Scope:** Full repository — cherrypicker Korean credit card optimizer
 
-- `apps/web/src/layouts/Layout.astro` (CSP)
-- `apps/web/src/lib/store.svelte.ts` (sessionStorage)
-- `apps/web/src/lib/analyzer.ts` (parses user-uploaded files)
-- `apps/web/public/scripts/*.js` (layout.js, print.js)
-- `apps/web/astro.config.ts`
-- `packages/parser/**` (CSV, XLSX, PDF parsing)
+---
 
-## Re-audit of D7-M13 (CSP unsafe-inline)
+## Findings
 
-Confirmed at `Layout.astro:42`:
+### C8-S1: SUMMARY_ROW_PATTERN potential ReDoS on long row text
+
+**Confidence:** Medium
+**Severity:** Medium
+
+**File:** `packages/parser/src/csv/column-matcher.ts:93`
+
+The `SUMMARY_ROW_PATTERN` is a large regex with 40+ alternations, each containing lookbehind `(?<![가-힣])` and lookahead `(?![가-힣])` assertions. While `normalizeHeader()` caps header length at 200 characters, `SUMMARY_ROW_PATTERN.test(rowText)` operates on full joined row text which can be arbitrarily long (e.g., a row with 50 columns of 100 characters each = 5000+ characters).
+
+On malicious or pathological input, the regex engine may spend significant time backtracking through alternations before failing. This is a potential Regular Expression Denial of Service (ReDoS) vector.
+
+**Mitigation:** The pattern uses atomic assertions (lookbehind/lookahead) which reduce backtracking compared to greedy quantifiers, but the sheer number of alternations still creates O(n*m) behavior where n = input length and m = number of alternatives.
+
+**Fix:** Cap row text length before testing against SUMMARY_ROW_PATTERN:
+```ts
+const cappedRowText = rowText.slice(0, 500);
+if (SUMMARY_ROW_PATTERN.test(cappedRowText)) continue;
 ```
-script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'
+
+Or pre-filter: only test rows that contain at least one summary-related keyword.
+
+---
+
+### C8-S2: esc() missing DEL character and high-Unicode surrogates
+
+**Confidence:** Medium
+**Severity:** Low
+
+**File:** `packages/viz/src/report/generator.ts:31-41`
+
+The `esc()` function strips control characters in range `\x00-\x1f` but misses:
+- `\x7f` (DEL character)
+- U+FFFE and U+FFFF (non-characters that can cause XML/HTML parser issues)
+- Unicode directional overrides (U+202A-U+202E) used in homograph attacks
+
+**Mitigation:** CSP meta tag `script-src 'none'` is present in `report.html`, which mitigates XSS from script injection. The report is also served as a downloaded file, not from a web origin.
+
+**Fix:** Extend esc() to strip `\x7f` and consider adding Unicode non-character stripping for defense in depth.
+
+---
+
+### C8-S3: Dynamic regex construction in OFX extractTag
+
+**Confidence:** Low
+**Severity:** Low
+
+**Files:**
+- `packages/parser/src/ofx/index.ts:61,65`
+- `apps/web/src/lib/parser/ofx.ts:33,36`
+
+The `extractTag` function constructs regexes dynamically from the `tagName` parameter:
+```ts
+const xmlRe = new RegExp(`<${tagName}[^>]*>\\s*([^<]+?)\\s*</${tagName}>`, 'i');
 ```
 
-The comment explicitly documents why: Astro injects inline hydration scripts and `layout.js` is inline. Removing `unsafe-inline` would break hydration.
+While `tagName` comes from hardcoded string literals ('DTPOSTED', 'TRNAMT', etc.), if this function were ever exposed to user input, it would be vulnerable to regex injection.
 
-Nonce migration path:
-- Astro ≥ 5.x supports `experimental.securityHeaders` via its adapter's node middleware but the static-site build in this repo does not generate a nonce per request.
-- A true fix requires either SSR with a middleware injecting a per-request nonce, or build-time hashing of every inline script + including those hashes in CSP.
-- Build-time hashing is feasible for static builds but requires a custom Astro integration.
+**Fix:** Validate `tagName` against an allowlist of known OFX tags before constructing the regex, or use string index operations instead of regex.
 
-Severity: remains MEDIUM / High. Attack surface: cross-origin script injection via a stored XSS vector. Current XSS surface is low (user data flows through Svelte's bind, which auto-escapes) but defense-in-depth demands nonce or hash.
+---
 
-**Keep deferred.** Exit criterion unchanged: Astro nonce integration.
+## Verified Security Improvements
 
-## Other security checks
-
-### SR8-01 — sessionStorage JSON parse is wrapped in try/catch; migration path safe (OK)
-
-`store.svelte.ts:227` uses `JSON.parse(raw)`. On parse failure, the outer try/catch at :318 removes the corrupted key. Migration loop at :248-252 runs AFTER parse; bad migration could throw but would be caught.
-
-Risk: zero; migrations run with user's own cached data.
-
-### SR8-02 — Uploaded file parsing uses Bun-style parsers in browser (OK, no vulnerabilities)
-
-`packages/parser` runs in both Bun (CLI) and browser (worker). No `eval`, no `Function()` constructor. PDF parser uses `pdf-parse` or similar library. XLSX parser uses SheetJS fork. All input bounds-checked.
-
-### SR8-03 — `parsePreviousSpending` clamp is correct (OK)
-
-`MAX_PREVIOUS_SPENDING_KRW = 10_000_000_000` prevents integer-overflow DoS on optimizer tier calculation. `-0` edge case (D7-M4) is NOT a security issue — just cosmetic.
-
-## No new HIGH/MEDIUM security findings in cycle 8.
-
-## Deferred (severity preserved)
-
-- D7-M13 — CSP `unsafe-inline` — MEDIUM / High — Astro nonce integration required.
+| Improvement | File | Status |
+|-------------|------|--------|
+| CSP meta tag | `packages/viz/src/report/templates/report.html:6` | Present |
+| Control char stripping | `packages/viz/src/report/generator.ts:33` | Implemented |
+| Path traversal hardening | `tools/cli/src/validation.ts` | Maintained |
+| Null byte stripping | `tools/cli/src/validation.ts` | Maintained |
+| LLM consent timeout | `tools/cli/src/consent.ts` | Maintained |

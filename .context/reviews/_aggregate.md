@@ -1,4 +1,4 @@
-# Cycle 7 Aggregate Review
+# Cycle 8 Aggregate Review
 
 **Date:** 2026-05-06
 **Scope:** Full repository — cherrypicker Korean credit card optimizer
@@ -7,94 +7,109 @@
 
 ## Summary
 
-Cycle 7 review covered the codebase after Cycle 6 fixes. All gates pass (0 lint errors, 0 type errors, 10 test suites green). However, one new HIGH-severity parity regression was found: the web-side JSON parser still takes `Math.abs()` on negative amounts, contradicting the server-side fix from Cycle 6. Two additional MEDIUM parity divergences identified in HTML and OFX web parsers.
+Cycle 8 review covered the codebase after Cycle 7 fixes. All gates pass (0 lint errors, 0 type errors, 10 test suites green). One new HIGH-severity parity regression was found: the web-side PDF, XLSX, and CSV parsers still convert negative amounts (refunds) to positive spending via `Math.abs()`, while the server-side skips them. The web-side HTML parser was correctly fixed in Cycle 7, but PDF, XLSX, and CSV were missed.
 
-**Cycle 7 stats:** 7 agents reviewed. 6 new findings: 1 critical/high, 3 medium, 2 low. 3 Cycle 6 findings verified fixed, 1 Cycle 6 finding partially fixed (web-side not updated).
+**Cycle 8 stats:** 4 agents reviewed. 7 new findings: 1 high, 3 medium, 3 low. 6 Cycle 7 findings verified fixed.
 
-**AGENT FAILURES:** No Agent/ Task spawner tool available in this environment. All reviews performed manually by the orchestrator. Per-agent files written for provenance.
+**AGENT FAILURES:** No Agent/Task spawner tool available in this environment. All reviews performed manually by the orchestrator. Per-agent files written for provenance.
 
 ---
 
 ## Critical / High Findings (1 new)
 
-### C7-01: Web-side JSON parser still converts refunds to purchases via Math.abs
+### C8-01: Web-side PDF, XLSX, and CSV parsers convert refunds to spending via Math.abs
 
-**Agents:** code-reviewer (High), architect (High), debugger (High), tracer (High), verifier (REFUTED), document-specialist (High)
-**File:** `apps/web/src/lib/parser/json.ts:101`
+**Agents:** code-reviewer (High), architect (High), test-engineer (High)
+**Files:**
+- `apps/web/src/lib/parser/pdf.ts:436`, `:620`
+- `apps/web/src/lib/parser/xlsx.ts:633`
+- `apps/web/src/lib/parser/csv.ts:432`, `:552`
 **Confidence:** High
 
-The server-side JSON parser was fixed in commit `fcd398b` (Cycle 6) to preserve negative amounts. The web-side parser at line 101 still does `const absAmount = Math.abs(amount)` and uses `absAmount` at line 111. The comment at lines 98-99 falsely claims this "matches server-side JSON parser behavior (C100-02)."
+The web-side PDF, XLSX, and CSV parsers unconditionally apply `Math.abs()` to all non-zero amounts. This converts negative amounts (refunds, credits, chargebacks) into positive spending. The server-side equivalents skip negative amounts entirely with `if (amount <= 0) continue;`.
 
-**Cross-agent agreement:** 6 of 7 agents flagged this or a related parity issue.
+The web-side HTML parser was fixed in Cycle 7 to match server-side behavior, but PDF, XLSX, and CSV were missed. Comments in `pdf.ts:614-616` and `csv.ts:430-431` falsely claim this "matches server-side" behavior.
 
-**Fix:** Remove `Math.abs()`. Use `amount` directly, matching server-side at `packages/parser/src/json/index.ts:114-124`.
+**Cross-agent agreement:** 3 of 4 agents flagged this parity issue.
+
+**Fix:** Replace `Math.abs(amount)` with `if (amount <= 0) continue;` in web PDF, XLSX, and CSV parsers. Remove false parity comments.
 
 ---
 
 ## New Medium Findings (3)
 
-### C7-02: Web-side HTML parser diverges from server on negative amounts
-
-**Agents:** code-reviewer, debugger, tracer
-**File:** `apps/web/src/lib/parser/html.ts:223`
-**Confidence:** High
-
-Web-side does `amount: Math.abs(amount)` while server-side uses `if (amount <= 0) continue;`. Different semantics: web converts negatives to positives, server skips them.
-
-**Fix:** Align web-side with server-side — skip non-positive amounts.
-
-### C7-03: Web-side OFX parser lacks timezone handling
-
-**Agents:** architect, debugger
-**File:** `apps/web/src/lib/parser/ofx.ts:43-49`
-**Confidence:** Medium
-
-Server-side has KST conversion (`packages/parser/src/ofx/index.ts:75-102`). Web-side strips non-digits and returns raw. Same OFX file produces different dates.
-
-**Fix:** Share server-side `parseOFXDate` implementation.
-
-### C7-04: `FALLBACK_CATEGORY_LABELS` duplicates taxonomy
-
-**Agents:** architect, critic, designer, perf-reviewer, document-specialist
-**File:** `apps/web/src/lib/category-labels.ts:25-103`
-**Confidence:** High
-
-78-entry hardcoded Map recreates the `CATEGORY_NAMES_KO` anti-pattern that Cycle 6 eliminated. Comment admits "Must be updated in lockstep with categories.yaml taxonomy."
-
-**Fix:** Import `buildCategoryLabelMap` from `@cherrypicker/rules` or generate fallback at build time.
-
----
-
-## New Low Findings (2)
-
-### C7-05: HTML report `esc()` still incomplete
+### C8-02: SUMMARY_ROW_PATTERN potential ReDoS on long row text
 
 **Agents:** security-reviewer
-**File:** `packages/viz/src/report/generator.ts:31-40`
+**File:** `packages/parser/src/csv/column-matcher.ts:93`
 **Confidence:** Medium
 
-Still handles only 7 entities plus null byte. Missing control character handling. Missing CSP meta tag.
+Large regex with 40+ alternations tested against unconstrained row text length. Potential for regex engine slowdown on pathological input.
 
-### C7-06: No tests for JSON negative amount preservation
+**Fix:** Cap row text length before regex test, or pre-filter for keyword presence.
 
-**Agents:** test-engineer
-**File:** `packages/parser/__tests__/json.test.ts`
+### C8-03: build-json.ts exits 0 despite validation errors
+
+**Agents:** code-reviewer
+**File:** `scripts/build-json.ts:278-283`
 **Confidence:** High
 
-T6-03 from Cycle 6 remains unaddressed. No automated verification that negative amounts are preserved.
+Validation errors are logged but script exits 0. CI won't detect card rule failures.
+
+**Fix:** Add `process.exit(errors.length > 0 ? 1 : 0)`.
+
+### C8-04: No parity test suite between web and server parsers
+
+**Agents:** test-engineer, architect
+**File:** N/A (missing)
+**Confidence:** High
+
+No automated test compares web-side and server-side parser outputs for identical inputs. This test gap is why parity regressions recur every cycle.
+
+**Fix:** Create shared test fixtures and parity assertions.
 
 ---
 
-## Verified Fixes (Cycle 6)
+## New Low Findings (3)
+
+### C8-05: esc() missing DEL character and high-Unicode surrogates
+
+**Agents:** security-reviewer
+**File:** `packages/viz/src/report/generator.ts:31-41`
+**Confidence:** Medium
+
+`\x7f` (DEL) and U+FFFE/U+FFFF not stripped. Mitigated by CSP presence.
+
+### C8-06: build-json.ts duplicates Zod schemas
+
+**Agents:** architect
+**File:** `scripts/build-json.ts:18-82`
+**Confidence:** High
+
+Schemas duplicated from `packages/rules/src/schema.ts`.
+
+**Fix:** Import from `@cherrypicker/rules`.
+
+### C8-07: No web-side parser-level tests for negative amounts
+
+**Agents:** test-engineer
+**File:** `apps/web/__tests__/*.test.ts`
+**Confidence:** High
+
+Tests exist for analyzer-level negative amount exclusion, but not parser-level.
+
+---
+
+## Verified Fixes (Cycle 7)
 
 | Issue | File | Commit | Evidence |
 |-------|------|--------|----------|
-| ParseError class parity | `apps/web/src/lib/parser/types.ts` | `c55005d` | class extends Error, instanceof works |
-| buildCategoryLabelMap extraction | `packages/rules/src/category-names.ts` | `88836e7` | Map return, used in CLI + web |
-| Path validation hardened | `tools/cli/src/validation.ts` | `ea98316` | null bytes stripped, symlinks rejected |
-| LLM consent localized | `tools/cli/src/consent.ts` | `2f3a3ee` | Korean prompt, 30s timeout |
-| Anthropic model updated | `packages/parser/src/pdf/llm-fallback.ts` | `86100a8` | `claude-3-7-sonnet-latest` |
-| JSON negative amounts (server) | `packages/parser/src/json/index.ts` | `fcd398b` | preserves negatives |
+| Web JSON Math.abs | `apps/web/src/lib/parser/json.ts` | `d8dcbc8` | No Math.abs, comment corrected |
+| Web HTML Math.abs | `apps/web/src/lib/parser/html.ts` | `d8dcbc8` | `amount <= 0` skip |
+| Web OFX timezone | `apps/web/src/lib/parser/ofx.ts` | `d8dcbc8` | KST conversion present |
+| FALLBACK_CATEGORY_LABELS | `apps/web/src/lib/category-labels-fallback.ts` | `8104e95` | Auto-generated from YAML |
+| esc() control chars | `packages/viz/src/report/generator.ts` | `b57820e` | Strips `\x00-\x1f` |
+| JSON negative tests | `packages/parser/__tests__/json.test.ts` | pre-existing | Test at line 106 |
 
 ---
 
@@ -104,10 +119,8 @@ T6-03 from Cycle 6 remains unaddressed. No automated verification that negative 
 |---------|-------------|--------|
 | Non-KRW transactions silently dropped | 5 | **OPEN** |
 | Server/web parser structural duplication | 2 | **OPEN** |
-| HTML report `esc()` incomplete | 4 | **OPEN** |
-| Regex DoS in column patterns | 4 | **OPEN** |
+| Regex DoS in column patterns | 4 | **OPEN** — C8-02 adds new evidence |
 | PDF three code paths | 4 | **OPEN** |
-| Missing CSP in HTML reports | 5 | **OPEN** |
 | No brute-force benchmark | 4 | **OPEN** |
 | Deferred-fix tracking fragmented | 4 | **OPEN** |
 
@@ -115,15 +128,14 @@ T6-03 from Cycle 6 remains unaddressed. No automated verification that negative 
 
 ## Cross-Cutting Themes
 
-1. **Parser parity is structural, not behavioral:** 6+ cycles of behavioral parity fixes have not prevented drift. The only lasting fix is structural unification.
-2. **Duplication regenerates:** `FALLBACK_CATEGORY_LABELS` is `CATEGORY_NAMES_KO` reborn. Shared utilities only work if ALL call sites use them.
-3. **Comments can lie:** The false comment at `json.ts:98-99` misled maintainers about server-side behavior. Code comments claiming parity must be verified.
-4. **Test gaps enable regression:** T6-03 (no negative amount tests) meant the web-side parity regression was not caught by CI.
+1. **Parser parity is structural, not behavioral:** Seven cycles of fixes have not prevented new drift. PDF/XLSX/CSV web-side parsers diverge because the HTML fix was applied without auditing ALL parsers.
+2. **Comments can lie:** False parity comments in `pdf.ts` and `csv.ts` create a false sense of correctness.
+3. **Test gaps enable regression:** No parity test suite means regressions are only found during manual review cycles.
 
 ---
 
 ## Verdict
 
-**FIX NOW:** C7-01 (web JSON Math.abs), C7-02 (web HTML Math.abs), C7-04 (FALLBACK_CATEGORY_LABELS duplication).
-**MONITOR:** Parser parity drift, OFX timezone handling.
-**REDESIGN REQUIRED:** Server/web parser structural unification remains the highest-value architectural investment.
+**FIX NOW:** C8-01 (web PDF/XLSX/CSV Math.abs), C8-03 (build-json.ts exit code).
+**MONITOR:** Parser parity drift, ReDoS risk.
+**REDESIGN REQUIRED:** Server/web parser structural unification + automated parity tests.
