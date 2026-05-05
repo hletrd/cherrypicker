@@ -23,7 +23,7 @@ import {
 import * as xlsx from 'xlsx';
 
 /** Fix malformed closing tags like </td   > */
-function normalizeHTML(html: string): string {
+export function normalizeHTML(html: string): string {
   return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>');
 }
 

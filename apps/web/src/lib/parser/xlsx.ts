@@ -1,8 +1,8 @@
 import * as XLSX from 'xlsx';
 import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js';
 import { detectBank } from './detect.js';
+import { normalizeHTML } from './html.js';
 import {
-  normalizeHeader,
   findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
@@ -371,11 +371,6 @@ function isHTMLContent(buffer: ArrayBuffer): boolean {
   const raw = new TextDecoder('utf-8').decode(buffer.slice(0, 512));
   const head = raw.replace(/^\uFEFF/, '').trimStart().toLowerCase();
   return head.startsWith('<!doctype') || head.startsWith('<html') || /<table[\s>]/.test(head);
-}
-
-/** Fix malformed closing tags like </td   > commonly found in Korean card exports */
-function normalizeHTML(html: string): string {
-  return html.replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>');
 }
 
 // ---------------------------------------------------------------------------

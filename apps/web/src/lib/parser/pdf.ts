@@ -1,7 +1,6 @@
 import type { BankId, ParseError, ParseResult, RawTransaction } from './types.js';
 import { detectBank } from './detect.js';
 import {
-  normalizeHeader,
   findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
@@ -10,16 +9,10 @@ import {
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
   SUMMARY_ROW_PATTERN,
-  HEADER_KEYWORDS,
   isValidHeaderRow,
 } from './column-matcher.js';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-/** Minimal representation of pdfjs-dist TextContent.items members.
- *  Defined locally because pdfjs-dist does not re-export these types
- *  from its main entry point. Matches the official TextItem / TextMarkedContent
- *  union — only `str` is accessed, so we narrow with `'str' in item`. */
-type PdfTextItem = { str: string; dir: string; transform: unknown[]; width: number; height: number; hasEOL: boolean };
+import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from './date-utils.js';
 
 // ---------------------------------------------------------------------------
 // Table parser (ported from packages/parser/src/pdf/table-parser.ts)
@@ -235,10 +228,6 @@ function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
 // ---------------------------------------------------------------------------
 // Structured parser (ported from packages/parser/src/pdf/index.ts)
 // ---------------------------------------------------------------------------
-
-/** Shared date-parsing — delegates to the canonical implementation in
- *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
-import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from './date-utils.js';
 
 function parseDateToISO(raw: string, errors?: ParseError[]): string {
   const result = parseDateStringToISO(raw);
