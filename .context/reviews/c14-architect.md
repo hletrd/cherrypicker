@@ -1,23 +1,19 @@
 # Cycle 14 Architect Review
 
-## Architecture Assessment
+## Findings
 
-### Current State
-Well-structured parser package with shared column-matcher, adapter factory, 3-tier PDF fallback.
+### C14-ARCH01: Parser duplication (web vs server) remains unaddressed (MEDIUM)
+- **Description:** The D-01 architectural debt (web-side parsers duplicate server-side logic) persists. New parser formats (HTML, OFX, JSON) were added to both sides in cycle 13, increasing the duplication surface.
+- **Impact:** Maintenance burden grows with each new format. Fixes must be applied in two places.
+- **Recommendation:** Prioritize extracting shared parser logic into a pure-JS package that can run in both Bun and browser environments.
+- **Confidence:** High
 
-### Findings
+### C14-ARCH02: `isValidISODate` semantic mismatch (MEDIUM)
+- **Files:** `packages/parser/src/date-utils.ts:228`, `apps/web/src/lib/parser/date-utils.ts:242`
+- **Description:** The function name promises "valid ISO date" but only checks format. This is a semantic contract violation.
+- **Impact:** Callers assume ISO validity implies usable date.
+- **Recommendation:** Either rename to `isISODateFormatted` and add a true `isValidISODate`, or enhance the existing function with range validation.
+- **Confidence:** High
 
-#### F-ARC-1: XLSX formula error cells produce confusing messages (Medium)
-When `raw: true` is used, formula cells with Excel errors (#VALUE!, #REF!) are returned as strings. `parseDateToISO` tries to parse "#VALUE!" as a date, producing "날짜를 해석할 수 없습니다: #VALUE!" -- confusing because the real issue is a formula error. Should detect Excel error strings and produce a clearer message.
-
-#### F-ARC-2: `extractPages` function lacks space insertion (Medium)
-`extractor.ts` exports `extractPages` (line 52-76) which does NOT insert spaces between text items on the same line, unlike `extractPagesFromBuffer`. If any code path uses `extractPages`, text will merge incorrectly. Currently unused in main parse flow but exported.
-
-#### F-ARC-3: Web PDF loses column alignment (Medium)
-Web `pdf.ts` joins text items with `.join(' ')` (line 322), losing all column alignment. Server-side uses Y-coordinate for line breaks and X-position for spacing. Web PDF relies entirely on fallback line-scanner rather than structured table parsing.
-
-#### F-ARC-4: Server/web column-matcher duplication (Low, deferred)
-Still duplicated across packages/parser and apps/web. Previously acknowledged.
-
-#### F-ARC-5: `splitCSVLine` trims field values unconditionally (Low)
-In `shared.ts`, `splitCSVLine` always trims each field. This is correct for most cases but could remove intentional leading/trailing whitespace in merchant names. Acceptable for credit card data.
+### C14-ARCH03: No new structural issues (GOOD)
+- The adapter-factory pattern continues to work well. The shared `parseAmountString` and `parseDateStringToISO` utilities reduce duplication.

@@ -1,41 +1,40 @@
-# Cycle 13 — Aggregate Review (2026-05-05)
+# Cycle 14 — Aggregate Review (2026-05-05)
 
 Deduplicated findings across `code-reviewer`, `security-reviewer`, `test-engineer`, `architect`, `debugger`, `critic`, `verifier`, `tracer`, `document-specialist`, `designer`, and `perf-reviewer`.
 
-Provenance files retained at `.context/reviews/c13-<agent-name>.md`.
+Provenance files retained at `.context/reviews/c14-<agent-name>.md`.
 
 ---
 
 ## Cross-Agent Agreement (High-Signal Findings)
 
-### C13-04 — PDF fallback trailing-minus amounts parsed as positive (MEDIUM)
-- **Agents:** code-reviewer (MEDIUM), debugger (MEDIUM), verifier (FAIL), tracer (MEDIUM)
-- **File:** `apps/web/src/lib/parser/pdf.ts:565, 604`
-- **Consensus:** The `fallbackAmountPattern` group 6 `([\d,]*(?:,|\d{5,})[\d,]*)-` places the trailing `-` OUTSIDE the capture group. `amountMatch[6]` gets only the digits (e.g., `"1,234"`). `parseAmount()` then loses the negativity because its trailing-minus detection (`/\d-$/`) requires the minus to be present. The result: a refund amount is treated as positive spending. The structured table parsing path is unaffected.
+### C14-01 — `isValidISODate` accepts invalid dates like "2024-99-99" (HIGH)
+- **Agents:** code-reviewer (HIGH), debugger (HIGH), verifier (FAIL), architect (MEDIUM), critic (HIGH), document-specialist (MEDIUM)
+- **Files:** `packages/parser/src/date-utils.ts:228`, `apps/web/src/lib/parser/date-utils.ts:242`
+- **Consensus:** The regex `/^\d{4}-\d{2}-\d{2}$/` only validates format, not actual month/day ranges. When `parseDateStringToISO` receives unrecognizable input that happens to look ISO-like (e.g., "2024-99-99"), it returns the input as-is. `isValidISODate` then incorrectly returns `true`, causing parsers to accept invalid dates without reporting parse errors. This is a semantic contract violation (function name promises "valid ISO date").
 
-### T13-01 — No web-side tests for HTML, OFX, JSON parsers (MEDIUM)
-- **Agents:** test-engineer (MEDIUM), critic (MEDIUM), verifier (GAP)
-- **Files:** `apps/web/__tests__/`
-- **Consensus:** Web-side test directory contains only 4 files: `analyzer-adapter.test.ts`, `formatters.test.ts`, `parser-date.test.ts`, `parser-encoding.test.ts`. Missing: `parser-html.test.ts`, `parser-ofx.test.ts`, `parser-json.test.ts`, `parser-xlsx.test.ts`, `parser-pdf.test.ts`, `parser-csv.test.ts`. Server-side has tests for all 7 formats. The web-side parsers are hand-maintained duplicates (D-01) and are at high risk of divergence.
+### C14-02 — `console.warn` still present after C11 cleanup (MEDIUM)
+- **Agents:** code-reviewer (MEDIUM), debugger (MEDIUM), security-reviewer (LOW), critic (MEDIUM), designer (LOW)
+- **Files:** `apps/web/src/lib/analyzer.ts:58, 64`, `apps/web/src/lib/store.svelte.ts:191, 243, 246, 329, 330, 338, 358`
+- **Consensus:** Commit `8fbe12a` (C11) claimed to remove stale console.warn, but multiple instances remain in analyzer.ts and store.svelte.ts. This creates production console noise and leaks internal data (card IDs, field values).
+
+### C14-03 — `renderPageText` hardcoded character width of 6 (MEDIUM)
+- **Agents:** code-reviewer (MEDIUM), perf-reviewer (LOW), critic (MEDIUM), tracer (MEDIUM)
+- **Files:** `packages/parser/src/pdf/extractor.ts:26`, `apps/web/src/lib/parser/pdf.ts:522`
+- **Consensus:** The `lastEndX` calculation uses `item.str.length * 6` as a crude width approximation. Korean and Latin characters have different PDF font widths. Incorrect space insertion can merge adjacent text items, degrading table parsing accuracy.
 
 ---
 
-## Verified Fixed (from Cycle 12)
+## Verified Fixed (from Cycle 13)
 
 | Finding | File | Evidence | Agents |
 |---------|------|----------|--------|
-| C12-01: Silent swallow of unparseable dates | `packages/parser/src/csv/adapter-factory.ts:158-160` | Now validates with `isValidISODate` and reports `ParseError` | code-reviewer, verifier, architect |
-| C12-06: Adapter-factory missing isValidISODate | `packages/parser/src/csv/adapter-factory.ts:158-160` | Same fix as C12-01 | code-reviewer, verifier |
-| C12-02: Web XLSX local findCol | `apps/web/src/lib/parser/xlsx.ts:7` | Now imports `findColumn` from `./column-matcher.js` | code-reviewer, verifier |
-| T12-01: Zero column-matcher tests | `packages/parser/__tests__/column-matcher.test.ts` | 2548 lines, 1408+ tests | test-engineer, code-reviewer |
-
----
-
-## Retracted Findings
-
-| Finding | Reason |
-|---------|--------|
-| C12-DB03: PDF fallback `dateMatch[1]` undefined | **FALSE POSITIVE.** The `fallbackDatePattern` at `apps/web/src/lib/parser/pdf.ts:554` HAS an outer capture group. `dateMatch[1]` is valid. |
+| C13-04: PDF trailing-minus lost | `apps/web/src/lib/parser/pdf.ts:573` | Capture group now includes minus | code-reviewer, verifier, debugger |
+| C13-CR01: Double semicolons | `packages/parser/src/csv/adapter-factory.ts` | Removed | code-reviewer, verifier |
+| T13-01: No web-side parser tests | `apps/web/__tests__/parser-*.test.ts` | HTML, JSON, OFX, PDF tests added | test-engineer, verifier |
+| T13-02: PDF trailing-minus test | `apps/web/__tests__/parser-pdf.test.ts` | Added | test-engineer, verifier |
+| T13-03: OFX negative amount test | `apps/web/__tests__/parser-ofx.test.ts` | Added | test-engineer, verifier |
+| T13-04: JSON negative amount test | `apps/web/__tests__/parser-json.test.ts` | Added | test-engineer, verifier |
 
 ---
 
@@ -43,59 +42,49 @@ Provenance files retained at `.context/reviews/c13-<agent-name>.md`.
 
 | # | Severity | Category | File | Finding | Agents |
 |---|----------|----------|------|---------|--------|
-| 1 | **MEDIUM** | Correctness | `apps/web/src/lib/parser/pdf.ts:565` | C13-04: PDF fallback trailing-minus lost in capture group | code-reviewer, debugger, verifier, tracer |
-| 2 | **MEDIUM** | Testing | `apps/web/__tests__/` | T13-01: No web-side HTML/OFX/JSON parser tests | test-engineer, critic, verifier |
-| 3 | **MEDIUM** | Testing | `apps/web/src/lib/parser/pdf.ts:565` | T13-02: No test for PDF fallback trailing-minus bug | test-engineer |
-| 4 | **LOW** | Code Quality | `packages/parser/src/csv/adapter-factory.ts:7`, `generic.ts:2` | C13-CR01: Double semicolon syntax debris | code-reviewer |
-| 5 | **LOW** | Testing | `apps/web/src/lib/parser/ofx.ts:134-135` | T13-03: No test for OFX negative amount conversion | test-engineer |
-| 6 | **LOW** | Testing | `apps/web/src/lib/parser/json.ts:98-100` | T13-04: No test for JSON negative amount preservation | test-engineer |
-| 7 | **LOW** | Docs | `apps/web/src/lib/parser/pdf.ts:560-565` | C13-DS01: PDF fallback amount pattern lacks capture-group docs | document-specialist |
+| 1 | **HIGH** | Correctness | `packages/parser/src/date-utils.ts:228`, `apps/web/src/lib/parser/date-utils.ts:242` | C14-01: `isValidISODate` accepts invalid dates | code-reviewer, debugger, verifier, architect, critic, document-specialist |
+| 2 | **MEDIUM** | Code Quality | `apps/web/src/lib/analyzer.ts:58, 64`, `apps/web/src/lib/store.svelte.ts` | C14-02: `console.warn` remains after C11 cleanup | code-reviewer, debugger, security-reviewer, critic, designer |
+| 3 | **MEDIUM** | Correctness | `packages/parser/src/pdf/extractor.ts:26`, `apps/web/src/lib/parser/pdf.ts:522` | C14-03: `renderPageText` hardcoded char width | code-reviewer, perf-reviewer, critic, tracer |
+| 4 | **MEDIUM** | Testing | `packages/parser/__tests__/date-utils.test.ts`, `apps/web/__tests__/parser-date.test.ts` | C14-TEST-01: No test for `isValidISODate` invalid dates | test-engineer |
+| 5 | **MEDIUM** | Architecture | `packages/parser/src/`, `apps/web/src/lib/parser/` | C14-ARCH01: Parser duplication (web vs server) | architect, critic |
+| 6 | **MEDIUM** | Code Quality | `packages/parser/src/date-utils.ts:104`, `apps/web/src/lib/parser/date-utils.ts:80` | C14-05: `parseDateStringToISO` fullMatch lacks end anchor | code-reviewer |
+| 7 | **MEDIUM** | Correctness | `apps/web/src/lib/analyzer.ts:58, 64` | C14-DB03: Fallback values bypass type safety | debugger |
+| 8 | **LOW** | Code Quality | `packages/parser/src/csv/adapter-factory.ts:8-9` | C14-04: Duplicate import paths | code-reviewer |
+| 9 | **LOW** | Testing | `packages/parser/__tests__/csv-shared.test.ts` | C14-TEST-02: No test for `parseAmountString` multi-decimal | test-engineer |
+| 10 | **LOW** | Docs | `packages/parser/src/pdf/index.ts:317-318` | C14-DS01: Missing capture group comments | document-specialist |
+| 11 | **LOW** | Security | `packages/parser/src/csv/shared.ts:140-163` | C14-SEC02: Potential ReDoS on long inputs | security-reviewer |
+| 12 | **LOW** | UI/UX | `apps/web/src/lib/analyzer.ts:58, 64` | C14-UI02: console.warn may confuse users | designer |
 
 ---
 
-## Carry-overs from Previous Cycles (severity preserved)
+## Carry-overs from Previous Cycles
 
 ### MEDIUM-priority carry-overs
-- **D7-M13** — CSP `unsafe-inline` in script-src. MEDIUM. Requires Astro nonce upstream support.
 - **D-01** — Parser duplication (web vs packages). HIGH. Major refactor deferred.
-- **D7-M11** — Architectural refactors (A7-01/02/03). MEDIUM. Cross-cycle.
+- **D7-M13** — CSP `unsafe-inline` in script-src. MEDIUM.
 - **C12-04** — `isDateLike` doesn't allow spaces around delimiters. Low-Medium.
 - **C12-05** — Web XLSX BANK_COLUMN_CONFIGS duplication. LOW.
 
 ### LOW-priority carry-overs
-- **D-09** — `scoreCardsForTransaction` O(n*m) performance. LOW.
-- **D7-M5** — Silent drop of malformed-date rows in monthlyBreakdown. LOW.
-- **D7-M9** — `ui-ux-screenshots.spec.js` has no assertions. LOW. Intentional.
-- **C9-02** — ALL_BANKS duplicates parser bank signatures. LOW.
-- **C9-03** — formatIssuerNameKo duplicates issuer name data. LOW.
-- **C9-04** — getIssuerColor duplicates issuer color data. LOW.
-- **C9-05** — getCategoryIconName duplicates taxonomy icon mapping. LOW.
-- **D8-02** — Dashboard cards lack `role="region"` + `aria-labelledby`. LOW.
-- **C9-08** — No test coverage for buildCategoryLabelMap edge cases. LOW.
-- **C9-09** — No test coverage for sessionStorage persistence/recovery. LOW.
-- **C9-10** — build-stats.ts fallback values may become stale. LOW.
-- **C12-UX01** — Hover expansion not discoverable on mobile. LOW.
-- **C12-UX02** — Dismiss button lacks visible focus ring. LOW.
-- **C12-UX04** — Table horizontal scroll without indicator. LOW.
-- **D-02** — README MIT vs LICENSE Apache 2.0 mismatch. MEDIUM (deferred).
+- D-09, D7-M5, D7-M9, C9-02 through C9-10, D8-02, C12-UX01 through C12-UX04, D-02
 
 ---
 
 ## Agent Failures
 
-None. All 11 agents completed successfully.
+None. All review perspectives completed successfully.
 
 ---
 
 ## Recommended Priority Order
 
-1. **C13-04** — Fix PDF fallback trailing-minus capture group (MEDIUM)
-2. **T13-01** — Add web-side parser tests for HTML, OFX, JSON (MEDIUM)
-3. **T13-02** — Add test for PDF fallback trailing-minus (MEDIUM)
-4. **C13-CR01** — Remove double semicolon syntax debris (LOW)
-5. **T13-03** — Add test for OFX negative amount conversion (LOW)
-6. **T13-04** — Add test for JSON negative amount preservation (LOW)
-7. **C13-DS01** — Document PDF fallback amount pattern capture groups (LOW)
-8. **C12-04** — Allow spaces in isDateLike patterns (Low-Medium — deferred)
+1. **C14-01** — Fix `isValidISODate` to validate month/day ranges (HIGH)
+2. **C14-02** — Remove remaining `console.warn` calls (MEDIUM)
+3. **C14-TEST-01** — Add tests for `isValidISODate` invalid dates (MEDIUM)
+4. **C14-03** — Improve `renderPageText` width estimation (MEDIUM)
+5. **C14-ARCH01** — Address parser duplication (MEDIUM, deferred)
+6. **C14-05** — Add end anchor to fullMatch regex (MEDIUM)
+7. **C14-DB03** — Review fallback normalization behavior (MEDIUM)
+8. **C14-04** — Combine duplicate imports (LOW)
 
-**Overall Verdict:** Cycle 13 has 3 MEDIUM and 6 LOW actionable findings. The codebase remains solid with no security or performance regressions. Priority should go to C13-04 (PDF trailing-minus bug) and T13-01 (web-side parser tests).
+**Overall Verdict:** Cycle 14 has 1 HIGH and 6 MEDIUM actionable findings. Priority should go to C14-01 (`isValidISODate` bug) which can silently corrupt date data.

@@ -2,36 +2,41 @@
 
 ## Findings
 
-### F-CR-1: XLSX formula error cells not explicitly handled (Medium)
-`packages/parser/src/xlsx/index.ts` line 193: `xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' })`
-With `raw: true`, formula cells producing Excel errors (#VALUE!, #REF!, #DIV/0!, #N/A) return as error strings. `parseAmount` handles these correctly (returns null), but `parseDateToISO` passes them to `parseDateStringToISO` which returns the error string as-is, then `isValidISODate` returns false, producing a generic "날짜를 해석할 수 없습니다" error.
+### C14-01: `isValidISODate` accepts invalid dates like "2024-99-99" (HIGH)
+- **Files:** `packages/parser/src/date-utils.ts:228`, `apps/web/src/lib/parser/date-utils.ts:242`
+- **Description:** The regex `/^\d{4}-\d{2}-\d{2}$/` only validates format, not actual month/day ranges. When `parseDateStringToISO` receives an unrecognizable input that happens to look ISO-like (e.g., "2024-99-99"), it returns the input as-is. `isValidISODate` then incorrectly returns `true`, causing the parser to accept invalid dates without reporting a parse error.
+- **Failure scenario:** A corrupted bank export contains "2024-99-99" as a date. The CSV generic parser produces a transaction with `date: "2024-99-99"`, which later causes `tx.date.startsWith(latestMonth)` to fail, silently dropping the transaction from optimization. The user sees fewer transactions than expected with no error explaining why.
+- **Fix:** Add month (01-12) and day (01-31) range validation to `isValidISODate`.
+- **Confidence:** High
 
-**Fix**: In `parseDateToISO`, detect Excel error strings before string parsing and produce a specific "셀 수식 오류" error message.
+### C14-02: `console.warn` still present in `analyzer.ts` despite C11 cleanup (MEDIUM)
+- **File:** `apps/web/src/lib/analyzer.ts:58, 64`
+- **Description:** Commit `8fbe12a` (C11) claimed to "remove stale console.warn and TODO comments", but `toCoreCardRuleSets` still uses `console.warn` for unknown card sources and reward types. This creates noise in production browser consoles and contradicts the stated cleanup intent.
+- **Failure scenario:** A scraped card rule has an unrecognized `source` or `type` field. The console emits warnings that users may see in production (if they open dev tools), and the warnings leak internal data (card IDs, field values).
+- **Fix:** Remove `console.warn` calls. The fallback values (`'web'`, `'discount'`) are sufficient; silently normalize without logging.
+- **Confidence:** High
 
-### F-CR-2: Server CSV generic parser uses English error messages (Low)
-`packages/parser/src/csv/generic.ts` line 57: `errors: [{ message: 'Empty file' }]` and line 167: `message: \`Cannot parse amount: ${amountRaw}\``
-All other server-side parsers use Korean messages. These two English messages are inconsistent.
+### C14-03: `renderPageText` hardcoded character width of 6 (MEDIUM)
+- **Files:** `packages/parser/src/pdf/extractor.ts:26`, `apps/web/src/lib/parser/pdf.ts:522`
+- **Description:** The `lastEndX` calculation uses `item.str.length * 6` as a crude approximation for text width. Korean characters (e.g., Hangul) and Latin characters have different widths in PDF font metrics. This can cause incorrect space insertion (or omission) between adjacent text items, corrupting the extracted text before table parsing.
+- **Failure scenario:** A Korean bank PDF uses a narrow font for Latin digits and a wide font for Korean merchant names. The width approximation causes missing spaces between adjacent items on the same line, merging "CU" and "편의점" into "CU편의점". The table parser then fails to detect column boundaries correctly.
+- **Fix:** Use `item.width` from pdf-parse / pdfjs-dist if available, or calculate width from the transform matrix (item.transform[0] is the horizontal scaling factor).
+- **Confidence:** Medium
 
-**Fix**: Change to Korean: '빈 파일입니다' and `금액을 해석할 수 없습니다: ${amountRaw}`
+### C14-04: `adapter-factory.ts` duplicate import paths (LOW)
+- **File:** `packages/parser/src/csv/adapter-factory.ts:8-9`
+- **Description:** Lines 8 and 9 import from `'../detect.js'` in two separate statements. Minor code smell.
+- **Fix:** Combine into a single import statement.
+- **Confidence:** High
 
-### F-CR-3: Web-side `splitLine` duplicates server `splitCSVLine` (Low, deferred)
-`apps/web/src/lib/parser/csv.ts` line 24-38: identical to `packages/parser/src/csv/shared.ts` lines 11-29. Already acknowledged in NOTE(C70-04) comment.
+### C14-05: `parseDateStringToISO` fullMatch regex lacks end anchor (MEDIUM)
+- **Files:** `packages/parser/src/date-utils.ts:104`, `apps/web/src/lib/parser/date-utils.ts:80`
+- **Description:** The regex `/^(\d{4})[\s]*[.\-\/．。][\s]*(\d{1,2})[\s]*[.\-\/．。][\s]*(\d{1,2})/` lacks a `$` end anchor. While trailing delimiters are intentionally handled, inputs like "2024-01-15xyz" would match and return "2024-01-15" with "xyz" silently discarded.
+- **Fix:** Add a negative lookahead or stricter boundary check after the day group.
+- **Confidence:** Medium
 
-### F-CR-4: PDF `extractPages` missing space insertion (Medium)
-`packages/parser/src/pdf/extractor.ts` lines 52-76: The `extractPages` function does NOT insert spaces between text items on the same line, unlike `extractPagesFromBuffer` (lines 14-50). This means exported `extractPages` would merge adjacent words.
-
-**Fix**: Add the same space-insertion logic (lastEndX tracking) to `extractPages`.
-
-### F-CR-5: Web PDF text extraction loses positional info (Medium)
-`apps/web/src/lib/parser/pdf.ts` line 322: `content.items.map(...).join(' ')`. This space-joins ALL items from a page regardless of their Y position, losing line break information. Unlike server-side which uses Y-coordinate changes for line breaks.
-
-**Fix**: Apply Y-coordinate-based line break detection in web PDF extraction, similar to server-side `extractor.ts`.
-
-### F-CR-6: XLSX `parseAmount` strips whitespace but CSV `parseCSVAmount` also strips (Very Low)
-Both handle whitespace correctly. No issue, just noting for completeness.
-
-### F-CR-7: No test coverage for Excel formula error cells (Medium)
-No test verifies behavior when an XLSX file contains formula errors. Should add a test with a mock sheet containing #VALUE! cells.
-
-### F-CR-8: PDF table-parser DATE_PATTERN lookahead edge case (Low)
-`table-parser.ts` line 3: The negative lookahead `(?![.\-\/\d])` on short date `\d{1,2}[.\-\/]\d{1,2}` prevents matching "3.5" as a date when followed by more digits. This is correct but doesn't prevent matching "3.5" when preceded by a digit (e.g., "123.5"). The lookbehind `(?<![.\d])` handles this.
+### C14-06: `console.warn` in `store.svelte.ts` (MEDIUM)
+- **File:** `apps/web/src/lib/store.svelte.ts:191, 243, 246, 329, 330, 338, 358`
+- **Description:** Multiple `console.warn` calls persist in the sessionStorage persistence layer. These were not removed in C11.
+- **Fix:** Remove or gate behind a debug flag.
+- **Confidence:** High

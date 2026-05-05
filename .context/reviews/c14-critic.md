@@ -1,29 +1,22 @@
-# Cycle 14 — critic (multi-perspective)
-
-**Date:** 2026-04-25
-
-## Perspectives
-
-### Maintainer
-- Codebase is well-documented with cycle citations (C1-12, C49-02, C81-04, C82-03, C92-01, C94-01) anchoring nontrivial decisions.
-- The cycle-counted commit prefixes inside source comments are increasingly noisy. Defensible because they preserve archaeology, but a future contributor without context will not know what `C82-03` means without grepping `.context/`.
-
-### New contributor
-- Reading `apps/web/src/lib/category-labels.ts` + `formatters.ts` is approachable. JSDoc is good.
-- The 4-way duplication of category taxonomy (CATEGORY_NAMES_KO, FALLBACK_CATEGORY_LABELS, FALLBACK_GROUPS, CATEGORY_COLORS) is the single biggest "huh?" moment for a new contributor. Already deferred (D-01-cluster).
-
-### Product
-- Functional correctness is solid; verify suite green.
-- No user-visible regressions introduced this cycle.
+# Cycle 14 Critic Review
 
 ## Findings
 
-### C14-CRT01 — LOW (Low confidence) — Maintainability
-- **File:** repository-wide source comments referencing `Cn-mm` cycle tags
-- **Observation:** 70+ source files now reference cycle citations. Without a central glossary, a future maintainer cannot decode them.
-- **Suggested fix:** Add a one-line note in `README.md` or `AGENTS.md` pointing to `.context/reviews/_aggregate.md` as the index for cycle citations. Optional, low-priority.
-- **Confidence:** Low. **Severity:** LOW.
+### C14-CRIT01: `isValidISODate` naming is misleading (HIGH)
+- **Files:** `packages/parser/src/date-utils.ts:228`, `apps/web/src/lib/parser/date-utils.ts:242`
+- **Description:** A function named `isValidISODate` that accepts "2024-99-99" is fundamentally misleading. The name sets an expectation that is not met by the implementation.
+- **Why it matters:** Developers trust the name. The bug in C14-01 exists precisely because callers assumed "valid ISO" meant "usable date".
+- **Recommendation:** Rename to `isISODateFormat` and introduce `isValidISODate` with real validation. Or keep the name and fix the validation.
+- **Confidence:** High
 
-## Summary
+### C14-CRIT02: C11 cleanup was incomplete (MEDIUM)
+- **Files:** `apps/web/src/lib/analyzer.ts`, `apps/web/src/lib/store.svelte.ts`
+- **Description:** Commit `8fbe12a` claimed to remove stale console.warn, but multiple instances remain. This suggests the cleanup was scoped to specific files and missed others.
+- **Recommendation:** Use a linter rule or grep-based CI check to prevent console.* in production code.
+- **Confidence:** High
 
-No new critical issues. The codebase shows healthy evolution and good engineering hygiene. The taxonomy duplication remains the single most prominent design tension.
+### C14-CRIT03: PDF text extraction width heuristic is a hack (MEDIUM)
+- **Files:** `packages/parser/src/pdf/extractor.ts:26`, `apps/web/src/lib/parser/pdf.ts:522`
+- **Description:** `item.str.length * 6` is a crude heuristic. It may work for common cases but is not principled.
+- **Recommendation:** Document the heuristic's limitations or switch to actual font metrics.
+- **Confidence:** Medium
