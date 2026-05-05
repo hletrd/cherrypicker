@@ -209,7 +209,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
       }
       continue;
     }
-    if (amount <= 0) continue;
+    if (amount === 0) continue;
 
     const date = parseDateStringToISO(dateRaw);
     if (!isValidISODate(date) && dateRaw) {
@@ -219,7 +219,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     const tx: RawTransaction = {
       date,
       merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
-      amount,
+      amount: Math.abs(amount),
     };
 
     if (installCol !== -1 && installRaw) {

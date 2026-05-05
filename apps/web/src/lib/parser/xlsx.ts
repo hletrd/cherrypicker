@@ -611,10 +611,9 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       }
       continue;
     }
-    // Skip zero- and negative-amount rows (e.g., balance inquiries, declined
-    // transactions, refunds). These don't contribute to spending optimization
-    // and would inflate monthly spending totals (C42-01/C42-02).
-    if (amount <= 0) continue;
+    // Skip zero-amount rows (balance inquiries) but accept negative amounts
+    // (refunds/credits) by taking absolute value (C100-02).
+    if (amount === 0) continue;
 
     const parsedDate = parseDateToISO(dateRaw, errors, i);
     // Validate that the parsed date is a proper ISO date string (YYYY-MM-DD).
@@ -638,7 +637,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     const tx: RawTransaction = {
       date: parsedDate,
       merchant: String(merchantRaw ?? '').replace(/^"(.*)"$/, '$1').trim(),
-      amount,
+      amount: Math.abs(amount),
       ...(installCol !== -1 && installRaw
         ? { installments: parseInstallments(String(installRaw)) }
         : {}),

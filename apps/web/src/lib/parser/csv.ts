@@ -169,10 +169,9 @@ function isValidAmount(amount: number | null, amountRaw: string, lineIdx: number
     }
     return false;
   }
-  // Skip zero- and negative-amount rows (e.g., balance inquiries, declined
-  // transactions, refunds). These don't contribute to spending optimization
-  // and would inflate monthly spending totals (C42-01/C42-02).
-  if (amount <= 0) return false;
+  // Skip zero-amount rows (balance inquiries) but accept negative amounts
+  // (refunds/credits) by letting callers take absolute value (C100-02).
+  if (amount === 0) return false;
   return true;
 }
 
@@ -418,7 +417,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
 
     if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
-    const amount = parseAmount(amountRaw);
+    let amount = parseAmount(amountRaw);
     // Use the shared isValidAmount() helper which handles both NaN and
     // zero-amount filtering (C26-02), matching the bank-specific adapters.
     // Enrich amount errors with raw row text for easier debugging, matching
@@ -429,6 +428,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
       }
       continue;
     }
+    amount = Math.abs(amount);
 
     const tx: RawTransaction = {
       date: parseDateToISO(dateRaw, errors, i),
@@ -540,7 +540,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
         if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
-        const amount = parseAmount(amountRaw);
+        let amount = parseAmount(amountRaw);
         if (!isValidAmount(amount, amountRaw, i, errors)) {
           // Enrich amount error with raw row text for easier debugging (F3)
           if (errors.length > 0 && errors[errors.length - 1]!.line === i + 1) {
@@ -548,6 +548,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
           }
           continue;
         }
+        amount = Math.abs(amount);
 
         const tx: RawTransaction = {
           date: parseDateToISO(dateRaw, errors, i),
