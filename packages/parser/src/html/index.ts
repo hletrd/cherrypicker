@@ -153,7 +153,17 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     if (row.every((c) => !c)) continue;
 
     const rowText = row.map((c) => String(c ?? '')).join(' ');
-    if (isSummaryRow(rowText)) continue;
+    if (isSummaryRow(rowText)) {
+      // Reset forward-fill state so summary row values don't propagate
+      // to merged data cells below (C25-COR01).
+      lastDate = '';
+      lastMerchant = '';
+      lastCategory = '';
+      lastInstallments = '';
+      lastMemo = '';
+      lastAmount = '';
+      continue;
+    }
 
     // Forward-fill pattern for all columns (date, merchant, category,
     // installments, memo, amount). Consistent with XLSX parser logic.

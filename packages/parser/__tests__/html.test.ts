@@ -210,14 +210,32 @@ describe('HTML Table Parser', () => {
 <tr><th>이용일</th><th>이용처</th><th>이용금액</th></tr>
 <tr><td>2024.01.15</td><td>카페</td><td>5,000</td></tr>
 <tr><td></td><td>합계</td><td>5,000</td></tr>
-<tr><td></td><td></td><td>12,000</td></tr>
+<tr><td>2024.01.16</td><td></td><td>12,000</td></tr>
 </table>`;
 
       const result = parseHTML(content);
-      // Summary row is skipped but merchant forward-fill should still be "카페"
+      // Summary row resets forward-fill state, so the row after the summary
+      // with empty merchant gets no forward-fill value (merchant stays empty).
       expect(result.transactions).toHaveLength(2);
       expect(result.transactions[0]!.merchant).toBe('카페');
-      expect(result.transactions[1]!.merchant).toBe('카페');
+      expect(result.transactions[1]!.merchant).toBe('');
+    });
+
+    it('does not forward-fill summary row amounts to merged cells (C25-TEST01)', () => {
+      const content = `<table>
+<tr><th>날짜</th><th>가맹점</th><th>금액</th></tr>
+<tr><td>2024.01.15</td><td>스타벅스</td><td>5,000</td></tr>
+<tr><td></td><td>총합계</td><td>999,999</td></tr>
+<tr><td>2024.01.16</td><td>이마트</td><td></td></tr>
+</table>`;
+
+      const result = parseHTML(content);
+      // Summary row resets forward-fill state, so the 이마트 row with empty
+      // amount cell gets no forward-fill value and is skipped.
+      const emartTx = result.transactions.find((t) => t.merchant.includes('이마트'));
+      expect(emartTx).toBeUndefined();
+      // Also verify no transaction picked up the summary amount
+      expect(result.transactions.some((t) => t.amount === 999999)).toBe(false);
     });
   });
 });
