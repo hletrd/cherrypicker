@@ -254,9 +254,9 @@ When old data is loaded from sessionStorage and categories are edited, `reoptimi
 | 1 | pending |
 | 2 | pending |
 | 3 | pending |
-| 4 | pending |
-| 5 | pending |
-| 6 | pending |
-| 7 | pending |
-| 8 | pending |
+| 4 | DONE — commit a1929eb |
+| 5 | DONE — commit 0660165 |
+| 6 | DONE — commit 40de597 |
+| 7 | DONE — commit a1929eb |
+| 8 | DONE — commit a1929eb |
 | 9 | pending |
