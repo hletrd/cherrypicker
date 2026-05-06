@@ -7,7 +7,7 @@ import type { BankId, ParseResult, RawTransaction } from './types.js';
 import { ParseError } from './types.js';
 import { detectBank } from './detect.js';
 import { parseDateStringToISO, isValidISODate } from './date-utils.js';
-import { parseAmountString } from './csv.js';
+import { parseAmountString } from './amount.js';
 
 /** Extract all STMTTRN transaction blocks from OFX content. */
 function extractTransactionBlocks(content: string): string[] {
