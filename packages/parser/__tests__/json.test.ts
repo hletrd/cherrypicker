@@ -217,4 +217,37 @@ describe('parseJSON', () => {
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]!.merchant).toBe('정상');
   });
+
+  it('reports parse error for boolean amount values (C30-HIGH-01)', () => {
+    const input = JSON.stringify([
+      { date: '2024-01-01', merchant: 'Test', amount: true },
+    ]);
+    const result = parseJSON(input);
+    expect(result.transactions).toHaveLength(0);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]!.message).toContain('boolean');
+  });
+
+  it('reports parse error for boolean false amount (C30-HIGH-01)', () => {
+    const input = JSON.stringify([
+      { date: '2024-01-01', merchant: 'Test', amount: false },
+    ]);
+    const result = parseJSON(input);
+    expect(result.transactions).toHaveLength(0);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]!.message).toContain('boolean');
+  });
+
+  it('silently skips null and undefined amounts without error (C30-HIGH-01)', () => {
+    const input = JSON.stringify([
+      { date: '2024-01-01', merchant: 'NullTest', amount: null },
+      { date: '2024-01-02', merchant: 'UndefTest' }, // amount is undefined (missing key)
+      { date: '2024-01-03', merchant: 'OK', amount: 5000 },
+    ]);
+    const result = parseJSON(input);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]!.merchant).toBe('OK');
+    // No errors for null/undefined — they are valid "missing amount" indicators
+    expect(result.errors.filter(e => e.message.includes('null') || e.message.includes('undefined'))).toHaveLength(0);
+  });
 });

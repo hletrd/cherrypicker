@@ -54,7 +54,11 @@ const CATEGORY_ALIASES = [
 ];
 
 const MEMO_ALIASES = [
-  'memo', 'note', 'notes', 'remarks', 'remark', 'description' /* fallback */,
+  'memo', 'note', 'notes', 'remarks', 'remark',
+  // NOTE: 'description' is intentionally listed here as a fallback but will
+  // never match because it is also in MERCHANT_ALIASES and findField scans
+  // aliases in order. Merchant takes precedence.
+  'description' /* fallback: never matches — see note above */,
   '비고', '적요', '메모', '내용', '설명', '참고', '상세내역', '승인번호',
 ];
 
@@ -76,7 +80,7 @@ function findField(obj: Record<string, unknown>, aliases: string[]): unknown {
  *  - Numbers (rounded to integer Won)
  *  - Strings with various formats (commas, Won sign, KRW prefix, etc.)
  *  Returns null for unparseable values. */
-function normalizeAmount(raw: unknown): number | null {
+function normalizeAmount(raw: unknown, lineIdx: number, errors: ParseError[]): number | null {
   if (typeof raw === 'number') {
     return Number.isFinite(raw) ? Math.round(raw) : null;
   }
@@ -84,6 +88,14 @@ function normalizeAmount(raw: unknown): number | null {
     const parsed = parseCSVAmount(raw);
     return parsed !== null && Number.isFinite(parsed) ? parsed : null;
   }
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+  // Boolean or other unexpected type — report as error
+  errors.push(new ParseError(
+    `금액 필드에 예상치 못한 타입(${typeof raw})이 있습니다: ${String(raw)}`,
+    { line: lineIdx }
+  ));
   return null;
 }
 
@@ -102,10 +114,15 @@ function parseTransactionObject(
   if (dateValue === undefined || amountValue === undefined) return null;
 
   const dateRaw = String(dateValue ?? '').trim();
-  const amount = normalizeAmount(amountValue);
+  const amount = normalizeAmount(amountValue, lineIdx, errors);
 
   if (amount === null) {
-    if (String(amountValue).trim()) {
+    // Only push generic parse error for string/number values that failed to parse.
+    // Booleans get a specific type error from normalizeAmount; null/undefined
+    // are silently skipped as "missing amount" indicators.
+    if (
+      typeof amountValue === 'string' || typeof amountValue === 'number'
+    ) {
       errors.push(new ParseError(`금액을 해석할 수 없습니다: ${String(amountValue)}`, { line: lineIdx }));
     }
     return null;
