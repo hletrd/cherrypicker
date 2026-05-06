@@ -477,7 +477,17 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
-    if (row.every((c) => !c)) continue;
+    if (row.every((c) => !c)) {
+      // Reset forward-fill state on blank rows to prevent values from
+      // unrelated data sections from leaking into subsequent sections (C32-F1).
+      lastDate = '';
+      lastMerchant = '';
+      lastCategory = '';
+      lastInstallments = '';
+      lastMemo = '';
+      lastAmount = '';
+      continue;
+    }
 
     // Skip summary/total rows
     const rowText = row.map((c) => String(c ?? '')).join(' ');
