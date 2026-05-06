@@ -288,6 +288,9 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
           JSON.parse(sniffBuffer.toString('utf-8').replace(/^﻿/, ''));
           format = 'json';
         } catch {
+          // Not valid JSON despite starting with [ or { — fall back to CSV.
+          // The CSV parser will surface parse errors if this is genuinely
+          // not CSV either (e.g., a malformed JSON file).
           format = 'csv';
         }
       }
