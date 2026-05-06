@@ -1,97 +1,198 @@
-# Aggregate Review — CherryPicker Cycle 36
+# Aggregate Review — CherryPicker Cycle 37
 
-## Methodology
-Reviews performed by: code-reviewer, security-reviewer, perf-reviewer.
-All findings cross-referenced for duplicates. Multi-agent agreement noted.
-
----
-
-## SUMMARY
-
-| Severity | New | Carryover | Total |
-|----------|-----|-----------|-------|
-| Medium | 4 | 2 | 6 |
-| Low | 8 | 7 | 15 |
-
-Total unique findings: 21 (9 new, 12 carryover, 3 verified fixed)
+**Date:** 2026-05-06
+**Reviews performed by:** code-reviewer, security-reviewer, perf-reviewer, test-engineer, architect, debugger, critic, verifier, designer, document-specialist
+**Cycle:** 37 / 100
 
 ---
 
-## VERIFIED FIXED (from Cycle 35)
+## Executive Summary
 
-| ID | Finding | Status |
-|----|---------|--------|
-| CR-03 | `toCoreCardRuleSets` threw on unknown reward type | **FIXED** — now defaults to `'none'` |
-| CR-04 | `console.warn` leaked into production | **FIXED** — warning removed |
-| CR-06 | `performanceTiers` ordering not validated | **FIXED** — explicit sort added |
+Cycle 37 is a **maintenance cycle** with no structural changes. Three prior findings were verified fixed (including the critical BUG-1 per-transaction cap undercalculation). Four new medium/low issues were identified in the recently added HTML/OFX/JSON parsers. The dominant pattern is **silent data loss** — all parsers filter out certain transaction types without user-visible feedback.
 
----
+All fundamental architectural debts (parser duplication, type leakage, optimizer complexity) remain untouched. The deferral culture for structural issues shows no signs of abating after 35+ cycles.
 
-## CROSS-AGENT AGREEMENT
-
-1. **I/O inefficiency in parser** (CR-11, PERF-08): **AGREED** by code-reviewer and perf-reviewer. `detectFormat` reads entire file into memory; buffer not reused for actual parsing.
-2. **LLM fallback security gaps** (SEC-03, SEC-06, CR-10): **AGREED** by security-reviewer and code-reviewer. Regex-based sanitization is incomplete; model name is outdated.
-3. **Silent data loss for non-KRW** (SEC-07): **AGREED** by security-reviewer alone. HIGH confidence — transactions disappear from results with no user indication.
+| Severity | Verified Fixed | New (Cycle 37) | Carryover | Total Open |
+|----------|---------------|----------------|-----------|------------|
+| Critical | 1 | 0 | 0 | 0 |
+| High | 2 | 0 | 4 | 4 |
+| Medium | 0 | 5 | 18 | 23 |
+| Low | 0 | 7 | 22 | 29 |
 
 ---
 
-## DEFERRED FINDINGS
+## Verified Fixed in Cycle 37
 
-### Deferred: PERF-01 (keywords.ts bundle size)
-- **Severity**: Low | **Confidence**: High
-- **Reason**: Requires measurement before action. Bundle impact may be negligible with tree-shaking.
-- **Exit criterion**: Run bundle analysis and confirm >100KB impact.
-
-### Deferred: PERF-02 (optimizer incremental update)
-- **Severity**: Medium | **Confidence**: High
-- **Reason**: Algorithmic change with risk of regression. Needs benchmarking before implementation.
-- **Exit criterion**: Benchmark current O(N*M*T) vs proposed O(N*M) with real datasets.
-
-### Deferred: SEC-08 (sessionStorage encryption)
-- **Severity**: Low | **Confidence**: High
-- **Reason**: Requires UX design for key management. Current threat model (single-user browser) accepts plaintext.
-- **Exit criterion**: Security audit flags this as required.
-
-### Deferred: CR-07, CR-17 (type unification, parser dedup)
-- **Severity**: Low-Medium | **Confidence**: High
-- **Reason**: Large refactoring with high regression risk. Requires dedicated cycle.
-- **Exit criterion**: When >5 type adapter bugs accumulate or parser parity tests fail.
+| ID | Finding | File | Evidence |
+|----|---------|------|----------|
+| **BUG-1** | Per-transaction cap on amount (20x undercalc) | `reward.ts:271-277` | `perTxCap` now applied to reward, not amount |
+| C32-V09 | JSON non-deterministic field matching | `json/index.ts:75-79` | Alias priority order scan, not Object.keys order |
+| C32-V01 | XLSX blank-row forward-fill leak | `xlsx/index.ts:307-316` | Blank rows now reset all last* values |
 
 ---
 
-## SCHEDULED FOR IMPLEMENTATION (This Cycle)
+## New Findings (Cycle 37) — Priority Ordered
 
-### Medium Priority
-1. **CR-01**: Silent JSON.parse error swallowing in detect.ts — add ParseError to result
-2. **CR-02**: Silent error swallowing in HTML parser — add ParseError to result
-3. **CR-05**: Add zero-amount guard in `scoreCardsForTransaction`
-4. **CR-09**: Fix Windows path bug in CLI tools (`fileURLToPath`)
-5. **CR-10**: Update hardcoded model name in scraper, add validation
-6. **CR-12**: Fix CP949 detection for small buffers
-7. **CR-15**: Decompose SUMMARY_ROW_PATTERN to avoid ReDoS
-8. **SEC-01**: CSP unsafe-inline — add nonce-based CSP to Layout.astro
-9. **SEC-07**: Surface non-KRW skipped transactions in output
-10. **PERF-06**: Optimize `cardPreviousSpending` calculation in analyzer.ts
+### Security
 
-### Low Priority
-11. **CR-08**: Validate categoryLabels Map is non-empty
-12. **CR-11**: Reuse buffer between detectFormat and parseStatement
-13. **CR-13**: Replace `any` with `unknown` + narrowing in store.svelte.ts
-14. **CR-14**: Add timeout to fetch in cards.ts
-15. **CR-16**: Add cancellation for in-flight analyze/reoptimize
-16. **PERF-03**: Pre-size arrays in buildAssignments
-17. **PERF-04**: Add debounce/isAnalyzing guard to FileDropzone
-18. **PERF-05**: Debounce sessionStorage persistence
-19. **PERF-07**: Document MerchantMatcher O(N) scan limitation
-20. **PERF-08**: Read only header bytes for format sniffing
-21. **SEC-03**: Add max-size guard before LLM fallback processing
-22. **SEC-04**: Tighten Anthropic API key regex
-23. **SEC-05**: Add rate limiting to LLM fallback
-24. **SEC-06**: Replace regex-based LLM sanitization with allowlist approach
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| SEC-37-01 | Low | `json/index.ts:212-216` | JSON wrapper key case-insensitive match lacks Object.hasOwn |
+
+### Performance
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| PERF-37-01 | Low | `json/index.ts:200-220` | Wrapper key scanning is O(keys x wrappers) instead of O(keys) |
+
+### Test Engineering
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| TE-37-01 | Medium | `ofx/index.ts:29-31` | No tests for OFX CCSTMTRS (credit card) parsing |
+| TE-37-02 | Medium | `html/index.ts:139-237` | No tests for HTML forward-fill logic |
+| TE-37-03 | Medium | `json/index.ts:138` | No tests for JSON negative amount handling |
+| TE-37-04 | Medium | `packages/parser/` vs `apps/web/` | No parity tests for HTML/OFX/JSON |
+| TE-37-05 | Low | `ofx/index.ts:88-115` | No tests for OFX timezone conversion |
+
+### Architecture
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| ARCH-37-01 | Low | `packages/parser/` vs `apps/web/` | New parsers add ~1235 lines of duplication |
+
+### Debugger / Correctness
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| BUG-37-01 | Medium | `json/index.ts:138` | JSON parser silently drops refunds/credits |
+| BUG-37-02 | Medium | `ofx/index.ts:88-115` | OFX date timezone math is confusing/fragile |
+| BUG-37-03 | Low | `html.ts:33-35` | `normalizeHTML` could strip legitimate content |
+| BUG-37-04 | Low | `ofx/index.ts:67-78` | OFX extractTag double-regex is inefficient |
+
+### Code Review
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| CR-37-01 | Medium | `json/index.ts:138` | JSON drops negative amounts without error |
+| CR-37-02 | Low | `html/index.ts:47` | HTML parser assumes UTF-8 input |
+| CR-37-03 | Low | `ofx/index.ts:67-78` | extractTag regex missing length validation |
+| CR-37-04 | Low | `html.ts:33-35` | normalizeHTML while-loop regex risk |
+
+### Critic / Design
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| C37-CRIT01 | Critical | All parsers | "Parity" comments are false substitute for shared code |
+| C37-CRIT02 | High | All parsers | Silent data loss is a systemic pattern |
+| C37-CRIT03 | High | Pervasive | Cycle reference convention has become technical debt |
+| C37-CRIT04 | Medium | New parsers | New formats add complexity without clear value proposition |
+| C37-CRIT05 | Medium | `html.ts:29-54` | normalizeHTML mixes security + parsing concerns |
+
+### Verifier
+
+| ID | Status | File | Description |
+|----|--------|------|-------------|
+| C37-V04 | STILL BROKEN | `reward.ts:47` | `isOnline` never populated |
+| C37-V05 | STILL BROKEN | `matcher.ts:128` | FIFO cache eviction (not LRU) |
+| C37-V06 | STILL BROKEN | `parser/index.ts:26` | Web UTF-16 not supported |
+| C37-V07 | STILL BROKEN | `store.svelte.ts:567` | NaN propagation in previousMonthSpending |
+
+### Designer / UX
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| U-DES-37-01 | Medium | All parsers → UI | No feedback when transactions are filtered out |
+| U-DES-37-02 | Low | `store.svelte.ts` | Parse errors not differentiated by file/format |
+
+### Documentation
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| DOC-37-01 | Medium | `ofx/index.ts:85` | Misleading JSDoc on parseOFXDate timezone math |
+| DOC-37-02 | Low | New parsers | Missing `@throws` / error behavior docs on entry functions |
 
 ---
 
-## AGENT NOTES
-- No agent failures. All reviews completed manually due to unavailable Agent tool.
-- Code-review and security-review have the highest confidence on findings with concrete file locations.
-- Performance findings are largely theoretical; real-world impact requires profiling.
+## Cross-Agent Agreement
+
+1. **Silent Data Loss** (BUG-37-01, C37-CRIT02, U-DES-37-01): **AGREED** by debugger, critic, designer, code-reviewer. All parsers silently drop transactions; no user feedback.
+2. **Parser Duplication** (ARCH-37-01, C37-CRIT01): **AGREED** by architect, critic, code-reviewer. New parsers add ~1235 lines of duplication with no automated parity.
+3. **normalizeHTML Concerns** (CR-37-04, C37-CRIT05, C32-V13): **AGREED** by security-reviewer, code-reviewer, critic. Regex-based stripping has ReDoS risk and mixes security/parsing concerns.
+
+---
+
+## Carryover Issues (Still Open from Cycles 32-36)
+
+### High Priority Carryover
+
+| ID | Description | File |
+|----|-------------|------|
+| C32-V02 | `isOnline` dead code — excludeOnline rules unreachable | `reward.ts:47` |
+| BUG-3 | NaN propagation in previousMonthSpending | `store.svelte.ts:567` |
+| BUG-4 | EUC-KR HTML detection failure | `xlsx.ts:99` |
+| BUG-7 | OFX credits silently skipped | `ofx.ts:146` |
+
+### Medium Priority Carryover (Selection)
+
+| ID | Description | File |
+|----|-------------|------|
+| CR-01 | Silent JSON.parse error swallowing | `detect.ts:286` |
+| CR-02 | Silent HTML parser error swallowing | `html/index.ts:48` |
+| CR-09 | Windows path bug in CLI | `tools/cli/` |
+| CR-10 | Outdated hardcoded model name | `extractor.ts:34` |
+| CR-15 | ReDoS risk in SUMMARY_ROW_PATTERN | `column-matcher.ts` |
+| SEC-01 | CSP unsafe-inline | `Layout.astro:50` |
+| SEC-07 | Non-KRW transactions silently skipped | `reward.ts:220` |
+| PERF-02 | Optimizer O(N*M*T) | `greedy.ts:39-66` |
+| PERF-06 | cardPreviousSpending O(cards*tx) | `analyzer.ts:224` |
+| C32-V03 | Web UTF-16 not supported | `parser/index.ts:26` |
+| C32-V07 | FIFO cache eviction | `matcher.ts:128` |
+| C32-V08 | AbortController reuse in scraper | `fetcher.ts:38` |
+
+### Deferred (Exit Criteria Not Met)
+
+| ID | Description | Reason |
+|----|-------------|--------|
+| SEC-08 | sessionStorage encryption | Requires UX key management |
+| PERF-02 | Optimizer incremental update | Needs benchmarking |
+| PERF-01 | keywords.ts bundle size | Requires measurement |
+| CR-07/CR-17 | Type unification + parser dedup | Large refactoring |
+
+---
+
+## Recommendations
+
+1. **FIX BEFORE SHIP:**
+   - C37-V04 (`isOnline` dead code) — silent incorrect reward calculation
+   - C37-V07 (NaN propagation) — complete analysis corruption
+   - BUG-37-01 (JSON silent data loss) — refunds dropped without error
+
+2. **FIX RECOMMENDED (This Cycle):**
+   - Add parse error for negative amounts in all parsers (address systemic silent data loss)
+   - Add parity tests for HTML/OFX/JSON
+   - Fix misleading `parseOFXDate` JSDoc
+
+3. **SCHEDULE FOR NEXT MAJOR CYCLE:**
+   - Parser unification (HTML/JSON/OFX are pure string processing)
+   - Cycle-reference convention cleanup
+   - README accuracy fixes
+
+---
+
+## Gate Verification
+
+| Gate | Result |
+|------|--------|
+| `npm run lint` | PASS |
+| `npm run typecheck` | PASS |
+| `bun run test` | PASS |
+
+---
+
+## Agent Notes
+
+- All reviews performed manually due to unavailability of Agent spawning tool.
+- Reviews verified against current HEAD (commits through 8fb7603).
+- New parser code (HTML, OFX, JSON) reviewed against both server and web implementations.
+- Cross-agent agreement identified three clusters: silent data loss, parser duplication, normalizeHTML concerns.

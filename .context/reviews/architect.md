@@ -1,51 +1,72 @@
-# Architecture Review — CherryPicker Cycle 35
+# Architecture Review — CherryPicker Cycle 37
 
-## Methodology
-Reviewed package boundaries, coupling, layering, and design risks across the monorepo.
-
----
-
-## CONFIRMED ISSUES
-
-### ARCH-01: Type leakage between web and core packages
-**File**: `apps/web/src/lib/analyzer.ts`, `apps/web/src/lib/store.svelte.ts`
-**Severity**: Medium | **Confidence**: High
-The web app has elaborate type adapter functions (`toRulesCategoryNodes`, `toCoreCardRuleSets`) that bridge web-local types to core/rules package types. This indicates the packages do NOT share a unified type system.
-**Root cause**: Web app has its own `CategoryNode` shape (with `label` instead of `labelKo`/`labelEn`) and its own `CardRuleSet` expectations. The core package was designed separately.
-**Fix**: Unify types across packages. Either: (a) make core/rules export the canonical types and have web import them directly, or (b) add a shared `@cherrypicker/types` package. The adapter layer is tech debt.
-
-### ARCH-02: Duplicate optimization result types in store
-**File**: `apps/web/src/lib/store.svelte.ts:11-66`
-**Severity**: Low | **Confidence**: High
-`store.svelte.ts` re-declares `CategoryReward`, `CapInfo`, `CardRewardResult`, `CardAssignment`, `OptimizationResult` — all structurally identical to types in `packages/core/src/models/result.ts`. This violates DRY.
-**Fix**: Import types from `@cherrypicker/core` directly.
-
-### ARCH-03: Parser has web/server duplication
-**File**: `apps/web/src/lib/parser/`, `packages/parser/src/`
-**Severity**: Medium | **Confidence**: High
-The parser logic exists in TWO places: `apps/web/src/lib/parser/` (browser) and `packages/parser/src/` (Bun/Node). While there is explicit parity testing (`pdf-parity.test.ts`, `web-detect-parity.test.ts`, `xlsx-parity.test.ts`), maintaining two copies of complex parsing logic is unsustainable.
-**Fix**: Consider building the parser package for web (e.g., via `bun build` or Vite) and importing it directly. The parity tests are a band-aid.
+**Reviewer:** architect
+**Scope:** Package boundaries, coupling, layering, design decisions, technical debt
+**Date:** 2026-05-06
 
 ---
 
-## LIKELY ISSUES / RISKS
+## Summary
 
-### ARCH-04: store.svelte.ts is too large (666 lines)
-**File**: `apps/web/src/lib/store.svelte.ts`
-**Severity**: Low | **Confidence**: Medium
-The store handles: state management, sessionStorage persistence, migration logic, validation, analysis orchestration, and reoptimization. This is a God Object.
-**Fix**: Split into: `analysisStore.ts`, `persistence.ts`, `validation.ts`.
+Cycle 37 did not introduce structural changes. The new parsers (HTML, OFX, JSON) follow the established pattern of dual implementation (server + web), compounding the parser duplication debt. No progress on the core architectural issues identified in cycles 32-35. The deferral culture for structural refactoring remains a concern.
 
-### ARCH-05: Tight coupling between analyzer and store
-**File**: `apps/web/src/lib/analyzer.ts`, `apps/web/src/lib/store.svelte.ts`
-**Severity**: Low | **Confidence**: Medium
-`analyzer.ts` imports from `store.svelte.ts` (`AnalysisResult`, `AnalyzeOptions`) and `store.svelte.ts` imports from `analyzer.ts` (`analyzeMultipleFiles`, etc.). This creates a circular dependency risk.
-**Fix**: Move shared types to a dedicated `types.ts` file.
+| Category | Count | Severity |
+|---|---|---|
+| New Findings | 1 | Low |
+| Carryover (still open) | 5 | — |
+| Structural Debt Status | Worsened | — |
 
 ---
 
-## DESIGN DECISIONS (Accepted)
+## NEW FINDINGS (Cycle 37)
 
-- **Greedy optimizer**: Appropriate for the problem size (NP-hard card selection). Confirmed no need for LP solver.
-- **Parser tiering** (structured -> fallback -> LLM): Good progressive enhancement.
-- **Card rule YAML**: Human-editable, version-controlled, schema-validated. Good choice.
+### ARCH-37-01: New Parser Formats Exacerbate Duplication Debt
+**File:** `packages/parser/src/` vs `apps/web/src/lib/parser/`
+**Severity:** Low | **Confidence:** High
+
+The addition of HTML, OFX, and JSON parsers in C98/C99 added ~600 lines of new server-side parser code and ~550 lines of new web-side parser code. Both implementations are manually maintained with parity comments (C98-02, C99-01, C100-01, C100-03) but no automated parity verification for the new formats. The total duplication footprint is now:
+
+| Format | Server Lines | Web Lines | Duplication |
+|--------|-------------|-----------|-------------|
+| CSV | ~200 | ~180 | High |
+| XLSX | ~400 | ~570 | High |
+| PDF | ~431 | ~622 | High |
+| HTML | ~279 | ~284 | Very High (nearly identical) |
+| JSON | ~90 | ~85 | Very High (nearly identical) |
+| OFX | ~130 | ~125 | Very High (nearly identical) |
+| **Total** | **~1530** | **~1866** | **~3396 lines duplicated** |
+
+The HTML, JSON, and OFX parsers are particularly wasteful because they are pure string-processing functions with no Node-specific or browser-specific APIs. They could be unified into a single runtime-agnostic implementation.
+
+**Fix:** Extract HTML, JSON, and OFX parsers into `packages/parser/src/` as pure functions, then import them into the web app via a build step. These three formats require no platform-specific APIs (unlike PDF which needs pdfjs-dist vs unpdf).
+
+---
+
+## CARRYOVER (still open from prior cycles)
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| ARCH-01 | Medium | `analyzer.ts` | Type leakage between web and core packages |
+| ARCH-02 | Low | `store.svelte.ts` | Duplicate optimization result types |
+| ARCH-03 | Medium | `packages/parser/src/` vs `apps/web/src/lib/parser/` | Parser web/server duplication |
+| ARCH-04 | Low | `store.svelte.ts` | God Object (666 lines) |
+| ARCH-05 | Low | `analyzer.ts` / `store.svelte.ts` | Circular dependency risk |
+
+---
+
+## Cross-Cycle Status: Structural Debt Accumulation
+
+| Issue | First Reported | Current Status | Lines Added Since |
+|-------|---------------|----------------|-------------------|
+| Server/web parser duplication | Cycle 2 | **Worsened** | +~1235 lines (HTML/JSON/OFX) |
+| CATEGORY_NAMES_KO hardcoding | Cycle 3 | **Still open** | — |
+| No parity tests for new parsers | Cycle 37 (new) | **New gap** | — |
+| Optimizer O(T^2 x C) | Cycle 12 | **Still open** | — |
+| Bank adapter configs hardcoded | Cycle 15 | **Still open** | — |
+| Type adapter tax | Cycle 35 | **Still open** | — |
+
+---
+
+## Recommendation
+
+Schedule a dedicated refactoring sprint for parser unification. The HTML, JSON, and OFX parsers are low-risk candidates for extraction because they use no platform-specific APIs. Start with these three to prove the pattern, then tackle CSV and XLSX (which need SheetJS bundling for web). PDF unification may require adopting pdfjs-dist for both environments.

@@ -1,81 +1,69 @@
-# Performance Review — CherryPicker Cycle 36
+# Performance Review — CherryPicker Cycle 37
 
-## Methodology
-Reviewed for CPU hotspots, memory allocations, I/O inefficiency, algorithmic complexity, and responsiveness across packages/core, packages/parser, apps/web.
-
----
-
-## VERIFIED FIXED (from Cycle 35)
-None — PERF-01 through PERF-05 remain open or deferred.
+**Reviewer:** perf-reviewer
+**Scope:** CPU hotspots, memory allocations, I/O inefficiency, algorithmic complexity
+**Date:** 2026-05-06
 
 ---
 
-## CARRYOVER (still open from Cycle 35)
+## Summary
 
-### PERF-01: `keywords.ts` is ~9200 lines of inline data
-**File**: `packages/core/src/categorizer/keywords.ts` | **Severity**: Low | **Confidence**: High
-9200+ merchant keyword entries inflate bundle size and parse time. All keywords loaded into memory even if only a subset is used.
-**Status**: Deferred. Requires measurement before action.
-**Exit criterion**: Run bundle analysis and confirm >100KB impact.
+No new performance regressions introduced in Cycle 37. The recently added HTML/JSON/OFX parsers have acceptable complexity (O(n) per file). One minor note on JSON wrapper key scanning. All prior performance findings remain open or deferred.
 
-### PERF-02: `scoreCardsForTransaction` recalculates full card output per card per transaction
-**File**: `packages/core/src/optimizer/greedy.ts:39-66` | **Severity**: Medium | **Confidence**: High
-```typescript
-const before = calculateCardOutput(currentTransactions, previousMonthSpending, rule).totalReward;
-const after = calculateCardOutput([...currentTransactions, transaction], previousMonthSpending, rule).totalReward;
-```
-O(N * M * T) complexity. For 1000 transactions and 50 cards, `calculateRewards` is called 100,000 times.
-**Status**: Deferred. Algorithmic change with regression risk. Needs benchmarking.
-**Exit criterion**: Benchmark current O(N*M*T) vs proposed O(N*M) with real datasets.
-
-### PERF-03: `buildAssignments` creates intermediate Maps and arrays
-**File**: `packages/core/src/optimizer/greedy.ts:68-132` | **Severity**: Low | **Confidence**: Medium
-Multiple intermediate data structures allocated per transaction.
-**Fix**: Pre-size arrays where possible, or use plain objects for small key counts.
-
-### PERF-04: No debounce on file dropzone
-**File**: `apps/web/src/components/upload/FileDropzone.svelte` | **Severity**: Low | **Confidence**: Medium
-Multiple rapid file drops could trigger overlapping analysis calls.
-**Fix**: Add `isAnalyzing` guard or debounce file drop events.
-
-### PERF-05: SessionStorage persistence runs on every reoptimize
-**File**: `apps/web/src/lib/store.svelte.ts` | **Severity**: Low | **Confidence**: Medium
-Every category edit triggers `persistToStorage`, serializing the entire result to JSON. For large datasets (1000+ transactions), this could cause jank.
-**Fix**: Debounce persistence or use `requestIdleCallback`.
+| Category | Count | Severity |
+|---|---|---|
+| New Findings | 1 | Low |
+| Carryover (still open) | 8 | — |
+| Deferred | 2 | — |
 
 ---
 
-## NEW FINDINGS
+## NEW FINDINGS (Cycle 37)
 
-### PERF-06: `analyzeMultipleFiles` computes `cardPreviousSpending` as O(cards * transactions)
-**File**: `apps/web/src/lib/analyzer.ts:224-250` | **Severity**: Medium | **Confidence**: High
-For each card (potentially 100+), the code filters ALL transactions (potentially 1000+) to compute exclusion-filtered previous month spending:
-```typescript
-for (const rule of coreRules) {
-  const qualifying = transactions
-    .filter(tx => tx.amount > 0 && !exclusions.has(tx.category) && ...)
-    .reduce((sum, tx) => sum + tx.amount, 0);
-}
-```
-This is O(cards * transactions) with repeated Set lookups. For 100 cards and 1000 transactions, that's 100,000 filter+reduce operations.
-**Fix**: Pre-compute a single pass over transactions to build per-category spending totals, then each card's previousMonthSpending is a simple sum of category totals minus excluded categories.
+### PERF-37-01: JSON Wrapper Key Scanning Is O(keys^2) for Wrapped Objects
+**File:** `packages/parser/src/json/index.ts:200-220`, `apps/web/src/lib/parser/json.ts:186-200`
+**Severity:** Low | **Confidence:** Medium
 
-### PERF-07: MerchantMatcher substring scan is O(keyword_count) per transaction
-**File**: `packages/core/src/categorizer/matcher.ts` | **Severity**: Low | **Confidence**: High
-`SUBSTRING_SAFE_ENTRIES` is precomputed at module load (good), but the substring scan still iterates over ALL keywords (~9200 entries) for every transaction that doesn't get an exact match. For a statement with 1000 transactions, that's 9.2M substring checks.
-**Fix**: Build a Trie or Aho-Corasick automaton from keywords for O(merchant_length + matches) matching instead of O(keyword_count * merchant_length).
+For wrapped JSON objects, the parser iterates over `wrapperKeys` (11 keys) and for each key iterates over `Object.keys(obj)`. For a JSON object with many keys (e.g., 100+ from a complex banking API response), this is 1,100 key comparisons. In practice, objects have < 20 keys and the fast path (exact match) catches most cases. Still, this could be optimized by building a lowercased key Set first.
 
-### PERF-08: `detectFormat` reads entire file for sniffing
-**File**: `packages/parser/src/detect.ts:255` | **Severity**: Low | **Confidence**: Medium
-`sniffBuffer = await readFile(filePath);` reads the ENTIRE file into memory just to check the first 1-8 bytes. For a 50MB PDF, this allocates 50MB unnecessarily.
-**Fix**: Use `fs.open` + `fs.read` to read only the first 4KB header for format sniffing.
+**Fix:** Pre-compute `lowerKeys = new Map(Object.keys(obj).map(k => [k.toLowerCase(), k]))` once, then do O(1) lookups.
 
 ---
 
-## VERIFIED SAFE
-- MerchantMatcher LRU cache bounded to 500 entries
-- `SUBSTRING_SAFE_ENTRIES` precomputed at module level (no re-computation per call)
-- Greedy optimizer filters to latest month before optimizing
-- `analyzeMultipleFiles` uses shared MerchantMatcher across files
-- No recursive calls without depth limits
-- `calculateRewards` uses in-place mutation for Maps (no unnecessary re-allocation of categoryRewards)
+## CARRYOVER (still open from prior cycles)
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| PERF-01 | Low | `keywords.ts` | 9200-line static keyword blob inflates bundle |
+| PERF-02 | Medium | `greedy.ts:39-66` | O(N*M*T) reward recalculation per card/tx |
+| PERF-03 | Low | `greedy.ts:68-132` | Intermediate Maps/arrays allocated per transaction |
+| PERF-04 | Low | `FileDropzone.svelte` | No debounce on file drop |
+| PERF-05 | Low | `store.svelte.ts` | SessionStorage persistence on every reoptimize |
+| PERF-06 | Medium | `analyzer.ts:224-250` | cardPreviousSpending O(cards * transactions) |
+| PERF-07 | Low | `matcher.ts` | Substring scan O(keyword_count) per transaction |
+| PERF-08 | Low | `detect.ts:255` | detectFormat reads entire file for sniffing |
+
+---
+
+## DEFERRED
+
+| ID | Severity | Reason |
+|----|----------|--------|
+| PERF-02 | Medium | Algorithmic change with regression risk; needs benchmarking |
+| PERF-01 | Low | Bundle impact requires measurement before action |
+
+---
+
+## Verification: New Parser Complexity
+
+| Parser | Time | Memory | Notes |
+|--------|------|--------|-------|
+| HTML | O(rows * cols) | O(rows * cols) for SheetJS workbook | Acceptable; limited by SheetJS |
+| OFX | O(blocks * tags) | O(blocks) for extracted strings | Acceptable; typically < 1K blocks |
+| JSON | O(items * aliases) | O(items) for transaction array | Acceptable; wrapper scan is minor |
+
+---
+
+## Recommendation
+
+The `cardPreviousSpending` calculation (PERF-06) is the highest-impact remaining performance issue. A single-pass pre-computation would reduce O(cards * transactions) to O(transactions + cards), providing measurable improvement for users with many cards.
