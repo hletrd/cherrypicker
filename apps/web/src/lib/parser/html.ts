@@ -20,7 +20,7 @@ import {
   isValidHeaderRow,
 } from './column-matcher.js';
 
-// SheetJS is imported as a CommonJS module
+// SheetJS is imported as an ES module
 import * as xlsx from 'xlsx';
 
 /** Fix malformed closing tags and strip dangerous content before SheetJS parsing.
@@ -39,7 +39,7 @@ export function normalizeHTML(html: string): string {
     // First pattern: quoted values (handles spaces within quotes)
     // Second pattern: unquoted values and empty attributes
     // Parity with server-side packages/parser/src/csv/shared.ts (C23-SEC01)
-    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*')/gi, '')
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|`[^`]*`)/gi, '')
     .replace(/\son\w+\s*=\s*[^>\s]*/gi, '')
     // Strip javascript: pseudo-protocol URLs from href/src attributes
     // Defense-in-depth against XSS if HTML is ever rendered (C28-SEC01)
@@ -160,7 +160,17 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
-    if (row.every((c) => !c)) continue;
+    if (row.every((c) => !c)) {
+      // Reset forward-fill state on blank rows to prevent values from
+      // unrelated data sections from leaking into subsequent sections (C31-TRACE01)
+      lastDate = '';
+      lastMerchant = '';
+      lastCategory = '';
+      lastInstallments = '';
+      lastMemo = '';
+      lastAmount = '';
+      continue;
+    }
 
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (isSummaryRow(rowText)) {

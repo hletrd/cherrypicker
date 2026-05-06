@@ -25,7 +25,7 @@ import {
   isValidHeaderRow,
 } from '../csv/column-matcher.js';
 
-// SheetJS is imported as a CommonJS module
+// SheetJS is imported as an ES module
 import xlsx from 'xlsx';
 
 /** Parse HTML content and extract transactions from tables.
@@ -151,7 +151,17 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
   // Parse data rows
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
-    if (row.every((c) => !c)) continue;
+    if (row.every((c) => !c)) {
+      // Reset forward-fill state on blank rows to prevent values from
+      // unrelated data sections from leaking into subsequent sections (C31-TRACE01)
+      lastDate = '';
+      lastMerchant = '';
+      lastCategory = '';
+      lastInstallments = '';
+      lastMemo = '';
+      lastAmount = '';
+      continue;
+    }
 
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (isSummaryRow(rowText)) {

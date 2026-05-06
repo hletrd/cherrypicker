@@ -161,6 +161,13 @@ export function parseAmountString(raw: string): number | null {
   const dotCount = (cleaned.match(/\./g) ?? []).length;
   if (dotCount > 1 || cleaned.endsWith('.')) return null;
   if (!cleaned) return null;
+  // Reject malformed strings like "1-2-3" that parseFloat would silently accept (C31-CR01).
+  // Allow trailing non-digits (e.g., "1234원" → parseFloat returns 1234) but reject
+  // any digits or dots after the initial numeric prefix.
+  const numMatch = cleaned.match(/^[+-]?\d+(?:\.\d+)?/);
+  if (!numMatch) return null;
+  const afterNum = cleaned.slice(numMatch[0].length);
+  if (/[\d.]/.test(afterNum)) return null;
   const n = Math.round(parseFloat(cleaned));
   if (Number.isNaN(n) || !Number.isFinite(n)) return null;
   return isNeg ? -n : n;
@@ -192,7 +199,7 @@ export function normalizeHTML(html: string): string {
     .replace(/<(iframe|object|embed)[\s\S]*?<\/\1>/gi, '')
     .replace(/<(iframe|object|embed)[^>]*>/gi, '')
     // Remove event handler attributes (onclick, onerror, etc.)
-    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*')/gi, '')
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|`[^`]*`)/gi, '')
     .replace(/\son\w+\s*=\s*[^>\s]*/gi, '')
     // Strip javascript: pseudo-protocol URLs from href/src attributes
     // Defense-in-depth against XSS if HTML is ever rendered (C28-SEC01)
