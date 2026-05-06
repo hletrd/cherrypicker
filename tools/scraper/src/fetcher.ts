@@ -47,10 +47,15 @@ export async function fetchCardPage(url: string): Promise<string> {
     // Also check meta charset in HTML head for cases where Content-Type doesn't specify
     const metaCharset = text.match(/<meta[^>]+charset=["']?([^"'\s;>]+)/i)?.[1]?.toLowerCase();
     if (metaCharset && (metaCharset === 'euc-kr' || metaCharset === 'ks_c_5601-1987')) {
+      // Create fresh controller for the re-fetch (C32-V08) so the first
+      // fetch's timeout does not accidentally abort the second.
+      const controller2 = new AbortController();
+      const timeout2 = setTimeout(() => controller2.abort(), FETCH_TIMEOUT_MS);
       const buffer = await fetch(url, {
-        signal: controller.signal,
+        signal: controller2.signal,
         headers: { 'User-Agent': USER_AGENT },
       }).then((r) => r.arrayBuffer());
+      clearTimeout(timeout2);
       const decoder = new TextDecoder('euc-kr');
       return decoder.decode(buffer);
     }
