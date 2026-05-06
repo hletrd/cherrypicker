@@ -62,7 +62,7 @@ function toCoreCardRuleSets(rules: WebCardRuleSet[]) {
       ...r,
       type: VALID_REWARD_TYPES.has(r.type)
         ? (r.type as 'discount' | 'points' | 'cashback' | 'mileage')
-        : 'discount',
+        : 'none',
       tiers: r.tiers.map((t) => ({
         ...t,
         unit: t.unit ?? null,
@@ -107,12 +107,20 @@ describe('toCoreCardRuleSets type adapter', () => {
     }
   });
 
-  test('unknown reward type falls back to "discount"', () => {
+  test('unknown reward type falls back to "none"', () => {
     const result = toCoreCardRuleSets([{
       ...baseRule,
       rewards: [{ type: 'unknown-type', tiers: [{ rate: 1, monthlyCap: null, perTransactionCap: null }] }],
     }]);
-    expect(result[0]!.rewards[0]!.type).toBe('discount');
+    expect(result[0]!.rewards[0]!.type).toBe('none');
+  });
+
+  test('empty string reward type falls back to "none"', () => {
+    const result = toCoreCardRuleSets([{
+      ...baseRule,
+      rewards: [{ type: '', tiers: [{ rate: 1, monthlyCap: null, perTransactionCap: null }] }],
+    }]);
+    expect(result[0]!.rewards[0]!.type).toBe('none');
   });
 
   test('null unit is normalized to null', () => {
