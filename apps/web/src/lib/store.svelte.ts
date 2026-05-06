@@ -564,7 +564,7 @@ function createAnalysisStore() {
         // the FRESH monthly breakdown (derived from editedTransactions) when
         // the user did not provide an explicit value.
         let previousMonthSpending: number | undefined;
-        if (options?.previousMonthSpending !== undefined) {
+        if (options?.previousMonthSpending !== undefined && Number.isFinite(options.previousMonthSpending)) {
           // Caller explicitly provided a value — use it
           previousMonthSpending = options.previousMonthSpending;
         } else if (snapshot.previousMonthSpendingOption !== undefined) {
