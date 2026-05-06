@@ -163,6 +163,32 @@ VERSION:102
       expect(result.transactions).toHaveLength(1);
       expect(result.transactions[0]!.date).toBe('2024-01-16');
     });
+
+    it('preserves date for time-only entries without timezone (C41-BUG01)', () => {
+      // 20240115230000 (no timezone) — treated as KST, date should stay 2024-01-15
+      const content = `<OFX>
+<BANKTRANLIST>
+<STMTTRN><TRNTYPE>DEBIT</TRNTYPE><DTPOSTED>20240115230000</DTPOSTED><TRNAMT>-10000</TRNAMT><NAME>TEST</NAME></STMTTRN>
+</BANKTRANLIST>
+</OFX>`;
+
+      const result = parseOFX(content);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.date).toBe('2024-01-15');
+    });
+
+    it('shifts date for entries with timezone offset (C41-BUG01)', () => {
+      // 20240115 23:00 UTC+0 = 2024-01-16 08:00 KST
+      const content = `<OFX>
+<BANKTRANLIST>
+<STMTTRN><TRNTYPE>DEBIT</TRNTYPE><DTPOSTED>20240115230000[0:GMT]</DTPOSTED><TRNAMT>-10000</TRNAMT><NAME>TEST</NAME></STMTTRN>
+</BANKTRANLIST>
+</OFX>`;
+
+      const result = parseOFX(content);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.date).toBe('2024-01-16');
+    });
   });
 
   describe('Edge cases', () => {

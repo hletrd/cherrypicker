@@ -50,10 +50,8 @@ function extractTag(block: string, tagName: string): string {
  *  OFX uses YYYYMMDD format optionally followed by time: 20240115120000[0:GMT].
  *  If a timezone offset is present, convert to KST (UTC+9) before extracting
  *  the date so cross-midnight offsets don't produce the wrong local date.
- *
- *  The KST conversion works by computing UTC ms, adding 9 hours, then reading
- *  back with getUTC* — which yields KST values because the Date is shifted +9h.
- *  Using local getters (getFullYear etc.) would be incorrect in non-KST envs (C31-CR02). */
+ *  When no timezone is present, the time is treated as already KST (local
+ *  time of the issuing bank) and no conversion is applied. */
 function parseOFXDate(raw: string): string {
   // Match: YYYYMMDD[HHMMSS[.sss][+offset:TZ]]]
   const m = raw.match(/^(\d{4})(\d{2})(\d{2})(?:(\d{2})(\d{2})(\d{2})(?:\.\d+)?(?:\[([+-]?\d+):[A-Z]+\])?)?/);
@@ -74,9 +72,15 @@ function parseOFXDate(raw: string): string {
   const hour = parseInt(m[4], 10);
   const minute = parseInt(m[5], 10);
   const second = parseInt(m[6], 10);
-  const tzOffset = m[7] ? parseInt(m[7], 10) : 0;
+  const hasTz = m[7] !== undefined;
+  const tzOffset = hasTz ? parseInt(m[7], 10) : 0;
 
-  // Convert to KST (UTC+9): local time - tzOffset = UTC; UTC + 9 = KST
+  if (!hasTz) {
+    // No timezone — treat as KST already. Just extract the date.
+    return parseDateStringToISO(`${m[1]}${m[2]}${m[3]}`);
+  }
+
+  // Timezone present: convert to KST (UTC+9)
   const utcMs = Date.UTC(year, month, day, hour, minute, second) - tzOffset * 3600000;
   const kst = new Date(utcMs + 9 * 3600000);
 
