@@ -9,6 +9,10 @@
  * Returns null for unparseable inputs so callers can distinguish between
  * genuinely zero amounts and parse failures.
  */
+/** Alias for parseAmount to match the server-side API shape.
+ *  HTML and other parsers import this name for clarity (C29-HIGH-02). */
+export const parseAmountString = parseAmount;
+
 export function parseAmount(raw: string): number | null {
   if (!raw.trim()) return null; // Early return for empty/whitespace-only input (C84-02 parity with server-side)
   let cleaned = raw.trim()
@@ -31,6 +35,11 @@ export function parseAmount(raw: string): number | null {
   if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
   const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
   if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
+  // Reject strings with multiple decimal points (e.g., "1.2.3") or empty-after-dot (e.g., "1.")
+  // These are not valid Korean Won amounts (C29-HIGH-01).
+  const dotCount = (cleaned.match(/\./g) ?? []).length;
+  if (dotCount > 1 || cleaned.endsWith('.')) return null;
+  if (!cleaned) return null; // Explicit empty guard for parity with server-side (C29-HIGH-01)
   // Use Math.round(parseFloat(...)) to match the xlsx parser's rounding behavior
   // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
   // cells may contain decimal remainders; rounding is more correct than truncation.

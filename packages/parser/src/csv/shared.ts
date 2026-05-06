@@ -156,6 +156,10 @@ export function parseAmountString(raw: string): number | null {
   if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
   const isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
   if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
+  // Reject strings with multiple decimal points (e.g., "1.2.3") or empty-after-dot (e.g., "1.")
+  // These are not valid Korean Won amounts (C29-HIGH-01).
+  const dotCount = (cleaned.match(/\./g) ?? []).length;
+  if (dotCount > 1 || cleaned.endsWith('.')) return null;
   if (!cleaned) return null;
   const n = Math.round(parseFloat(cleaned));
   if (Number.isNaN(n) || !Number.isFinite(n)) return null;
@@ -188,7 +192,7 @@ export function normalizeHTML(html: string): string {
     .replace(/<(iframe|object|embed)[\s\S]*?<\/\1>/gi, '')
     .replace(/<(iframe|object|embed)[^>]*>/gi, '')
     // Remove event handler attributes (onclick, onerror, etc.)
-    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*')/gi, '')
     .replace(/\son\w+\s*=\s*[^>\s]*/gi, '')
     // Strip javascript: pseudo-protocol URLs from href/src attributes
     // Defense-in-depth against XSS if HTML is ever rendered (C28-SEC01)
