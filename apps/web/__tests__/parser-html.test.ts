@@ -122,6 +122,13 @@ describe('HTML Table Parser (web)', () => {
       expect(normalizeHTML('<td onclick="alert(1);\nconsole.log(2)">value</td>')).toBe('<td>value</td>');
     });
 
+    it('removes event handlers with spaces around equals sign (C24-TEST01)', () => {
+      expect(normalizeHTML('<td onclick ="alert(1)">value</td>')).toBe('<td>value</td>');
+      expect(normalizeHTML('<td onclick= "alert(1)">value</td>')).toBe('<td>value</td>');
+      expect(normalizeHTML('<td onclick = "alert(1)">value</td>')).toBe('<td>value</td>');
+      expect(normalizeHTML('<td onerror = \'console.log(1)\'>value</td>')).toBe('<td>value</td>');
+    });
+
     it('removes event handlers without breaking adjacent attributes (C23-TEST01)', () => {
       expect(normalizeHTML('<td onclick="alert(1)" class="foo">value</td>')).toBe('<td class="foo">value</td>');
       expect(normalizeHTML('<td class="foo" onclick="alert(1)">value</td>')).toBe('<td class="foo">value</td>');

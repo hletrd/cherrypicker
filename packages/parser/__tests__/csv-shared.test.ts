@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { splitCSVLine, splitCSVContent, parseCSVAmount, isValidCSVAmount, parseCSVInstallments, parseAmountString } from '../src/csv/shared.js';
+import { splitCSVLine, splitCSVContent, parseCSVAmount, isValidCSVAmount, parseCSVInstallments, parseAmountString, normalizeHTML } from '../src/csv/shared.js';
 import { normalizeHeader, findColumn, DATE_COLUMN_PATTERN, isValidHeaderRow, HEADER_KEYWORDS } from '../src/csv/column-matcher.js';
 
 // ---------------------------------------------------------------------------
@@ -809,5 +809,41 @@ describe('parseAmountString', () => {
   test('returns null for Infinity literal', () => {
     expect(parseAmountString('Infinity')).toBeNull();
     expect(parseAmountString('-Infinity')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// normalizeHTML — HTML sanitization for SheetJS pre-processing (C24-TEST01)
+// ---------------------------------------------------------------------------
+
+describe('normalizeHTML', () => {
+  test('strips script tags and contents', () => {
+    expect(normalizeHTML('<td><script>alert(1)</script>value</td>')).toBe('<td>value</td>');
+  });
+
+  test('strips quoted event handlers', () => {
+    expect(normalizeHTML('<td onclick="alert(1)">value</td>')).toBe('<td>value</td>');
+    expect(normalizeHTML('<td onerror=\'console.log(1)\'>value</td>')).toBe('<td>value</td>');
+  });
+
+  test('strips unquoted event handlers', () => {
+    expect(normalizeHTML('<td onclick=alert(1)>value</td>')).toBe('<td>value</td>');
+  });
+
+  test('strips event handlers with spaces around equals sign (C24-TEST01)', () => {
+    expect(normalizeHTML('<td onclick ="alert(1)">value</td>')).toBe('<td>value</td>');
+    expect(normalizeHTML('<td onclick= "alert(1)">value</td>')).toBe('<td>value</td>');
+    expect(normalizeHTML('<td onclick = "alert(1)">value</td>')).toBe('<td>value</td>');
+    expect(normalizeHTML('<td onerror = \'console.log(1)\'>value</td>')).toBe('<td>value</td>');
+  });
+
+  test('strips iframe, object, embed tags', () => {
+    expect(normalizeHTML('<iframe src="evil"></iframe><td>value</td>')).toBe('<td>value</td>');
+    expect(normalizeHTML('<object data="evil"></object><td>value</td>')).toBe('<td>value</td>');
+    expect(normalizeHTML('<embed src="evil"><td>value</td>')).toBe('<td>value</td>');
+  });
+
+  test('fixes malformed closing tags', () => {
+    expect(normalizeHTML('content</td   >')).toBe('content</td>');
   });
 });
