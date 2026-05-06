@@ -94,10 +94,10 @@ No tests cover the default case.
 
 ## Completion Tracking
 
-| Task | Status |
-|---|---|
-| 1 | pending |
-| 2 | pending |
-| 3 | pending |
-| 4 | pending |
-| 5 | pending |
+| Task | Status | Commit |
+|---|---|---|
+| 1 | DONE | b8d3404 |
+| 2 | DONE | 7d6c3eb |
+| 3 | NOT DONE | — (deferred to C34) |
+| 4 | DONE | b8d3404 |
+| 5 | DONE | 653fab5 |

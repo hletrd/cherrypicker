@@ -129,11 +129,11 @@ Unknown types silently default to `calculateDiscount`.
 
 ## Completion Tracking
 
-| Task | Status |
-|---|---|
-| 1 | pending |
-| 2 | pending |
-| 3 | pending |
-| 4 | pending |
-| 5 | pending |
-| 6 | pending |
+| Task | Status | Commit |
+|---|---|---|
+| 1 | DONE | 653fab5 |
+| 2 | DONE | 4dfa7b2 |
+| 3 | DONE | b8d3404 |
+| 4 | DONE | ddc9284 |
+| 5 | DONE | a2c0994 |
+| 6 | DONE | b8d3404 |
