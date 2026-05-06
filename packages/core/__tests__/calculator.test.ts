@@ -397,6 +397,33 @@ const fixedRewardPerDayFixture: CardRuleSet = {
   },
 };
 
+const combinedRateFixedFixture: CardRuleSet = {
+  card: {
+    id: 'fixture-combined-card',
+    issuer: 'fixture',
+    name: 'Fixture Combined Rate+Fixed Card',
+    nameKo: '복합 혜택 테스트 카드',
+    type: 'credit',
+    annualFee: { domestic: 0, international: 0 },
+    url: 'https://example.com/combined-fixture',
+    lastUpdated: '2026-05-06',
+    source: 'manual',
+  },
+  performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+  performanceExclusions: [],
+  rewards: [
+    {
+      category: 'dining',
+      type: 'discount',
+      tiers: [{ performanceTier: 'tier0', rate: 5, fixedAmount: 500, monthlyCap: null, perTransactionCap: null }],
+    },
+  ],
+  globalConstraints: {
+    monthlyTotalDiscountCap: null,
+    minimumAnnualSpending: null,
+  },
+};
+
 const mileageFixture: CardRuleSet = {
   card: {
     id: 'fixture-mileage-card',
@@ -697,5 +724,20 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     // Broad dining rule is blocked because tx has subcategory='cafe'
     // Specific cafe rule doesn't match because merchant doesn't contain '메가커피'
     expect(cafe!.reward).toBe(0);
+  });
+
+  test('rate takes precedence over fixedAmount when both are present on same tier (C26-COR01)', () => {
+    // A tier with both rate: 5% and fixedAmount: 500 should apply only the rate.
+    // 5% on 10000 = 500 reward (same as fixedAmount in this case, but rate-based).
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'dining', 10000)],
+      previousMonthSpending: 0,
+      cardRule: combinedRateFixedFixture,
+    });
+    const dining = output.rewards.find((reward) => reward.category === 'dining');
+    expect(dining).toBeDefined();
+    // Rate-based: 10000 * 0.05 = 500. FixedAmount (500) is ignored when rate is present.
+    expect(dining!.reward).toBe(500);
+    expect(dining!.rate).toBe(0.05);
   });
 });
