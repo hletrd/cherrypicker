@@ -128,7 +128,8 @@ export class MerchantMatcher {
 
   private setCache(key: string, result: MatchResult): void {
     if (this.cache.size >= MerchantMatcher.MAX_CACHE_SIZE) {
-      // Evict oldest (first entry in Map iteration order)
+      // Evict oldest (first entry in Map iteration order = least recently used)
+      // because getCache promotes accessed entries to the end (C32-V07).
       const firstKey = this.cache.keys().next().value;
       if (firstKey !== undefined) {
         this.cache.delete(firstKey);
