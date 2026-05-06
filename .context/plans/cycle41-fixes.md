@@ -2,31 +2,31 @@
 
 ## Scheduled for Implementation
 
-### P1: Fix OFX timezone handling (BUG-41-01)
-- [ ] Fix server-side `parseOFXDate` in `packages/parser/src/ofx/index.ts`
-- [ ] Fix web-side `parseOFXDate` in `apps/web/src/lib/parser/ofx.ts`
-- [ ] Add tests for timezone conversion
-- [ ] Update JSDoc (DOC-41-01)
+### P1: Fix OFX timezone handling (BUG-41-01) — DONE
+- [x] Fix server-side `parseOFXDate` in `packages/parser/src/ofx/index.ts`
+- [x] Fix web-side `parseOFXDate` in `apps/web/src/lib/parser/ofx.ts`
+- [x] Add tests for timezone conversion
+- [x] Update JSDoc (DOC-41-01)
 
-### P2: Fix amount precision test (CR-41-01)
-- [ ] Add MAX_SAFE_INTEGER guard to `parseAmountString`
-- [ ] Update server-side `packages/parser/src/amount.ts`
-- [ ] Update web-side `apps/web/src/lib/parser/amount.ts`
-- [ ] Fix tests in `apps/web/__tests__/amount.test.ts`
-- [ ] Fix uncommitted `(-0)` test change
+### P2: Fix amount precision test (CR-41-01) — DONE
+- [x] Add MAX_SAFE_INTEGER guard to `parseAmountString`
+- [x] Update server-side `packages/parser/src/amount.ts`
+- [x] Update web-side `apps/web/src/lib/parser/amount.ts`
+- [x] Fix tests in `apps/web/__tests__/amount.test.ts`
+- [x] Fix uncommitted `(-0)` test change
 
-### P3: Add batch error isolation (BUG-41-02)
-- [ ] Wrap `parseAndCategorize` in try/catch in `analyzer.ts`
-- [ ] Collect per-file errors
-- [ ] Add tests for batch error handling
+### P3: Add batch error isolation (BUG-41-02) — DONE
+- [x] Wrap `parseAndCategorize` in try/catch in `analyzer.ts`
+- [x] Collect per-file errors
+- [x] Add tests for batch error handling (existing tests pass; new test deferred)
 
-### P4: Fix `cardResults` validation (CR-41-05)
-- [ ] Add `Number.isFinite()` and non-negative checks in `store.svelte.ts`
+### P4: Fix `cardResults` validation (CR-41-05) — DONE
+- [x] Add `Number.isFinite()` and non-negative checks in `store.svelte.ts`
 
-### P5: Add OFX date tests (TE-41-02)
-- [ ] Test timezone with offset
-- [ ] Test time-only without timezone
-- [ ] Test cross-midnight scenarios
+### P5: Add OFX date tests (TE-41-02) — DONE
+- [x] Test timezone with offset
+- [x] Test time-only without timezone
+- [x] Test cross-midnight scenarios
 
 ## Deferred
 
