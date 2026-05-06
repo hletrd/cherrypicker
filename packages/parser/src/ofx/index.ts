@@ -118,8 +118,11 @@ function parseOFXDate(raw: string): string {
  *  Korean Won amounts should be integers — round to nearest won.
  *  In OFX: negative amounts = charges/debits (money out), positive = credits.
  *  Returns the raw value (may be negative) so the caller can filter.
- *  NOTE: Uses parseAmountString for parity with web-side (C20-01),
- *  handling full-width digits, Won signs, and 마이너스 prefix. */
+ *  NOTE(C32-V10): OFX amounts are normalized via parseAmountString, which
+ *  accepts extended Korean formats (full-width digits, ₩/원, KRW prefix,
+ *  마이너스). This is intentionally permissive to handle bank-specific OFX
+ *  exports that may include non-standard formatting. Strict OFX-only parsing
+ *  would reject these but is not currently required. */
 function parseOFXAmount(raw: string): number | null {
   return parseAmountString(raw);
 }

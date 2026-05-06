@@ -133,6 +133,9 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
       errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dtPosted}`, { line: i + 1 }));
     }
 
+    // NOTE(C32-V10): parseOFXAmount delegates to parseAmountString, which
+    // intentionally accepts extended Korean formats (full-width digits, ₩/원,
+    // KRW prefix, 마이너스) for permissive bank-export compatibility.
     const rawAmount = parseOFXAmount(trnAmt);
     if (rawAmount === null) {
       if (trnAmt.trim()) {
