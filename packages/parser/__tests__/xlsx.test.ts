@@ -375,6 +375,35 @@ describe('XLSX merged cell forward-fill', () => {
       cleanup(filePath);
     }
   });
+
+  test('resets forward-fill state on summary rows (C27-TEST01)', async () => {
+    // A summary row between two merged groups should reset forward-fill state,
+    // preventing values from the first group from leaking into the second.
+    const filePath = createTempXLSX([
+      ['거래일시', '가맹점명', '이용금액', '업종'],
+      ['2026-02-01', '이마트', 10000, '마트'],
+      ['', '', 20000, ''],
+      ['합계', '합계', 30000, '합계'],
+      ['2026-02-05', '', 5500, '카페'],
+      ['', '', 4500, ''],
+    ]);
+    try {
+      const result = await parseXLSX(filePath);
+      expect(result.transactions).toHaveLength(4);
+      // First group: forward-filled from row 1
+      expect(result.transactions[0]?.merchant).toBe('이마트');
+      expect(result.transactions[0]?.category).toBe('마트');
+      expect(result.transactions[1]?.merchant).toBe('이마트');
+      expect(result.transactions[1]?.category).toBe('마트');
+      // Second group: must NOT forward-fill merchant from first group
+      expect(result.transactions[2]?.merchant).toBe('');
+      expect(result.transactions[2]?.category).toBe('카페');
+      expect(result.transactions[3]?.merchant).toBe('');
+      expect(result.transactions[3]?.category).toBe('카페');
+    } finally {
+      cleanup(filePath);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
