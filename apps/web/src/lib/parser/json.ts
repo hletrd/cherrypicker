@@ -1,5 +1,6 @@
 /** JSON transaction parser (web-side).
  *  Parity with server-side packages/parser/src/json/index.ts (C97-01).
+ *  Import paths differ but implementations are identical (C31-DOC02).
  *  Parses JSON arrays of transaction objects from banking APIs, mobile app
  *  exports, and financial tools. */
 
