@@ -40,7 +40,7 @@ export function normalizeHTML(html: string): string {
     // Second pattern: unquoted values and empty attributes
     // Parity with server-side packages/parser/src/csv/shared.ts (C23-SEC01)
     .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*')/gi, '')
-    .replace(/\son\w+=[^>\s]*/gi, '')
+    .replace(/\son\w+\s*=\s*[^>\s]*/gi, '')
     // Fix malformed closing tags
     .replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>')
     .replace(/<\/([a-z][a-z0-9]*)\s+>/gi, '</$1>');
