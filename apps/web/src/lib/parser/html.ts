@@ -39,7 +39,7 @@ export function normalizeHTML(html: string): string {
     // First pattern: quoted values (handles spaces within quotes)
     // Second pattern: unquoted values and empty attributes
     // Parity with server-side packages/parser/src/csv/shared.ts (C23-SEC01)
-    .replace(/\son\w+=(?:"[^"]*"|'[^']*')/gi, '')
+    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*')/gi, '')
     .replace(/\son\w+=[^>\s]*/gi, '')
     // Fix malformed closing tags
     .replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>')

@@ -188,8 +188,8 @@ export function normalizeHTML(html: string): string {
     .replace(/<(iframe|object|embed)[\s\S]*?<\/\1>/gi, '')
     .replace(/<(iframe|object|embed)[^>]*>/gi, '')
     // Remove event handler attributes (onclick, onerror, etc.)
-    .replace(/\son\w+=["'][^"']*["']/gi, '')
-    .replace(/\son\w+=\w+/gi, '')
+    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\son\w+\s*=\s*[^>\s]*/gi, '')
     // Fix malformed closing tags
     .replace(/<\/(td|th|tr|table|thead|tbody)\s+>/gi, '</$1>')
     .replace(/<\/([a-z][a-z0-9]*)\s+>/gi, '</$1>');
