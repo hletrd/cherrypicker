@@ -344,7 +344,11 @@ function loadFromStorage(): AnalysisResult | null {
                 };
               })
             : undefined,
-          previousMonthSpendingOption: typeof parsed.previousMonthSpendingOption === 'number' ? parsed.previousMonthSpendingOption : undefined,
+          previousMonthSpendingOption:
+            typeof parsed.previousMonthSpendingOption === 'number' &&
+            Number.isFinite(parsed.previousMonthSpendingOption)
+              ? parsed.previousMonthSpendingOption
+              : undefined,
           cardIdsOption: Array.isArray(parsed.cardIdsOption) ? parsed.cardIdsOption : undefined,
         } as AnalysisResult;
       }
@@ -487,7 +491,11 @@ function createAnalysisStore() {
         const analysisResult = await analyzeMultipleFiles(fileArray, options);
         // Preserve the user's explicit previousMonthSpending input so
         // reoptimize() can forward it instead of silently dropping it (C44-01).
-        if (options?.previousMonthSpending !== undefined) {
+        if (
+          options?.previousMonthSpending !== undefined &&
+          Number.isFinite(options.previousMonthSpending) &&
+          options.previousMonthSpending >= 0
+        ) {
           analysisResult.previousMonthSpendingOption = options.previousMonthSpending;
         }
         // Preserve the user's explicit cardIds filter so reoptimize()
