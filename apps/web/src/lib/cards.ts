@@ -144,8 +144,10 @@ export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson | u
     chainAbortSignal(controller, signal);
     cardsAbortController = controller;
 
+    const fetchTimeout = setTimeout(() => controller.abort(), 10_000);
     cardsPromise = fetch(`${getBaseUrl()}data/cards.json`, { signal: controller.signal })
       .then(res => {
+        clearTimeout(fetchTimeout);
         if (!res.ok) throw new Error('카드 데이터를 불러올 수 없습니다');
         return res.json() as Promise<CardsJson>;
       })
@@ -194,8 +196,10 @@ export async function loadCategories(signal?: AbortSignal): Promise<CategoryNode
     chainAbortSignal(controller, signal);
     categoriesAbortController = controller;
 
+    const fetchTimeout = setTimeout(() => controller.abort(), 10_000);
     categoriesPromise = fetch(`${getBaseUrl()}data/categories.json`, { signal: controller.signal })
       .then(res => {
+        clearTimeout(fetchTimeout);
         if (!res.ok) throw new Error('카테고리 데이터를 불러올 수 없습니다');
         return res.json() as Promise<{ categories: CategoryNode[] }>;
       })
