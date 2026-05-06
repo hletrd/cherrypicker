@@ -197,15 +197,17 @@ describe('detectEncoding', () => {
   });
 
   test('detects CP949 for CP949-encoded Korean text', () => {
-    // CP949 encoding of "거래일시,가맹점명,이용금액"
-    // CP949 lead bytes are in 0x80-0xBF range (not valid UTF-8 lead bytes)
-    const cp949Text = Buffer.from([
+    // CP949 encoding of "거래일시,가맹점명,이용금액" repeated to exceed 100 bytes.
+    // CP949 lead bytes are in 0x80-0xBF range (not valid UTF-8 lead bytes).
+    const segment = Buffer.from([
       0xB0, 0xA1, 0xC0, 0xDA, 0xC0, 0xCF, 0xBD, 0xC3, // 거래일시
       0x2C, // comma
       0xB0, 0xCB, 0xB8, 0xAE, 0xC1, 0xF6, 0xB8, 0xDE, // 가맹점명
       0x2C, // comma
       0xC0, 0xCF, 0xBB, 0xF3, 0xB0, 0xE8, 0xB9, 0xE2, // 이용금액
     ]);
+    // Repeat to reach >100 bytes so the per-KB ratio heuristic is reliable.
+    const cp949Text = Buffer.concat(Array(5).fill(segment));
     expect(detectEncoding(cp949Text)).toBe('cp949');
   });
 
