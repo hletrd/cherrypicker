@@ -184,6 +184,15 @@ function calculateFixedReward(
 
 export function calculateRewards(input: CalculationInput): CalculationOutput {
   const { transactions, previousMonthSpending, cardRule } = input;
+
+  // Guard against NaN/Infinity/negative previousMonthSpending which would
+  // silently produce zero rewards (no tier matches NaN comparisons) (C39-BUG01).
+  if (!Number.isFinite(previousMonthSpending) || previousMonthSpending < 0) {
+    throw new Error(
+      `previousMonthSpending must be a non-negative finite number, got ${previousMonthSpending}`
+    );
+  }
+
   const { card, performanceTiers, rewards: rewardRules, globalConstraints } = cardRule;
 
   // 1. Determine performance tier

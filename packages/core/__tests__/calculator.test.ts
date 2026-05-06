@@ -772,4 +772,34 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
       })
     ).toThrow(/Unknown reward type/);
   });
+
+  test('rejects NaN previousMonthSpending (C39-BUG01)', () => {
+    expect(() =>
+      calculateRewards({
+        transactions: [makeTx('t1', 'dining', 10000)],
+        previousMonthSpending: NaN,
+        cardRule: simplePlan,
+      })
+    ).toThrow(/previousMonthSpending must be a non-negative finite number/);
+  });
+
+  test('rejects Infinity previousMonthSpending (C39-BUG01)', () => {
+    expect(() =>
+      calculateRewards({
+        transactions: [makeTx('t1', 'dining', 10000)],
+        previousMonthSpending: Infinity,
+        cardRule: simplePlan,
+      })
+    ).toThrow(/previousMonthSpending must be a non-negative finite number/);
+  });
+
+  test('rejects negative previousMonthSpending (C39-BUG01)', () => {
+    expect(() =>
+      calculateRewards({
+        transactions: [makeTx('t1', 'dining', 10000)],
+        previousMonthSpending: -1000,
+        cardRule: simplePlan,
+      })
+    ).toThrow(/previousMonthSpending must be a non-negative finite number/);
+  });
 });
