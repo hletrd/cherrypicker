@@ -740,4 +740,38 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     expect(dining!.reward).toBe(500);
     expect(dining!.rate).toBe(0.05);
   });
+
+  test('unknown reward type throws instead of silently defaulting (C33-F5)', () => {
+    const badFixture: CardRuleSet = {
+      card: {
+        id: 'fixture-bad-type',
+        issuer: 'fixture',
+        name: 'Bad Type Card',
+        nameKo: '잘못된 타입 테스트 카드',
+        type: 'credit',
+        annualFee: { domestic: 0, international: 0 },
+        url: 'https://example.com/bad-type',
+        lastUpdated: '2026-05-06',
+        source: 'manual',
+      },
+      performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+      performanceExclusions: [],
+      rewards: [
+        {
+          category: 'dining',
+          // Intentionally invalid type to verify the calculator rejects it
+          type: 'unknown_type' as 'discount',
+          tiers: [{ performanceTier: 'tier0', rate: 5, monthlyCap: null, perTransactionCap: null }],
+        },
+      ],
+      globalConstraints: { monthlyTotalDiscountCap: null, minimumAnnualSpending: null },
+    };
+    expect(() =>
+      calculateRewards({
+        transactions: [makeTx('t1', 'dining', 10000)],
+        previousMonthSpending: 0,
+        cardRule: badFixture,
+      })
+    ).toThrow(/Unknown reward type/);
+  });
 });
