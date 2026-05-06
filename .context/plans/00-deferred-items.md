@@ -1767,4 +1767,36 @@ Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings*
 - **Reason for deferral:** Low priority, no functional gap. OFX already has amount tests covering normal cases. Adding a test with full-width digits or Won signs would only verify the import path of `parseAmountString`.
 - **Exit criterion:** Add an OFX test that includes full-width digits or Won signs in amounts, implicitly verifying that `parseAmountString` (with full-width support) is correctly imported.
 
+### C31-CRIT-01: Pause adding new parser formats until D-01 is addressed
+- **Original finding:** C31-critic-01
+- **Severity:** MEDIUM (policy/architectural)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/*` vs `packages/parser/src/*`
+- **Reason for deferral:** The codebase now has ~2000 lines of near-identical parser code across 6 formats (CSV, XLSX, PDF, HTML, OFX, JSON). Each new format increases maintenance burden linearly. This is a policy recommendation, not a code change. Implementation requires addressing D-01 first.
+- **Exit criterion:** D-01 (shared parser module) is resolved; then new formats can be added safely.
+- **Maps to:** D-01
+
+### C31-CRIT-04: Shift review focus from edge cases to architectural debt
+- **Original finding:** C31-critic-04
+- **Severity:** LOW (process suggestion)
+- **Confidence:** Medium
+- **Reason for deferral:** After 30+ review cycles, new findings are increasingly edge-casey with diminishing returns. This is a meta-recommendation about review scope, not a code fix. Future review cycles should prioritize D-01 and user-reported issues.
+- **Exit criterion:** Next review cycle focuses on architectural debt reduction and user-reported issues.
+
+### C31-DEBUG-LOW-01: Forward-fill `isSummaryRow` receives `String(number)` for numeric cells
+- **Original finding:** C31-debugger-LOW-01
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `apps/web/src/lib/parser/html.ts:183-189`, `packages/parser/src/html/index.ts:176-182`
+- **Reason for deferral:** Probability is negligible. `isSummaryRow` expects Korean summary keywords, and a numeric value would never match. Documented assumption that summary rows contain Korean text.
+- **Exit criterion:** If real-world reports emerge of numeric cells incorrectly triggering summary detection, add type guard.
+
+### C31-PERF-LOW-02: HTML parser forward-fill allocates many intermediate strings
+- **Original finding:** C31-perf-reviewer-LOW-02
+- **Severity:** LOW (performance)
+- **Confidence:** Low
+- **File+line:** `apps/web/src/lib/parser/html.ts:97-275`, `packages/parser/src/html/index.ts:82-269`
+- **Reason for deferral:** Typical HTML exports are under 500 rows. GC pressure is acceptable at current scale. If large HTML exports become common, consider streaming processing or reducing intermediate allocations.
+- **Exit criterion:** If performance issues reported for large HTML files (> 5000 rows), implement streaming or reduce allocations.
+
 ---
