@@ -329,16 +329,18 @@ describe('isValidCSVAmount', () => {
     expect(errors).toHaveLength(0);
   });
 
-  test('returns false for zero amount (no error pushed)', () => {
+  test('returns false for zero amount (error pushed)', () => {
     const errors: { line?: number; message: string }[] = [];
     expect(isValidCSVAmount(0, '0', 0, errors)).toBe(false);
-    expect(errors).toHaveLength(0);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('지출로 처리되지 않는 금액입니다');
   });
 
-  test('returns false for negative amount (no error pushed)', () => {
+  test('returns false for negative amount (error pushed)', () => {
     const errors: { line?: number; message: string }[] = [];
     expect(isValidCSVAmount(-5000, '-5000', 0, errors)).toBe(false);
-    expect(errors).toHaveLength(0);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('지출로 처리되지 않는 금액입니다');
   });
 });
 

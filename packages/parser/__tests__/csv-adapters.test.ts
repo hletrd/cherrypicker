@@ -524,8 +524,9 @@ describe('Won sign amount column inference (C7-06)', () => {
     // Fullwidth-minus amounts are parsed as negative by parseCSVAmount.
     // Since amounts <= 0 are filtered, no transactions result, but the
     // key test is that column inference correctly identified column 2 as
-    // amount (no "금액을 해석할 수 없습니다" errors).
-    expect(result.errors.filter(e => e.message.includes('금액'))).toHaveLength(0);
+    // amount (no "금액을 해석할 수 없습니다" parse errors).
+    // Filter errors ("지출로 처리되지 않는 금액입니다") are expected.
+    expect(result.errors.filter(e => e.message.includes('해석할 수 없습니다'))).toHaveLength(0);
   });
 });
 
