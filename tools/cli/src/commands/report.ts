@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { writeFileSync } from 'node:fs';
 import { parseStatement } from '@cherrypicker/parser';
 import { MerchantMatcher, buildConstraints, optimize } from '@cherrypicker/core';
@@ -10,11 +11,11 @@ import { validateFilePath } from '../validation.js';
 import { requireRemoteLLMConsent } from '../consent.js';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
-  new URL('../../../..', import.meta.url).pathname,
+  fileURLToPath(new URL('../../../..', import.meta.url)),
   'packages/rules/data/categories.yaml',
 );
 const DEFAULT_CARDS_DIR = resolve(
-  new URL('../../../..', import.meta.url).pathname,
+  fileURLToPath(new URL('../../../..', import.meta.url)),
   'packages/rules/data/cards',
 );
 
