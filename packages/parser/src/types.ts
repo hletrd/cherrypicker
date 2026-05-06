@@ -15,7 +15,6 @@ export interface RawTransaction {
   installments?: number;
   category?: string;    // Bank's own category if available
   memo?: string;
-  isOnline?: boolean;
 }
 
 export interface ParseResult {

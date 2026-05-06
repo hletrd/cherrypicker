@@ -25,7 +25,6 @@ export const rewardTierRateSchema = z.object({
 
 export const rewardConditionsSchema = z.object({
   minTransaction: z.number().int().nonnegative().nullable().optional().transform((v) => v ?? undefined).pipe(z.number().int().nonnegative().optional()),
-  excludeOnline: z.boolean().optional(),
   specificMerchants: z.array(z.string()).optional(),
   note: z.string().optional(),
 }).passthrough();

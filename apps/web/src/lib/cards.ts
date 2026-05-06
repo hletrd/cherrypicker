@@ -17,7 +17,6 @@ export interface RewardEntry {
   type: string;
   tiers: RewardTier[];
   conditions?: {
-    excludeOnline?: boolean;
     specificMerchants?: string[];
     minAmount?: number;
     note?: string;

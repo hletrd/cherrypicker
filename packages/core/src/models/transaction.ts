@@ -5,7 +5,6 @@ export interface Transaction {
   amount: number;        // Won (positive = spending)
   currency: string;      // KRW default
   installments?: number; // 할부 개월
-  isOnline?: boolean;
   rawCategory?: string;  // Bank's own category if present
   memo?: string;
 }

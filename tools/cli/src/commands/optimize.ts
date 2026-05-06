@@ -103,7 +103,6 @@ export async function runOptimize(args: string[]): Promise<void> {
       amount: tx.amount,
       currency: 'KRW',
       installments: tx.installments,
-      isOnline: tx.isOnline,
       rawCategory: tx.category,
       memo: tx.memo,
       category: match.category,

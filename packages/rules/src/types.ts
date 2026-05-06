@@ -21,7 +21,6 @@ export interface RewardTierRate {
 
 export interface RewardConditions {
   minTransaction?: number;
-  excludeOnline?: boolean;
   specificMerchants?: string[];
   note?: string;
   [key: string]: unknown;
