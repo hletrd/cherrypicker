@@ -1686,3 +1686,66 @@ Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings*
 - **File+line:** `apps/web/src/lib/parser/html.ts:38-42`
 - **Reason for deferral:** Defense-in-depth, not an active vulnerability. SheetJS does not execute JavaScript. The risk is entity expansion bombs or nested tables causing memory issues. The `normalizeHTML` function currently only fixes spacing in closing tags.
 - **Exit criterion:** If HTML files come from untrusted sources, add pre-processing to strip `<script>`, `<style>`, event handlers, and `<iframe>`/`<object>` tags before passing to SheetJS.
+
+---
+
+## Deferred Findings (Cycle 29, May 2026)
+
+### C29-ARCH-HIGH-01: Parser code duplication between web and server (D-01 continuation)
+- **Original finding:** C29-architect-HIGH-01, C29-code-reviewer-MEDIUM-01
+- **Severity:** HIGH (architectural)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/*` vs `packages/parser/src/*`
+- **Reason for deferral:** Major architectural refactor requiring extraction of shared parser logic into a platform-agnostic pure-TS module. Every parser (CSV, XLSX, HTML, JSON, OFX, PDF) exists in nearly-identical form in both environments. The web app and server package use different module systems and runtime APIs (Buffer vs ArrayBuffer, fs/promises vs File API), but pure-TS utilities (amount parsing, date parsing, column matching, normalizeHTML, aliases, isSummaryRow) could be shared today. Acknowledged in code comments since C70-04.
+- **Exit criterion:** Create `packages/parser-shared/` or `packages/parser/src/shared/` containing isomorphic utilities. Import from both web and server. Add dual-path tests verifying identical behavior.
+- **Maps to:** D-01, D-C10-01, C20-ARCH02
+
+### C29-ARCH-HIGH-02: analyzer.ts mixes data transformation with business logic
+- **Original finding:** C29-architect-HIGH-02
+- **Severity:** HIGH (architectural)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/analyzer.ts` (440 lines)
+- **Reason for deferral:** `analyzer.ts` handles type adaptation, caching, transaction categorization, optimization, multi-file analysis, and date extraction in a single file. The `toCoreCardRuleSets` function manually narrows web-side JSON to core package types using Sets with fallback defaults, which masks schema mismatches. Fixing requires aligning web-side and core package schemas or generating adapters from Zod schemas — a significant refactor.
+- **Exit criterion:** Split analyzer.ts into focused modules (adapter.ts, categorize.ts, optimize.ts, analyze-multiple.ts). Align schemas or generate narrowing code from Zod.
+
+### C29-ARCH-M01: Rate/fixed reward precedence is implicit and unvalidated
+- **Original finding:** C29-architect-MEDIUM-01
+- **Severity:** MEDIUM
+- **Confidence:** Medium
+- **File+line:** `packages/core/src/calculator/reward.ts` (lines 259-278)
+- **Reason for deferral:** The calculator silently gives precedence to `rate` over `fixedAmount` when both are present on the same tier. If a YAML file accidentally specifies both, only the rate is used with no warning. Fixing requires adding a validation step when loading card rules, which touches the rules package YAML loader and needs careful design to avoid breaking existing rule files.
+- **Exit criterion:** Add validation in the card rule loader that warns (or errors) when both `rate` and `fixedAmount` are present on the same tier. Or explicitly document precedence in the YAML schema.
+
+### C29-DEBUG-LOW-01: isSummaryRow may match legitimate merchant names
+- **Original finding:** C29-debugger-LOW-01
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `packages/parser/src/csv/column-matcher.ts:97`
+- **Reason for deferral:** Known limitation of fuzzy matching. Keywords like "소계", "합계", "총계" could match legitimate merchant names (e.g., "합계마트"). Making it stricter (requiring keyword at start of row or surrounded by whitespace) risks false negatives on legitimate summary rows. Trade-off accepted.
+- **Exit criterion:** If real-world reports of false positives emerge, implement stricter matching (anchor at word boundary or row start).
+
+### C29-ARCH-LOW-01: calculateFixedReward mutates external dayRewardTracker Set
+- **Original finding:** C29-architect-LOW-01
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `packages/core/src/calculator/reward.ts` (lines 155-156)
+- **Reason for deferral:** The mutation is bounded (Set created in calculateRewards and passed to calculateFixedReward) and documented in comments. Refactoring to pure functions would require changing the reward calculation interface and updating all callers. Minor maintainability concern.
+- **Exit criterion:** Document the side effect in the function signature JSDoc, or refactor to return `{ reward: number; shouldTrack: boolean }`.
+
+### C29-CR-LOW-01: LLM fallback JSON.parse without validation before use
+- **Original finding:** C29-code-reviewer-LOW-01
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `packages/parser/src/pdf/llm-fallback.ts` (line 91)
+- **Reason for deferral:** Parsed result is immediately filtered with runtime type checks. Anthropic API is trusted. Prototype pollution via LLM output is theoretical. The MEDIUM-01 fix (stricter API key validation) reduces exposure.
+- **Exit criterion:** If LLM parsing becomes user-configurable (e.g., custom model endpoints), add a JSON.parse reviver rejecting `__proto__` and `constructor`.
+
+### C29-CR-LOW-02: Type assertion after manual validation in store.svelte.ts
+- **Original finding:** C29-code-reviewer-LOW-02
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `apps/web/src/lib/store.svelte.ts` (line 307)
+- **Reason for deferral:** The `as AnalysisResult` cast follows extensive manual field validation, so risk is low. Replacing with a proper type guard would be more maintainable but requires defining a guard function that duplicates the existing validation logic.
+- **Exit criterion:** When AnalysisResult schema changes, replace manual validation + cast with a Zod schema parse or a proper type guard function.
+
+---
