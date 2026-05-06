@@ -1,7 +1,7 @@
 import type { RewardRule, RewardTierRate, PerformanceTier } from '@cherrypicker/rules';
 import type { CategorizedTransaction } from '../models/transaction.js';
 import type { CategoryReward, CapInfo } from '../models/result.js';
-import type { CalculationInput, CalculationOutput } from './types.js';
+import type { CalculationInput, CalculationOutput, SkippedTransaction } from './types.js';
 import { calculateDiscount } from './discount.js';
 import { calculatePoints } from './points.js';
 import { calculateCashback } from './cashback.js';
@@ -207,6 +207,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
 
   const categoryRewards = new Map<string, CategoryReward>();
   const capsHit: CapInfo[] = [];
+  const skippedTransactions: SkippedTransaction[] = [];
 
   // Track cumulative reward per rewardType within each category bucket,
   // so the dominant type (highest cumulative reward) is reported rather
@@ -215,9 +216,15 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
 
   for (const tx of transactions) {
     // Skip negative-amount transactions (refunds, reversals)
-    if (tx.amount <= 0) continue;
+    if (tx.amount <= 0) {
+      skippedTransactions.push({ id: tx.id, amount: tx.amount, currency: tx.currency ?? 'KRW', reason: 'negative_amount' });
+      continue;
+    }
     // Skip non-KRW transactions — reward math assumes Won amounts
-    if (tx.currency && tx.currency !== 'KRW') continue;
+    if (tx.currency && tx.currency !== 'KRW') {
+      skippedTransactions.push({ id: tx.id, amount: tx.amount, currency: tx.currency, reason: 'non_krw' });
+      continue;
+    }
 
     const categoryKey = buildCategoryKey(tx.category, tx.subcategory);
     const rule = tierId === 'none' ? undefined : findRule(rewardRules, tx);
@@ -364,5 +371,6 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     totalReward,
     totalSpending,
     capsHit,
+    skippedTransactions,
   };
 }

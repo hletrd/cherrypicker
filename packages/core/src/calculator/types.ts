@@ -10,6 +10,13 @@ export interface CalculationInput {
   cardRule: CardRuleSet;
 }
 
+export interface SkippedTransaction {
+  id: string;
+  amount: number;
+  currency: string;
+  reason: 'non_krw' | 'negative_amount';
+}
+
 export interface CalculationOutput {
   cardId: string;
   performanceTier: string;
@@ -17,6 +24,7 @@ export interface CalculationOutput {
   totalReward: number;
   totalSpending: number;
   capsHit: CapInfo[];
+  skippedTransactions: SkippedTransaction[];
 }
 
 // ---------------------------------------------------------------------------
