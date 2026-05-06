@@ -127,7 +127,13 @@ function parseTransactionObject(
   }
   // Skip zero and negative amounts (balance inquiries, refunds, credits).
   // Parity with CSV, HTML, XLSX, and OFX parsers (C26-COR02).
-  if (amount <= 0) return null;
+  if (amount <= 0) {
+    errors.push(new ParseError(
+      `지출로 처리되지 않는 금액입니다: ${String(merchantValue ?? '').trim()} ${amount}원`,
+      { line: lineIdx },
+    ));
+    return null;
+  }
 
   const date = parseDateStringToISO(dateRaw);
   if (!isValidISODate(date) && dateRaw) {

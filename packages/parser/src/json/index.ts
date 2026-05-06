@@ -135,7 +135,13 @@ function parseTransactionObject(
   // Skip zero and negative amounts (balance inquiries, refunds, credits).
   // These don't contribute to spending optimization. Parity with CSV, HTML,
   // XLSX, and OFX parsers which skip them at parse time (C26-COR02).
-  if (amount <= 0) return null;
+  if (amount <= 0) {
+    errors.push(new ParseError(
+      `지출로 처리되지 않는 금액입니다: ${String(merchantValue ?? '').trim()} ${amount}원`,
+      { line: lineIdx },
+    ));
+    return null;
+  }
 
   const date = parseDateStringToISO(dateRaw);
   if (!isValidISODate(date) && dateRaw) {

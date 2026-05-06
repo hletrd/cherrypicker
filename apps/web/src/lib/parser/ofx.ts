@@ -143,7 +143,13 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
       }
       continue;
     }
-    if (rawAmount >= 0) continue;
+    if (rawAmount >= 0) {
+      errors.push(new ParseError(
+        `입금/환불 내역은 지출로 처리되지 않습니다: ${name || '알 수 없는 거래'} ${rawAmount}원`,
+        { line: i + 1 },
+      ));
+      continue;
+    }
     const amount = Math.abs(rawAmount);
 
     const tx: RawTransaction = {
