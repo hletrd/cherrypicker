@@ -257,15 +257,10 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     let rawReward = 0;
     let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
     const hasFixedReward = (tierRate.fixedAmount ?? 0) > 0;
-    if (normalizedRate !== null && normalizedRate > 0 && hasFixedReward) {
-      // Both rate and fixedAmount are present on the same tier. Korean card
-      // rules do not currently use both together. The if/else structure can
-      // only apply one, so rate-based reward takes precedence.
-      const calcFn = getCalcFn(rule.type);
-      const effectiveAmount = perTxCap !== null ? Math.min(tx.amount, perTxCap) : tx.amount;
-      rawReward = calcFn(effectiveAmount, normalizedRate, null, 0).reward;
-      ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
-    } else if (normalizedRate !== null && normalizedRate > 0) {
+    if (normalizedRate !== null && normalizedRate > 0) {
+      // Rate-based reward. When both rate and fixedAmount are present on the
+      // same tier, rate takes precedence — Korean card rules do not currently
+      // use both together, and the calculator does not combine them.
       const calcFn = getCalcFn(rule.type);
       const effectiveAmount = perTxCap !== null ? Math.min(tx.amount, perTxCap) : tx.amount;
       rawReward = calcFn(effectiveAmount, normalizedRate, null, 0).reward;
