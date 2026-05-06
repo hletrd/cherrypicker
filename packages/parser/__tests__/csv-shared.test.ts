@@ -846,4 +846,24 @@ describe('normalizeHTML', () => {
   test('fixes malformed closing tags', () => {
     expect(normalizeHTML('content</td   >')).toBe('content</td>');
   });
+
+  test('strips single-quoted javascript: URLs (C29-TEST02)', () => {
+    expect(normalizeHTML('<a href=\'javascript:alert(1)\'>link</a>')).toBe('<a>link</a>');
+    expect(normalizeHTML("<img src='javascript:alert(1)'>")).toBe('<img>');
+  });
+
+  test('strips unquoted javascript: URLs (C29-TEST02)', () => {
+    expect(normalizeHTML('<a href=javascript:alert(1)>link</a>')).toBe('<a>link</a>');
+    expect(normalizeHTML('<img src=javascript:alert(1)>')).toBe('<img>');
+  });
+
+  test('strips javascript: URLs with case variations (C29-TEST02)', () => {
+    expect(normalizeHTML('<a href="JaVaScRiPt:alert(1)">link</a>')).toBe('<a>link</a>');
+    expect(normalizeHTML('<a href="JavaScript:void(0)">link</a>')).toBe('<a>link</a>');
+  });
+
+  test('does NOT strip javascript: in non-href/src contexts (C29-TEST02)', () => {
+    expect(normalizeHTML('<div data-value="javascript:foo">text</div>')).toBe('<div data-value="javascript:foo">text</div>');
+    expect(normalizeHTML('<span title="javascript:bar">text</span>')).toBe('<span title="javascript:bar">text</span>');
+  });
 });

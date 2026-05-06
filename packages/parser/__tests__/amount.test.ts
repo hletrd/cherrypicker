@@ -40,6 +40,31 @@ describe('parseAmountString (server)', () => {
     expect(parseAmountString('abc')).toBeNull();
     expect(parseAmountString('-')).toBeNull();
   });
+
+  it('returns null for invalid decimal strings (C29-TEST01)', () => {
+    expect(parseAmountString('1.2.3')).toBeNull();
+    expect(parseAmountString('1..2')).toBeNull();
+    expect(parseAmountString('1.')).toBeNull();
+    expect(parseAmountString('..1')).toBeNull();
+  });
+
+  it('returns null for bare currency symbols without digits (C29-TEST01)', () => {
+    expect(parseAmountString('원')).toBeNull();
+    expect(parseAmountString('마이너스')).toBeNull();
+    expect(parseAmountString('₩')).toBeNull();
+    expect(parseAmountString('KRW')).toBeNull();
+  });
+
+  it('handles very large numbers (C29-TEST01)', () => {
+    expect(parseAmountString('9,999,999,999,999,999')).toBe(9999999999999999);
+    expect(parseAmountString('9999999999999999')).toBe(9999999999999999);
+  });
+
+  it('handles mixed full-width and ASCII digits (C29-TEST01)', () => {
+    expect(parseAmountString('１2３4')).toBe(1234);
+    expect(parseAmountString('１,234')).toBe(1234);
+    expect(parseAmountString('1,２３4')).toBe(1234);
+  });
 });
 
 describe('parseAmount wrapper (server)', () => {

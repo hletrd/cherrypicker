@@ -150,6 +150,26 @@ describe('HTML Table Parser (web)', () => {
       expect(normalizeHTML('<a href="javascript:alert(1)" class="foo">link</a>')).toBe('<a class="foo">link</a>');
       expect(normalizeHTML('<a href="/safe/path">link</a>')).toBe('<a href="/safe/path">link</a>');
     });
+
+    it('strips single-quoted javascript: URLs (C29-TEST02)', () => {
+      expect(normalizeHTML('<a href=\'javascript:alert(1)\'>link</a>')).toBe('<a>link</a>');
+      expect(normalizeHTML("<img src='javascript:alert(1)'>")).toBe('<img>');
+    });
+
+    it('strips unquoted javascript: URLs (C29-TEST02)', () => {
+      expect(normalizeHTML('<a href=javascript:alert(1)>link</a>')).toBe('<a>link</a>');
+      expect(normalizeHTML('<img src=javascript:alert(1)>')).toBe('<img>');
+    });
+
+    it('strips javascript: URLs with case variations (C29-TEST02)', () => {
+      expect(normalizeHTML('<a href="JaVaScRiPt:alert(1)">link</a>')).toBe('<a>link</a>');
+      expect(normalizeHTML('<a href="JavaScript:void(0)">link</a>')).toBe('<a>link</a>');
+    });
+
+    it('does NOT strip javascript: in non-href/src contexts (C29-TEST02)', () => {
+      expect(normalizeHTML('<div data-value="javascript:foo">text</div>')).toBe('<div data-value="javascript:foo">text</div>');
+      expect(normalizeHTML('<span title="javascript:bar">text</span>')).toBe('<span title="javascript:bar">text</span>');
+    });
   });
 
   describe('Edge cases', () => {
