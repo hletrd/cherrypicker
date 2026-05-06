@@ -49,7 +49,11 @@ function extractTag(block: string, tagName: string): string {
 /** Parse OFX YYYYMMDD date to ISO format.
  *  OFX uses YYYYMMDD format optionally followed by time: 20240115120000[0:GMT].
  *  If a timezone offset is present, convert to KST (UTC+9) before extracting
- *  the date so cross-midnight offsets don't produce the wrong local date. */
+ *  the date so cross-midnight offsets don't produce the wrong local date.
+ *
+ *  The KST conversion works by computing UTC ms, adding 9 hours, then reading
+ *  back with getUTC* — which yields KST values because the Date is shifted +9h.
+ *  Using local getters (getFullYear etc.) would be incorrect in non-KST envs (C31-CR02). */
 function parseOFXDate(raw: string): string {
   // Match: YYYYMMDD[HHMMSS[.sss][+offset:TZ]]]
   const m = raw.match(/^(\d{4})(\d{2})(\d{2})(?:(\d{2})(\d{2})(\d{2})(?:\.\d+)?(?:\[([+-]?\d+):[A-Z]+\])?)?/);
