@@ -87,6 +87,12 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
     throw new Error('LLM 응답에서 JSON 배열을 찾을 수 없습니다.');
   }
 
+  // Guard against extremely large responses that could cause memory issues (C31-SEC02)
+  const MAX_JSON_LENGTH = 100_000;
+  if (jsonMatch[0].length > MAX_JSON_LENGTH) {
+    throw new Error(`LLM 응답이 너무 깁니다 (${jsonMatch[0].length} > ${MAX_JSON_LENGTH}).`);
+  }
+
   let parsed: LLMTransaction[] = [];
   try {
     parsed = JSON.parse(jsonMatch[0]);
@@ -114,17 +120,30 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
     }
   }
 
+  // Structural validation: must be an array of objects (C31-SEC02/C31-CR05)
+  if (!Array.isArray(parsed) || !parsed.every((tx) => tx !== null && typeof tx === 'object')) {
+    throw new Error('LLM 응답이 객체 배열이 아닙니다.');
+  }
+
   return parsed
-    .filter((tx): tx is Required<Pick<LLMTransaction, 'date' | 'merchant' | 'amount'>> & LLMTransaction =>
-      typeof tx.date === 'string' && typeof tx.merchant === 'string' && typeof tx.amount === 'number'
-    )
+    .filter((tx): tx is Required<Pick<LLMTransaction, 'date' | 'merchant' | 'amount'>> & LLMTransaction => {
+      // Basic type checks
+      if (typeof tx.date !== 'string' || typeof tx.merchant !== 'string' || typeof tx.amount !== 'number') {
+        return false;
+      }
+      // Structural validation: date must look like YYYY-MM-DD, amount must be positive finite integer (C31-CR05)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tx.date)) return false;
+      if (!Number.isFinite(tx.amount) || tx.amount <= 0) return false;
+      return true;
+    })
     .map((tx) => {
       const result: RawTransaction = {
         date: tx.date,
         merchant: tx.merchant,
         amount: Math.round(tx.amount),
       };
-      if (typeof tx.installments === 'number' && tx.installments > 1) {
+      // Validate installments: must be a positive integer > 1 if present (C31-CR05)
+      if (typeof tx.installments === 'number' && Number.isFinite(tx.installments) && tx.installments > 1 && Number.isInteger(tx.installments)) {
         result.installments = tx.installments;
       }
       return result;
