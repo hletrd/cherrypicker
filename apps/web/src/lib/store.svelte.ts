@@ -298,7 +298,10 @@ function loadFromStorage(): AnalysisResult | null {
               if (!isPlainObject(cr)) return false;
               return (
                 typeof cr.cardId === 'string' &&
+                cr.cardId.length > 0 &&
                 typeof cr.totalReward === 'number' &&
+                Number.isFinite(cr.totalReward) &&
+                cr.totalReward >= 0 &&
                 Array.isArray(cr.byCategory)
               );
             }

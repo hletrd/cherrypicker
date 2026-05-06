@@ -312,15 +312,44 @@ export async function analyzeMultipleFiles(
   // 2. Parse and categorize ALL files using the shared matcher
   // Pass categoryNodes to avoid redundant loadCategories() calls inside
   // parseAndCategorize() — the caller already has the data (C81-03).
-  const allParsed = await Promise.all(
-    files.map((f, i) => parseAndCategorize(f, options, i, sharedMatcher, categoryNodes))
+  // Wrap each call in try/catch so one failing file doesn't abort the batch (C41-BUG02).
+  const allParsed: {
+    transactions: CategorizedTx[];
+    bank: string | null;
+    format: string;
+    parseErrors: { line?: number; message: string; raw?: string }[];
+    categoryNodes: CategoryNode[];
+  }[] = [];
+  const fileErrors: { fileName: string; message: string }[] = [];
+
+  const parseResults = await Promise.all(
+    files.map(async (f, i) => {
+      try {
+        return await parseAndCategorize(f, options, i, sharedMatcher, categoryNodes);
+      } catch (err) {
+        fileErrors.push({
+          fileName: f.name,
+          message: err instanceof Error ? err.message : '파일을 분석할 수 없어요',
+        });
+        return null;
+      }
+    })
   );
+
+  for (const result of parseResults) {
+    if (result) allParsed.push(result);
+  }
 
   // 2. Merge all transactions and build category labels from the first parsed result
   const allTransactions: CategorizedTx[] = [];
   const allErrors: { line?: number; message: string; raw?: string }[] = [];
   let bank: string | null = null;
   let format = 'csv';
+
+  // Include per-file errors in the aggregated error list
+  for (const fe of fileErrors) {
+    allErrors.push({ message: `${fe.fileName}: ${fe.message}` });
+  }
 
   // Build category labels once from the taxonomy data returned by parseAndCategorize
   let categoryLabels: Map<string, string> | undefined;
@@ -336,7 +365,14 @@ export async function analyzeMultipleFiles(
   }
 
   if (allTransactions.length === 0) {
-    throw new Error('거래 내역을 찾을 수 없어요');
+    const errorDetail = fileErrors.length > 0
+      ? fileErrors.map((fe) => fe.fileName).join(', ')
+      : '';
+    throw new Error(
+      errorDetail
+        ? `거래 내역을 찾을 수 없어요: ${errorDetail}`
+        : '거래 내역을 찾을 수 없어요'
+    );
   }
 
   // 3. Sort transactions by date
