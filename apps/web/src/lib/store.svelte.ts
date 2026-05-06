@@ -210,12 +210,22 @@ let _loadPersistWarningKind: PersistWarningKind = null;
  *  the _truncatedTxCount field in the persisted data (C22-03). */
 let _loadTruncatedTxCount: number | null = null;
 
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+function safeJSONParse(text: string): unknown {
+  return JSON.parse(text, (key, value) => {
+    if (FORBIDDEN_KEYS.has(key)) {
+      throw new Error(`Forbidden key in JSON: ${key}`);
+    }
+    return value;
+  }) as unknown;
+}
+
 function loadFromStorage(): AnalysisResult | null {
   try {
     if (typeof sessionStorage !== 'undefined') {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      let parsed = JSON.parse(raw);
+      let parsed: any = safeJSONParse(raw);
       // Check schema version — log a warning on mismatch but continue
       // validation so we don't silently delete data that may still be
       // partially valid after an app upgrade (C74-02).
