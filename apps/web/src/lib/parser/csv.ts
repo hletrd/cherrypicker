@@ -13,6 +13,7 @@ import {
   isSummaryRow,
   isValidHeaderRow,
 } from './column-matcher.js';
+import { parseAmount } from './amount.js';
 
 // ---------------------------------------------------------------------------
 // Shared helpers (used by all adapters)
@@ -98,7 +99,7 @@ function splitCSVContent(content: string, _delimiter: string): string[] {
  *  date-utils.ts to avoid triplicating the logic across parsers (C19-01). */
 import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, daysInMonth } from './date-utils.js';
 
-// NOTE(C70-04): The helpers below (splitLine, parseAmount, parseInstallments,
+// NOTE(C70-04): The helpers below (splitLine, parseInstallments,
 // isValidAmount) duplicate logic from packages/parser/src/csv/shared.ts.
 // Full dedup requires the D-01 architectural refactor (shared module between
 // Bun and browser environments). When that refactor lands, replace these with
@@ -113,41 +114,6 @@ function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): s
     errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw.trim()}`, { line: lineIdx + 1 }));
   }
   return result;
-}
-
-/** Parse an amount string from CSV data. Returns null for unparseable inputs
- *  (NaN), matching the null-return pattern used by all other parsers (web PDF,
- *  web XLSX, server CSV, server XLSX, server PDF). The previous NaN return
- *  (C37-01) hid the risk of NaN propagation — the `number` return type could
- *  not enforce null checks at the call site. */
-function parseAmount(raw: string): number | null {
-  if (!raw.trim()) return null; // Early return for empty/whitespace-only input (C84-02 parity with server-side)
-  let cleaned = raw.trim()
-    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
-    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
-    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-').replace(/＋/g, '+') // full-width comma/dot/minus/plus -> ASCII
-    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
-    .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
-    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-  // Handle "마이너스" prefix — some Korean bank exports use this instead of
-  // a negative sign or parentheses (parity with server-side parseCSVAmount
-  // in packages/parser/src/csv/shared.ts C33-03). Must be checked after
-  // stripping 원/₩ so that inputs like "마이너스1,234원" are correctly
-  // detected, and parenthesized amounts like "(1,234원)" work correctly.
-  const isManeuners = /^마이너스/.test(cleaned);
-  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
-  // Handle trailing minus sign — some Korean bank exports use "1,234-"
-  // instead of "-1,234" for negative amounts (C68-01).
-  const hasTrailingMinus = /\d-$/.test(cleaned);
-  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
-  const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
-  if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
-  // Use Math.round(parseFloat(...)) to match the xlsx parser's rounding behavior
-  // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
-  // cells may contain decimal remainders; rounding is more correct than truncation.
-  const parsed = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(parsed) || !Number.isFinite(parsed)) return null;
-  return isNegative ? -parsed : parsed;
 }
 
 /** Exported alias for parseAmount — used by the JSON parser (C97-01). */

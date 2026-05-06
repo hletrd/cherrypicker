@@ -12,6 +12,7 @@ import {
   isSummaryRow,
   isValidHeaderRow,
 } from './column-matcher.js';
+import { parseAmount } from './amount.js';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from './date-utils.js';
 
@@ -238,39 +239,6 @@ export function parseDateToISO(raw: string, errors?: ParseError[]): string {
     errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw.trim()}`));
   }
   return result;
-}
-
-/** Parse an amount string from PDF text. Returns null for unparseable inputs
- *  so callers can distinguish between genuinely zero amounts and parse failures,
- *  matching the CSV parser's isValidAmount() pattern (C33-03). */
-export function parseAmount(raw: string): number | null {
-  let cleaned = raw
-    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
-    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
-    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-').replace(/＋/g, '+') // full-width comma/dot/minus/plus -> ASCII
-    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
-    .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
-    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-  // Handle "마이너스" prefix — some Korean bank exports use this instead of
-  // a negative sign or parentheses (parity with server-side parseCSVAmount
-  // in packages/parser/src/csv/shared.ts C33-03).
-  const isManeuners = /^마이너스/.test(cleaned);
-  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
-  // Handle trailing minus sign — some Korean bank exports use "1,234-"
-  // instead of "-1,234" for negative amounts (C68-01).
-  const hasTrailingMinus = /\d-$/.test(cleaned);
-  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
-  // Handle parenthesized negatives: (1,234) → -1234 (C36-01).
-  const isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
-  if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
-  if (!cleaned.trim()) return null;
-  // Use Math.round(parseFloat(...)) to match the csv.ts (C21-03) and xlsx.ts
-  // (C20-01) parsers' rounding behavior. Korean Won amounts are always
-  // integers, but PDF-extracted strings may contain decimal remainders from
-  // formula cells; rounding is more correct than truncation.
-  const n = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(n) || !Number.isFinite(n)) return null;
-  return isNeg ? -n : n;
 }
 
 function findDateCell(row: string[]): { idx: number; value: string } | null {

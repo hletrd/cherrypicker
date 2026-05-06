@@ -1,0 +1,40 @@
+// ---------------------------------------------------------------------------
+// Shared amount parser (extracted from csv.ts and pdf.ts — C27-COR03)
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse an amount string from Korean bank statement exports.
+ * Handles full-width digits, Won signs, 마이너스 prefix, trailing minus,
+ * parenthesized negatives, KRW prefix, and comma separators.
+ * Returns null for unparseable inputs so callers can distinguish between
+ * genuinely zero amounts and parse failures.
+ */
+export function parseAmount(raw: string): number | null {
+  if (!raw.trim()) return null; // Early return for empty/whitespace-only input (C84-02 parity with server-side)
+  let cleaned = raw.trim()
+    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts (C66-02)
+    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits -> ASCII
+    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-').replace(/＋/g, '+') // full-width comma/dot/minus/plus -> ASCII
+    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
+    .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix (C56-01)
+    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
+  // Handle "마이너스" prefix — some Korean bank exports use this instead of
+  // a negative sign or parentheses (parity with server-side parseCSVAmount
+  // in packages/parser/src/csv/shared.ts C33-03). Must be checked after
+  // stripping 원/₩ so that inputs like "마이너스1,234원" are correctly
+  // detected, and parenthesized amounts like "(1,234원)" work correctly.
+  const isManeuners = /^마이너스/.test(cleaned);
+  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
+  // Handle trailing minus sign — some Korean bank exports use "1,234-"
+  // instead of "-1,234" for negative amounts (C68-01).
+  const hasTrailingMinus = /\d-$/.test(cleaned);
+  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
+  const isNegative = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
+  if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
+  // Use Math.round(parseFloat(...)) to match the xlsx parser's rounding behavior
+  // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
+  // cells may contain decimal remainders; rounding is more correct than truncation.
+  const parsed = Math.round(parseFloat(cleaned));
+  if (Number.isNaN(parsed) || !Number.isFinite(parsed)) return null;
+  return isNegative ? -parsed : parsed;
+}
