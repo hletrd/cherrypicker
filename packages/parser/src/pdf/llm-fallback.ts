@@ -62,8 +62,8 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
   if (!apiKey) {
     throw new Error('API 키가 설정되지 않아 LLM 폴백을 사용할 수 없습니다.');
   }
-  // Stricter regex matching Anthropic key format: sk-ant-api03-... or sk-ant-api04-...
-  if (!/^sk-ant-api[0-9]{2,}-[A-Za-z0-9_-]{30,}$/.test(apiKey)) {
+  // Stricter regex matching Anthropic key format: sk-ant-api03-... (90+ chars after hyphen)
+  if (!/^sk-ant-api[0-9]{2,}-[A-Za-z0-9_-]{90,}$/.test(apiKey)) {
     throw new Error(
       'ANTHROPIC_API_KEY 형식이 올바르지 않습니다. 키는 "sk-ant-api03-..." 형식이어야 합니다.'
     );
@@ -72,6 +72,12 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
   const client = new Anthropic({ apiKey });
 
   const model = process.env['ANTHROPIC_MODEL'] ?? 'claude-3-7-sonnet-latest';
+
+  // Reject extremely large inputs before any processing to prevent memory pressure
+  const MAX_INPUT_CHARS = 100_000;
+  if (text.length > MAX_INPUT_CHARS) {
+    throw new Error(`PDF 텍스트가 너무 깁니다 (${text.length} > ${MAX_INPUT_CHARS} 글자). LLM 폴백을 사용할 수 없습니다.`);
+  }
 
   // Truncate text to avoid token limits — take first 8000 chars
   const truncated = sanitizeLLMInput(

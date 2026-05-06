@@ -31,7 +31,8 @@ describe('parsePDFWithLLM API key validation', () => {
   });
 
   test('does not throw validation error for a well-formed key', async () => {
-    process.env['ANTHROPIC_API_KEY'] = 'sk-ant-api03-this-is-a-valid-looking-key-1234567890';
+    // 90+ chars after the hyphen to match tightened regex (C36-SEC04)
+    process.env['ANTHROPIC_API_KEY'] = 'sk-ant-api03-' + 'a'.repeat(95);
     // The function will proceed past validation and attempt an API call,
     // which will fail with a network/auth error. We verify the error is NOT about key format.
     await expect(parsePDFWithLLM('test')).rejects.not.toThrow('sk-ant-');
