@@ -1748,4 +1748,23 @@ Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings*
 - **Reason for deferral:** The `as AnalysisResult` cast follows extensive manual field validation, so risk is low. Replacing with a proper type guard would be more maintainable but requires defining a guard function that duplicates the existing validation logic.
 - **Exit criterion:** When AnalysisResult schema changes, replace manual validation + cast with a Zod schema parse or a proper type guard function.
 
+### C30-ARCH-MED-01: Refactor isHTMLContent to avoid double decode
+
+- **Original finding:** C30-architect-MED-01
+- **Severity:** MEDIUM (performance)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/xlsx.ts:327-353`, `packages/parser/src/xlsx/index.ts:30-37`
+- **Reason for deferral:** `isHTMLContent` decodes the first 512 bytes, then the caller decodes the full buffer again. Refactoring to return `{ isHTML: boolean; decodedPrefix: string }` and reusing the prefix would require changes in both web and server XLSX parsers. Maps to existing D-52.
+- **Exit criterion:** Only one full decode of the buffer occurs; HTML detection still works; tests pass.
+- **Maps to:** D-52
+
+### C30-TE-MED-02: Add tests for OFX parseAmountString import path
+
+- **Original finding:** C30-test-engineer-MED-02
+- **Severity:** MEDIUM
+- **Confidence:** Medium
+- **File+line:** `apps/web/__tests__/parser-ofx.test.ts`
+- **Reason for deferral:** Low priority, no functional gap. OFX already has amount tests covering normal cases. Adding a test with full-width digits or Won signs would only verify the import path of `parseAmountString`.
+- **Exit criterion:** Add an OFX test that includes full-width digits or Won signs in amounts, implicitly verifying that `parseAmountString` (with full-width support) is correctly imported.
+
 ---
