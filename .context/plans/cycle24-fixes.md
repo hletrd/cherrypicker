@@ -8,19 +8,19 @@
 
 ## Task 1: Fix HTML event handler regex for whitespace around equals sign [C24-SEC01] — DONE
 
-- **Commit:** `TBD`
+- **Commit:** `47c623b`
 - **Files:** `apps/web/src/lib/parser/html.ts:42`, `packages/parser/src/csv/shared.ts:191-192`
 - Updated BOTH regexes to `/\son\w+\s*=\s*(?:"[^"]*"|'[^']*')/gi` (web) and `/\son\w+\s*=\s*["'][^"']*["']/gi` + `/\son\w+\s*=\s*\w+/gi` (server).
 
 ## Task 2: Add test for whitespace-variant event handlers [C24-TEST01] — DONE
 
-- **Commit:** `TBD`
+- **Commit:** `b5c7d12`
 - **Files:** `apps/web/__tests__/parser-html.test.ts`, `packages/parser/__tests__/csv-shared.test.ts`
 - Added tests covering spaces before, after, and on both sides of `=` for both web and server `normalizeHTML`.
 
 ## Task 3: Add finite-number validation for totalTransactionCount [C24-DB02] — DONE
 
-- **Commit:** `TBD`
+- **Commit:** `56d5fea`
 - **Files:** `apps/web/src/lib/store.svelte.ts:289,291`
 - Added `Number.isFinite()` guard for both `transactionCount` and `totalTransactionCount` in `loadFromStorage`.
 
@@ -45,6 +45,6 @@
 
 ## Gate Results
 
-- `npm run lint`: TBD
-- `npm run typecheck`: TBD
-- `bun run test`: TBD
+- `npm run lint`: PASS (0 errors, 0 warnings)
+- `npm run typecheck`: PASS (0 errors)
+- `bun run test`: PASS (all packages green)
