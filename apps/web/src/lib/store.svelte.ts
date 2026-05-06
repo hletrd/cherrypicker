@@ -564,6 +564,21 @@ function createAnalysisStore() {
         // result is guaranteed non-null here (early null guard at top of try block).
         // Keep all months in the transactions field for display/editing,
         // but the optimization only covers the latest month.
+        // Recompute metadata from edited transactions so counts and periods
+        // reflect the current data set, not the pre-edit snapshot (C25-COR02).
+        const newTransactionCount = editedTransactions.length;
+        const newTotalTransactionCount = editedTransactions.length;
+        const dates = editedTransactions
+          .filter((tx) => tx.date && tx.date.length >= 10)
+          .map((tx) => tx.date)
+          .sort();
+        const newStatementPeriod = dates.length > 0
+          ? { start: dates[0], end: dates[dates.length - 1] }
+          : snapshot.statementPeriod;
+        const newFullStatementPeriod = dates.length > 0
+          ? { start: dates[0], end: dates[dates.length - 1] }
+          : snapshot.fullStatementPeriod;
+
         // Use the snapshot captured at function entry instead of reading the
         // reactive result variable, which may have changed during the async
         // gaps above (C81-01).
@@ -572,6 +587,10 @@ function createAnalysisStore() {
           transactions: editedTransactions,
           optimization,
           monthlyBreakdown: updatedMonthlyBreakdown,
+          transactionCount: newTransactionCount,
+          totalTransactionCount: newTotalTransactionCount,
+          statementPeriod: newStatementPeriod,
+          fullStatementPeriod: newFullStatementPeriod,
         };
         generation++;
         const persistResult = persistToStorage(result);
