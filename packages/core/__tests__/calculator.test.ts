@@ -334,7 +334,7 @@ const perTxCapFixture: CardRuleSet = {
     {
       category: 'dining',
       type: 'discount',
-      tiers: [{ performanceTier: 'tier0', rate: 10, monthlyCap: null, perTransactionCap: 50000 }],
+      tiers: [{ performanceTier: 'tier0', rate: 10, monthlyCap: null, perTransactionCap: 5000 }],
     },
   ],
   globalConstraints: {
@@ -486,7 +486,7 @@ describe('calculateRewards - global cap and per-transaction cap', () => {
   });
 
   test('per-transaction cap: reward amount capped per transaction', () => {
-    // 10% of 100000 = 10000, but perTransactionCap=50000 → 10% of 50000 = 5000
+    // 10% of 100000 = 10000, but perTransactionCap=5000 caps reward at 5000 (C32-BUG-1)
     const output = calculateRewards({
       transactions: [makeTx('t1', 'dining', 100000)],
       previousMonthSpending: 0,
@@ -497,7 +497,7 @@ describe('calculateRewards - global cap and per-transaction cap', () => {
   });
 
   test('per-transaction cap does not affect transactions under cap', () => {
-    // 10% of 30000 = 3000, perTransactionCap=50000 → no binding
+    // 10% of 30000 = 3000, perTransactionCap=5000 → no binding (under cap)
     const output = calculateRewards({
       transactions: [makeTx('t1', 'dining', 30000)],
       previousMonthSpending: 0,

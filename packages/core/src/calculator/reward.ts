@@ -37,9 +37,7 @@ function ruleConditionsMatch(rule: RewardRule, tx: CategorizedTransaction): bool
   if (rule.conditions?.minTransaction !== undefined && tx.amount < rule.conditions.minTransaction) {
     return false;
   }
-  if (rule.conditions?.excludeOnline && tx.isOnline) {
-    return false;
-  }
+  // excludeOnline removed — no parser populates isOnline (C32-F2)
   if (
     rule.conditions?.specificMerchants &&
     rule.conditions.specificMerchants.length > 0 &&
@@ -55,7 +53,7 @@ function ruleSpecificity(rule: RewardRule): number {
   if (rule.category !== '*') score += 100;
   if (rule.subcategory) score += 50;
   if (rule.conditions?.specificMerchants?.length) score += 25;
-  if (rule.conditions?.excludeOnline) score += 10;
+  // excludeOnline removed (C32-F2)
   if (rule.conditions?.minTransaction !== undefined) score += 5;
   return score;
 }
@@ -262,8 +260,8 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       // same tier, rate takes precedence — Korean card rules do not currently
       // use both together, and the calculator does not combine them.
       const calcFn = getCalcFn(rule.type);
-      const effectiveAmount = perTxCap !== null ? Math.min(tx.amount, perTxCap) : tx.amount;
-      rawReward = calcFn(effectiveAmount, normalizedRate, null, 0).reward;
+      const uncappedReward = calcFn(tx.amount, normalizedRate, null, 0).reward;
+      rawReward = perTxCap !== null ? Math.min(uncappedReward, perTxCap) : uncappedReward;
       ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
     } else if (hasFixedReward) {
       rawReward = calculateFixedReward(tx, tierRate, rewardKey, dayRewardTracker);
@@ -302,6 +300,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         // cap relative to the global constraint.
         const overcount = rewardAfterMonthlyCap - appliedReward;
         ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed - overcount);
+        bucket.capReached = true;
       }
       globalMonthUsed += appliedReward;
     }
