@@ -29,10 +29,12 @@ export default defineConfig({
   test: {
     include: [
       'packages/core/__tests__/**/*.test.ts',
-      'packages/parser/__tests__/detect.test.ts',
-      'packages/parser/__tests__/csv.test.ts',
+      'packages/parser/__tests__/**/*.test.ts',
       'packages/rules/__tests__/**/*.test.ts',
       'packages/viz/__tests__/**/*.test.ts',
+      'apps/web/__tests__/**/*.test.ts',
+      'tools/cli/__tests__/**/*.test.ts',
+      'tools/scraper/__tests__/**/*.test.ts',
     ],
     // Test files that use Bun-only APIs beyond bun:test + import.meta.dir
     // (readFileSync with Bun paths, loadCardRule, etc.) may still fail
