@@ -1800,3 +1800,103 @@ Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings*
 - **Exit criterion:** If performance issues reported for large HTML files (> 5000 rows), implement streaming or reduce allocations.
 
 ---
+
+## Deferred Findings (Cycle 32)
+
+### C32-V11: parseAmountString allows trailing non-digit characters after numeric prefix
+- **Original finding:** C32-verifier-V11
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `packages/parser/src/csv/shared.ts:165-170`
+- **Reason for deferral:** The regex `/^[+-]?\d+(?:\.\d+)?/` extracts a leading numeric prefix and permits trailing characters. In practice, Korean bank exports do not produce malformed trailing text after amounts. The existing cleaning strips `원`, commas, and parentheses before regex matching. A stricter validation would reject more inputs but provide marginal benefit.
+- **Exit criterion:** If real-world bank exports produce malformed amounts with trailing text that causes incorrect parsing, tighten the regex to reject trailing alphabetic characters.
+
+### C32-V13: normalizeHTML does not handle all XSS vectors
+- **Original finding:** C32-verifier-V13
+- **Severity:** LOW
+- **Confidence:** Low
+- **File+line:** `packages/parser/src/csv/shared.ts:192-210`, `apps/web/src/lib/parser/html.ts:45-63`
+- **Reason for deferral:** normalizeHTML is used defensively before SheetJS parsing, not for rendering user-facing HTML. The remaining vectors (data: URLs, SVG onload, CSS expressions, meta refresh) would only be exploitable if the normalized HTML were ever displayed in the DOM, which it is not. Plan 59 Task 8 documents this behavior. If the normalized output is ever rendered, switch to DOMPurify.
+- **Exit criterion:** If normalized HTML is ever rendered in the DOM, replace regex-based sanitization with DOMPurify.
+
+### C32-V14: reoptimize does not preserve manual card assignment overrides
+- **Original finding:** C32-verifier-V14
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `apps/web/src/lib/store.svelte.ts:500-635`
+- **Reason for deferral:** No UI for manual overrides exists today. Adding sticky manual assignments requires new UI state, persistence schema changes, and optimizer modifications. This is a feature request, not a bug fix.
+- **Exit criterion:** UI supports manual card assignment overrides that survive reoptimization.
+
+### C32-ARCH01: Greedy optimizer extension point is a façade
+- **Original finding:** C32-architect-ARCH01
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/index.ts:10-31`
+- **Reason for deferral:** The `OptimizeMethod` union and `options.method` parameter suggest pluggable architecture but only `'greedy'` exists. Removing the façade is a breaking API change for any downstream callers that pass `options.method`. No alternative optimizer exists. Can be addressed when a second optimizer is implemented.
+- **Exit criterion:** A second optimizer algorithm is added, or the façade is removed in a major-version bump.
+
+### C32-ARCH02: Web app duplicates OptimizationResult and related types
+- **Original finding:** C32-architect-ARCH02
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/store.svelte.ts:11-66` vs `packages/core/src/models/result.ts:1-51`
+- **Reason for deferral:** The duplicated types are structurally identical except `CapInfo` in the store lacks the `category` field. Fixing requires importing from `@cherrypicker/core` and ensuring the store's Svelte reactivity works with imported types. Low risk, cosmetic drift.
+- **Exit criterion:** Store imports types directly from `@cherrypicker/core` and deleted local duplicates.
+
+### C32-ARCH03: toCoreCardRuleSets runtime adapter indicates upstream type narrowing failure
+- **Original finding:** C32-architect-ARCH03
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/analyzer.ts:47-81`
+- **Reason for deferral:** The adapter narrows `string` fields from JSON fetch to enum literals at runtime. This is a consequence of loading rules via `fetch()` (returns `unknown`) rather than importing typed modules. Fixing requires either (a) generating TypeScript types from YAML at build time, or (b) using `satisfies` assertions on the JSON source. Both are architectural changes.
+- **Exit criterion:** Card rules are loaded with compile-time type safety, eliminating the runtime adapter.
+
+### C32-INFRA02: No test coverage reporting configured
+- **Original finding:** C32-test-engineer-INFRA02
+- **Severity:** LOW
+- **Confidence:** High
+- **File+line:** `vitest.config.ts`, root `package.json`
+- **Reason for deferral:** Adding coverage requires installing `@vitest/coverage-v8` and configuring thresholds. The immediate priority is getting all tests running under vitest (Plan 59 Task 7). Coverage can be added after that.
+- **Exit criterion:** Coverage reporting is configured and a minimum threshold is enforced in CI.
+
+### C32-INFRA03: Mixed test runners (vitest + bun:test)
+- **Original finding:** C32-test-engineer-INFRA03
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** Root `package.json`, `vitest-bun-shim.ts`
+- **Reason for deferral:** Standardizing on a single runner is a tooling change that may break Bun-specific tests. After Plan 59 Task 7 brings all tests under vitest, evaluate whether `bun:test` is still needed.
+- **Exit criterion:** Either all tests run under a single runner, or the split is clearly documented with rationale.
+
+### C32-INFRA04: Playwright config issues
+- **Original finding:** C32-test-engineer-INFRA04
+- **Severity:** LOW
+- **Confidence:** Medium
+- **File+line:** `playwright.config.ts`
+- **Reason for deferral:** `fullyParallel: false`, `bunx astro preview`, minimal reporter, and no cross-browser projects are config choices with tradeoffs. Parallel execution could cause port conflicts. `bunx` assumption is documented. These are optimization opportunities, not correctness bugs.
+- **Exit criterion:** If e2e CI duration becomes a bottleneck, revisit parallel execution and cross-browser coverage.
+
+### C32-SEC-LLM: LLM fallback prompt injection risk
+- **Original finding:** C32-security-reviewer-03
+- **Severity:** HIGH (deferred because runtime environment is Bun CLI, not web)
+- **Confidence:** High
+- **File+line:** `packages/parser/src/pdf/llm-fallback.ts:68`
+- **Reason for deferral:** The LLM fallback runs in the Bun CLI environment, not the browser. The API key is not exposed to end users. Prompt injection could cause the LLM to leak its system prompt or return malformed data, but the output is validated before use. A full fix requires structured prompt delimiters and output validation, which is a larger security effort.
+- **Exit criterion:** Prompt text is wrapped in delimiters that prevent instruction override, and LLM output is structurally validated before JSON.parse.
+
+### C32-SEC-STORE: sessionStorage persists sensitive financial data unencrypted
+- **Original finding:** C32-security-reviewer-05
+- **Severity:** MEDIUM (deferred — same-origin protection exists)
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/store.svelte.ts:101-201`
+- **Reason for deferral:** sessionStorage is same-origin and not accessible to other websites. A reviver for prototype pollution was added in prior cycles. Full encryption would require a key management strategy (derive from user password? browser crypto?). The benefit is marginal for the threat model.
+- **Exit criterion:** If the app ever stores data in localStorage (which persists across sessions and is vulnerable to XSS), encrypt with Web Crypto API.
+
+### C32-SEC-SSRF: fetchCardPage fetches arbitrary URLs
+- **Original finding:** C32-security-reviewer-08
+- **Severity:** MEDIUM (deferred — runs in trusted CLI environment)
+- **Confidence:** High
+- **File+line:** `tools/scraper/src/fetcher.ts:13`
+- **Reason for deferral:** The scraper runs in a trusted developer/CI environment with explicit consent. URL validation already exists (hostname whitelist). The risk is limited to the operator's own network.
+- **Exit criterion:** If scraper is exposed to untrusted user input, add strict URL schema validation and DNS rebinding protection.
+
+---
