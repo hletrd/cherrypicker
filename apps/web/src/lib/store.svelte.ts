@@ -97,6 +97,13 @@ export interface AnalyzeOptions {
 }
 
 // --- SessionStorage persistence ---
+// NOTE(C33-F4): sessionStorage persists analysis data as plaintext JSON.
+// This is acceptable for the current threat model (single-user browser tab)
+// but means financial data is visible to any JavaScript on the origin,
+// including browser extensions. Data is validated on load (see safeJSONParse
+// and isPlainObject) to mitigate prototype pollution, but encryption is
+// not implemented. If encryption is added in the future, migrate via
+// STORAGE_VERSION and the MIGRATIONS registry below.
 
 const STORAGE_KEY = 'cherrypicker:analysis';
 
@@ -167,7 +174,7 @@ function persistToStorage(data: AnalysisResult): PersistResult {
         _v: STORAGE_VERSION,
       };
       const serialized = JSON.stringify(persisted);
-      const byteSize = new Blob([serialized]).size;
+      const byteSize = new TextEncoder().encode(serialized).length;
       if (byteSize > MAX_PERSIST_SIZE) {
         // Transactions are the largest field — omit them if over budget.
         // Record how many were lost so the warning can inform the user (C22-03).
@@ -223,6 +230,12 @@ function safeJSONParse(text: string): unknown {
   }) as unknown;
 }
 
+/** Type guard for plain objects (not arrays, not null).
+ *  Replaces `as Record<string, unknown>` casts on external data (C33-F6). */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
 function loadFromStorage(): AnalysisResult | null {
   try {
     if (typeof sessionStorage !== 'undefined') {
@@ -263,12 +276,11 @@ function loadFromStorage(): AnalysisResult | null {
         if (Array.isArray(parsed.optimization.assignments)) {
           const validAssignments = parsed.optimization.assignments.filter(
             (a: unknown): boolean => {
-              if (!a || typeof a !== 'object') return false;
-              const obj = a as Record<string, unknown>;
+              if (!isPlainObject(a)) return false;
               return (
-                typeof obj.assignedCardId === 'string' && obj.assignedCardId.length > 0 &&
-                typeof obj.category === 'string' && obj.category.length > 0 &&
-                typeof obj.spending === 'number' && Number.isFinite(obj.spending) && obj.spending >= 0
+                typeof a.assignedCardId === 'string' && a.assignedCardId.length > 0 &&
+                typeof a.category === 'string' && a.category.length > 0 &&
+                typeof a.spending === 'number' && Number.isFinite(a.spending) && a.spending >= 0
               );
             }
           );
@@ -283,12 +295,11 @@ function loadFromStorage(): AnalysisResult | null {
         if (Array.isArray(parsed.optimization.cardResults)) {
           const validCardResults = parsed.optimization.cardResults.filter(
             (cr: unknown): boolean => {
-              if (!cr || typeof cr !== 'object') return false;
-              const obj = cr as Record<string, unknown>;
+              if (!isPlainObject(cr)) return false;
               return (
-                typeof obj.cardId === 'string' &&
-                typeof obj.totalReward === 'number' &&
-                Array.isArray(obj.byCategory)
+                typeof cr.cardId === 'string' &&
+                typeof cr.totalReward === 'number' &&
+                Array.isArray(cr.byCategory)
               );
             }
           );
@@ -325,11 +336,11 @@ function loadFromStorage(): AnalysisResult | null {
           optimization: parsed.optimization,
           monthlyBreakdown: Array.isArray(parsed.monthlyBreakdown)
             ? parsed.monthlyBreakdown.map((item: unknown) => {
-                const obj = item && typeof item === 'object' ? item as Record<string, unknown> : null;
+                const entry = isPlainObject(item) ? item : null;
                 return {
-                  month: obj && typeof obj.month === 'string' ? obj.month : '',
-                  spending: obj && typeof obj.spending === 'number' ? obj.spending : 0,
-                  transactionCount: obj && typeof obj.transactionCount === 'number' ? obj.transactionCount : 0,
+                  month: entry && typeof entry.month === 'string' ? entry.month : '',
+                  spending: entry && typeof entry.spending === 'number' ? entry.spending : 0,
+                  transactionCount: entry && typeof entry.transactionCount === 'number' ? entry.transactionCount : 0,
                 };
               })
             : undefined,
@@ -564,7 +575,7 @@ function createAnalysisStore() {
         // the FRESH monthly breakdown (derived from editedTransactions) when
         // the user did not provide an explicit value.
         let previousMonthSpending: number | undefined;
-        if (options?.previousMonthSpending !== undefined && Number.isFinite(options.previousMonthSpending)) {
+        if (options?.previousMonthSpending !== undefined && Number.isFinite(options.previousMonthSpending) && options.previousMonthSpending >= 0) {
           // Caller explicitly provided a value — use it
           previousMonthSpending = options.previousMonthSpending;
         } else if (snapshot.previousMonthSpendingOption !== undefined) {
