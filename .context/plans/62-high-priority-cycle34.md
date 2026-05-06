@@ -27,3 +27,5 @@ Unknown reward types are silently coerced to `'discount'`, producing incorrect r
 - Unknown reward types throw instead of silently defaulting
 - All 213 tests pass
 - Lint and typecheck pass
+
+**Status: COMPLETED** — Implemented in commit `703f628`.

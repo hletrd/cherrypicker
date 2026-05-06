@@ -21,6 +21,8 @@ Regex `sk-ant-api[0-9]{2}` only matches exactly 2 digits. Future Anthropic key f
 - Regex matches 2-digit and 3+ digit version numbers
 - Existing tests pass
 
+**Status: COMPLETED** — Implemented in commit `67f56e7`.
+
 ---
 
 ## Task 2: Warn on unknown card source [C34-N3]
@@ -42,3 +44,5 @@ Unknown `card.source` values are silently mapped to `'web'`, obscuring data qual
 ### Exit Criterion
 - Unknown sources log a warning
 - No test failures
+
+**Status: COMPLETED** — Implemented in commit `703f628`.
