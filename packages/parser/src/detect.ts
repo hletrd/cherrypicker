@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises';
 import { extname } from 'path';
 import type { BankId, DetectionResult, FileFormat } from './types.js';
+import { ParseError } from './types.js';
 
 /** Detect text encoding from raw bytes using BOM and byte-pattern heuristics.
  *  Returns the detected encoding string suitable for TextDecoder.
@@ -39,8 +40,16 @@ export function detectEncoding(buffer: Buffer): string {
       }
     }
   }
-  // If more than 5 non-continuation high-bytes per KB, likely CP949
-  if (cp949SignalBytes > 0 && (cp949SignalBytes / (scanLen / 1024)) > 5) {
+  // If more than 5 non-continuation high-bytes per KB, likely CP949.
+  // For small buffers (< 100 bytes), require an absolute minimum of 5 signal
+  // bytes to avoid false positives from incidental high bytes (e.g. binary
+  // prefixes, short control sequences). For larger buffers, the per-KB ratio
+  // is reliable (C36-CP949).
+  const ratio = scanLen > 0 ? cp949SignalBytes / (scanLen / 1024) : 0;
+  if (scanLen >= 100 && cp949SignalBytes > 0 && ratio > 5) {
+    return 'cp949';
+  }
+  if (scanLen < 100 && cp949SignalBytes >= 5) {
     return 'cp949';
   }
   return 'utf-8';
@@ -233,6 +242,7 @@ export function detectCSVDelimiter(content: string): string {
 
 export async function detectFormat(filePath: string): Promise<DetectionResult> {
   const ext = extname(filePath).toLowerCase();
+  const errors: ParseError[] = [];
 
   // Determine format from extension
   let format: FileFormat;
@@ -287,10 +297,15 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
         try {
           JSON.parse(sniffBuffer.toString('utf-8').replace(/^﻿/, ''));
           format = 'json';
-        } catch {
+        } catch (err) {
           // Not valid JSON despite starting with [ or { — fall back to CSV.
-          // The CSV parser will surface parse errors if this is genuinely
-          // not CSV either (e.g., a malformed JSON file).
+          // Capture the parse error so callers know the file was malformed.
+          errors.push(
+            new ParseError(
+              `JSON 형식이 아닙니다: ${err instanceof Error ? err.message : String(err)}`,
+              { file: filePath, format: 'json' },
+            ),
+          );
           format = 'csv';
         }
       }
@@ -315,8 +330,8 @@ export async function detectFormat(filePath: string): Promise<DetectionResult> {
     const encoding = detectEncoding(csvBuffer);
     const content = decodeBuffer(csvBuffer, encoding);
     const { bank, confidence } = detectBank(content);
-    return { format, bank, confidence, encoding };
+    return { format, bank, confidence, encoding, errors };
   }
 
-  return { format, bank: null, confidence: 0 };
+  return { format, bank: null, confidence: 0, errors };
 }

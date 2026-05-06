@@ -6,6 +6,7 @@ export interface DetectionResult {
   bank: BankId | null;
   confidence: number;
   encoding?: string;
+  errors?: ParseError[];
 }
 
 export interface RawTransaction {

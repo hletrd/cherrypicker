@@ -38,12 +38,15 @@ export interface ParseOptions {
  * @param options - Optional: specify bank ID to skip auto-detection
  * @returns ParseResult with transactions and any errors encountered
  */
-function enrichErrors(result: ParseResult, filePath: string): ParseResult {
+function enrichErrors(result: ParseResult, filePath: string, detectionErrors?: ParseError[]): ParseResult {
   for (const err of result.errors) {
     if (err instanceof ParseError) {
       if (!err.file) err.file = filePath;
       if (!err.format) err.format = result.format;
     }
+  }
+  if (detectionErrors && detectionErrors.length > 0) {
+    result.errors.unshift(...detectionErrors);
   }
   return result;
 }
@@ -59,34 +62,35 @@ export async function parseStatement(filePath: string, options?: ParseOptions): 
       // CP949 byte-pattern analysis, and BOM detection (C7-02/C7-03).
       const encoding = detection.encoding ?? detectEncoding(buffer);
       const content = decodeBuffer(buffer, encoding);
-      return enrichErrors(parseCSV(content, bank), filePath);
+      return enrichErrors(parseCSV(content, bank), filePath, detection.errors);
     }
 
     case 'xlsx':
-      return enrichErrors(await parseXLSX(filePath, bank), filePath);
+      return enrichErrors(await parseXLSX(filePath, bank), filePath, detection.errors);
 
     case 'pdf':
       return enrichErrors(
         await parsePDF(filePath, bank, { allowRemoteLLM: options?.allowRemoteLLM ?? false }),
         filePath,
+        detection.errors,
       );
 
     case 'json': {
       const buffer = await readFile(filePath);
       const content = buffer.toString('utf-8');
-      return enrichErrors(parseJSON(content, bank), filePath);
+      return enrichErrors(parseJSON(content, bank), filePath, detection.errors);
     }
 
     case 'ofx': {
       const buffer = await readFile(filePath);
       const content = buffer.toString('utf-8');
-      return enrichErrors(parseOFX(content, bank), filePath);
+      return enrichErrors(parseOFX(content, bank), filePath, detection.errors);
     }
 
     case 'html': {
       const buffer = await readFile(filePath);
       const content = buffer.toString('utf-8');
-      return enrichErrors(parseHTML(content, bank), filePath);
+      return enrichErrors(parseHTML(content, bank), filePath, detection.errors);
     }
 
     default: {
