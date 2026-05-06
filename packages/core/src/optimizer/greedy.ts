@@ -197,7 +197,14 @@ export function greedyOptimize(
   // comparisons which sort inconsistently across JS engines.
   const sortedTransactions = [...constraints.transactions]
     .filter((tx) => tx.amount > 0 && Number.isFinite(tx.amount))
-    .sort((a, b) => b.amount - a.amount);
+    .sort((a, b) => {
+      const amountDiff = b.amount - a.amount;
+      if (amountDiff !== 0) return amountDiff;
+      // Secondary sort keys for deterministic ordering (C32-V12)
+      const merchantDiff = a.merchant.localeCompare(b.merchant);
+      if (merchantDiff !== 0) return merchantDiff;
+      return a.date.localeCompare(b.date);
+    });
 
   const txAssignments: TxAssignment[] = [];
 
