@@ -66,17 +66,17 @@ function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
         ? (rule.card.source as 'manual' | 'llm-scrape' | 'web')
         : 'web',
     },
-    rewards: rule.rewards.map((r) => ({
-      ...r,
-      type: VALID_REWARD_TYPES.has(r.type)
-        ? (r.type as 'discount' | 'points' | 'cashback' | 'mileage')
-        : 'none',
-      tiers: r.tiers.map((t) => ({
-        ...t,
-        // Ensure unit is narrowed from string | undefined to the expected union
-        unit: t.unit ?? null,
+    rewards: rule.rewards
+      .filter((r) => VALID_REWARD_TYPES.has(r.type))
+      .map((r) => ({
+        ...r,
+        type: r.type as 'discount' | 'points' | 'cashback' | 'mileage',
+        tiers: r.tiers.map((t) => ({
+          ...t,
+          // Ensure unit is narrowed from string | undefined to the expected union
+          unit: t.unit ?? null,
+        })),
       })),
-    })),
   }));
 }
 
@@ -221,11 +221,16 @@ export async function optimizeFromTransactions(
   // 전월실적 기본값: 사용자가 입력하지 않으면 이번 달 총 지출과 같다고 가정
   // 단, 카드사별 performanceExclusions에 포함된 카테고리의 지출은 전월실적에서 제외
   // 각 카드마다 제외 항목이 다르므로 카드별로 개별 계산
+  // Pre-compute total positive spending for the fast-path (cards with no exclusions).
+  const totalPositiveSpending = transactions.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
   const cardPreviousSpending = new Map<string, number>();
   for (const rule of coreRules) {
     if (options?.previousMonthSpending !== undefined) {
       // 사용자가 명시적으로 입력한 값 — 모든 카드에 동일 적용
       cardPreviousSpending.set(rule.card.id, options.previousMonthSpending);
+    } else if (rule.performanceExclusions.length === 0) {
+      // Fast path: no exclusions means all positive spending qualifies
+      cardPreviousSpending.set(rule.card.id, totalPositiveSpending);
     } else {
       // 카드별 performanceExclusions에 따라 전월실적 개별 계산
       // Match against three key forms: parent category (e.g. "tax_payment"),
@@ -233,18 +238,22 @@ export async function optimizeFromTransactions(
       // This ensures that subcategory-level exclusions work correctly even when
       // the transaction's category is the parent (e.g. tx.category="dining",
       // tx.subcategory="cafe", exclusion entry="cafe").
+      // Single-pass loop avoids intermediate array allocation from filter+reduce.
       const exclusions = new Set(rule.performanceExclusions);
-      const qualifying = transactions
-        .filter(tx =>
-          // Only positive amounts contribute to 전월실적 (gross spending convention).
-          // Including refunds (negative) or zero-amount rows would understate the
-          // user's performance, placing them in a lower tier with worse rewards (C1-01/C5-01).
-          tx.amount > 0 &&
+      let qualifying = 0;
+      for (const tx of transactions) {
+        // Only positive amounts contribute to 전월실적 (gross spending convention).
+        // Including refunds (negative) or zero-amount rows would understate the
+        // user's performance, placing them in a lower tier with worse rewards (C1-01/C5-01).
+        if (tx.amount <= 0) continue;
+        if (
           !exclusions.has(tx.category) &&
           !(tx.subcategory && exclusions.has(tx.subcategory)) &&
           !(tx.subcategory && exclusions.has(`${tx.category}.${tx.subcategory}`))
-        )
-        .reduce((sum, tx) => sum + tx.amount, 0);
+        ) {
+          qualifying += tx.amount;
+        }
+      }
       cardPreviousSpending.set(rule.card.id, qualifying);
     }
   }
@@ -254,6 +263,10 @@ export async function optimizeFromTransactions(
   if (!categoryLabels) {
     const categoryNodes = await loadCategories();
     categoryLabels = buildCategoryLabelMap(categoryNodes);
+  }
+
+  if (categoryLabels.size === 0) {
+    throw new Error('카테고리 레이블을 생성할 수 없어요. 카테고리 데이터를 확인해 주세요.');
   }
 
   const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
