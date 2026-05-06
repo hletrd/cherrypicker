@@ -1,6 +1,29 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { RawTransaction } from '../types.js';
 
+/** Sanitize raw text before sending to LLM to mitigate prompt injection.
+ *  Removes or neutralizes common injection patterns found in malicious
+ *  PDFs or crafted statements (C33-F3). */
+function sanitizeLLMInput(text: string): string {
+  // Strip common prompt injection prefixes and instructions.
+  // This is defense-in-depth; the system prompt also constrains behavior.
+  const injectionPatterns = [
+    /ignore\s+(all|previous)\s+(instructions?|prompts?)/gi,
+    /forget\s+(all|your)\s+(instructions?|prompts?)/gi,
+    /you\s+are\s+now\s+a/gi,
+    / disregard\s+the\s+above/gi,
+    /\[system\s*:\s*[^\]]*\]/gi,
+    /<\/?system>/gi,
+    /new\s+instructions?:/gi,
+    /override\s+previous/gi,
+  ];
+  let cleaned = text;
+  for (const pattern of injectionPatterns) {
+    cleaned = cleaned.replace(pattern, '[REDACTED]');
+  }
+  return cleaned;
+}
+
 const SYSTEM_PROMPT = `You are a Korean credit card statement parser.
 Extract transaction records from the provided text.
 
@@ -51,7 +74,9 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
   const model = process.env['ANTHROPIC_MODEL'] ?? 'claude-3-7-sonnet-latest';
 
   // Truncate text to avoid token limits — take first 8000 chars
-  const truncated = text.length > 8000 ? text.slice(0, 8000) + '\n...(truncated)' : text;
+  const truncated = sanitizeLLMInput(
+    text.length > 8000 ? text.slice(0, 8000) + '\n...(truncated)' : text
+  );
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
