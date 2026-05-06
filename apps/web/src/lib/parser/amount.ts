@@ -41,12 +41,14 @@ export function parseAmount(raw: string): number | null {
   if (dotCount > 1 || cleaned.endsWith('.')) return null;
   if (!cleaned) return null; // Explicit empty guard for parity with server-side (C29-HIGH-01)
   // Reject malformed strings like "1-2-3" that parseFloat would silently accept (C31-CR01).
-  // Allow trailing non-digits (e.g., "1234원" → parseFloat returns 1234) but reject
-  // any digits or dots after the initial numeric prefix.
+  // Allow trailing "원" (e.g., "1234원" → parseFloat returns 1234) which some bank
+  // exports include inside parentheses like "(1,234 원)" (C72-01). Reject other
+  // trailing characters like "1234abc" which indicate corrupted/malformed input.
   const numMatch = cleaned.match(/^[+-]?\d+(?:\.\d+)?/);
   if (!numMatch) return null;
   const afterNum = cleaned.slice(numMatch[0].length);
   if (/[\d.]/.test(afterNum)) return null;
+  if (afterNum.trim() && afterNum.trim() !== '원') return null;
   // Use Math.round(parseFloat(...)) to match the xlsx parser's rounding behavior
   // (C21-03). Korean Won amounts are always integers, but formula-rendered CSV
   // cells may contain decimal remainders; rounding is more correct than truncation.

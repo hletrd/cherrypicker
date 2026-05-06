@@ -65,6 +65,14 @@ describe('parseAmountString (server)', () => {
     expect(parseAmountString('１,234')).toBe(1234);
     expect(parseAmountString('1,２３4')).toBe(1234);
   });
+
+  it('rejects trailing alphabetic garbage (C39-TEST01)', () => {
+    expect(parseAmountString('1234abc')).toBeNull();
+    expect(parseAmountString('50000원금')).toBeNull();
+    expect(parseAmountString('10000!!!')).toBeNull();
+    expect(parseAmountString('1234 xyz')).toBeNull();
+    expect(parseAmountString('1234+')).toBeNull();
+  });
 });
 
 describe('parseAmount wrapper (server)', () => {
