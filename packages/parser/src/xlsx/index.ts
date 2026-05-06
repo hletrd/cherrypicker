@@ -4,7 +4,8 @@ import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
 import { parseDateStringToISO, isValidDayForMonth, isValidISODate } from '../date-utils.js';
-import { parseAmountString, normalizeHTML } from '../csv/shared.js';
+import { parseAmount } from '../amount.js';
+import { normalizeHTML } from '../csv/shared.js';
 import {
   findColumn,
   DATE_COLUMN_PATTERN,
@@ -146,21 +147,6 @@ export function parseDateToISO(
     errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${str}`, { line: lineIdx + 1 }));
   }
   return str;
-}
-
-function parseAmount(raw: unknown): number | null {
-  if (typeof raw === 'number') {
-    // Korean Won amounts must be integers — round to prevent decimal
-    // values (e.g., from formula cells) from polluting reward math.
-    return Number.isFinite(raw) ? Math.round(raw) : null;
-  }
-  if (typeof raw === 'string') {
-    // Delegate string parsing to shared parseAmountString to eliminate
-    // duplication across CSV, XLSX, and PDF parsers (C97-02).
-    const parsed = parseAmountString(raw);
-    return parsed !== null && Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
 }
 
 function parseInstallments(raw: unknown): number | undefined {

@@ -19,7 +19,7 @@ import type { BankId, ParseResult, RawTransaction } from '../types.js';
 import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
-import { parseAmountString } from '../csv/shared.js';
+import { parseAmountString } from '../amount.js';
 
 /** Extract all STMTTRN transaction blocks from OFX content.
  *  Handles both SGML-style (no closing tags) and XML-style (closing tags).

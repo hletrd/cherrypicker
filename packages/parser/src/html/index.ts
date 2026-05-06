@@ -11,7 +11,8 @@ import type { BankId, ParseResult, RawTransaction } from '../types.js';
 import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
-import { parseAmountString, normalizeHTML } from '../csv/shared.js';
+import { parseAmountString } from '../amount.js';
+import { normalizeHTML } from '../csv/shared.js';
 import {
   findColumn,
   DATE_COLUMN_PATTERN,
