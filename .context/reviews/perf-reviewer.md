@@ -1,64 +1,55 @@
-# Performance Review — cherrypicker (Cycle 20)
+# Performance Review — CherryPicker Cycle 35
 
-**Reviewer:** perf-reviewer (opus)
-**Scope:** Full repository — hot paths, allocations, algorithmic complexity
-**Date:** 2026-05-05
-
----
-
-## Summary
-
-Cycle 19 fixed monthly spending normalization but introduced no performance changes. Cycle 20 review finds 2 new performance-related findings: the greedy optimizer still recalculates rewards from scratch per transaction (carried from cycle 5, now with clearer impact), and the HTML parser's forward-fill creates unnecessary string allocations.
+## Methodology
+Reviewed for CPU hotspots, memory leaks, unnecessary allocations, N+1 queries, large data structure handling, and responsiveness across packages/core, packages/parser, apps/web.
 
 ---
 
-## New Findings
+## CONFIRMED ISSUES
 
-### [C20-PERF01-MEDIUM] Greedy optimizer recalculates full card rewards for every marginal score
+### PERF-01: `keywords.ts` is ~9200 lines of inline data
+**File**: `packages/core/src/categorizer/keywords.ts`
+**Severity**: Low | **Confidence**: High
+The merchant keywords file is extremely large (9200+ entries). While this is static data and Tree-shaking handles it, it inflates bundle size and parse time. The file is imported by `matcher.ts` which means ALL keywords are loaded into memory even if only a subset is used.
+**Fix**: Consider splitting by category or loading lazily. Since this is compile-time static data, the impact is limited to initial parse. Mark as deferred — requires careful measurement.
 
-**Files:** `packages/core/src/optimizer/greedy.ts:51-53`, `packages/core/src/optimizer/greedy.ts:124-156`
-**Confidence:** High
-
-For each transaction, `scoreCardsForTransaction` calls `calculateCardOutput` twice per card:
-```ts
+### PERF-02: `scoreCardsForTransaction` recalculates full card output per card per transaction
+**File**: `packages/core/src/optimizer/greedy.ts:39-66`
+**Severity**: Medium | **Confidence**: High
+```typescript
 const before = calculateCardOutput(currentTransactions, previousMonthSpending, rule).totalReward;
 const after = calculateCardOutput([...currentTransactions, transaction], previousMonthSpending, rule).totalReward;
 ```
+For each transaction and each card, `calculateRewards` is called twice. With N transactions and M cards, this is O(N * M * T) where T is the number of rules per card. For large statements (1000+ transactions) and many cards (50+), this is expensive.
+**Fix**: Incrementally update card reward state instead of recomputing from scratch. Cache tier selection results per card.
 
-Each call to `calculateCardOutput` re-evaluates ALL reward rules for ALL transactions assigned to that card. This is O(r * t) per call, where r = rules per card, t = transactions. With n transactions and m cards, total complexity is O(n * m * r * t).
-
-**Concrete impact:** 500 transactions, 10 cards, 20 rules each. Each transaction triggers 20 full recalculations. Each recalculation processes up to 500 transactions * 20 rules = 10,000 evaluations. Total: 500 * 20 * 10,000 = 100,000,000 rule evaluations.
-
-**Fix:** Cache marginal reward. Store `previousTotalReward` per card and compute only the incremental reward for the new transaction. This reduces complexity to O(n * m * r).
-
----
-
-### [C20-PERF02-LOW] HTML parser forward-fill allocates strings per cell per row
-
-**Files:** `apps/web/src/lib/parser/html.ts:141-244`
-**Confidence:** High
-
-Every row iteration creates multiple `String()` conversions and `isSummaryRow()` calls:
-```ts
-const dateRaw = String(dateCol !== -1 ? (isNonEmpty(rawDateValue) ? rawDateValue : lastDate) : '').trim();
-```
-
-For a 1000-row HTML table, this creates ~5000 intermediate strings and runs `isSummaryRow` up to 6000 times (once per cell update + once per row check). The `isSummaryRow` regex is large and recompiled on each call (no caching).
-
-**Fix:** Pre-compile `SUMMARY_ROW_PATTERN` once (it already is at module level, but verify). Batch the `isSummaryRow` check: test the full row text once at line 146, then skip per-cell summary checks for rows already identified as summary rows.
+### PERF-03: `buildAssignments` creates intermediate Maps and arrays
+**File**: `packages/core/src/optimizer/greedy.ts:68-132`
+**Severity**: Low | **Confidence**: Medium
+`buildAssignments` builds `assignmentMap`, `alternativeRewardMap`, and multiple intermediate arrays. For large transaction sets, these allocations add up.
+**Fix**: Pre-size arrays where possible, or use plain objects instead of Maps for small key counts.
 
 ---
 
-## Previously Reported — Status
+## LIKELY ISSUES / RISKS
 
-| Finding | Cycle | Status | Notes |
-|---------|-------|--------|-------|
-| MerchantMatcher O(n*m) scan | 4 | **OPEN** | LRU cache added (500 cap) but still linear scan on cache miss |
-| PDF text extraction materializes entire document | 4 | **OPEN** | No streaming implemented |
-| Greedy optimizer recalculation | 5 | **OPEN** | Same as C20-PERF01 |
+### PERF-04: No debounce on file dropzone
+**File**: `apps/web/src/components/upload/FileDropzone.svelte`
+**Severity**: Low | **Confidence**: Medium
+Multiple rapid file drops could trigger overlapping analysis calls. No explicit debounce or loading-state guard prevents concurrent analyzes.
+**Fix**: Add an `isAnalyzing` guard or debounce file drop events.
+
+### PERF-05: SessionStorage persistence runs on every reoptimize
+**File**: `apps/web/src/lib/store.svelte.ts:638`
+**Severity**: Low | **Confidence**: Medium
+Every category edit triggers `persistToStorage`, which serializes the entire result to JSON. For large datasets (1000+ transactions), this could cause jank.
+**Fix**: Debounce persistence or use a requestIdleCallback.
 
 ---
 
-## Verdict
-
-**FIX AND SHIP** — C20-PERF01 is the most impactful. Marginal reward caching would reduce optimizer runtime by orders of magnitude for large datasets.
+## VERIFIED SAFE
+- MerchantMatcher uses LRU cache with bounded size (500 entries)
+- `SUBSTRING_SAFE_ENTRIES` precomputed at module level
+- Greedy optimizer filters to latest month before optimizing
+- `analyzeMultipleFiles` uses shared MerchantMatcher across files
+- No recursive calls without depth limits
