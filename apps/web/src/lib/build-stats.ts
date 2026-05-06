@@ -23,8 +23,11 @@ export async function readCardStats(): Promise<CardStats> {
     totalIssuers = data.meta?.totalIssuers ?? totalIssuers;
     totalCategories = data.meta?.categories?.length ?? totalCategories;
   } catch (err) {
-    // Silent fallback — build stats are cosmetic; malformed or missing cards.json
-    // is not fatal. The fallback values are displayed on the landing page.
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[build-stats] Using fallback values because cards.json is unavailable or malformed. ' +
+      'Run the card data build step to update public/data/cards.json.'
+    );
   }
   return { totalCards, totalIssuers, totalCategories };
 }
