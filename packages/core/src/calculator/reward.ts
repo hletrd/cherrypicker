@@ -107,7 +107,7 @@ function getCalcFn(type: string): RewardCalcFn {
       // Mileage calculated same as points (Won-equivalent)
       return calculatePoints;
     default:
-      return calculateDiscount;
+      throw new Error(`Unknown reward type: ${type}. Expected one of: discount, points, cashback, mileage`);
   }
 }
 
