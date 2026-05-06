@@ -623,7 +623,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
           // Refunds/credits (negative amounts) are skipped, matching
           // server-side PDF parser behavior (C8-01).
           fallbackTransactions.push({
-            date: parseDateToISO(dateMatch[1]!, errors),
+            date: parseDateToISO(dateMatch[0], errors),
             merchant: between.replace(/\s+/g, ' ').trim(),
             amount,
           });

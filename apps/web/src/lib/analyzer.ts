@@ -365,7 +365,7 @@ export async function analyzeMultipleFiles(
   // If only one month uploaded, leave undefined so optimizeFromTransactions
   // computes per-card exclusion-filtered spending automatically
   const previousMonthSpending = previousMonth
-    ? monthlySpending.get(previousMonth)!
+    ? (monthlySpending.get(previousMonth) ?? 0)
     : options?.previousMonthSpending;
 
   // 6. Filter to latest month for optimization
