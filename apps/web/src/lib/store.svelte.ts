@@ -210,7 +210,10 @@ let _loadPersistWarningKind: PersistWarningKind = null;
  *  the _truncatedTxCount field in the persisted data (C22-03). */
 let _loadTruncatedTxCount: number | null = null;
 
-const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const FORBIDDEN_KEYS = new Set([
+  '__proto__', 'constructor', 'prototype',
+  '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__',
+]);
 function safeJSONParse(text: string): unknown {
   return JSON.parse(text, (key, value) => {
     if (FORBIDDEN_KEYS.has(key)) {
@@ -255,6 +258,24 @@ function loadFromStorage(): AnalysisResult | null {
         typeof parsed.optimization.totalSpending === 'number' &&
         typeof parsed.optimization.effectiveRate === 'number'
       ) {
+        // Validate assignment entries — each must have required fields to
+        // prevent downstream crashes in OptimalCardMap / CategoryBreakdown (C31-CR04)
+        if (Array.isArray(parsed.optimization.assignments)) {
+          const validAssignments = parsed.optimization.assignments.filter(
+            (a: unknown): boolean => {
+              if (!a || typeof a !== 'object') return false;
+              const obj = a as Record<string, unknown>;
+              return (
+                typeof obj.assignedCardId === 'string' && obj.assignedCardId.length > 0 &&
+                typeof obj.category === 'string' && obj.category.length > 0 &&
+                typeof obj.spending === 'number' && Number.isFinite(obj.spending) && obj.spending >= 0
+              );
+            }
+          );
+          if (validAssignments.length !== parsed.optimization.assignments.length) {
+            parsed.optimization.assignments = validAssignments;
+          }
+        }
         // Shallow validation of cardResults entries — each must have the
         // essential fields that dashboard components access during rendering.
         // If any entry fails validation, strip the entire cardResults array
