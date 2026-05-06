@@ -369,13 +369,13 @@ Twelve `as` casts bypass TypeScript structural checking. If external data change
 
 | Task | Status |
 |---|---|
-| 1 | pending |
-| 2 | pending |
-| 3 | pending |
-| 4 | pending |
-| 5 | pending |
-| 6 | pending |
-| 7 | pending |
-| 8 | pending |
-| 9 | pending |
-| 10 | pending |
+| 1 | DONE — included in commit d8cfd3c (reward.ts) |
+| 2 | DONE — commit e2b00df |
+| 3 | DONE — commit ca30754 |
+| 4 | DONE — commit 423a7df |
+| 5 | DONE — commit c022239 |
+| 6 | DONE — commit 419fb2b |
+| 7 | DONE — commit 216cdd7 |
+| 8 | DONE — commit 7ea2d36 |
+| 9 | DONE — commit 453edce |
+| 10 | DONE — commit 453edce |

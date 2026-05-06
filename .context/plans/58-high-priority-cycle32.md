@@ -214,8 +214,8 @@ Web-side `parseFile` only tries `['utf-8', 'cp949']` encodings. Server-side `det
 
 | Task | Status |
 |---|---|
-| 1 | pending |
-| 2 | pending |
-| 3 | pending |
-| 4 | pending |
-| 5 | pending |
+| 1 | DONE — commit affbdf1 |
+| 2 | DONE — commit bdf9111 |
+| 3 | DONE — commit e8be401 |
+| 4 | DONE — commit d8cfd3c |
+| 5 | DONE — commit 196ba3c |
