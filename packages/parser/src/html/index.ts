@@ -246,7 +246,13 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
       }
       continue;
     }
-    if (amount <= 0) continue;
+    if (amount <= 0) {
+      errors.push(new ParseError(
+        `지출로 처리되지 않는 금액입니다: ${merchantRaw || '알 수 없는 거래'} ${amount}원`,
+        { line: i + 1, raw: rowText },
+      ));
+      continue;
+    }
 
     // Parse date
     const date = parseDateStringToISO(dateRaw);

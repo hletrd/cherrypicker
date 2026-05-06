@@ -413,7 +413,13 @@ function parseXLSXSheet(
     // transactions, refunds). These don't contribute to spending optimization
     // and would inflate monthly spending totals (C42-01/C42-02). All other
     // parsers (CSV, web CSV/XLSX/PDF) apply the same filter.
-    if (amount <= 0) continue;
+    if (amount <= 0) {
+      errors.push(new ParseError(
+        `지출로 처리되지 않는 금액입니다: ${String(merchantRaw ?? '').trim() || '알 수 없는 거래'} ${amount}원`,
+        { line: i + 1, raw: rowText },
+      ));
+      continue;
+    }
 
     const parsedDate = parseDateToISO(dateRaw, errors, i);
     // Validate that the parsed date is a proper ISO date string (YYYY-MM-DD).
