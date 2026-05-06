@@ -29,7 +29,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "국내 가맹점 0.5% 캐시백. 수요일 이용 시 0.7% 캐시백. 해외 이용 0.7% 캐시백. 익월 15일 입금"
 

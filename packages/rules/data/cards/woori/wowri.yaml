@@ -83,7 +83,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - SK에너지
         - GS칼텍스
@@ -107,7 +106,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 카카오페이
         - 네이버페이

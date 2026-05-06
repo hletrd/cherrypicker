@@ -29,7 +29,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 쿠팡
         - 이마트
@@ -46,7 +45,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 파리바게트
         - 뚜레쥬르

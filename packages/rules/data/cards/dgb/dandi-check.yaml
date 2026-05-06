@@ -38,7 +38,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 스타벅스
         - 슬리플리스인시애틀
@@ -60,7 +59,6 @@ rewards:
         perTransactionCap: 3000
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - CGV
         - 메가박스
@@ -80,7 +78,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - CU
         - GS25
@@ -99,7 +96,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "이동통신요금 자동이체 시 3% 결제일 캐시백"
 
@@ -116,7 +112,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "온라인 쇼핑몰 5% 결제일 캐시백"
 

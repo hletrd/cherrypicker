@@ -52,7 +52,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 커피전문점
         - 베이커리

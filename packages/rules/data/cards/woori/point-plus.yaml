@@ -101,7 +101,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 10000
-      excludeOnline: false
       specificMerchants:
         - 네이버페이
         - 카카오페이

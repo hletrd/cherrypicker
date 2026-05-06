@@ -29,7 +29,6 @@ function makeTx(
   category: string,
   amount: number,
   merchant = '테스트',
-  isOnline = false,
   subcategory?: string,
 ): CategorizedTransaction {
   return {
@@ -41,7 +40,6 @@ function makeTx(
     category,
     subcategory,
     confidence: 1.0,
-    isOnline,
   };
 }
 
@@ -656,7 +654,7 @@ describe('calculateRewards - broad category rule blocked by subcategorized trans
     };
     // Transaction with subcategory='cafe' should NOT match the broad dining rule
     const output = calculateRewards({
-      transactions: [makeTx('t1', 'dining', 20000, '스타벅스', false, 'cafe')],
+      transactions: [makeTx('t1', 'dining', 20000, '스타벅스', 'cafe')],
       previousMonthSpending: 0,
       cardRule: broadOnlyFixture,
     });
@@ -704,7 +702,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
 
   test('subcategory-specific rules win over broad category rules', () => {
     const output = calculateRewards({
-      transactions: [makeTx('t1', 'dining', 20000, '메가커피 강남', false, 'cafe')],
+      transactions: [makeTx('t1', 'dining', 20000, '메가커피 강남', 'cafe')],
       previousMonthSpending: 0,
       cardRule: subcategoryFixture,
     });
@@ -715,7 +713,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
 
   test('subcategory-specific merchant misses result in 0 reward when broad rule is blocked', () => {
     const output = calculateRewards({
-      transactions: [makeTx('t1', 'dining', 20000, '스타벅스 강남', false, 'cafe')],
+      transactions: [makeTx('t1', 'dining', 20000, '스타벅스 강남', 'cafe')],
       previousMonthSpending: 0,
       cardRule: subcategoryFixture,
     });

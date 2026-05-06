@@ -1,7 +1,7 @@
 {
   "meta": {
     "version": "1.0.0",
-    "generatedAt": "2026-05-05T20:16:19.723Z",
+    "generatedAt": "2026-05-06T04:45:20.313Z",
     "totalIssuers": 24,
     "totalCards": 683,
     "categories": [
@@ -5446,7 +5446,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "해외가맹점"
                 ]
@@ -10453,7 +10452,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스"
                 ]
@@ -10481,7 +10479,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "맥도날드",
                   "버거킹",
@@ -10513,7 +10510,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "간편결제"
                 ]
@@ -13756,7 +13752,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "KB Pay"
                 ]
@@ -16239,7 +16234,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -20167,7 +20161,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -20185,7 +20178,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -20237,7 +20229,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -20255,7 +20246,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -20307,7 +20297,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -20359,7 +20348,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -20377,7 +20365,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -20395,7 +20382,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -20447,7 +20433,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -20465,7 +20450,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -20483,7 +20467,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -20502,7 +20485,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -21265,7 +21247,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -21314,7 +21295,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -22012,7 +21992,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -22803,7 +22782,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "네이버쇼핑",
                   "쿠팡",
@@ -23490,7 +23468,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "카페"
                 ]
@@ -24288,7 +24265,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "커피전문점",
                   "베이커리",
@@ -25555,7 +25531,6 @@
               ],
               "conditions": {
                 "minTransaction": 100000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "네이버플러스스토어",
                   "쿠팡",
@@ -25580,7 +25555,6 @@
               ],
               "conditions": {
                 "minTransaction": 100000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "이마트",
                   "농협하나로마트",
@@ -25603,7 +25577,6 @@
               ],
               "conditions": {
                 "minTransaction": 100000,
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -25622,7 +25595,6 @@
               ],
               "conditions": {
                 "minTransaction": 100000,
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -25641,7 +25613,6 @@
               ],
               "conditions": {
                 "minTransaction": 100000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SKT",
                   "KT",
@@ -25728,7 +25699,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -31692,7 +31662,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "쿠팡",
                   "이마트",
@@ -31716,7 +31685,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "파리바게트",
                   "뚜레쥬르",
@@ -31830,7 +31798,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "하나페이",
                   "삼성페이",
@@ -31873,7 +31840,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "이마트",
                   "홈플러스",
@@ -31913,7 +31879,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SK에너지",
                   "GS칼텍스",
@@ -31952,7 +31917,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스",
                   "이디야",
@@ -32038,7 +32002,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "하나원큐페이"
                 ]
@@ -32058,7 +32021,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -32870,7 +32832,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "다이소",
                   "올리브영"
@@ -32907,7 +32868,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스",
                   "커피빈"
@@ -32990,7 +32950,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "넷플릭스",
                   "디즈니플러스",
@@ -33059,7 +33018,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "배달의민족",
                   "요기요",
@@ -33127,7 +33085,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CU",
                   "GS25",
@@ -33272,7 +33229,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SK에너지",
                   "GS칼텍스",
@@ -33311,7 +33267,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스",
                   "커피빈",
@@ -33398,7 +33353,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "넷플릭스",
                   "디즈니플러스",
@@ -33437,7 +33391,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "배달의민족",
                   "요기요",
@@ -33505,7 +33458,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "무신사",
                   "지그재그",
@@ -33543,7 +33495,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CU",
                   "GS25",
@@ -35677,7 +35628,6 @@
               ],
               "conditions": {
                 "minTransaction": 1000,
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -35704,7 +35654,6 @@
               ],
               "conditions": {
                 "minTransaction": 1000,
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -35792,7 +35741,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             }
@@ -44929,7 +44877,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SK에너지",
                   "GS칼텍스",
@@ -44960,7 +44907,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "롯데시네마",
                   "CGV",
@@ -44990,7 +44936,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "넷플릭스",
                   "왓챠",
@@ -45211,7 +45156,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스"
                 ]
@@ -45239,7 +45183,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "롯데시네마",
                   "CGV",
@@ -45313,7 +45256,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "배달의민족",
                   "요기요",
@@ -45343,7 +45285,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "넷플릭스",
                   "유튜브프리미엄",
@@ -45780,7 +45721,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "롯데마트",
                   "이마트",
@@ -45818,7 +45758,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SK에너지",
                   "GS칼텍스",
@@ -46229,7 +46168,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "이마트",
                   "홈플러스",
@@ -46268,7 +46206,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SK에너지",
                   "GS칼텍스",
@@ -47681,7 +47618,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "넷플릭스",
                   "유튜브프리미엄",
@@ -48061,7 +47997,6 @@
               ],
               "conditions": {
                 "minTransaction": 20000,
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -48088,7 +48023,6 @@
               ],
               "conditions": {
                 "minTransaction": 20000,
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -48114,7 +48048,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -48141,7 +48074,6 @@
               ],
               "conditions": {
                 "minTransaction": 20000,
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -48168,7 +48100,6 @@
               ],
               "conditions": {
                 "minTransaction": 20000,
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -48195,7 +48126,6 @@
               ],
               "conditions": {
                 "minTransaction": 20000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "배달의민족",
                   "요기요",
@@ -48225,7 +48155,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "넷플릭스",
                   "유튜브프리미엄",
@@ -48365,7 +48294,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": true,
                 "specificMerchants": [
                   "롯데마트",
                   "이마트",
@@ -48701,7 +48629,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -48897,9 +48824,7 @@
                   "perTransactionCap": null
                 }
               ],
-              "conditions": {
-                "excludeOnline": true
-              }
+              "conditions": {}
             }
           ],
           "globalConstraints": {
@@ -49726,7 +49651,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "배달의민족",
                   "요기요",
@@ -49762,7 +49686,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "넷플릭스",
                   "유튜브프리미엄",
@@ -51587,7 +51510,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "백화점",
                   "대형할인점",
@@ -51636,7 +51558,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SK에너지",
                   "GS칼텍스",
@@ -51683,7 +51604,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스",
                   "폴바셋"
@@ -51977,7 +51897,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SK에너지",
                   "GS칼텍스",
@@ -52016,7 +51935,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "카카오페이",
                   "네이버페이",
@@ -52782,7 +52700,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "우리WON페이",
                   "네이버페이",
@@ -52896,7 +52813,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "우리WON페이",
                   "네이버페이",
@@ -53690,7 +53606,6 @@
               ],
               "conditions": {
                 "minTransaction": 10000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "네이버페이",
                   "카카오페이",
@@ -53830,7 +53745,6 @@
               ],
               "conditions": {
                 "minTransaction": 10000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "네이버페이",
                   "카카오페이",
@@ -54045,7 +53959,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스",
                   "투썸플레이스",
@@ -54086,7 +53999,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CU",
                   "GS25",
@@ -54124,7 +54036,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "버스",
                   "지하철",
@@ -54162,7 +54073,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SKT",
                   "KT",
@@ -54230,7 +54140,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": []
               }
             },
@@ -54264,7 +54173,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "우리페이",
                   "네이버페이",
@@ -56969,7 +56877,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CU",
                   "GS25",
@@ -56999,7 +56906,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "올리브영"
                 ]
@@ -57027,7 +56933,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "11번가",
                   "G마켓"
@@ -57056,7 +56961,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CGV",
                   "롯데시네마"
@@ -57316,7 +57220,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "쿠팡",
                   "무신사",
@@ -57362,7 +57265,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스",
                   "배달의민족",
@@ -76698,7 +76600,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스",
                   "슬리플리스인시애틀",
@@ -76731,7 +76632,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CGV",
                   "메가박스",
@@ -76762,7 +76662,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CU",
                   "GS25"
@@ -76792,7 +76691,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "이동통신요금 자동이체 시 3% 결제일 캐시백"
               }
@@ -76819,7 +76717,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "온라인 쇼핑몰 5% 결제일 캐시백"
               }
@@ -76884,7 +76781,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전월 30만원 이상 시 전 업종 0.1% 포인트 적립"
               }
@@ -76911,7 +76807,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "이마트",
                   "롯데마트",
@@ -76944,7 +76839,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "온라인 쇼핑 0.7% 포인트 적립"
               }
@@ -76971,7 +76865,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "배달앱"
                 ],
@@ -77000,7 +76893,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "슈퍼마켓 0.5% 포인트 적립"
               }
@@ -77027,7 +76919,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "국세/4대보험 납부 0.5% 포인트 적립"
               }
@@ -78185,7 +78076,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전 가맹점 0.2% 청구할인"
               }
@@ -78220,7 +78110,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전 주유소(LPG 포함) 리터당 60원 청구할인"
               }
@@ -78255,7 +78144,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "커피/외식 할인"
               }
@@ -78290,7 +78178,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CGV",
                   "메가박스",
@@ -78329,7 +78216,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "이동통신 요금 청구할인"
               }
@@ -79005,7 +78891,6 @@
               ],
               "conditions": {
                 "minTransaction": 10000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "국내 가맹점 건당 1만원 이상 이용 시 0.2% 캐시백. 월 100만원 초과분은 0.4% 캐시백"
               }
@@ -79032,7 +78917,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "해외 가맹점 건당 미화 10달러 이상 이용 시 이용금액의 1% 캐시백. 전월 30만원 이상 필요"
               }
@@ -79098,7 +78982,6 @@
               ],
               "conditions": {
                 "minTransaction": 30000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전월 30만원 이상 시 3만원 이상 결제 시 3,000원당 대한항공 스카이패스 1마일 적립. 온라인 쇼핑몰(SSG닷컴, 롯데닷컴, AK몰, 갤러리아몰 등)에서 1,000원당 1마일 적립"
               }
@@ -79126,7 +79009,6 @@
               ],
               "conditions": {
                 "minTransaction": 30000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SSG닷컴",
                   "롯데닷컴",
@@ -79158,7 +79040,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "커피빈",
                   "스타벅스",
@@ -79192,7 +79073,6 @@
               ],
               "conditions": {
                 "minTransaction": 10000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CGV",
                   "롯데시네마"
@@ -79562,7 +79442,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SK주유소"
                 ],
@@ -79591,7 +79470,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "CGV",
                   "메가박스",
@@ -79623,7 +79501,6 @@
               ],
               "conditions": {
                 "minTransaction": 20000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "건당 2만원 이상 결제 시 탑포인트 0.1% 적립"
               }
@@ -83082,7 +82959,6 @@
               ],
               "conditions": {
                 "minTransaction": 5000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전 가맹점 최대 1.2% 캐시백. 건당 5000원 이상"
               }
@@ -83101,7 +82977,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전국 제과점 10% 캐시백"
               }
@@ -83120,7 +82995,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전국 주유소 리터당 30원 적립"
               }
@@ -83139,7 +83013,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전북지역 영화관 현장할인"
               }
@@ -83158,7 +83031,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "교보문고"
                 ],
@@ -84017,7 +83889,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "기본 0.2% 무실적 캐시백. 전월 20만원 이상 시 대상 업종 0.2% 추가 (합산 0.4%)"
               }
@@ -84060,7 +83931,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "카페/패스트푸드 5% 특별캐시백. 핫트렌드/커피/패스트푸드/배달앱/미용화장품 업종"
               }
@@ -84103,7 +83973,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "올리브영"
                 ],
@@ -85718,7 +85587,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "평일 0.2%, 주말/공휴일 0.4% 캐시백. 실적/한도 제한 없음"
               }
@@ -85737,7 +85605,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "배달의민족",
                   "컴포즈커피",
@@ -85762,7 +85629,6 @@
               ],
               "conditions": {
                 "minTransaction": 5000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "GS25"
                 ],
@@ -85783,7 +85649,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "프로모션 시즌12. 후불교통(버스/지하철) 월 5만원 이상 이용 시 4000원 캐시백"
               }
@@ -85803,7 +85668,6 @@
               ],
               "conditions": {
                 "minTransaction": 30000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "GS칼텍스"
                 ],
@@ -85825,7 +85689,6 @@
               ],
               "conditions": {
                 "minTransaction": 20000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "다이소"
                 ],
@@ -85847,7 +85710,6 @@
               ],
               "conditions": {
                 "minTransaction": 30000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "쿠팡"
                 ],
@@ -85869,7 +85731,6 @@
               ],
               "conditions": {
                 "minTransaction": 100000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "프로모션 시즌12. 학원업종 10만원 이상 1만원 캐시백"
               }
@@ -85889,7 +85750,6 @@
               ],
               "conditions": {
                 "minTransaction": 200000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "프로모션 시즌12. 병원업종 20만원 이상 1만원 캐시백"
               }
@@ -86124,7 +85984,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "평일 0.2%, 주말/공휴일 0.4% 캐시백. 실적/한도 제한 없음"
               }
@@ -86152,7 +86011,6 @@
               ],
               "conditions": {
                 "minTransaction": 50000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전월 30만원 이상 시 후불교통(버스/지하철) 월 5만원 이상 이용 시 4,000원 캐시백. K-패스 대중교통비 환급(일반 20%, 청년 30%, 저소득층 53%) 별도 제공"
               }
@@ -86204,7 +86062,6 @@
               ],
               "conditions": {
                 "minTransaction": 50000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "국내외 5만원 이상 결제 시 건당 300원 또는 3,000원 랜덤 캐시백. 가맹점별 1일 1회. 실적/한도 제한 없음"
               }
@@ -86255,7 +86112,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전월 이용실적에 따라 월 통합 캐시백 한도 제공. 최초 발급 후 다음 달 말일까지는 실적 무관 월 한도 2만원. 업종별 캐시백 적립. 세금 신고 기간(1월/5월/7월) 부가세 이용내역 자동 제공"
               }
@@ -87953,7 +87809,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "국내 전 가맹점 0.7% 청구할인 (결제계좌 수협은행 기준). 타행 결제계좌 시 0.4%"
               }
@@ -87972,7 +87827,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "통신요금 20% 청구할인"
               }
@@ -88052,7 +87906,6 @@
               ],
               "conditions": {
                 "minTransaction": 5000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스",
                   "폴바셋",
@@ -88094,7 +87947,6 @@
               ],
               "conditions": {
                 "minTransaction": 5000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "병원/의료기관 청구할인. 건당 5000원 이상"
               }
@@ -88130,7 +87982,6 @@
               ],
               "conditions": {
                 "minTransaction": 5000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "넷플릭스",
                   "유튜브 프리미엄"
@@ -88169,7 +88020,6 @@
               ],
               "conditions": {
                 "minTransaction": 5000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "쿠팡",
                   "티몬",
@@ -88364,7 +88214,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "국내 가맹점 0.5% 캐시백. 수요일 이용 시 0.7% 캐시백. 해외 이용 0.7% 캐시백. 익월 15일 입금"
               }
@@ -88491,7 +88340,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "국내 이용금액 주중 0.1%, 주말/공휴일 0.2% 캐시백. 해외 이용 0.1% 캐시백"
               }
@@ -88510,7 +88358,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "아파트 관리비 0.1% 캐시백"
               }
@@ -88781,7 +88628,6 @@
               ],
               "conditions": {
                 "minTransaction": 3000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "영역별 3000원 이상 결제 시 건당 캐시백. 영역별 1일 1회. 무실적 300원, 전월 30만 이상 500원"
               }
@@ -88809,7 +88655,6 @@
               ],
               "conditions": {
                 "minTransaction": 3000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "영역별 3000원 이상 결제 시 건당 캐시백. 영역별 1일 1회"
               }
@@ -88837,7 +88682,6 @@
               ],
               "conditions": {
                 "minTransaction": 3000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "영역별 3000원 이상 결제 시 건당 캐시백. 영역별 1일 1회"
               }
@@ -88864,7 +88708,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "전월 30만원 이상 시 대중교통 이용금액 월 5만원 초과 시 3000원 추가 캐시백. K-패스 환급 별도"
               }
@@ -88958,7 +88801,6 @@
               ],
               "conditions": {
                 "minTransaction": 5000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "GS25",
                   "CU"
@@ -89005,7 +88847,6 @@
               ],
               "conditions": {
                 "minTransaction": 5000,
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스"
                 ],
@@ -89051,7 +88892,6 @@
               ],
               "conditions": {
                 "minTransaction": 5000,
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "여기서더캐시백 선택 시. 배달/OTT/영화 영역. 영역별 일 1000원 한도"
               }
@@ -89094,7 +88934,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "여기서더캐시백 선택 시. 통신 3사 요금 결제 5% 캐시백"
               }
@@ -89137,7 +88976,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "모두다캐시백 선택 시. 오프라인 0.7%, 온라인(네이버쇼핑/쿠팡 등) 1.1~1.2%"
               }
@@ -89180,7 +89018,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "쿠팡"
                 ],
@@ -89377,7 +89214,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "SKT",
                   "KT",
@@ -89417,7 +89253,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "아파트 관리비 자동납부 10% 청구할인"
               }
@@ -89452,7 +89287,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "학원비(외국어, 입시/보습, 운전면허, 예체능, 기술/직업훈련, 무술도장) 10% 청구할인"
               }
@@ -89487,7 +89321,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "병원 10% 청구할인"
               }
@@ -89522,7 +89355,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "스타벅스",
                   "커피빈",
@@ -89563,7 +89395,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "이마트",
                   "롯데마트",
@@ -89603,7 +89434,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "손해보험, 건강보험/고용보험/산재보험/국민연금 자동납부 10% 청구할인"
               }
@@ -89638,7 +89468,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "골프장",
                   "골프연습장"
@@ -89692,7 +89521,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "집중캐시백 선택 시. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
               }
@@ -89711,7 +89539,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "집중캐시백 선택 시. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
               }
@@ -89730,7 +89557,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "카페",
                   "디저트",
@@ -89753,7 +89579,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "영화관"
                 ],
@@ -89774,7 +89599,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "집중캐시백 선택 시. 구독/멤버십 영역. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
               }
@@ -89793,7 +89617,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [
                   "올리브영"
                 ],
@@ -89814,7 +89637,6 @@
                 }
               ],
               "conditions": {
-                "excludeOnline": false,
                 "specificMerchants": [],
                 "note": "어디서나캐시백 선택 시. 국내 온·오프라인 0.3% 캐시백"
               }

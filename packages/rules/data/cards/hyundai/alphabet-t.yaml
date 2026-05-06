@@ -31,7 +31,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
 
   - category: airline
@@ -43,7 +42,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
 
   - category: hotel
@@ -55,7 +53,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
 
   - category: uncategorized
@@ -68,7 +65,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
 
 globalConstraints:

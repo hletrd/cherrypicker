@@ -58,7 +58,6 @@ rewards:
         perTransactionCap: 1000
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 쿠팡
         - 무신사
@@ -85,7 +84,6 @@ rewards:
         perTransactionCap: 1000
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 스타벅스
         - 배달의민족

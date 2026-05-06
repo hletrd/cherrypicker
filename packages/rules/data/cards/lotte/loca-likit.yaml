@@ -40,7 +40,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 스타벅스
 
@@ -57,7 +56,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 롯데시네마
         - CGV
@@ -100,7 +98,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 배달의민족
         - 요기요
@@ -119,7 +116,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 넷플릭스
         - 유튜브프리미엄

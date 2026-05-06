@@ -47,7 +47,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 5000
-      excludeOnline: false
       specificMerchants:
         - 스타벅스
         - 폴바셋
@@ -73,7 +72,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 5000
-      excludeOnline: false
       specificMerchants: []
       note: "병원/의료기관 청구할인. 건당 5000원 이상"
 
@@ -94,7 +92,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 5000
-      excludeOnline: false
       specificMerchants:
         - 넷플릭스
         - 유튜브 프리미엄
@@ -117,7 +114,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 5000
-      excludeOnline: false
       specificMerchants:
         - 쿠팡
         - 티몬

@@ -56,7 +56,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "기본 0.2% 무실적 캐시백. 전월 20만원 이상 시 대상 업종 0.2% 추가 (합산 0.4%)"
 
@@ -81,7 +80,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "카페/패스트푸드 5% 특별캐시백. 핫트렌드/커피/패스트푸드/배달앱/미용화장품 업종"
 
@@ -106,7 +104,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 올리브영
       note: "미용/화장품 업종 5% 특별캐시백"

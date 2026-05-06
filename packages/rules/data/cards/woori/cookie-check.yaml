@@ -40,7 +40,6 @@ rewards:
         perTransactionCap: 1000
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - CU
         - GS25
@@ -59,7 +58,6 @@ rewards:
         perTransactionCap: 1000
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 올리브영
 
@@ -76,7 +74,6 @@ rewards:
         perTransactionCap: 2000
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 11번가
         - G마켓
@@ -94,7 +91,6 @@ rewards:
         perTransactionCap: 5000
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - CGV
         - 롯데시네마

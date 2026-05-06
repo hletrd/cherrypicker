@@ -38,7 +38,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: 3000
-      excludeOnline: false
       specificMerchants: []
       note: "영역별 3000원 이상 결제 시 건당 캐시백. 영역별 1일 1회. 무실적 300원, 전월 30만 이상 500원"
 
@@ -55,7 +54,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: 3000
-      excludeOnline: false
       specificMerchants: []
       note: "영역별 3000원 이상 결제 시 건당 캐시백. 영역별 1일 1회"
 
@@ -72,7 +70,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: 3000
-      excludeOnline: false
       specificMerchants: []
       note: "영역별 3000원 이상 결제 시 건당 캐시백. 영역별 1일 1회"
 
@@ -89,7 +86,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "전월 30만원 이상 시 대중교통 이용금액 월 5만원 초과 시 3000원 추가 캐시백. K-패스 환급 별도"
 

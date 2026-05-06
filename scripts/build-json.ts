@@ -31,7 +31,6 @@ const rewardTierRateSchema = z.object({
 
 const rewardConditionsSchema = z.object({
   minTransaction: z.union([z.number(), z.null()]).optional().transform((v) => v ?? undefined),
-  excludeOnline: z.boolean().optional(),
   specificMerchants: z.array(z.string()).optional(),
   note: z.string().optional(),
 }).passthrough();

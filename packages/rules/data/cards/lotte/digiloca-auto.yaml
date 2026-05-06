@@ -52,9 +52,7 @@ rewards:
         unit: won_per_liter
         monthlyCap: 50000
         perTransactionCap: null
-    conditions:
-      excludeOnline: true
-
+    conditions: {}
 globalConstraints:
   monthlyTotalDiscountCap: 50000
   minimumAnnualSpending: null

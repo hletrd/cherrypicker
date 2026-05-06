@@ -38,7 +38,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "평일 0.2%, 주말/공휴일 0.4% 캐시백. 실적/한도 제한 없음"
 
@@ -55,7 +54,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 50000
-      excludeOnline: false
       specificMerchants: []
       note: "전월 30만원 이상 시 후불교통(버스/지하철) 월 5만원 이상 이용 시 4,000원 캐시백. K-패스 대중교통비 환급(일반 20%, 청년 30%, 저소득층 53%) 별도 제공"
 

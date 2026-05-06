@@ -29,7 +29,6 @@ rewards:
         perTransactionCap: 3000
     conditions:
       minTransaction: 50000
-      excludeOnline: false
       specificMerchants: []
       note: "국내외 5만원 이상 결제 시 건당 300원 또는 3,000원 랜덤 캐시백. 가맹점별 1일 1회. 실적/한도 제한 없음"
 

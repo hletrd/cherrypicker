@@ -47,7 +47,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - SKT
         - KT
@@ -72,7 +71,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "아파트 관리비 자동납부 10% 청구할인"
 
@@ -93,7 +91,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "학원비(외국어, 입시/보습, 운전면허, 예체능, 기술/직업훈련, 무술도장) 10% 청구할인"
 
@@ -114,7 +111,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "병원 10% 청구할인"
 
@@ -135,7 +131,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 스타벅스
         - 커피빈
@@ -161,7 +156,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 이마트
         - 롯데마트
@@ -186,7 +180,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "손해보험, 건강보험/고용보험/산재보험/국민연금 자동납부 10% 청구할인"
 
@@ -207,7 +200,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 골프장
         - 골프연습장

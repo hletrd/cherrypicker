@@ -41,7 +41,6 @@ rewards:
         monthlyCap: 10000
         perTransactionCap: null
     conditions:
-      excludeOnline: true
       note: "오프라인 대형마트 결제 건만 적용 (롯데슈퍼, 이마트에브리데이, 홈플러스익스프레스 제외)"
       specificMerchants:
         - 롯데마트

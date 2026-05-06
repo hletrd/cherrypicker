@@ -29,7 +29,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "전월 이용실적에 따라 월 통합 캐시백 한도 제공. 최초 발급 후 다음 달 말일까지는 실적 무관 월 한도 2만원. 업종별 캐시백 적립. 세금 신고 기간(1월/5월/7월) 부가세 이용내역 자동 제공"
 

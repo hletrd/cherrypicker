@@ -29,7 +29,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "국내 전 가맹점 0.7% 청구할인 (결제계좌 수협은행 기준). 타행 결제계좌 시 0.4%"
 
@@ -42,7 +41,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "통신요금 20% 청구할인"
 

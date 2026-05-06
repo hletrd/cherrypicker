@@ -38,7 +38,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 10000
-      excludeOnline: false
       specificMerchants: []
       note: "국내 가맹점 건당 1만원 이상 이용 시 0.2% 캐시백. 월 100만원 초과분은 0.4% 캐시백"
 
@@ -55,7 +54,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "해외 가맹점 건당 미화 10달러 이상 이용 시 이용금액의 1% 캐시백. 전월 30만원 이상 필요"
 

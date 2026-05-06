@@ -62,7 +62,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 넷플릭스
         - 유튜브프리미엄

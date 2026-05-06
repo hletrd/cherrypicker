@@ -64,7 +64,6 @@ rewards:
         perTransactionCap: 1000
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 다이소
         - 올리브영
@@ -86,7 +85,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 스타벅스
         - 커피빈

@@ -29,7 +29,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "집중캐시백 선택 시. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
 
@@ -42,7 +41,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "집중캐시백 선택 시. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
 
@@ -55,7 +53,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 카페
         - 디저트
@@ -71,7 +68,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 영화관
       note: "집중캐시백 선택 시. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
@@ -85,7 +81,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "집중캐시백 선택 시. 구독/멤버십 영역. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
 
@@ -98,7 +93,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 올리브영
       note: "집중캐시백 선택 시. 헬스&뷰티 영역. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
@@ -112,7 +106,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "어디서나캐시백 선택 시. 국내 온·오프라인 0.3% 캐시백"
 

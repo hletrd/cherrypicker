@@ -51,7 +51,6 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
-      excludeOnline: false
       specificMerchants:
         - 해외가맹점
 

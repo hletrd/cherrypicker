@@ -40,7 +40,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - SK주유소
       note: "SK주유소 이용액 1.5% 할인 캐시백"
@@ -58,7 +57,6 @@ rewards:
         perTransactionCap: 1500
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - CGV
         - 메가박스
@@ -78,7 +76,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 20000
-      excludeOnline: false
       specificMerchants: []
       note: "건당 2만원 이상 결제 시 탑포인트 0.1% 적립"
 

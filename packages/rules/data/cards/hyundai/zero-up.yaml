@@ -39,7 +39,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 100000
-      excludeOnline: false
       specificMerchants:
         - 네이버플러스스토어
         - 쿠팡
@@ -56,7 +55,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 100000
-      excludeOnline: false
       specificMerchants:
         - 이마트
         - 농협하나로마트
@@ -71,7 +69,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 100000
-      excludeOnline: false
       specificMerchants: []
 
   - category: fuel
@@ -83,7 +80,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 100000
-      excludeOnline: false
       specificMerchants: []
 
   - category: telecom
@@ -95,7 +91,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 100000
-      excludeOnline: false
       specificMerchants:
         - SKT
         - KT

@@ -52,7 +52,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 네이버쇼핑
         - 쿠팡

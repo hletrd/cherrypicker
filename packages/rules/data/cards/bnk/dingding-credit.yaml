@@ -50,7 +50,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "전 가맹점 0.2% 청구할인"
 
@@ -71,7 +70,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "전 주유소(LPG 포함) 리터당 60원 청구할인"
 
@@ -92,7 +90,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "커피/외식 할인"
 
@@ -113,7 +110,6 @@ rewards:
         perTransactionCap: 3000
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - CGV
         - 메가박스
@@ -137,7 +133,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "이동통신 요금 청구할인"
 

@@ -49,7 +49,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 우리WON페이
         - 네이버페이

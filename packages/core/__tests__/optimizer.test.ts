@@ -27,7 +27,6 @@ function makeTx(
   category: string,
   amount: number,
   merchant = category,
-  isOnline = false,
   subcategory?: string,
 ): CategorizedTransaction {
   return {
@@ -39,7 +38,6 @@ function makeTx(
     category,
     subcategory,
     confidence: 1.0,
-    isOnline,
   };
 }
 
@@ -334,8 +332,8 @@ describe('buildConstraints', () => {
 
   test('preserves original transactions for transaction-aware scoring', () => {
     const txs: CategorizedTransaction[] = [
-      makeTx('t1', 'dining', 12000, '메가커피 강남', false, 'cafe'),
-      makeTx('t2', 'dining', 18000, '스타벅스 강남', false, 'cafe'),
+      makeTx('t1', 'dining', 12000, '메가커피 강남', 'cafe'),
+      makeTx('t2', 'dining', 18000, '스타벅스 강남', 'cafe'),
     ];
     const constraints = buildConstraints(txs, new Map([['fixture-subcategory-card', 0]]), DEFAULT_CATEGORY_LABELS);
     expect(constraints.transactions).toEqual(txs);
@@ -343,8 +341,8 @@ describe('buildConstraints', () => {
 
   test('transaction-level merchant and subcategory conditions change assignment decisions', () => {
     const transactions: CategorizedTransaction[] = [
-      makeTx('t1', 'dining', 20000, '메가커피 강남', false, 'cafe'),
-      makeTx('t2', 'dining', 20000, '스타벅스 강남', false, 'cafe'),
+      makeTx('t1', 'dining', 20000, '메가커피 강남', 'cafe'),
+      makeTx('t2', 'dining', 20000, '스타벅스 강남', 'cafe'),
     ];
     const constraints = makeConstraints(transactions, new Map([
       ['fixture-subcategory-card', 0],

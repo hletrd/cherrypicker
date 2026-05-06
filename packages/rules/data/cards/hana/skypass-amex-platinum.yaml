@@ -39,7 +39,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 1000
-      excludeOnline: false
       specificMerchants: []
 
   - category: uncategorized
@@ -55,7 +54,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 1000
-      excludeOnline: false
       specificMerchants: []
 
 globalConstraints:

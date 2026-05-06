@@ -29,7 +29,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "국내 이용금액 주중 0.1%, 주말/공휴일 0.2% 캐시백. 해외 이용 0.1% 캐시백"
 
@@ -42,7 +41,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "아파트 관리비 0.1% 캐시백"
 

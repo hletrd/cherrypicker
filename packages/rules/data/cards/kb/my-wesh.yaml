@@ -42,7 +42,6 @@ rewards:
         perTransactionCap: 2500
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - KB Pay
 

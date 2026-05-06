@@ -29,7 +29,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 5000
-      excludeOnline: false
       specificMerchants: []
       note: "전 가맹점 최대 1.2% 캐시백. 건당 5000원 이상"
 
@@ -42,7 +41,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "전국 제과점 10% 캐시백"
 
@@ -55,7 +53,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "전국 주유소 리터당 30원 적립"
 
@@ -68,7 +65,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants: []
       note: "전북지역 영화관 현장할인"
 
@@ -81,7 +77,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 교보문고
       note: "교보문고 광화문/전주점 2% 캐시백"

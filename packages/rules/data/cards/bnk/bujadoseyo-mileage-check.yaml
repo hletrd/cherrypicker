@@ -38,7 +38,6 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 30000
-      excludeOnline: false
       specificMerchants: []
       note: "전월 30만원 이상 시 3만원 이상 결제 시 3,000원당 대한항공 스카이패스 1마일 적립. 온라인 쇼핑몰(SSG닷컴, 롯데닷컴, AK몰, 갤러리아몰 등)에서 1,000원당 1마일 적립"
 
@@ -55,7 +54,6 @@ rewards:
         perTransactionCap: 10000
     conditions:
       minTransaction: 30000
-      excludeOnline: false
       specificMerchants:
         - SSG닷컴
         - 롯데닷컴
@@ -76,7 +74,6 @@ rewards:
         perTransactionCap: 500
     conditions:
       minTransaction: null
-      excludeOnline: false
       specificMerchants:
         - 커피빈
         - 스타벅스
@@ -98,7 +95,6 @@ rewards:
         perTransactionCap: 1000
     conditions:
       minTransaction: 10000
-      excludeOnline: false
       specificMerchants:
         - CGV
         - 롯데시네마
