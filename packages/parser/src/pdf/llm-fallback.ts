@@ -39,9 +39,10 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
   if (!apiKey) {
     throw new Error('API 키가 설정되지 않아 LLM 폴백을 사용할 수 없습니다.');
   }
-  if (!apiKey.startsWith('sk-ant-') || apiKey.length < 20) {
+  // Stricter regex matching Anthropic key format: sk-ant-api03-... or sk-ant-api04-...
+  if (!/^sk-ant-api[0-9]{2}-[A-Za-z0-9_-]{30,}$/.test(apiKey)) {
     throw new Error(
-      'ANTHROPIC_API_KEY 형식이 올바르지 않습니다. 키는 "sk-ant-"로 시작해야 합니다.'
+      'ANTHROPIC_API_KEY 형식이 올바르지 않습니다. 키는 "sk-ant-api03-..." 형식이어야 합니다.'
     );
   }
 
