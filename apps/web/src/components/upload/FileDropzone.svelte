@@ -406,7 +406,7 @@
         </div>
         {#if i < STEPS.length - 1}
           <div
-            class="mb-4 h-px w-8 transition-colors duration-300 sm:w-12
+            class="mb-4 h-0.5 w-8 transition-colors duration-300 sm:w-12
               {currentStep > stepNum ? 'bg-green-400' : 'bg-[var(--color-border)]'}"
             aria-hidden="true"
           ></div>

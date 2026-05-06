@@ -148,7 +148,7 @@ export function getIssuerColor(issuer: string): string {
  * to meet WCAG AA contrast; all others use white text (C1-03/C90-02).
  */
 export function getIssuerTextColor(issuer: string): string {
-  const darkTextIssuers = new Set(['kakao', 'jeju']);
+  const darkTextIssuers = new Set(['kakao', 'jeju', 'kb']);
   return darkTextIssuers.has(issuer) ? 'text-gray-900' : 'text-white';
 }
 

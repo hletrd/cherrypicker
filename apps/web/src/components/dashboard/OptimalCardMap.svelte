@@ -122,7 +122,7 @@
             <td class="py-3 text-right">
               <div class="flex flex-col items-end gap-1">
                 <span class="font-mono font-semibold text-[var(--color-primary)]">{formatRate(a.rate)}</span>
-                <div class="h-1.5 w-20 overflow-hidden rounded-full bg-[var(--color-bg)]">
+                <div class="h-2.5 w-20 overflow-hidden rounded-full bg-[var(--color-bg)]">
                   <div
                     class="h-full rounded-full bg-[var(--color-primary)] transition-all duration-500"
                     style="width: {rateBarWidth}%; opacity: 0.7"
