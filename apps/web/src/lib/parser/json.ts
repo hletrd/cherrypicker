@@ -65,8 +65,14 @@ const MEMO_ALIASES = [
  *  MERCHANT_ALIASES and MEMO_ALIASES), the list scanned first determines
  *  the match. */
 function findField(obj: Record<string, unknown>, aliases: string[]): unknown {
+  // Exact match first (fast path)
   for (const alias of aliases) {
     if (Object.hasOwn(obj, alias)) return obj[alias];
+  }
+  // Case-insensitive fallback — scan aliases in priority order against all
+  // keys, so alias order (fixed) determines match priority, not Object.keys
+  // insertion order (C32-V09).
+  for (const alias of aliases) {
     const lower = alias.toLowerCase();
     for (const key of Object.keys(obj)) {
       if (key.toLowerCase() === lower) return obj[key];
