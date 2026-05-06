@@ -225,7 +225,11 @@ export async function optimizeFromTransactions(
   const totalPositiveSpending = transactions.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
   const cardPreviousSpending = new Map<string, number>();
   for (const rule of coreRules) {
-    if (options?.previousMonthSpending !== undefined) {
+    if (
+      options?.previousMonthSpending !== undefined &&
+      Number.isFinite(options.previousMonthSpending) &&
+      options.previousMonthSpending >= 0
+    ) {
       // 사용자가 명시적으로 입력한 값 — 모든 카드에 동일 적용
       cardPreviousSpending.set(rule.card.id, options.previousMonthSpending);
     } else if (rule.performanceExclusions.length === 0) {
