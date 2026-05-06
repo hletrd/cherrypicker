@@ -42,6 +42,11 @@ function scoreCardsForTransaction(
   cardPreviousSpending: Map<string, number>,
   assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
 ): CardScore[] {
+  // Defensive guard: callers should pre-filter, but division by zero
+  // would produce Infinity and corrupt sort ordering.
+  if (transaction.amount <= 0 || !Number.isFinite(transaction.amount)) {
+    return [];
+  }
   const scores: CardScore[] = [];
 
   for (const rule of cardRules) {

@@ -64,21 +64,13 @@ function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
       ...rule.card,
       source: VALID_SOURCES.has(rule.card.source)
         ? (rule.card.source as 'manual' | 'llm-scrape' | 'web')
-        : (() => {
-            console.warn(`[cherrypicker] Unknown card source "${rule.card.source}" for ${rule.card.id}, defaulting to "web"`);
-            return 'web' as const;
-          })(),
+        : 'web',
     },
     rewards: rule.rewards.map((r) => ({
       ...r,
       type: VALID_REWARD_TYPES.has(r.type)
         ? (r.type as 'discount' | 'points' | 'cashback' | 'mileage')
-        : (() => {
-            throw new Error(
-              `Unknown reward type "${r.type}" in rule for category "${r.category}" on card "${rule.card.id}". ` +
-              `Expected one of: discount, points, cashback, mileage`,
-            );
-          })(),
+        : 'none',
       tiers: r.tiers.map((t) => ({
         ...t,
         // Ensure unit is narrowed from string | undefined to the expected union

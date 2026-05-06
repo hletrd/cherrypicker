@@ -10,8 +10,14 @@ function selectTier(
   performanceTiers: PerformanceTier[],
   previousMonthSpending: number,
 ): PerformanceTier | undefined {
+  // Guard against out-of-order tiers — sort ascending by minSpending so
+  // that filtering and reduce behave deterministically regardless of
+  // YAML authoring order.
+  const sortedTiers = performanceTiers.length > 1
+    ? [...performanceTiers].sort((a, b) => a.minSpending - b.minSpending)
+    : performanceTiers;
   // Find the highest tier the user qualifies for
-  const qualifying = performanceTiers.filter(
+  const qualifying = sortedTiers.filter(
     (t) =>
       previousMonthSpending >= t.minSpending &&
       (t.maxSpending === null || previousMonthSpending <= t.maxSpending),
