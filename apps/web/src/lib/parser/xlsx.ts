@@ -481,7 +481,17 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
 
     // Skip summary/total rows
     const rowText = row.map((c) => String(c ?? '')).join(' ');
-    if (isSummaryRow(rowText)) continue;
+    if (isSummaryRow(rowText)) {
+      // Reset forward-fill state so summary row values don't propagate
+      // to merged data cells below (C27-COR02).
+      lastDate = '';
+      lastMerchant = '';
+      lastCategory = '';
+      lastInstallments = '';
+      lastMemo = '';
+      lastAmount = '';
+      continue;
+    }
 
     // Forward-fill pattern for all columns (date, merchant, category,
     // installments, memo, amount). Consistent logic: update last-value
