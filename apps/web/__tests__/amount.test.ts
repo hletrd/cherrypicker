@@ -100,14 +100,15 @@ describe('parseAmount (web)', () => {
     expect(parseAmount('KRW')).toBeNull();
   });
 
-  it('handles very large numbers (C29-TEST01)', () => {
-    expect(parseAmount('9,999,999,999,999,999')).toBe(9999999999999999);
-    expect(parseAmount('9999999999999999')).toBe(9999999999999999);
+  it('rejects amounts above MAX_SAFE_INTEGER (C41-TEST01)', () => {
+    expect(parseAmount('9,999,999,999,999,999')).toBeNull();
+    expect(parseAmount('9999999999999999')).toBeNull();
+    expect(parseAmount('10000000000000000')).toBeNull();
   });
-  // NOTE: Numeric literals >= 2^53 trigger TS80008. The toBe() call receives
-  // the actual number from parseAmount, not a literal, so runtime precision
-  // is fine. TypeScript just warns about the literal in source. We silence
-  // this by accepting the runtime value via expect().
+  it('accepts amounts at MAX_SAFE_INTEGER boundary (C41-TEST01)', () => {
+    expect(parseAmount('9007199254740991')).toBe(9007199254740991);
+    expect(parseAmount('9,007,199,254,740,991')).toBe(9007199254740991);
+  });
 
   it('handles mixed full-width and ASCII digits (C29-TEST01)', () => {
     expect(parseAmount('１2３4')).toBe(1234);

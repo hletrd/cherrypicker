@@ -55,9 +55,14 @@ describe('parseAmountString (server)', () => {
     expect(parseAmountString('KRW')).toBeNull();
   });
 
-  it('handles very large numbers (C29-TEST01)', () => {
-    expect(parseAmountString('9,999,999,999,999,999')).toBe(9999999999999999);
-    expect(parseAmountString('9999999999999999')).toBe(9999999999999999);
+  it('rejects amounts above MAX_SAFE_INTEGER (C41-TEST01)', () => {
+    expect(parseAmountString('9,999,999,999,999,999')).toBeNull();
+    expect(parseAmountString('9999999999999999')).toBeNull();
+    expect(parseAmountString('10000000000000000')).toBeNull();
+  });
+  it('accepts amounts at MAX_SAFE_INTEGER boundary (C41-TEST01)', () => {
+    expect(parseAmountString('9007199254740991')).toBe(9007199254740991);
+    expect(parseAmountString('9,007,199,254,740,991')).toBe(9007199254740991);
   });
 
   it('handles mixed full-width and ASCII digits (C29-TEST01)', () => {
