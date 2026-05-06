@@ -69,14 +69,15 @@ function findField(obj: Record<string, unknown>, aliases: string[]): unknown {
   for (const alias of aliases) {
     if (Object.hasOwn(obj, alias)) return obj[alias];
   }
-  // Case-insensitive fallback — scan aliases in priority order against all
-  // keys, so alias order (fixed) determines match priority, not Object.keys
-  // insertion order (C32-V09).
+  // Case-insensitive fallback — build lowercase lookup map once per object
+  // for O(keys) + O(aliases) performance instead of O(aliases × keys) (C39-PERF01).
+  const lowerMap = new Map<string, unknown>();
+  for (const key of Object.keys(obj)) {
+    lowerMap.set(key.toLowerCase(), obj[key]);
+  }
   for (const alias of aliases) {
-    const lower = alias.toLowerCase();
-    for (const key of Object.keys(obj)) {
-      if (key.toLowerCase() === lower) return obj[key];
-    }
+    const v = lowerMap.get(alias.toLowerCase());
+    if (v !== undefined) return v;
   }
   return undefined;
 }
