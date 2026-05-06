@@ -140,6 +140,16 @@ describe('HTML Table Parser (web)', () => {
       expect(normalizeHTML('<td onclick="alert(1)" class="foo">value</td>')).toBe('<td class="foo">value</td>');
       expect(normalizeHTML('<td class="foo" onclick="alert(1)">value</td>')).toBe('<td class="foo">value</td>');
     });
+
+    it('strips javascript: URLs from href and src attributes (C28-TEST05)', () => {
+      expect(normalizeHTML('<a href="javascript:alert(1)">link</a>')).toBe('<a>link</a>');
+      expect(normalizeHTML('<a href="javascript:void(0)">link</a>')).toBe('<a>link</a>');
+      expect(normalizeHTML('<img src="javascript:alert(1)">')).toBe('<img>');
+      expect(normalizeHTML('<a href = "javascript:alert(1)">link</a>')).toBe('<a>link</a>');
+      expect(normalizeHTML('<a HREF="javascript:alert(1)">link</a>')).toBe('<a>link</a>');
+      expect(normalizeHTML('<a href="javascript:alert(1)" class="foo">link</a>')).toBe('<a class="foo">link</a>');
+      expect(normalizeHTML('<a href="/safe/path">link</a>')).toBe('<a href="/safe/path">link</a>');
+    });
   });
 
   describe('Edge cases', () => {
