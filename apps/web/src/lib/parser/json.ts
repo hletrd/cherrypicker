@@ -95,9 +95,9 @@ function parseTransactionObject(
     }
     return null;
   }
-  // Skip zero amounts (balance inquiries). Negative amounts (refunds/credits)
-  // are preserved — the optimizer's positive-only filter handles them.
-  if (amount === 0) return null;
+  // Skip zero and negative amounts (balance inquiries, refunds, credits).
+  // Parity with CSV, HTML, XLSX, and OFX parsers (C26-COR02).
+  if (amount <= 0) return null;
 
   const date = parseDateStringToISO(dateRaw);
   if (!isValidISODate(date) && dateRaw) {
