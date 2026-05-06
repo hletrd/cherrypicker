@@ -187,8 +187,7 @@ export function parseAmountString(raw: string): number | null {
   if (afterNum.trim() && afterNum.trim() !== '원') return null;
   const n = Math.round(parseFloat(cleaned));
   if (Number.isNaN(n) || !Number.isFinite(n)) return null;
-  const result = isNeg ? -n : n;
-  return result === 0 ? 0 : result;
+  return isNeg ? -n : n;
 }
 
 /** Parse an installment value from a CSV cell. Returns undefined for
