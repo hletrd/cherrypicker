@@ -589,7 +589,13 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     // Skip zero- and negative-amount rows (balance inquiries, refunds,
     // credits). These don't contribute to spending optimization.
     // Matches server-side XLSX parser behavior (C8-01).
-    if (amount <= 0) continue;
+    if (amount <= 0) {
+      errors.push(new ParseError(
+        `지출로 처리되지 않는 금액입니다: ${String(merchantRaw ?? '').trim() || '알 수 없는 거래'} ${amount}원`,
+        { line: i + 1, raw: rowText },
+      ));
+      continue;
+    }
 
     const parsedDate = parseDateToISO(dateRaw, errors, i);
     // Validate that the parsed date is a proper ISO date string (YYYY-MM-DD).

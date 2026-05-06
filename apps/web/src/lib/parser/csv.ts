@@ -142,7 +142,15 @@ function isValidAmount(amount: number | null, amountRaw: string, lineIdx: number
   // Skip zero-amount rows (balance inquiries, declined transactions).
   // Also skip negative amounts (refunds/credits) — matching server-side
   // isValidCSVAmount behavior (C20-03).
-  if (amount <= 0) return false;
+  if (amount <= 0) {
+    if (amountRaw.trim()) {
+      errors.push(new ParseError(
+        `지출로 처리되지 않는 금액입니다: ${amountRaw} ${amount}원`,
+        { line: lineIdx + 1 },
+      ));
+    }
+    return false;
+  }
   return true;
 }
 
