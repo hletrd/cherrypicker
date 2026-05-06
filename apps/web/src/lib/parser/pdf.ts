@@ -476,7 +476,8 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
       let pageText = '';
       for (const item of content.items) {
         if (!('str' in item)) continue;
-        const transform = item.transform as number[];
+        const transform = item.transform;
+        if (!Array.isArray(transform) || transform.length < 6) continue;
         const y = transform[5] ?? 0;
         if (lastY !== -1 && Math.abs(y - lastY) > 5) {
           pageText += '\n';
@@ -486,7 +487,7 @@ export async function parsePDF(buffer: ArrayBuffer, bank?: BankId): Promise<Pars
         }
         pageText += item.str;
         lastY = y;
-        if (transform) {
+        if (Array.isArray(transform) && transform.length >= 5) {
           lastEndX = (transform[4] ?? 0) + item.str.length * 6;
         }
       }
