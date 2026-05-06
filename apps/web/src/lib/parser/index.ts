@@ -25,6 +25,18 @@ export async function parseFile(file: File, bank?: BankId): Promise<ParseResult>
     case 'csv': {
       let content: string;
       const buffer = await file.arrayBuffer();
+      // Check for UTF-16 BOM before the utf-8/cp949 trial (C32-F3).
+      // Korean bank systems occasionally export UTF-16 "Unicode" CSVs.
+      const arr = new Uint8Array(buffer);
+      if (arr.length >= 2 && arr[0] === 0xFF && arr[1] === 0xFE) {
+        content = new TextDecoder('utf-16le').decode(buffer);
+        const detectedBank = bank ?? detectBankFromText(content);
+        return parseCSV(content, detectedBank ?? undefined);
+      } else if (arr.length >= 2 && arr[0] === 0xFE && arr[1] === 0xFF) {
+        content = new TextDecoder('utf-16be').decode(buffer);
+        const detectedBank = bank ?? detectBankFromText(content);
+        return parseCSV(content, detectedBank ?? undefined);
+      }
       // CP949 is a strict superset of EUC-KR, so EUC-KR is omitted — it can
       // never produce fewer replacement characters than CP949, making it
       // redundant in the "fewest replacement chars" heuristic (C64-02).
