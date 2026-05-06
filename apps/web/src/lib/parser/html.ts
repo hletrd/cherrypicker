@@ -27,9 +27,13 @@ import * as xlsx from 'xlsx';
  *  Removes script tags, event handlers, iframe/object/embed tags, and style blocks
  *  to prevent entity expansion bombs and unexpected SheetJS behavior (C20-SEC02). */
 export function normalizeHTML(html: string): string {
-  return html
-    // Strip script tags and their contents
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
+  // Run script-tag stripping in a loop to handle nested/malformed tags
+  // that a single regex pass might miss (C33-F11).
+  let cleaned = html;
+  while (/<script[\s\S]*?<\/script>/i.test(cleaned)) {
+    cleaned = cleaned.replace(/<script[\s\S]*?<\/script>/gi, '');
+  }
+  return cleaned
     // Strip style tags and their contents
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     // Strip iframe, object, embed tags
