@@ -172,7 +172,13 @@ function persistToStorage(data: AnalysisResult): PersistResult {
         // Transactions are the largest field — omit them if over budget.
         // Record how many were lost so the warning can inform the user (C22-03).
         const txCount = data.transactions?.length ?? 0;
-        const withoutTxs: PersistedAnalysisResult = { ...persisted, transactions: undefined, _truncatedTxCount: txCount };
+        const withoutTxs: PersistedAnalysisResult = {
+          ...persisted,
+          transactions: undefined,
+          transactionCount: 0,
+          totalTransactionCount: 0,
+          _truncatedTxCount: txCount,
+        };
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(withoutTxs));
         return { kind: 'truncated', truncatedTxCount: txCount }; // Data was truncated — transactions not saved
       } else {
