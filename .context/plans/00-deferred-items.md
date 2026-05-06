@@ -1900,3 +1900,31 @@ Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings*
 - **Exit criterion:** If scraper is exposed to untrusted user input, add strict URL schema validation and DNS rebinding protection.
 
 ---
+
+## Deferred Findings (Cycle 34 — Reconfirmed Still Open)
+
+### C34-D01: CSP `unsafe-inline` remains in script-src and style-src
+- **Original finding:** C33-F1 / C34-F1
+- **Severity:** HIGH
+- **Confidence:** High
+- **File+line:** `apps/web/src/layouts/Layout.astro:50`
+- **Reason for deferral:** Same as D-C10-04. Nonce-based CSP migration requires build-time nonce generation and injection into all `<script>` tags. Astro's inline hydration scripts and Tailwind CSS v4 scoped styles both depend on `unsafe-inline`.
+- **Exit criterion:** Implement nonce-based CSP with build-time nonce generation.
+
+### C34-D02: Greedy optimizer O(T*C) complexity unchanged
+- **Original finding:** C33-F2 / C34-F2
+- **Severity:** HIGH
+- **Confidence:** High
+- **File+line:** `packages/core/src/optimizer/greedy.ts:39-66`
+- **Reason for deferral:** Same as prior cycles. Memoizing incremental reward deltas requires careful state tracking across caps (monthly, per-transaction, global). The current full-recalculation approach is correct and fast enough for typical usage (< 1000 transactions, < 30 cards).
+- **Exit criterion:** Performance becomes a bottleneck for large statement sets, or a refactor cycle is dedicated to the optimizer.
+
+### C34-D03: Parser duplication between web and server
+- **Original finding:** C33-F7 / C34-F7
+- **Severity:** MEDIUM
+- **Confidence:** High
+- **File+line:** `apps/web/src/lib/parser/*` vs `packages/parser/src/*`
+- **Reason for deferral:** Same as D-01. Extracting shared logic requires creating a platform-agnostic pure-TS package, which is a significant refactor. Feature parity comments (e.g., C100-01) indicate active maintenance of both sides.
+- **Exit criterion:** Dedicated refactor cycle with design doc for shared parser package.
+
+---
