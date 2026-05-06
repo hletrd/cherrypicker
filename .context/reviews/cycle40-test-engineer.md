@@ -1,20 +1,50 @@
-# Test Engineering Review -- Cycle 40
+# Test Engineering Review — CherryPicker Cycle 40
 
-## Current Coverage
-- Bun tests: 692 passing
-- Vitest tests: 250 passing
-- Total: 942 tests
+**Reviewer:** test-engineer
+**Scope:** Test coverage, edge cases, parity tests, missing test paths
+**Date:** 2026-05-06
 
-## Coverage Gaps
+---
 
-### GAP-1: No tests for 14 additional bank CSV adapters [HIGH]
-The 14 new CSV adapters (kakao, toss, kbank, bnk, dgb, suhyup, jb, kwangju, jeju, sc, mg, cu, kdb, epost) have no dedicated tests. `csv-adapters.test.ts` only covers the original 10 banks.
+## Summary
 
-### GAP-2: No test for normalizeHeader with combined "/" headers [MEDIUM]
-No test verifies that headers like "이용일/승인일" correctly match through findColumn's "/" splitting logic.
+Two coverage gaps identified: web-side parser parity and a specific amount parsing edge case. Prior coverage gaps remain unaddressed.
 
-### GAP-3: No test for XLSX with date column containing Korean full date format [LOW]
-XLSX tests use ISO dates and Excel serial numbers, but no test uses "2026년 2월 1일" format in cells.
+| Category | Count | Severity |
+|---|---|---|
+| New Coverage Gaps | 2 | Low |
+| Carryover | 5 | — |
 
-### GAP-4: No test for PDF fallback line scanner with small amounts [LOW]
-PDF tests don't verify that small amounts like "₩500" are correctly detected by the fallback scanner.
+---
+
+## NEW COVERAGE GAPS
+
+### TE-40-01: Parity Tests Only Cover Server-Side Parsers
+**File:** `packages/parser/__tests__/non-spending-parity.test.ts`
+**Severity:** Low | **Confidence:** Medium
+
+The parity tests added in C39 only exercise server-side parsers (`packages/parser/src/*`). The web-side parsers in `apps/web/src/lib/parser/*.ts` have identical logic (per parity comments) but no automated verification. A regression in the web-side copy would not be caught.
+
+**Fix:** Add web-side parity tests following the same pattern, or unify parser code to eliminate the duplication.
+
+---
+
+### TE-40-02: No Test for `parseAmountString` Double-Negative
+**File:** `packages/parser/src/csv/shared.ts:165-183`
+**Severity:** Low | **Confidence:** High
+
+Input `(-1234)` incorrectly returns positive `1234`. No existing test covers this edge case.
+
+**Fix:** Add a test case for `(-1234)`, `(-0)`, and `(-1234원)`.
+
+---
+
+## CARRYOVER
+
+| ID | Severity | File | Description |
+|----|----------|------|-------------|
+| TE-37-01 | Medium | `ofx/index.ts:29-31` | No tests for OFX CCSTMTRS |
+| TE-37-02 | Medium | `html.ts` | No tests for HTML forward-fill (web-side) |
+| TE-37-05 | Low | `ofx/index.ts:88-115` | No tests for OFX timezone conversion |
+| TE-01 | Medium | `analyzer.ts` | No tests for `toCoreCardRuleSets` adapter |
+| TE-02 | Medium | `analyzer.ts` | No tests for multi-file analyze |
