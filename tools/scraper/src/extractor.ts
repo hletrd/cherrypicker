@@ -31,7 +31,7 @@ ${truncate(pageContent, MAX_CONTENT_CHARS)}
 issuer 필드는 "${issuer}"로 설정하세요.`;
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: process.env['ANTHROPIC_MODEL'] ?? 'claude-sonnet-4-20250514',
     max_tokens: 4096,
     system: SYSTEM_PROMPT,
     tools: [CARD_RULE_EXTRACTION_TOOL as Anthropic.Tool],
