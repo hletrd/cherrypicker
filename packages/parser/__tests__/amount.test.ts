@@ -73,6 +73,19 @@ describe('parseAmountString (server)', () => {
     expect(parseAmountString('1234 xyz')).toBeNull();
     expect(parseAmountString('1234+')).toBeNull();
   });
+
+  it('handles double-negative parentheses without flipping sign (C40-BUG02)', () => {
+    // (-1234) should remain negative, not become positive
+    expect(parseAmountString('(-1234)')).toBe(-1234);
+    expect(parseAmountString('(-1,234)')).toBe(-1234);
+    expect(parseAmountString('(-0)')).toBe(-0);
+  });
+
+  it('preserves single-parenthesis negative behavior (C40-BUG02)', () => {
+    // (1234) should still be negative (accounting notation)
+    expect(parseAmountString('(1234)')).toBe(-1234);
+    expect(parseAmountString('(1,234)')).toBe(-1234);
+  });
 });
 
 describe('parseAmount wrapper (server)', () => {

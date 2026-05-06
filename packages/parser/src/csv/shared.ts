@@ -162,8 +162,15 @@ export function parseAmountString(raw: string): number | null {
   // instead of "-1,234" for negative amounts.
   const hasTrailingMinus = /\d-$/.test(cleaned);
   if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
-  const isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
-  if (cleaned.startsWith('(') && cleaned.endsWith(')')) cleaned = cleaned.slice(1, -1);
+  let isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
+  if (cleaned.startsWith('(') && cleaned.endsWith(')')) {
+    cleaned = cleaned.slice(1, -1);
+    // Parentheses indicate accounting-style negatives. If the inner value
+    // is already negative (e.g., "(-1234)"), don't double-negate (C40-BUG02).
+    if (cleaned.startsWith('-')) {
+      isNeg = false;
+    }
+  }
   // Reject strings with multiple decimal points (e.g., "1.2.3") or empty-after-dot (e.g., "1.")
   // These are not valid Korean Won amounts (C29-HIGH-01).
   const dotCount = (cleaned.match(/\./g) ?? []).length;
@@ -180,7 +187,8 @@ export function parseAmountString(raw: string): number | null {
   if (afterNum.trim() && afterNum.trim() !== '원') return null;
   const n = Math.round(parseFloat(cleaned));
   if (Number.isNaN(n) || !Number.isFinite(n)) return null;
-  return isNeg ? -n : n;
+  const result = isNeg ? -n : n;
+  return result === 0 ? 0 : result;
 }
 
 /** Parse an installment value from a CSV cell. Returns undefined for
