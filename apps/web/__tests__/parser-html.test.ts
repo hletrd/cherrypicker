@@ -112,6 +112,20 @@ describe('HTML Table Parser (web)', () => {
     it('removes event handler attributes without values (C22-TEST01)', () => {
       expect(normalizeHTML('<td onclick=>value</td>')).toBe('<td>value</td>');
     });
+
+    it('removes quoted event handlers with spaces in values (C23-TEST01)', () => {
+      expect(normalizeHTML('<td onclick="alert(1); console.log(2)">value</td>')).toBe('<td>value</td>');
+      expect(normalizeHTML('<td onerror="fetch(\'evil\'); doSomething()">value</td>')).toBe('<td>value</td>');
+    });
+
+    it('removes quoted event handlers with newlines in values (C23-TEST01)', () => {
+      expect(normalizeHTML('<td onclick="alert(1);\nconsole.log(2)">value</td>')).toBe('<td>value</td>');
+    });
+
+    it('removes event handlers without breaking adjacent attributes (C23-TEST01)', () => {
+      expect(normalizeHTML('<td onclick="alert(1)" class="foo">value</td>')).toBe('<td class="foo">value</td>');
+      expect(normalizeHTML('<td class="foo" onclick="alert(1)">value</td>')).toBe('<td class="foo">value</td>');
+    });
   });
 
   describe('Edge cases', () => {
