@@ -71,7 +71,7 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
 
   const client = new Anthropic({ apiKey });
 
-  const model = process.env['ANTHROPIC_MODEL'] ?? 'claude-3-7-sonnet-latest';
+  const model = process.env['ANTHROPIC_MODEL'] ?? 'claude-sonnet-5';
 
   // Reject extremely large inputs before any processing to prevent memory pressure
   const MAX_INPUT_CHARS = 100_000;
