@@ -21,6 +21,7 @@ import type {
   FileParseProgress,
   FileParseRun,
 } from './file-parse-queue.js';
+import { OperationEpoch } from './operation-epoch.js';
 
 type AnalyzerModule = typeof import('./analyzer.js');
 let analyzerModulePromise: Promise<AnalyzerModule> | null = null;
@@ -64,6 +65,7 @@ export interface CardRewardResult {
 }
 
 export interface CalculationIssue {
+  cardId: string;
   transactionId: string;
   ruleId: string;
   category: string;
@@ -237,9 +239,9 @@ function createAnalysisStore() {
   // refresh, the condition `gen !== lastSyncedGeneration` is false, and
   // editedTxs stays empty even though the store has transactions (C7-01).
   let generation = $state(result !== null ? 1 : 0);
-  // Separate from the published-result generation. This request counter makes
-  // every async analyze commit conditional on still being the newest request.
-  let analysisRequestId = 0;
+  // Analyze, reoptimize, cancel, and reset all mutate the same state. One
+  // operation owner prevents any older async continuation from committing.
+  const operationEpoch = new OperationEpoch();
   // Set when sessionStorage persistence was partial (transactions truncated)
   // or failed entirely (quota exceeded). Reset on successful full save.
   // Only set the warning when we have evidence the data came from storage
@@ -335,9 +337,9 @@ function createAnalysisStore() {
       options: AnalyzeOptions | undefined,
       execution: AnalyzeExecution,
     ): Promise<void> {
-      const requestId = ++analysisRequestId;
+      const operation = operationEpoch.begin();
       const isActiveRequest = () =>
-        requestId === analysisRequestId && execution.run.isCurrent();
+        operation.isCurrent() && execution.run.isCurrent();
       loading = true;
       error = null;
 
@@ -376,19 +378,20 @@ function createAnalysisStore() {
         error = e instanceof Error ? e.message : '분석 중 문제가 생겼어요';
         result = null;
       } finally {
-        if (requestId === analysisRequestId) {
+        if (operation.isCurrent()) {
           loading = false;
         }
       }
     },
 
     cancelAnalysis(): void {
-      analysisRequestId++;
+      operationEpoch.invalidate();
       loading = false;
       error = null;
     },
 
     async reoptimize(editedTransactions: CategorizedTx[], options?: AnalyzeOptions): Promise<void> {
+      const operation = operationEpoch.begin();
       loading = true;
       error = null;
       try {
@@ -411,6 +414,7 @@ function createAnalysisStore() {
         const snapshot = result;
 
         const categoryLabels = await getCategoryLabels();
+        if (!operation.isCurrent() || result !== snapshot) return;
         const explicitPreviousMonthSpending =
           options?.previousMonthSpending ??
           (options?.previousSpendingBasis?.kind === 'user-total'
@@ -429,6 +433,7 @@ function createAnalysisStore() {
         }
 
         const { optimizeFromTransactions } = await loadAnalyzerModule();
+        if (!operation.isCurrent() || result !== snapshot) return;
         const optimization = await optimizeFromTransactions(context.latestTransactions, {
           ...options,
           previousMonthSpending: explicitPreviousMonthSpending,
@@ -438,6 +443,7 @@ function createAnalysisStore() {
           // so reoptimize doesn't silently switch to optimizing against all cards.
           cardIds: options?.cardIds ?? snapshot.cardIdsOption,
         }, categoryLabels);
+        if (!operation.isCurrent() || result !== snapshot) return;
         // result is guaranteed non-null here (early null guard at top of try block).
         // Keep all months in the transactions field for display/editing,
         // but the optimization only covers the latest month.
@@ -464,13 +470,15 @@ function createAnalysisStore() {
         persistWarningKind = persistResult.kind;
         truncatedTxCount = persistResult.truncatedTxCount;
       } catch (e) {
+        if (!operation.isCurrent()) return;
         error = e instanceof Error ? e.message : '재계산 중 문제가 생겼어요';
       } finally {
-        loading = false;
+        if (operation.isCurrent()) loading = false;
       }
     },
 
     reset(): void {
+      operationEpoch.invalidate();
       result = null;
       error = null;
       loading = false;

@@ -1,4 +1,9 @@
-import { MerchantMatcher, buildConstraints, greedyOptimize } from '@cherrypicker/core';
+import {
+  MerchantMatcher,
+  buildConstraints,
+  greedyOptimize,
+  resolveCardPreviousSpending,
+} from '@cherrypicker/core';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import type { PerformanceExclusionId } from '@cherrypicker/rules/browser';
 import { parseFile } from './parser/index.js';
@@ -26,9 +31,9 @@ import {
   assertCatalogAvailable,
   assertRequestedCardsResolved,
   attachParseWarningIdentity,
+  emptyParseResultMessage,
   toRulesCategoryNodes,
 } from './analyzer-helpers.js';
-import { calculatePerformanceSpending } from './performance-spending.js';
 import { runFileParseQueue } from './file-parse-queue.js';
 
 export interface CategorizedTx {
@@ -46,6 +51,65 @@ export interface CategorizedTx {
   channel?: 'online' | 'offline';
   fuelVolumeLiters?: number;
   performanceExclusionTags?: PerformanceExclusionId[];
+  factProvenance?: RawTransaction['factProvenance'];
+}
+
+interface CategoryMatcher {
+  match(
+    merchantName: string,
+    rawCategory?: string,
+  ): { category: string; subcategory?: string; confidence: number };
+}
+
+export function categorizeParsedTransactions(
+  transactions: readonly RawTransaction[],
+  matcher: CategoryMatcher,
+  fileIndex?: number,
+): CategorizedTx[] {
+  const idPrefix = fileIndex !== undefined ? `f${fileIndex}-` : '';
+  return transactions.map((tx, index) => {
+    const match = matcher.match(tx.merchant, tx.category);
+    return {
+      id: `tx-${idPrefix}${index}`,
+      date: tx.date,
+      merchant: tx.merchant,
+      amount: tx.amount,
+      installments: tx.installments,
+      category: match.category,
+      subcategory: match.subcategory,
+      confidence: match.confidence,
+      rawCategory: tx.category,
+      memo: tx.memo,
+      paymentType: tx.paymentType,
+      channel: tx.channel,
+      fuelVolumeLiters: tx.fuelVolumeLiters,
+      performanceExclusionTags: tx.performanceExclusionTags,
+      factProvenance: tx.factProvenance,
+    };
+  });
+}
+
+export function toCoreTransactions(
+  transactions: readonly CategorizedTx[],
+): CategorizedTransaction[] {
+  return transactions.map((tx) => ({
+    id: tx.id,
+    date: tx.date,
+    merchant: tx.merchant,
+    amount: tx.amount,
+    currency: 'KRW',
+    installments: tx.installments,
+    rawCategory: tx.rawCategory,
+    memo: tx.memo,
+    category: tx.category,
+    subcategory: tx.subcategory,
+    confidence: tx.confidence,
+    paymentType: tx.paymentType,
+    channel: tx.channel,
+    fuelVolumeLiters: tx.fuelVolumeLiters,
+    performanceExclusionTags: tx.performanceExclusionTags,
+    factProvenance: tx.factProvenance,
+  }));
 }
 
 export async function parseAndCategorize(
@@ -54,14 +118,15 @@ export async function parseAndCategorize(
   fileIndex?: number,
   matcher?: MerchantMatcher,
   categoryNodes?: CategoryNode[],
+  signal?: AbortSignal,
 ): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string }[]; categoryNodes: CategoryNode[] }> {
   const resolvedBank: BankId | undefined =
     options?.bank && VALID_BANK_IDS.has(options.bank)
       ? (options.bank as BankId)
       : undefined;
-  const parseResult = await parseFile(file, resolvedBank);
+  const parseResult = await parseFile(file, resolvedBank, signal);
   if (parseResult.transactions.length === 0) {
-    throw new Error('거래 내역을 찾을 수 없어요');
+    throw new Error(emptyParseResultMessage(parseResult.errors));
   }
 
   // Use provided categoryNodes (from analyzeMultipleFiles) or fetch fresh.
@@ -81,28 +146,10 @@ export async function parseAndCategorize(
   // type (which has an extra `label` field) to the rules shape via the adapter.
   const effectiveMatcher = matcher ?? new MerchantMatcher(toRulesCategoryNodes(nodes));
 
-  // Include fileIndex in the ID to prevent collisions when multiple files
-  // are uploaded — without it, each file produces tx-0 through tx-N and
-  // the merged list has duplicate IDs, breaking Svelte keyed-each and
-  // the changeCategory function in TransactionReview.
-  const idPrefix = fileIndex !== undefined ? `f${fileIndex}-` : '';
-
-  const transactions: CategorizedTx[] = parseResult.transactions.map(
-    (tx: RawTransaction, idx: number) => {
-      const match = effectiveMatcher.match(tx.merchant, tx.category);
-      return {
-        id: `tx-${idPrefix}${idx}`,
-        date: tx.date,
-        merchant: tx.merchant,
-        amount: tx.amount,
-        installments: tx.installments,
-        category: match.category,
-        subcategory: match.subcategory,
-        confidence: match.confidence,
-        rawCategory: tx.category,
-        memo: tx.memo,
-      };
-    },
+  const transactions = categorizeParsedTransactions(
+    parseResult.transactions,
+    effectiveMatcher,
+    fileIndex,
   );
 
   return {
@@ -120,24 +167,7 @@ export async function optimizeFromTransactions(
   options?: AnalyzeOptions,
   prebuiltCategoryLabels?: Map<string, string>,
 ): Promise<AnalysisResult['optimization']> {
-  // Convert CategorizedTx to CategorizedTransaction for the optimizer
-  const categorized: CategorizedTransaction[] = transactions.map(tx => ({
-    id: tx.id,
-    date: tx.date,
-    merchant: tx.merchant,
-    amount: tx.amount,
-    currency: 'KRW',
-    installments: tx.installments,
-    rawCategory: tx.rawCategory,
-    memo: tx.memo,
-    category: tx.category,
-    subcategory: tx.subcategory,
-    confidence: tx.confidence,
-    paymentType: tx.paymentType,
-    channel: tx.channel,
-    fuelVolumeLiters: tx.fuelVolumeLiters,
-    performanceExclusionTags: tx.performanceExclusionTags,
-  }));
+  const categorized = toCoreTransactions(transactions);
 
   // The generated optimizer artifact already has the canonical core shape.
   // Its loader validates and caches the original JSON object graph once.
@@ -152,9 +182,9 @@ export async function optimizeFromTransactions(
   }
   assertRequestedCardsResolved(options?.cardIds, coreRules.length);
 
-  // 전월실적 기본값: 사용자가 입력하지 않으면 이번 달 총 지출과 같다고 가정
-  // 단, 카드사별 performanceExclusions에 포함된 카테고리의 지출은 전월실적에서 제외
-  // 각 카드마다 제외 항목이 다르므로 카드별로 개별 계산
+  // 전월실적은 직접 입력한 값, 정확한 이전 달 명세서, 또는 명세서가
+  // 없을 때의 0원 가정 중 하나이며 provenance를 함께 보존한다.
+  // 카드사별 performanceExclusions는 명세서 기반일 때 개별 계산한다.
   // Pre-compute total positive spending for the fast-path (cards with no exclusions).
   const previousBasis: PreviousSpendingBasis | undefined =
     options?.previousSpendingBasis ??
@@ -165,41 +195,14 @@ export async function optimizeFromTransactions(
       : undefined);
   const performanceTransactions =
     options?.previousMonthTransactions ?? transactions;
-  const totalPositiveSpending = performanceTransactions.reduce(
-    (sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0),
-    0,
+  const {
+    cardPreviousSpending,
+    issues: performanceBasisIssues,
+  } = resolveCardPreviousSpending(
+    coreRules,
+    performanceTransactions,
+    previousBasis,
   );
-  const cardPreviousSpending = new Map<string, number>();
-  const performanceBasisIssues: NonNullable<
-    AnalysisResult['optimization']['unsupportedRules']
-  > = [];
-  for (const rule of coreRules) {
-    if (previousBasis?.kind === 'user-total') {
-      cardPreviousSpending.set(rule.card.id, previousBasis.amount);
-    } else if (previousBasis?.kind === 'missing-calendar-month') {
-      cardPreviousSpending.set(rule.card.id, previousBasis.assumedAmount);
-    } else if (rule.performanceExclusions.length === 0) {
-      // Fast path: no exclusions means all positive spending qualifies
-      cardPreviousSpending.set(rule.card.id, totalPositiveSpending);
-    } else {
-      const performance = calculatePerformanceSpending(
-        performanceTransactions,
-        rule.performanceExclusions,
-      );
-      cardPreviousSpending.set(rule.card.id, performance.amount);
-      if (performance.unknownExclusions.length > 0) {
-        performanceBasisIssues.push({
-          transactionId: 'performance-basis',
-          ruleId: `${rule.card.id}:performance-exclusions`,
-          category: 'performance',
-          reason: 'missing_performance_exclusion_fact',
-          detail:
-            '전월실적 제외 여부를 확인할 거래 정보가 없어 실적을 0원으로 처리했어요: ' +
-            performance.unknownExclusions.join(', '),
-        });
-      }
-    }
-  }
   // Build category labels map from taxonomy for the optimizer
   // Skip loadCategories() if labels were pre-built by the caller
   let categoryLabels = prebuiltCategoryLabels;
@@ -222,10 +225,9 @@ export async function optimizeFromTransactions(
     ];
     const issuesByCard = new Map<string, typeof performanceBasisIssues>();
     for (const issue of performanceBasisIssues) {
-      const cardId = issue.ruleId.replace(/:performance-exclusions$/, '');
-      const issues = issuesByCard.get(cardId) ?? [];
+      const issues = issuesByCard.get(issue.cardId) ?? [];
       issues.push(issue);
-      issuesByCard.set(cardId, issues);
+      issuesByCard.set(issue.cardId, issues);
     }
     for (const cardResult of optimizationResult.cardResults) {
       const issues = issuesByCard.get(cardResult.cardId);
@@ -281,13 +283,14 @@ export async function analyzeMultipleFiles(
   };
   const parseQueue = await runFileParseQueue(
     files,
-    async (file, index) => ({
+    async (file, index, signal) => ({
       ...(await parseAndCategorize(
         file,
         options,
         index,
         sharedMatcher,
         categoryNodes,
+        signal,
       )),
       fileName: file.name,
     }),
@@ -351,11 +354,21 @@ export async function analyzeMultipleFiles(
   }
 
   if (allTransactions.length === 0) {
+    const genericEmptyMessage = '거래 내역을 찾을 수 없어요';
+    const actionableError = allErrors.find(
+      ({ message }) =>
+        message.trim().length > 0 && message !== genericEmptyMessage,
+    );
+    if (actionableError) {
+      throw new Error(
+        `${actionableError.fileName}: ${actionableError.message}`,
+      );
+    }
     const errorDetail = failedFileNames.join(', ');
     throw new Error(
       errorDetail
-        ? `거래 내역을 찾을 수 없어요: ${errorDetail}`
-        : '거래 내역을 찾을 수 없어요'
+        ? `${genericEmptyMessage}: ${errorDetail}`
+        : genericEmptyMessage,
     );
   }
 
@@ -379,12 +392,9 @@ export async function analyzeMultipleFiles(
     previousMonthTransactions: context.previousTransactions,
   }, categoryLabels);
 
-  // Note: `transactions` includes ALL months for display/editing, but the
-  // optimization only covers the latest month. When reoptimize is called
-  // with edited transactions, it includes all months. This is acceptable
-  // because non-latest-month transactions still contribute to per-card
-  // previousMonthSpending calculations and don't distort the optimization
-  // — they just add more data for the optimizer to consider.
+  // `transactions` keeps every uploaded month for display/editing, while
+  // optimization uses only the latest valid month and the exact predecessor
+  // month remains available solely as the performance-spending basis.
   return {
     success: true,
     bank,

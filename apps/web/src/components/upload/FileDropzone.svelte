@@ -7,7 +7,6 @@
   import {
     STATEMENT_FILE_ACCEPT,
     SUPPORTED_STATEMENT_FORMAT_LABELS,
-    isSupportedStatementFile,
   } from '../../lib/supported-formats.js';
   import {
     MAX_PREVIOUS_SPENDING_KRW,
@@ -17,6 +16,12 @@
     LatestFileParseRun,
     type FileParseProgress,
   } from '../../lib/file-parse-queue.js';
+  import {
+    MAX_UPLOAD_FILE_BYTES,
+    MAX_UPLOAD_FILE_COUNT,
+    MAX_UPLOAD_TOTAL_BYTES,
+    admitUploadFiles,
+  } from '../../lib/upload-admission.js';
   import Icon from '../ui/Icon.svelte';
 
   const analysisRuns = new LatestFileParseRun();
@@ -93,7 +98,6 @@
   let uploadStatus = $state<'idle' | 'uploading' | 'success' | 'error'>('idle');
   let analysisProgress = $state<FileParseProgress>({ completed: 0, total: 0 });
   let errorMessages = $state<string[]>([]);
-  let warningMessages = $state<string[]>([]);
   let bank = $state('');
   let previousSpending = $state<string>('');
   let previousSpendingError = $state<string | null>(null);
@@ -155,16 +159,6 @@
     return 'document-text';
   }
 
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per file
-  const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50 MB total
-
-  function updateTotalSizeWarning() {
-    const totalSize = uploadedFiles.reduce((sum, file) => sum + file.size, 0);
-    warningMessages = totalSize > MAX_TOTAL_SIZE
-      ? ['전체 파일 크기가 50MB를 초과해 처리 시간이 길어질 수 있어요.']
-      : [];
-  }
-
   function cancelActiveAnalysis(): void {
     if (uploadStatus !== 'uploading') return;
     analysisRuns.cancel();
@@ -201,35 +195,12 @@
 
   function addFiles(newFiles: File[]) {
     cancelActiveAnalysis();
-    const invalid: string[] = [];
-    const oversized: string[] = [];
-    const duplicateNames: string[] = [];
-    const valid: File[] = [];
-    for (const f of newFiles) {
-      if (f.size > MAX_FILE_SIZE) {
-        oversized.push(`${f.name} (${formatFileSize(f.size)})`);
-        continue;
-      }
-      if (isSupportedStatementFile(f)) {
-        // Avoid duplicates by name AND size — same name with different size
-        // is likely a different statement (e.g., "statement.csv" from a
-        // different month). Same name AND same size is likely the same file
-        // re-uploaded (C80-01/D-47).
-        if (!uploadedFiles.some(existing => existing.name === f.name && existing.size === f.size)) {
-          valid.push(f);
-        } else {
-          duplicateNames.push(f.name);
-        }
-      } else {
-        invalid.push(f.name);
-      }
-    }
+    const admission = admitUploadFiles(uploadedFiles, newFiles);
     // Add valid files first
-    if (valid.length > 0) {
-      uploadedFiles = [...uploadedFiles, ...valid];
+    if (admission.accepted.length > 0) {
+      uploadedFiles = [...uploadedFiles, ...admission.accepted];
       uploadStatus = 'idle';
       errorMessages = [];
-      updateTotalSizeWarning();
       // Auto-detect bank from first file content (non-blocking)
       detectBankFromFile();
     }
@@ -237,14 +208,26 @@
     // can see all issues at once instead of discovering them one retry at a
     // time (C72-04).
     const errorParts: string[] = [];
-    if (oversized.length > 0) {
-      errorParts.push(`파일 크기는 10MB 이하여야 합니다 (초과: ${oversized.join(', ')})`);
+    if (admission.oversized.length > 0) {
+      errorParts.push(
+        `파일 크기는 ${formatFileSize(MAX_UPLOAD_FILE_BYTES)} 이하여야 합니다 (초과: ${admission.oversized.map((file) => `${file.name} (${formatFileSize(file.size)})`).join(', ')})`,
+      );
     }
-    if (invalid.length > 0) {
-      errorParts.push(`${SUPPORTED_STATEMENT_FORMAT_LABELS} 파일만 지원합니다 (제외됨: ${invalid.join(', ')})`);
+    if (admission.unsupported.length > 0) {
+      errorParts.push(`${SUPPORTED_STATEMENT_FORMAT_LABELS} 파일만 지원합니다 (제외됨: ${admission.unsupported.map((file) => file.name).join(', ')})`);
     }
-    if (duplicateNames.length > 0) {
-      errorParts.push(`같은 이름의 파일이 이미 있어요 (제외됨: ${duplicateNames.join(', ')})`);
+    if (admission.duplicates.length > 0) {
+      errorParts.push(`같은 파일이 이미 있어요 (제외됨: ${admission.duplicates.map((file) => file.name).join(', ')})`);
+    }
+    if (admission.overAggregateBytes.length > 0) {
+      errorParts.push(
+        `전체 파일 크기는 ${formatFileSize(MAX_UPLOAD_TOTAL_BYTES)} 이하여야 합니다 (제외됨: ${admission.overAggregateBytes.map((file) => file.name).join(', ')})`,
+      );
+    }
+    if (admission.overFileCount.length > 0) {
+      errorParts.push(
+        `파일은 최대 ${MAX_UPLOAD_FILE_COUNT}개까지 추가할 수 있어요 (제외됨: ${admission.overFileCount.map((file) => file.name).join(', ')})`,
+      );
     }
     if (errorParts.length > 0) {
       errorMessages = errorParts;
@@ -255,7 +238,6 @@
   function removeFile(index: number) {
     cancelActiveAnalysis();
     uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
-    updateTotalSizeWarning();
     if (uploadedFiles.length === 0) {
       uploadStatus = 'idle';
       errorMessages = [];
@@ -275,7 +257,6 @@
     uploadedFiles = [];
     uploadStatus = 'idle';
     errorMessages = [];
-    warningMessages = [];
     previousSpendingError = null;
     bank = '';
     previousSpending = '';
@@ -608,9 +589,9 @@
           </p>
         {/if}
         {#if uploadedFiles.length >= 2}
-          <p id="previous-spending-help" class="mt-1 text-xs text-[var(--color-text-muted)]">여러 달 업로드 시 전월 실적이 자동으로 사용돼요. 직접 입력하면 덮어써요.</p>
+          <p id="previous-spending-help" class="mt-1 text-xs text-[var(--color-text-muted)]">정확한 전월 명세서가 있으면 자동으로 사용해요. 직접 입력하면 덮어써요.</p>
         {:else}
-          <p id="previous-spending-help" class="mt-1 text-xs text-[var(--color-text-muted)]">입력하지 않으면 이번 달 지출액을 기준으로 자동 계산해요</p>
+          <p id="previous-spending-help" class="mt-1 text-xs text-[var(--color-text-muted)]">입력하지 않고 정확한 전월 명세서도 없으면 전월실적을 0원으로 가정해요.</p>
         {/if}
       </div>
 
@@ -640,15 +621,6 @@
     </form>
   {/if}
 
-  {#if warningMessages.length > 0}
-    <div role="status" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
-      <ul class="list-disc space-y-0.5 pl-5">
-        {#each warningMessages as message}
-          <li>{message}</li>
-        {/each}
-      </ul>
-    </div>
-  {/if}
 
   <!-- Error state -->
   {#if uploadStatus === 'error'}

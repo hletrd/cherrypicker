@@ -254,7 +254,7 @@
                 </div>
                 {#if tier.maxSpending !== null}
                   <div class="text-xs text-[var(--color-text-muted)]">
-                    {formatWon(tier.maxSpending)} 미만
+                    {formatWon(tier.maxSpending)} 이하
                   </div>
                 {/if}
               </div>

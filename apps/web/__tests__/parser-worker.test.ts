@@ -1,0 +1,151 @@
+import { describe, expect, test } from 'bun:test';
+import type { ParseResult } from '../src/lib/parser/types.js';
+import {
+  parseWithWorker,
+  type ParserWorkerFactory,
+  type ParserWorkerLike,
+} from '../src/lib/parser/worker-runner.js';
+import type {
+  ParserWorkerRequest,
+  ParserWorkerResponse,
+} from '../src/lib/parser/worker-protocol.js';
+
+class FakeWorker implements ParserWorkerLike {
+  messages: ParserWorkerRequest[] = [];
+  transfers: Array<Transferable[] | undefined> = [];
+  terminations = 0;
+  messageListeners = new Set<
+    (event: MessageEvent<ParserWorkerResponse>) => void
+  >();
+  errorListeners = new Set<(event: ErrorEvent) => void>();
+
+  postMessage(
+    message: ParserWorkerRequest,
+    transfer?: Transferable[],
+  ): void {
+    this.messages.push(message);
+    this.transfers.push(transfer);
+  }
+
+  addEventListener(
+    type: 'message' | 'error',
+    listener:
+      | ((event: MessageEvent<ParserWorkerResponse>) => void)
+      | ((event: ErrorEvent) => void),
+  ): void {
+    if (type === 'message') {
+      this.messageListeners.add(
+        listener as (event: MessageEvent<ParserWorkerResponse>) => void,
+      );
+    } else {
+      this.errorListeners.add(listener as (event: ErrorEvent) => void);
+    }
+  }
+
+  removeEventListener(
+    type: 'message' | 'error',
+    listener:
+      | ((event: MessageEvent<ParserWorkerResponse>) => void)
+      | ((event: ErrorEvent) => void),
+  ): void {
+    if (type === 'message') {
+      this.messageListeners.delete(
+        listener as (event: MessageEvent<ParserWorkerResponse>) => void,
+      );
+    } else {
+      this.errorListeners.delete(listener as (event: ErrorEvent) => void);
+    }
+  }
+
+  terminate(): void {
+    this.terminations++;
+  }
+
+  respond(response: ParserWorkerResponse): void {
+    for (const listener of this.messageListeners) {
+      listener({ data: response } as MessageEvent<ParserWorkerResponse>);
+    }
+  }
+}
+
+describe('browser parser worker ownership', () => {
+  test.each([
+    ['csv', 'date,merchant,amount'],
+    ['xlsx', new ArrayBuffer(8)],
+  ] as const)('aborting active %s parsing terminates its worker', async (
+    format,
+    payload,
+  ) => {
+    const worker = new FakeWorker();
+    const factory: ParserWorkerFactory = () => worker;
+    const controller = new AbortController();
+    const parsing = parseWithWorker(
+      { format, payload },
+      controller.signal,
+      factory,
+    );
+
+    controller.abort();
+    const error = await parsing.then(
+      () => null,
+      (reason: unknown) => reason,
+    );
+    expect(error).toMatchObject({ name: 'AbortError' });
+    expect(worker.terminations).toBe(1);
+    expect(worker.messageListeners.size).toBe(0);
+    expect(worker.errorListeners.size).toBe(0);
+  });
+
+  test('rehydrates parser errors and transfers workbook buffers', async () => {
+    const worker = new FakeWorker();
+    const buffer = new ArrayBuffer(8);
+    const parsing = parseWithWorker(
+      { format: 'xlsx', payload: buffer },
+      undefined,
+      () => worker,
+    );
+    const result: ParseResult = {
+      bank: null,
+      format: 'xlsx',
+      transactions: [],
+      errors: [],
+    };
+    worker.respond({
+      ok: true,
+      result: {
+        ...result,
+        errors: [{ message: '날짜 오류', line: 3 }],
+      },
+    });
+
+    const parsed = await parsing;
+    expect(parsed.errors[0]).toMatchObject({
+      name: 'ParseError',
+      message: '날짜 오류',
+      line: 3,
+    });
+    expect(worker.transfers[0]).toEqual([buffer]);
+    expect(worker.terminations).toBe(1);
+  });
+
+  test('terminates the worker when startup fails', async () => {
+    const worker = new FakeWorker();
+    worker.postMessage = () => {
+      throw new Error('clone failed');
+    };
+
+    const error = await parseWithWorker(
+      { format: 'csv', payload: 'date,merchant,amount' },
+      undefined,
+      () => worker,
+    ).then(
+      () => null,
+      (reason: unknown) => reason,
+    );
+
+    expect(error).toMatchObject({ message: 'clone failed' });
+    expect(worker.terminations).toBe(1);
+    expect(worker.messageListeners.size).toBe(0);
+    expect(worker.errorListeners.size).toBe(0);
+  });
+});

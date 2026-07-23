@@ -8,6 +8,7 @@ import type { BankId, ParseResult, RawTransaction } from './types.js';
 import { ParseError } from './types.js';
 import { parseAmount } from './amount.js';
 import { parseDateStringToISO, isValidISODate } from './date-utils.js';
+import { extractTransactionFacts } from '@cherrypicker/parser/browser';
 
 /** Field name aliases for date, merchant, and amount fields. */
 const DATE_ALIASES = [
@@ -45,7 +46,7 @@ const INSTALLMENTS_ALIASES = [
 ];
 
 const CATEGORY_ALIASES = [
-  'category', 'type', 'paymentType', 'payment_type', 'paymentMethod', 'payment_method',
+  'category', 'type',
   '업종', '카테고리', '분류', '업종분류', '거래유형', '결제유형', '결제구분', '구분',
 ];
 
@@ -133,12 +134,18 @@ function parseTransactionObject(
   const date = parseDateStringToISO(dateRaw);
   if (!isValidISODate(date) && dateRaw) {
     errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw}`, { line: lineIdx }));
+    return null;
   }
 
+  const extractedFacts = extractTransactionFacts(obj);
+  for (const message of extractedFacts.errors) {
+    errors.push(new ParseError(message, { line: lineIdx }));
+  }
   const tx: RawTransaction = {
     date,
     merchant: String(merchantValue ?? '').trim(),
     amount,
+    ...extractedFacts.facts,
   };
 
   const installValue = findField(obj, INSTALLMENTS_ALIASES);

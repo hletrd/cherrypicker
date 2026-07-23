@@ -44,5 +44,7 @@ describe('catalog reward display boundary', () => {
     expect(source).toContain('data-testid="unsupported-reward-disclosure"');
     expect(source).toContain('data-testid="unsupported-reward-item"');
     expect(source).toContain('{#each unsupportedRewards as reward}');
+    expect(source).toContain('{formatWon(tier.maxSpending)} 이하');
+    expect(source).not.toContain('{formatWon(tier.maxSpending)} 미만');
   });
 });

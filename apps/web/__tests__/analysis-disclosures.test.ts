@@ -49,6 +49,7 @@ describe('previous-spending provenance disclosure', () => {
 describe('unsupported optimizer disclosure', () => {
   test('deduplicates repeated artifacts and groups user-facing reasons', () => {
     const duplicate = {
+      cardId: 'card-1',
       transactionId: 'tx-1',
       ruleId: 'fuel-rule',
       category: 'transportation',
@@ -58,6 +59,7 @@ describe('unsupported optimizer disclosure', () => {
       duplicate,
       duplicate,
       {
+        cardId: 'card-2',
         transactionId: 'tx-2',
         ruleId: 'overseas-rule',
         category: 'travel',
@@ -89,6 +91,7 @@ describe('unsupported optimizer disclosure', () => {
       null,
       { reason: 'missing_channel' },
       {
+        cardId: 'card-3',
         transactionId: 'tx-3',
         ruleId: 'future-rule',
         category: 'other',
@@ -106,6 +109,7 @@ describe('unsupported optimizer disclosure', () => {
   test('labels missing performance-exclusion facts specifically', () => {
     const summary = summarizeUnsupportedRules([
       {
+        cardId: 'card-1',
         transactionId: 'performance-basis',
         ruleId: 'card-1:performance-exclusions',
         category: 'performance',
@@ -120,6 +124,33 @@ describe('unsupported optimizer disclosure', () => {
         count: 1,
       },
     ]);
+  });
+
+  test('keeps the same rule ID from different cards as distinct issues', () => {
+    const summary = summarizeUnsupportedRules([
+      {
+        cardId: 'card-a',
+        transactionId: 'tx-1',
+        ruleId: 'reward-001',
+        category: 'dining',
+        reason: 'rule_marked_unsupported',
+      },
+      {
+        cardId: 'card-b',
+        transactionId: 'tx-1',
+        ruleId: 'reward-001',
+        category: 'dining',
+        reason: 'rule_marked_unsupported',
+      },
+    ]);
+
+    expect(summary).toEqual(
+      expect.objectContaining({
+        issueCount: 2,
+        transactionCount: 1,
+        ruleCount: 2,
+      }),
+    );
   });
 });
 

@@ -21,6 +21,7 @@ export interface UnsupportedRulesSummary {
 }
 
 interface CalculationIssueLike {
+  cardId: string;
   transactionId: string;
   ruleId: string;
   category: string;
@@ -72,6 +73,7 @@ function isCalculationIssue(value: unknown): value is CalculationIssueLike {
   if (!value || typeof value !== 'object') return false;
   const issue = value as Record<string, unknown>;
   return (
+    typeof issue.cardId === 'string' &&
     typeof issue.transactionId === 'string' &&
     typeof issue.ruleId === 'string' &&
     typeof issue.category === 'string' &&
@@ -88,6 +90,7 @@ export function summarizeUnsupportedRules(
   for (const value of values) {
     if (!isCalculationIssue(value)) continue;
     const key = [
+      value.cardId,
       value.transactionId,
       value.ruleId,
       value.category,
@@ -102,7 +105,7 @@ export function summarizeUnsupportedRules(
   const reasonCounts = new Map<string, number>();
   for (const issue of issues.values()) {
     transactions.add(issue.transactionId);
-    rules.add(issue.ruleId);
+    rules.add(`${issue.cardId}\u0000${issue.ruleId}`);
     reasonCounts.set(issue.reason, (reasonCounts.get(issue.reason) ?? 0) + 1);
   }
 

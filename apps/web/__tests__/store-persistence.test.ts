@@ -170,6 +170,68 @@ describe('production persistence serializer', () => {
     );
   });
 
+  test('round-trips card-aware calculation issues and drops legacy identities', () => {
+    const analysis = analysisFixture();
+    analysis.optimization.unsupportedRules = [
+      {
+        cardId: 'card-a',
+        transactionId: 'tx-1',
+        ruleId: 'reward-001',
+        category: 'dining',
+        reason: 'rule_marked_unsupported',
+      },
+      {
+        cardId: 'card-b',
+        transactionId: 'tx-1',
+        ruleId: 'reward-001',
+        category: 'dining',
+        reason: 'rule_marked_unsupported',
+      },
+    ];
+
+    const restored = deserializeAnalysis(serializeAnalysis(analysis).serialized);
+    expect(restored.data?.optimization.unsupportedRules).toEqual(
+      analysis.optimization.unsupportedRules,
+    );
+
+    const legacy = JSON.parse(serializeAnalysis(analysis).serialized);
+    delete legacy.optimization.unsupportedRules[0].cardId;
+    expect(
+      deserializeAnalysis(JSON.stringify(legacy))
+        .data?.optimization.unsupportedRules,
+    ).toEqual([analysis.optimization.unsupportedRules[1]]);
+  });
+
+  test('round-trips typed facts and their provenance for reoptimization', () => {
+    const analysis = analysisFixture();
+    Object.assign(analysis.transactions![0]!, {
+      paymentType: 'overseas',
+      channel: 'online',
+      fuelVolumeLiters: 18.5,
+      performanceExclusionTags: ['annual_fee'],
+      factProvenance: {
+        paymentType: 'statement',
+        channel: 'statement',
+        fuelVolumeLiters: 'statement',
+        performanceExclusionTags: 'statement',
+      },
+    });
+
+    const restored = deserializeAnalysis(serializeAnalysis(analysis).serialized);
+    expect(restored.data?.transactions?.[0]).toMatchObject({
+      paymentType: 'overseas',
+      channel: 'online',
+      fuelVolumeLiters: 18.5,
+      performanceExclusionTags: ['annual_fee'],
+      factProvenance: {
+        paymentType: 'statement',
+        channel: 'statement',
+        fuelVolumeLiters: 'statement',
+        performanceExclusionTags: 'statement',
+      },
+    });
+  });
+
   test('omits transactions and records their count above the storage budget', () => {
     const oversized = analysisFixture('x'.repeat(MAX_PERSIST_SIZE));
     const { serialized, result } = serializeAnalysis(oversized);

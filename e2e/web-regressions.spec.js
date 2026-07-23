@@ -116,3 +116,24 @@ test('built app bounds persisted-state migration and recovers safely', async ({ 
   ).toBeNull();
   expect(pageErrors).toEqual([]);
 });
+
+test('skip link stays on each nested route and focuses the main landmark', async ({
+  page,
+}) => {
+  for (const route of ['dashboard', 'cards', 'results', 'report']) {
+    await page.goto(new URL(`${route}/`, homeUrl).toString());
+    const skipLink = page.getByRole('link', {
+      name: '본문으로 건너뛰기',
+    });
+    await page.keyboard.press('Tab');
+    await expect(skipLink).toBeFocused();
+
+    const currentPath = new URL(page.url()).pathname;
+    expect(await skipLink.getAttribute('href')).toBe(
+      `${currentPath}#main-content`,
+    );
+    await skipLink.press('Enter');
+    await expect(page).toHaveURL(/#main-content$/);
+    await expect(page.locator('main#main-content')).toBeFocused();
+  }
+});

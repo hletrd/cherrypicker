@@ -7,7 +7,12 @@
  * previously untested (C10-01).
  */
 import { describe, test, expect } from 'bun:test';
-import { formatCatalogReward, formatSavingsValue, formatWon } from '../src/lib/formatters.js';
+import {
+  buildSkipLinkUrl,
+  formatCatalogReward,
+  formatSavingsValue,
+  formatWon,
+} from '../src/lib/formatters.js';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -83,6 +88,16 @@ describe('formatSavingsValue', () => {
     const result = formatSavingsValue(5000);
     // Same as formatSavingsValue(5000, 5000)
     expect(result).toBe('+' + formatWon(5000));
+  });
+});
+
+describe('buildSkipLinkUrl', () => {
+  test('keeps the fragment on the current nested route under a document base', () => {
+    const href = buildSkipLinkUrl('/cherrypicker/dashboard/');
+    expect(href).toBe('/cherrypicker/dashboard/#main-content');
+    expect(
+      new URL(href, 'https://hletrd.github.io/cherrypicker/').pathname,
+    ).toBe('/cherrypicker/dashboard/');
   });
 });
 

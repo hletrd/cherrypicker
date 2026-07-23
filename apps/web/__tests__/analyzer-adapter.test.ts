@@ -4,10 +4,17 @@ import {
   assertRequestedCardsResolved,
   attachParseWarningIdentity,
   buildMonthlyBreakdown,
+  emptyParseResultMessage,
   getLatestMonth,
   toRulesCategoryNodes,
   validDateRange,
 } from '../src/lib/analyzer-helpers.js';
+import {
+  categorizeParsedTransactions,
+  toCoreTransactions,
+} from '../src/lib/analyzer.js';
+import { calculateRewards } from '@cherrypicker/core';
+import type { CardRuleSet } from '@cherrypicker/rules';
 
 describe('production category adapter', () => {
   test('projects nested web categories into the rules shape', () => {
@@ -46,6 +53,102 @@ describe('production category adapter', () => {
     ]);
   });
 
+});
+
+describe('typed transaction fact adapter', () => {
+  test('preserves facts and provenance through the web optimizer boundary', () => {
+    const categorized = categorizeParsedTransactions(
+      [{
+        date: '2026-02-10',
+        merchant: 'S-OIL',
+        amount: 10_000,
+        paymentType: 'overseas',
+        channel: 'offline',
+        fuelVolumeLiters: 12.5,
+        performanceExclusionTags: ['annual_fee'],
+        factProvenance: {
+          paymentType: 'statement',
+          channel: 'statement',
+          fuelVolumeLiters: 'statement',
+          performanceExclusionTags: 'statement',
+        },
+      }],
+      {
+        match: () => ({
+          category: 'transportation',
+          subcategory: 'fuel',
+          confidence: 1,
+        }),
+      },
+    );
+    const coreTransactions = toCoreTransactions(categorized);
+
+    expect(coreTransactions[0]).toMatchObject({
+      paymentType: 'overseas',
+      channel: 'offline',
+      fuelVolumeLiters: 12.5,
+      performanceExclusionTags: ['annual_fee'],
+      factProvenance: {
+        paymentType: 'statement',
+        channel: 'statement',
+        fuelVolumeLiters: 'statement',
+        performanceExclusionTags: 'statement',
+      },
+    });
+
+    const cardRule: CardRuleSet = {
+      card: {
+        id: 'web-fuel-card',
+        issuer: 'test',
+        name: 'Web Fuel',
+        nameKo: '웹 주유',
+        type: 'credit',
+        annualFee: { domestic: 0, international: 0 },
+        lastUpdated: '2026-07-23',
+        source: 'manual',
+      },
+      performanceTiers: [{
+        id: 'tier0',
+        label: '무실적',
+        minSpending: 0,
+        maxSpending: null,
+      }],
+      performanceExclusions: [],
+      rewards: [{
+        id: 'fuel-reward',
+        category: 'transportation',
+        subcategory: 'fuel',
+        type: 'discount',
+        tiers: [{
+          performanceTier: 'tier0',
+          rate: null,
+          fixedAmount: 100,
+          unit: 'won_per_liter',
+          value: { kind: 'fuel_per_liter', amount: 100 },
+          monthlyCap: null,
+          perTransactionCap: null,
+          annualCap: null,
+        }],
+        priority: 1,
+        combination: 'exclusive',
+        stackingGroup: 'fuel-reward',
+        capGroup: 'fuel-reward',
+        support: { status: 'supported' },
+      }],
+      globalConstraints: {
+        monthlyTotalDiscountCap: null,
+        minimumAnnualSpending: null,
+      },
+    };
+
+    expect(
+      calculateRewards({
+        transactions: coreTransactions,
+        previousMonthSpending: 0,
+        cardRule,
+      }).totalReward,
+    ).toBe(1_250);
+  });
 });
 
 describe('production month helpers', () => {
@@ -110,5 +213,14 @@ describe('analysis boundary helpers', () => {
         raw: 'bad,row',
       },
     ]);
+  });
+
+  test('preserves actionable zero-row parser errors', () => {
+    expect(
+      emptyParseResultMessage([
+        { message: '필수 컬럼을 찾을 수 없습니다: 날짜, 금액' },
+      ]),
+    ).toBe('필수 컬럼을 찾을 수 없습니다: 날짜, 금액');
+    expect(emptyParseResultMessage([])).toBe('거래 내역을 찾을 수 없어요');
   });
 });

@@ -275,3 +275,8 @@ export function buildPageUrl(path: string): string {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   return `${base}${base.endsWith('/') ? '' : '/'}${cleanPath}`;
 }
+
+export function buildSkipLinkUrl(pathname: string): string {
+  const normalized = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  return `${normalized}#main-content`;
+}

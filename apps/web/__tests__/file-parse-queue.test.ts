@@ -187,6 +187,38 @@ describe('file parse queue', () => {
     expect(result.stale).toBe(true);
   });
 
+  test('passes cancellation to active workers', async () => {
+    const started: number[] = [];
+    const controller = new LatestFileParseRun();
+    const run = controller.begin();
+    const resultPromise = runFileParseQueue(
+      [0, 1, 2],
+      async (_item, index, signal) => {
+        started.push(index);
+        await new Promise<void>((_resolve, reject) => {
+          signal.addEventListener(
+            'abort',
+            () => reject(new DOMException('cancelled', 'AbortError')),
+            { once: true },
+          );
+        });
+        return index;
+      },
+      { run, yieldControl: async () => {} },
+    );
+
+    await until(() => started.length === 2);
+    controller.cancel();
+    const result = await resultPromise;
+    expect(started).toEqual([0, 1]);
+    expect(result.outcomes.slice(0, 2)).toEqual([
+      { status: 'rejected', reason: expect.objectContaining({ name: 'AbortError' }) },
+      { status: 'rejected', reason: expect.objectContaining({ name: 'AbortError' }) },
+    ]);
+    expect(result.outcomes[2]).toEqual({ status: 'cancelled' });
+    expect(result.cancelled).toBe(true);
+  });
+
   test('allows only the latest generation to commit late results', async () => {
     const firstWorker = deferred<string>();
     const controller = new LatestFileParseRun();
@@ -235,8 +267,9 @@ describe('file parse queue', () => {
 
     expect(analyzer).toContain('runFileParseQueue(');
     expect(analyzer).not.toMatch(/Promise\.all\(\s*files\.map/);
-    expect(store).toContain('requestId === analysisRequestId');
+    expect(store).toContain('OperationEpoch');
     expect(store).toContain('execution.run.isCurrent()');
+    expect(analyzer).toContain('async (file, index, signal)');
     expect(dropzone).toContain('LatestFileParseRun');
     expect(dropzone).toContain(
       'analysisProgress.completed}/{analysisProgress.total',

@@ -1,6 +1,6 @@
 ---
 import { readCardStats } from '../lib/build-stats.js';
-import { buildPageUrl } from '../lib/formatters.js';
+import { buildPageUrl, buildSkipLinkUrl } from '../lib/formatters.js';
 
 interface Props {
   title: string;
@@ -10,6 +10,7 @@ interface Props {
 const { title, description = '내 소비에 맞는 카드 조합 찾기' } = Astro.props;
 const pathname = Astro.url.pathname;
 const base = import.meta.env.BASE_URL;
+const skipLinkUrl = buildSkipLinkUrl(pathname);
 
 // Navigation URLs using buildPageUrl for trailing-slash safety (C6-01)
 const homeUrl = buildPageUrl('');
@@ -70,7 +71,7 @@ function isActive(href: string) {
     <script is:inline src={`${base}scripts/print.js`}></script>
   </head>
   <body class="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] transition-colors duration-200">
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-[var(--color-primary-fill)] focus:px-4 focus:py-2 focus:text-sm focus:text-white focus:shadow-lg">
+    <a href={skipLinkUrl} class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-[var(--color-primary-fill)] focus:px-4 focus:py-2 focus:text-sm focus:text-white focus:shadow-lg">
       본문으로 건너뛰기
     </a>
     <nav class="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur-sm">
@@ -182,7 +183,7 @@ function isActive(href: string) {
       </div>
     </nav>
 
-    <main id="main-content" class="mx-auto max-w-7xl px-4 py-8 sm:px-6 animate-[fadeIn_0.3s_ease]">
+    <main id="main-content" tabindex="-1" class="mx-auto max-w-7xl px-4 py-8 sm:px-6 animate-[fadeIn_0.3s_ease]">
       <slot />
     </main>
 

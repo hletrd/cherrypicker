@@ -1,3 +1,5 @@
+import type { ParsedTransactionFacts } from '@cherrypicker/parser/browser';
+
 export type FileFormat = 'csv' | 'xlsx' | 'pdf' | 'json' | 'ofx' | 'html';
 export type BankId = 'hyundai' | 'kb' | 'ibk' | 'woori' | 'samsung' | 'shinhan' | 'lotte' | 'hana' | 'nh' | 'bc' | 'kakao' | 'toss' | 'kbank' | 'bnk' | 'dgb' | 'suhyup' | 'jb' | 'kwangju' | 'jeju' | 'sc' | 'mg' | 'cu' | 'kdb' | 'epost';
 
@@ -8,7 +10,7 @@ export interface DetectionResult {
   encoding?: string;
 }
 
-export interface RawTransaction {
+export interface RawTransaction extends ParsedTransactionFacts {
   date: string;
   merchant: string;
   amount: number;

@@ -74,6 +74,13 @@ export function attachParseWarningIdentity(
   }));
 }
 
+export function emptyParseResultMessage(
+  errors: readonly { message: string }[],
+): string {
+  const actionable = errors.find(({ message }) => message.trim().length > 0);
+  return actionable?.message ?? '거래 내역을 찾을 수 없어요';
+}
+
 export function assertRequestedCardsResolved(
   requestedCardIds: readonly string[] | undefined,
   resolvedCount: number,

@@ -57,6 +57,7 @@ function isolatedSummaryArtifact() {
 
 function isolatedDetailArtifact(url) {
   return {
+    sourceHash: publishedDetail.sourceHash,
     issuer: { ...publishedDetail.issuer, cardCount: 1 },
     cards: [
       {

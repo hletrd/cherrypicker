@@ -207,6 +207,23 @@ function validCardResult(value: unknown): boolean {
   );
 }
 
+function validCalculationIssue(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    typeof value.cardId === 'string' &&
+    value.cardId.length > 0 &&
+    typeof value.transactionId === 'string' &&
+    value.transactionId.length > 0 &&
+    typeof value.ruleId === 'string' &&
+    value.ruleId.length > 0 &&
+    typeof value.category === 'string' &&
+    value.category.length > 0 &&
+    typeof value.reason === 'string' &&
+    value.reason.length > 0 &&
+    (value.detail === undefined || typeof value.detail === 'string')
+  );
+}
+
 function finiteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
@@ -387,8 +404,22 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
   }
 
   optimization.assignments = optimization.assignments.filter(validAssignment);
+  if (Array.isArray(optimization.unsupportedRules)) {
+    optimization.unsupportedRules =
+      optimization.unsupportedRules.filter(validCalculationIssue);
+  }
   if (Array.isArray(optimization.cardResults)) {
-    optimization.cardResults = optimization.cardResults.filter(validCardResult);
+    const cardResults = optimization.cardResults.filter(validCardResult);
+    optimization.cardResults = cardResults;
+    for (const cardResult of cardResults) {
+      if (
+        isPlainObject(cardResult) &&
+        Array.isArray(cardResult.unsupportedRules)
+      ) {
+        cardResult.unsupportedRules =
+          cardResult.unsupportedRules.filter(validCalculationIssue);
+      }
+    }
   }
 
   let warningKind: PersistWarningKind = null;
