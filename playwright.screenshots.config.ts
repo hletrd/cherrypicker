@@ -5,14 +5,14 @@ const { host, port, baseURL } = resolveE2ERuntime();
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: '**/ui-ux-screenshots.spec.js',
-  outputDir: './test-results/playwright-regression',
+  testMatch: '**/ui-ux-screenshots.spec.js',
+  outputDir: './test-results/playwright-screenshots',
   fullyParallel: false,
-  retries: process.env.CI ? 2 : 0,
+  retries: 0,
   reporter: 'line',
   use: {
     baseURL,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
   },
   webServer: {
     command: `cd apps/web && bunx astro preview --host ${host} --port ${port}`,
