@@ -72,7 +72,7 @@ describe('non-spending amount ParseError parity (C39-TE02)', () => {
   });
 
   test('OFX parser emits ParseError for positive amounts (credits)', () => {
-    const content = `<OFX>
+    const content = `<OFX><CURDEF>KRW
 <BANKTRANLIST>
 <STMTTRN>
 <TRNTYPE>CREDIT

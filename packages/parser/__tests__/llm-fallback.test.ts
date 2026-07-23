@@ -92,6 +92,22 @@ describe('PDF Sonnet output contract', () => {
     ).toThrow('2개 행 중 1개');
   });
 
+  test.each(['', '   '])('rejects a blank merchant value %j', (merchant) => {
+    try {
+      parsePDFLLMResponse(
+        message(JSON.stringify([
+          { date: '2026-07-23', merchant, amount: 1200 },
+        ])),
+      );
+      throw new Error('blank merchant response should have been rejected');
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain('1개 행 중 1개');
+      expect((error as Error & { code?: string }).code)
+        .toBe('missing_required_merchant');
+    }
+  });
+
   test('rejects input beyond the complete single-request ceiling', () => {
     expect(() =>
       buildPDFLLMRequest('가'.repeat(PDF_LLM_MAX_INPUT_CHARS + 1)),

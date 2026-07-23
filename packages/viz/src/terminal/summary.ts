@@ -43,7 +43,12 @@ export function printSpendingSummary(transactions: CategorizedTransaction[], cat
   // Total row — use includedCount instead of transactions.length so the count
   // reflects only the positive-amount transactions that contributed to grandTotal,
   // matching the fix applied to the HTML report generator (C3-01/C4-01).
-  table.push(['합계', formatWon(grandTotal), String(includedCount), '100.0%']);
+  table.push([
+    '합계',
+    formatWon(grandTotal),
+    String(includedCount),
+    grandTotal > 0 ? '100.0%' : '0.0%',
+  ]);
 
   console.log('\n지출 내역 요약');
   console.log('='.repeat(60));

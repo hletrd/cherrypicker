@@ -238,6 +238,16 @@ describe('public terminal sinks', () => {
     expect(output.match(/\b2\b/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
+  test('renders an empty direct-call summary as zero percent', () => {
+    const output = captureConsoleLog(() => {
+      printSpendingSummary([], new Map());
+    });
+
+    expect(output).toContain('합계');
+    expect(output).toContain('0.0%');
+    expect(output).not.toContain('100.0%');
+  });
+
   test('labels recommendation benefits as gross monthly rewards', () => {
     const result: OptimizationResult = {
       assignments: [],

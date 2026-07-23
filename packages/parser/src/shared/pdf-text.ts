@@ -103,8 +103,10 @@ function findMerchant(
   preferredIdx: number,
 ): { idx: number; value: string } {
   if (preferredIdx >= 0 && preferredIdx < row.length) {
-    const value = (row[preferredIdx] ?? '').trim();
-    if (value) return { idx: preferredIdx, value };
+    return {
+      idx: preferredIdx,
+      value: normalizeRequiredMerchant(row[preferredIdx]),
+    };
   }
 
   const reserved = new Set([dateIdx, amountIdx]);
@@ -160,8 +162,9 @@ function parseStructuredPDFText(
   const header = headerIdx === -1 ? null : getHeaderColumns(rows[headerIdx]!);
   const transactions: RawTransaction[] = [];
   const errors: ParseError[] = [];
+  let requiredMerchantErrorCount = 0;
 
-  for (const row of transactionRows) {
+  for (const [rowIndex, row] of transactionRows.entries()) {
     if (isSummaryRow(row.join(' '))) continue;
 
     const resolved = resolvePDFRowValues(
@@ -199,10 +202,22 @@ function parseStructuredPDFText(
       resolved.amountIdx,
       header ? shiftedColumn(header.merchantCol) : -1,
     );
+    const normalizedMerchant = normalizeRequiredMerchant(merchant.value);
+    if (!normalizedMerchant) {
+      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+          code: REQUIRED_MERCHANT_ERROR_CODE,
+          line: rowIndex + 1,
+          raw: row.join(' '),
+        }));
+      }
+      requiredMerchantErrorCount++;
+      continue;
+    }
 
     const transaction: RawTransaction = {
       date,
-      merchant: merchant.value,
+      merchant: normalizedMerchant,
       amount,
     };
 
@@ -250,8 +265,9 @@ function parseFallbackPDFText(
 ): { transactions: RawTransaction[]; errors: ParseError[] } {
   const transactions: RawTransaction[] = [];
   const errors: ParseError[] = [];
+  let requiredMerchantErrorCount = 0;
 
-  for (const line of text.split('\n')) {
+  for (const [lineIndex, line] of text.split('\n').entries()) {
     const dateMatch = line.match(FALLBACK_DATE_PATTERN);
     if (!dateMatch || !isValidFallbackDate(dateMatch[0])) continue;
 
@@ -265,7 +281,20 @@ function parseFallbackPDFText(
       : dateStart > amountMatch.end
         ? line.slice(amountMatch.end, dateStart).trim()
         : '';
-    if (!between) continue;
+    const merchant = normalizeRequiredMerchant(
+      between.replace(/\s+/g, ' '),
+    );
+    if (!merchant) {
+      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+          code: REQUIRED_MERCHANT_ERROR_CODE,
+          line: lineIndex + 1,
+          raw: line,
+        }));
+      }
+      requiredMerchantErrorCount++;
+      continue;
+    }
 
     const amount = parseAmount(amountMatch.token);
     if (amount === null) {
@@ -285,7 +314,7 @@ function parseFallbackPDFText(
 
     transactions.push({
       date,
-      merchant: between.replace(/\s+/g, ' ').trim(),
+      merchant,
       amount,
     });
   }
@@ -300,6 +329,13 @@ export function parsePDFText(
   try {
     const structured = parseStructuredPDFText(text);
     if (structured.transactions.length > 0) return structured;
+    if (
+      structured.errors.some(
+        (error) => error.code === REQUIRED_MERCHANT_ERROR_CODE,
+      )
+    ) {
+      return structured;
+    }
     const fallback = parseFallbackPDFText(text);
     return {
       transactions: fallback.transactions,
@@ -319,6 +355,12 @@ import {
   parseDateStringToISO,
 } from '../date-utils.js';
 import { parseAmount } from './amount.js';
+import {
+  MAX_REQUIRED_FIELD_ROW_ERRORS,
+  normalizeRequiredMerchant,
+  REQUIRED_MERCHANT_ERROR_CODE,
+  REQUIRED_MERCHANT_ERROR_MESSAGE,
+} from './required-fields.js';
 import {
   detectHeaderRow,
   filterTransactionRows,

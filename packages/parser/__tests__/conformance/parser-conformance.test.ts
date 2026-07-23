@@ -71,7 +71,7 @@ describe('server/browser parser conformance', () => {
   });
 
   test('OFX invalid DTPOSTED rows are rejected with identical diagnostics', () => {
-    const content = `<OFX>
+    const content = `<OFX><CURDEF>KRW
 <BANKTRANLIST>
 <STMTTRN>
 <TRNTYPE>DEBIT

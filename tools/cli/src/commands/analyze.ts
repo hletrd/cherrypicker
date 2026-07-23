@@ -42,6 +42,11 @@ export async function runAnalyze(args: string[]): Promise<void> {
       console.warn(formatParseWarning(e));
     }
   }
+  if (parseResult.transactions.length === 0) {
+    throw new Error(
+      '분석할 수 있는 유효한 거래가 없습니다. 파싱 경고와 명세서 내용을 확인해 주세요.',
+    );
+  }
 
   console.log(`\n감지된 은행: ${parseResult.bank ?? '알 수 없음'}`);
   console.log(`파싱된 거래 수: ${parseResult.transactions.length}건`);

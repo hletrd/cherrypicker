@@ -4,12 +4,14 @@
  */
 export { parseAmount, parseAmountString } from './shared/amount.js';
 export {
+  detectAndDecodeStatementTextBytes,
   decodeStatementTextBytes,
   decodeTextBytes,
   detectStatementTextEncoding,
   detectTextEncoding,
   UnsupportedTextEncodingError,
   type StatementTextFormat,
+  type StatementTextDecodeResult,
   type SupportedTextEncoding,
 } from './shared/encoding.js';
 export {
@@ -26,6 +28,8 @@ export {
   extractOFXTag,
   extractOFXTransactionBlocks,
   parseOFXDateToISO,
+  resolveOFXStatementCurrency,
+  type OFXStatementCurrencyResult,
   type OFXTransactionBlock,
 } from './shared/ofx.js';
 export {

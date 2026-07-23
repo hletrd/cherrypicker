@@ -3,7 +3,11 @@
  * Parity with server-side packages/parser/__tests__/ofx.test.ts (T13-01, T13-03).
  */
 import { describe, it, expect } from 'bun:test';
-import { parseOFX } from '../src/lib/parser/ofx.js';
+import { parseOFX as parseRawOFX } from '../src/lib/parser/ofx.js';
+
+function parseOFX(content: string) {
+  return parseRawOFX(`<CURDEF>KRW</CURDEF>${content}`);
+}
 
 describe('OFX Parser (web)', () => {
   describe('OFX 1.x (SGML-style)', () => {
@@ -111,6 +115,20 @@ VERSION:102
   });
 
   describe('Edge cases', () => {
+    it('rejects a missing or unsupported statement currency', () => {
+      const transaction = `<BANKTRANLIST>
+<STMTTRN><DTPOSTED>20240115</DTPOSTED><TRNAMT>-10000</TRNAMT><NAME>TEST</NAME></STMTTRN>
+</BANKTRANLIST>`;
+
+      const missing = parseRawOFX(transaction);
+      expect(missing.transactions).toEqual([]);
+      expect(missing.errors[0]?.code).toBe('ofx_missing_currency');
+
+      const foreign = parseRawOFX(`<CURDEF>USD</CURDEF>${transaction}`);
+      expect(foreign.transactions).toEqual([]);
+      expect(foreign.errors[0]?.code).toBe('ofx_unsupported_currency');
+    });
+
     it('returns error for empty OFX content', () => {
       const result = parseOFX('OFXHEADER:100\nDATA:OFXSGML');
       expect(result.transactions).toHaveLength(0);

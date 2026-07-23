@@ -113,6 +113,8 @@ describe('isOptimizableTx', () => {
 
   test('rejects missing merchant', () => {
     expect(isOptimizableTx({ ...baseTx, merchant: undefined })).toBe(false);
+    expect(isOptimizableTx({ ...baseTx, merchant: '' })).toBe(false);
+    expect(isOptimizableTx({ ...baseTx, merchant: '   ' })).toBe(false);
   });
 
   test('rejects missing category', () => {

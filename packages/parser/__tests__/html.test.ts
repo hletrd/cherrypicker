@@ -245,10 +245,11 @@ describe('HTML Table Parser', () => {
 
       const result = parseHTML(content);
       // Summary row resets forward-fill state, so the row after the summary
-      // with empty merchant gets no forward-fill value (merchant stays empty).
-      expect(result.transactions).toHaveLength(2);
+      // gets no fabricated merchant and is rejected by the required-field
+      // boundary.
+      expect(result.transactions).toHaveLength(1);
       expect(result.transactions[0]!.merchant).toBe('카페');
-      expect(result.transactions[1]!.merchant).toBe('');
+      expect(result.errors[0]?.code).toBe('missing_required_merchant');
     });
 
     it('does not forward-fill summary row amounts to merged cells (C25-TEST01)', () => {

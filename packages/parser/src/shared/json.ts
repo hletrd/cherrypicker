@@ -1,6 +1,12 @@
 import { isValidISODate, parseDateStringToISO } from '../date-utils.js';
 import { parseAmount } from './amount.js';
 import {
+  MAX_REQUIRED_FIELD_ROW_ERRORS,
+  normalizeRequiredMerchant,
+  REQUIRED_MERCHANT_ERROR_CODE,
+  REQUIRED_MERCHANT_ERROR_MESSAGE,
+} from './required-fields.js';
+import {
   extractTransactionFacts,
   type ParsedTransactionFacts,
 } from './transaction-facts.js';
@@ -72,7 +78,8 @@ export interface JSONParseDiagnostic {
     | 'json_syntax'
     | 'json_shape'
     | 'json_row_rejected'
-    | 'json_fact_invalid';
+    | 'json_fact_invalid'
+    | typeof REQUIRED_MERCHANT_ERROR_CODE;
   line?: number;
 }
 
@@ -108,10 +115,24 @@ function parseTransactionObject(
   object: Readonly<Record<string, unknown>>,
   line: number,
   errors: JSONParseDiagnostic[],
+  requiredMerchantErrors: { count: number },
 ): JSONTransaction | null {
   const dateValue = findField(object, DATE_ALIASES);
   const amountValue = findField(object, AMOUNT_ALIASES);
   const merchantValue = findField(object, MERCHANT_ALIASES);
+  const merchant = normalizeRequiredMerchant(merchantValue);
+
+  if (!merchant) {
+    if (requiredMerchantErrors.count < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+      errors.push({
+        code: REQUIRED_MERCHANT_ERROR_CODE,
+        line,
+        message: REQUIRED_MERCHANT_ERROR_MESSAGE,
+      });
+    }
+    requiredMerchantErrors.count++;
+    return null;
+  }
 
   const missingFields: string[] = [];
   if (dateValue === undefined || dateValue === null || String(dateValue).trim() === '') {
@@ -162,7 +183,7 @@ function parseTransactionObject(
 
   const transaction: JSONTransaction = {
     date,
-    merchant: String(merchantValue ?? '').trim(),
+    merchant,
     amount,
     ...extractedFacts.facts,
   };
@@ -245,6 +266,7 @@ export function parseJSONTransactions(content: string): JSONParseKernelResult {
 
   const errors: JSONParseDiagnostic[] = [];
   const transactions: JSONTransaction[] = [];
+  const requiredMerchantErrors = { count: 0 };
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
     const line = index + 1;
@@ -256,6 +278,7 @@ export function parseJSONTransactions(content: string): JSONParseKernelResult {
       row as Record<string, unknown>,
       line,
       errors,
+      requiredMerchantErrors,
     );
     if (transaction) transactions.push(transaction);
   }

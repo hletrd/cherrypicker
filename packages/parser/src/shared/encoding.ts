@@ -17,13 +17,18 @@ export class UnsupportedTextEncodingError extends Error {
   }
 }
 
-function isValidUTF8(bytes: Uint8Array): boolean {
+function tryDecodeUTF8(bytes: Uint8Array): string | null {
   try {
-    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    return true;
+    return new TextDecoder('utf-8', { fatal: true })
+      .decode(bytes)
+      .replace(/^﻿/, '');
   } catch {
-    return false;
+    return null;
   }
+}
+
+function isValidUTF8(bytes: Uint8Array): boolean {
+  return tryDecodeUTF8(bytes) !== null;
 }
 
 /**
@@ -210,19 +215,50 @@ export function detectStatementTextEncoding(
   bytes: Uint8Array,
   format: StatementTextFormat,
 ): SupportedTextEncoding {
+  return detectAndDecodeStatementTextBytes(bytes, format).encoding;
+}
+
+export interface StatementTextDecodeResult {
+  encoding: SupportedTextEncoding;
+  text: string;
+}
+
+/**
+ * Resolve a statement encoding and decode the payload as one operation.
+ *
+ * The common UTF-8 path uses its fatal validation decode as the returned
+ * string, avoiding a second validation pass and a third whole-input decode.
+ */
+export function detectAndDecodeStatementTextBytes(
+  bytes: Uint8Array,
+  format: StatementTextFormat,
+): StatementTextDecodeResult {
   const unsupportedBOM = detectUnsupportedBOM(bytes);
   if (unsupportedBOM) {
     throw new UnsupportedTextEncodingError(format, unsupportedBOM);
   }
   const bomEncoding = detectBOMEncoding(bytes);
-  if (bomEncoding) return bomEncoding;
+  if (bomEncoding) {
+    if (bomEncoding === 'utf-8') {
+      const text = tryDecodeUTF8(bytes);
+      if (text === null) {
+        throw new UnsupportedTextEncodingError(format, 'invalid UTF-8');
+      }
+      return { encoding: bomEncoding, text };
+    }
+    return {
+      encoding: bomEncoding,
+      text: decodeTextBytes(bytes, bomEncoding),
+    };
+  }
   const bomlessUTF16 = detectBOMlessUTF16(bytes);
   if (bomlessUTF16) {
     throw new UnsupportedTextEncodingError(format, bomlessUTF16);
   }
 
   if (format === 'json') {
-    if (isValidUTF8(bytes)) return 'utf-8';
+    const text = tryDecodeUTF8(bytes);
+    if (text !== null) return { encoding: 'utf-8', text };
     const detected = isPlausibleCP949(bytes) ? 'cp949' : 'unknown';
     throw new UnsupportedTextEncodingError(format, detected);
   }
@@ -236,12 +272,34 @@ export function detectStatementTextEncoding(
   ) {
     throw new UnsupportedTextEncodingError(format, declaration.encoding);
   }
-  if (declaration.encoding) return declaration.encoding;
+  if (declaration.encoding === 'utf-8') {
+    const text = tryDecodeUTF8(bytes);
+    if (text === null) {
+      throw new UnsupportedTextEncodingError(format, 'invalid UTF-8');
+    }
+    return { encoding: declaration.encoding, text };
+  }
+  if (declaration.encoding === 'cp949') {
+    return {
+      encoding: declaration.encoding,
+      text: decodeTextBytes(bytes, declaration.encoding),
+    };
+  }
   if (declaration.unsupportedLabel && !containsOnlyASCII(bytes)) {
     throw new UnsupportedTextEncodingError(format, declaration.unsupportedLabel);
   }
 
-  return detectTextEncoding(bytes);
+  const utf8Text = tryDecodeUTF8(bytes);
+  if (utf8Text !== null) {
+    return { encoding: 'utf-8', text: utf8Text };
+  }
+  if (isPlausibleCP949(bytes)) {
+    return {
+      encoding: 'cp949',
+      text: decodeTextBytes(bytes, 'cp949'),
+    };
+  }
+  throw new UnsupportedTextEncodingError(format, 'invalid UTF-8');
 }
 
 export function detectTextEncoding(bytes: Uint8Array): SupportedTextEncoding {
@@ -295,9 +353,5 @@ export function decodeStatementTextBytes(
   bytes: Uint8Array,
   format: StatementTextFormat,
 ): string {
-  const encoding = detectStatementTextEncoding(bytes, format);
-  if (encoding === 'utf-8' && !isValidUTF8(bytes)) {
-    throw new UnsupportedTextEncodingError(format, 'invalid UTF-8');
-  }
-  return decodeTextBytes(bytes, encoding);
+  return detectAndDecodeStatementTextBytes(bytes, format).text;
 }

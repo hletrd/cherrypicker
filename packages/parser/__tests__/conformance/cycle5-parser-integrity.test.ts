@@ -78,6 +78,7 @@ ENCODING:${encoding}
 CHARSET:${charset}
 
 <OFX>
+<CURDEF>KRW
 <BANKTRANLIST>
 <STMTTRN>
 <DTPOSTED>20260723
@@ -502,7 +503,11 @@ ${date === undefined ? '' : `<DTPOSTED>${date}\n`}${amount === undefined ? '' : 
 }
 
 function parseOFXPair(content: string) {
-  return [parseServerOFX(content), parseBrowserOFX(content)] as const;
+  const currencyBoundContent = `<CURDEF>KRW</CURDEF>${content}`;
+  return [
+    parseServerOFX(currencyBoundContent),
+    parseBrowserOFX(currencyBoundContent),
+  ] as const;
 }
 
 describe('Cycle 5 strict OFX conformance', () => {

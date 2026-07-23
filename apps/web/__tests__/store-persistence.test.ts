@@ -252,6 +252,8 @@ describe('production persistence parser', () => {
     ['memo type', { memo: 7 }],
     ['raw category type', { rawCategory: false }],
     ['impossible transaction date', { date: '2026-02-30' }],
+    ['blank merchant', { merchant: '' }],
+    ['whitespace-only merchant', { merchant: '   ' }],
   ])('quarantines malformed persisted transaction facts: %s', (_name, override) => {
     const transaction = {
       ...analysisFixture().transactions![0]!,

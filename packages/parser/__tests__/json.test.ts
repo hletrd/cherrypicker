@@ -125,10 +125,11 @@ describe('parseJSON', () => {
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]!.amount).toBe(5000);
     expect(
-      result.errors
-        .filter((error) => error.code === 'json_row_rejected')
-        .map((error) => error.line),
-    ).toEqual([1, 2]);
+      result.errors.map((error) => [error.code, error.line]),
+    ).toEqual([
+      ['missing_required_merchant', 1],
+      ['json_row_rejected', 2],
+    ]);
   });
 
   it('returns error for invalid JSON', () => {

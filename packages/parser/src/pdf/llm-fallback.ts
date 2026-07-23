@@ -1,6 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { isValidISODate } from '../date-utils.js';
 import type { RawTransaction } from '../types.js';
+import {
+  normalizeRequiredMerchant,
+  REQUIRED_MERCHANT_ERROR_CODE,
+} from '../shared/required-fields.js';
 
 /** Sanitize raw text before sending to LLM to mitigate prompt injection.
  *  Removes or neutralizes common injection patterns found in malicious
@@ -148,10 +152,14 @@ export function parsePDFLLMResponse(message: Anthropic.Message): RawTransaction[
   }
 
   const invalidRows: number[] = [];
+  const missingMerchantRows: number[] = [];
   for (const [index, tx] of parsed.entries()) {
+    const merchant = normalizeRequiredMerchant(tx.merchant);
+    if (!merchant) missingMerchantRows.push(index + 1);
     if (
       typeof tx.date !== 'string' ||
       typeof tx.merchant !== 'string' ||
+      !merchant ||
       typeof tx.amount !== 'number' ||
       !isValidISODate(tx.date) ||
       !Number.isSafeInteger(tx.amount) ||
@@ -165,15 +173,19 @@ export function parsePDFLLMResponse(message: Anthropic.Message): RawTransaction[
     }
   }
   if (invalidRows.length > 0) {
-    throw new Error(
+    const error = new Error(
       `LLM 응답 ${parsed.length}개 행 중 ${invalidRows.length}개가 올바르지 않습니다: ${invalidRows.join(', ')}행`,
     );
+    if (missingMerchantRows.length > 0) {
+      Object.assign(error, { code: REQUIRED_MERCHANT_ERROR_CODE });
+    }
+    throw error;
   }
 
   return parsed.map((tx) => {
       const result: RawTransaction = {
         date: tx.date!,
-        merchant: tx.merchant!,
+        merchant: normalizeRequiredMerchant(tx.merchant),
         amount: tx.amount!,
       };
       if (typeof tx.installments === 'number' && tx.installments > 1) {

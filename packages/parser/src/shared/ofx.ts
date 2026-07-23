@@ -5,6 +5,12 @@ export interface OFXTransactionBlock {
   line: number;
 }
 
+export type OFXStatementCurrencyResult =
+  | { status: 'ok'; currency: 'KRW' }
+  | { status: 'missing' }
+  | { status: 'unsupported'; currency: string }
+  | { status: 'ambiguous' };
+
 function collectOFXBlocks(
   content: string,
   pattern: RegExp,
@@ -52,6 +58,114 @@ export function extractOFXTransactionBlocks(content: string): OFXTransactionBloc
     content,
     /<STMTTRN(?:\s[^>]*)?>([\s\S]*?)(?=<STMTTRN(?:\s[^>]*)?>|<\/BANKTRANLIST|<\/STMTRS|<\/CCSTMTRS|<\/CREDITCARDMSGSRSV1|$)/gi,
   );
+}
+
+function collectOFXCurrencies(content: string): string[] {
+  const currencies: string[] = [];
+  const pattern = /<CURDEF(?:\s[^>]*)?>\s*([^<\r\n]*)/gi;
+  let match = pattern.exec(content);
+  while (match) {
+    currencies.push((match[1] ?? '').trim().toUpperCase());
+    match = pattern.exec(content);
+  }
+  return currencies;
+}
+
+function currencyHeader(content: string): string {
+  const bankListIndex = content.search(/<BANKTRANLIST(?:\s[^>]*)?>/i);
+  const transactionIndex = content.search(/<STMTTRN(?:\s[^>]*)?>/i);
+  const boundaries = [bankListIndex, transactionIndex].filter(
+    (index) => index >= 0,
+  );
+  const boundary = boundaries.length > 0 ? Math.min(...boundaries) : content.length;
+  return content.slice(0, boundary);
+}
+
+function resolveCurrencyValue(
+  currencies: readonly string[],
+): OFXStatementCurrencyResult {
+  if (currencies.length === 0 || !currencies[0]) {
+    return { status: 'missing' };
+  }
+  if (currencies.length !== 1) return { status: 'ambiguous' };
+  const currency = currencies[0]!;
+  return currency === 'KRW'
+    ? { status: 'ok', currency }
+    : { status: 'unsupported', currency };
+}
+
+/**
+ * Resolve currency at the statement/account boundary rather than accepting
+ * the first CURDEF anywhere in the document.
+ *
+ * Multiple statement responses are accepted only when every transaction-
+ * bearing response declares KRW independently. A legacy document-level
+ * CURDEF remains valid for one otherwise unambiguous statement response.
+ */
+export function resolveOFXStatementCurrency(
+  content: string,
+): OFXStatementCurrencyResult {
+  const allBlocks = extractOFXTransactionBlocks(content);
+  const statementPattern =
+    /<(STMTRS|CCSTMTRS)(?:\s[^>]*)?>([\s\S]*?)<\/\1\s*>/gi;
+  const statements: string[] = [];
+  let coveredBlocks = 0;
+  let statementMatch = statementPattern.exec(content);
+  while (statementMatch) {
+    const statement = statementMatch[2] ?? '';
+    const statementBlocks = extractOFXTransactionBlocks(statement);
+    if (statementBlocks.length > 0) {
+      statements.push(statement);
+      coveredBlocks += statementBlocks.length;
+    }
+    statementMatch = statementPattern.exec(content);
+  }
+
+  if (statements.length === 0) {
+    const header = currencyHeader(content);
+    if (
+      collectOFXCurrencies(content).length !==
+        collectOFXCurrencies(header).length
+    ) {
+      return { status: 'ambiguous' };
+    }
+    return resolveCurrencyValue(collectOFXCurrencies(header));
+  }
+
+  if (coveredBlocks !== allBlocks.length) {
+    return { status: 'ambiguous' };
+  }
+
+  const allCurrencies = collectOFXCurrencies(content);
+  let statementCurrencyCount = 0;
+  const resolved: OFXStatementCurrencyResult[] = [];
+  for (const statement of statements) {
+    const headerCurrencies = collectOFXCurrencies(currencyHeader(statement));
+    const statementCurrencies = collectOFXCurrencies(statement);
+    if (statementCurrencies.length !== headerCurrencies.length) {
+      return { status: 'ambiguous' };
+    }
+    statementCurrencyCount += statementCurrencies.length;
+    resolved.push(resolveCurrencyValue(headerCurrencies));
+  }
+
+  const externalCurrencies = allCurrencies.slice(statementCurrencyCount);
+  if (
+    resolved.length === 1 &&
+    resolved[0]?.status === 'missing' &&
+    statementCurrencyCount === 0 &&
+    externalCurrencies.length === 1
+  ) {
+    return resolveCurrencyValue(externalCurrencies);
+  }
+  if (statementCurrencyCount !== allCurrencies.length) {
+    return { status: 'ambiguous' };
+  }
+
+  for (const result of resolved) {
+    if (result.status !== 'ok') return result;
+  }
+  return { status: 'ok', currency: 'KRW' };
 }
 
 function escapeRegExp(value: string): string {

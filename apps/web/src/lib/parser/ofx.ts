@@ -10,7 +10,12 @@ import { parseAmountString } from './amount.js';
 import {
   extractOFXTag,
   extractOFXTransactionBlocks,
+  MAX_REQUIRED_FIELD_ROW_ERRORS,
+  normalizeRequiredMerchant,
   parseOFXDateToISO,
+  REQUIRED_MERCHANT_ERROR_CODE,
+  REQUIRED_MERCHANT_ERROR_MESSAGE,
+  resolveOFXStatementCurrency,
 } from '@cherrypicker/parser/browser';
 
 /** Parse an OFX amount string. In OFX: negative = charges, positive = credits. */
@@ -40,6 +45,41 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
     }
   }
 
+  const currency = resolveOFXStatementCurrency(content);
+  if (currency.status === 'missing') {
+    return {
+      bank: resolvedBank,
+      format: 'ofx',
+      transactions: [],
+      errors: [new ParseError(
+        'OFX 통화 정보(CURDEF)가 없습니다. KRW 명세서만 분석할 수 있습니다.',
+        { code: 'ofx_missing_currency' },
+      )],
+    };
+  }
+  if (currency.status === 'unsupported') {
+    return {
+      bank: resolvedBank,
+      format: 'ofx',
+      transactions: [],
+      errors: [new ParseError(
+        `지원하지 않는 OFX 통화입니다: ${currency.currency.slice(0, 16)}. KRW 명세서만 분석할 수 있습니다.`,
+        { code: 'ofx_unsupported_currency' },
+      )],
+    };
+  }
+  if (currency.status === 'ambiguous') {
+    return {
+      bank: resolvedBank,
+      format: 'ofx',
+      transactions: [],
+      errors: [new ParseError(
+        'OFX 통화 정보(CURDEF)가 거래 명세서와 일치하지 않습니다. 각 명세서에 KRW 통화가 하나씩 선언되어야 합니다.',
+        { code: 'ofx_ambiguous_currency' },
+      )],
+    };
+  }
+
   const blocks = extractOFXTransactionBlocks(content);
   if (blocks.length === 0) {
     return {
@@ -50,11 +90,14 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
     };
   }
 
+  let requiredMerchantErrorCount = 0;
   for (let i = 0; i < blocks.length; i++) {
     const { content: block, line } = blocks[i]!;
     const dtPosted = extractOFXTag(block, 'DTPOSTED');
     const trnAmt = extractOFXTag(block, 'TRNAMT');
     const name = extractOFXTag(block, 'NAME');
+    const memo = extractOFXTag(block, 'MEMO');
+    const merchant = normalizeRequiredMerchant(name || memo);
 
     let missingRequiredField = false;
     if (!dtPosted) {
@@ -69,6 +112,16 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
         code: 'ofx_missing_trnamt',
         line,
       }));
+      missingRequiredField = true;
+    }
+    if (!merchant) {
+      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+          code: REQUIRED_MERCHANT_ERROR_CODE,
+          line,
+        }));
+      }
+      requiredMerchantErrorCount++;
       missingRequiredField = true;
     }
     if (missingRequiredField) continue;
@@ -91,7 +144,7 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
     }
     if (rawAmount >= 0) {
       errors.push(new ParseError(
-        `입금/환불 내역은 지출로 처리되지 않습니다: ${name || '알 수 없는 거래'} ${rawAmount}원`,
+        `입금/환불 내역은 지출로 처리되지 않습니다: ${merchant} ${rawAmount}원`,
         { line },
       ));
       continue;
@@ -100,11 +153,10 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
 
     const tx: RawTransaction = {
       date,
-      merchant: name || extractOFXTag(block, 'MEMO') || '',
+      merchant,
       amount,
     };
 
-    const memo = extractOFXTag(block, 'MEMO');
     if (memo && memo !== tx.merchant) {
       tx.memo = memo;
     }

@@ -10,7 +10,12 @@ import { parseAmount } from './amount.js';
 import { normalizeHTML } from './html-normalize.js';
 import {
   createSheetMergeIndex,
+  MAX_REQUIRED_FIELD_ROW_ERRORS,
+  missingRequiredColumnLabels,
+  normalizeRequiredMerchant,
   parseDateCell,
+  REQUIRED_MERCHANT_ERROR_CODE,
+  REQUIRED_MERCHANT_ERROR_MESSAGE,
   resolveSheetCell,
 } from '@cherrypicker/parser/browser';
 import {
@@ -112,20 +117,28 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
   const categoryCol = findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN);
   const memoCol = findColumn(headers, undefined, MEMO_COLUMN_PATTERN);
 
-  if (dateCol === -1 || amountCol === -1) {
-    const missing: string[] = [];
-    if (dateCol === -1) missing.push('날짜');
-    if (amountCol === -1) missing.push('금액');
+  const missing = missingRequiredColumnLabels({
+    date: dateCol,
+    merchant: merchantCol,
+    amount: amountCol,
+  });
+  if (missing.length > 0) {
     return {
       bank,
       format: 'html',
       transactions: [],
-      errors: [new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`)],
+      errors: [new ParseError(
+        `필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`,
+        merchantCol === -1
+          ? { code: REQUIRED_MERCHANT_ERROR_CODE }
+          : undefined,
+      )],
     };
   }
 
   const mergeIndex = createSheetMergeIndex(sheet['!merges']);
   const consumedAmountSources = new Set<string>();
+  let requiredMerchantErrorCount = 0;
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -154,14 +167,27 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
     const amountCell = resolveSheetCell(rows, i, amountCol, mergeIndex);
 
     const dateRaw = dateCell.value;
-    const merchantRaw = String(merchantCell?.value ?? '').trim();
+    const merchantRaw = merchantCell?.value ?? '';
     const categoryRaw = String(categoryCell?.value ?? '').trim();
     const installRaw = String(installCell?.value ?? '').trim();
     const memoRaw = String(memoCell?.value ?? '').trim();
     const amountRaw = amountCell.value;
 
-    if (!String(dateRaw ?? '').trim() && !merchantRaw && !String(amountRaw ?? '').trim()) continue;
+    if (!String(dateRaw ?? '').trim() && !String(merchantRaw).trim() && !String(amountRaw ?? '').trim()) continue;
     if (amountCell.fromMerge && consumedAmountSources.has(amountCell.sourceKey)) continue;
+
+    const merchant = normalizeRequiredMerchant(merchantRaw);
+    if (!merchant) {
+      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+          code: REQUIRED_MERCHANT_ERROR_CODE,
+          line: i + 1,
+          raw: rowText,
+        }));
+      }
+      requiredMerchantErrorCount++;
+      continue;
+    }
 
     const amount = parseAmount(amountRaw);
     if (amount === null) {
@@ -172,7 +198,7 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
     }
     if (amount <= 0) {
       errors.push(new ParseError(
-        `지출로 처리되지 않는 금액입니다: ${merchantRaw || '알 수 없는 거래'} ${amount}원`,
+        `지출로 처리되지 않는 금액입니다: ${merchant} ${amount}원`,
         { line: i + 1, raw: rowText },
       ));
       continue;
@@ -189,7 +215,7 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
 
     const tx: RawTransaction = {
       date: parsedDate.value,
-      merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
+      merchant,
       amount,
     };
 

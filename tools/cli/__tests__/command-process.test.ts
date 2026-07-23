@@ -200,6 +200,49 @@ describe('CLI process contract', () => {
     );
   });
 
+  test.each([
+    ['an empty statement', ['date,merchant,amount']],
+    [
+      'a wholly rejected statement',
+      [
+        'date,merchant,amount',
+        '2026-07-24,   ,10000',
+      ],
+    ],
+  ])('analyze fails closed for %s', async (_name, lines) => {
+    const directory = await mkdtemp(join(tmpdir(), 'cherrypicker-empty-'));
+    temporaryDirectories.push(directory);
+    const statement = join(directory, 'empty.csv');
+    await writeFile(statement, lines.join('\n'));
+
+    const result = runCli(['analyze', statement]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('분석할 수 있는 유효한 거래가 없습니다');
+    expect(result.stdout).not.toContain('지출 내역 요약');
+    expect(result.stdout).not.toContain('합계');
+    expect(result.stdout).not.toContain('100.0%');
+  });
+
+  test('analyze refuses foreign-currency OFX before printing a summary', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'cherrypicker-foreign-'));
+    temporaryDirectories.push(directory);
+    const statement = join(directory, 'foreign.ofx');
+    await writeFile(
+      statement,
+      `<OFX><STMTRS><CURDEF>USD</CURDEF><BANKTRANLIST>
+<STMTTRN><DTPOSTED>20260724</DTPOSTED><TRNAMT>-10000</TRNAMT><NAME>FOREIGN</NAME></STMTTRN>
+</BANKTRANLIST></STMTRS></OFX>`,
+    );
+
+    const result = runCli(['analyze', statement]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('지원하지 않는 OFX 통화');
+    expect(result.stdout).not.toContain('지출 내역 요약');
+    expect(result.stdout).not.toContain('합계');
+  });
+
   test(
     'optimize uses the compiled web catalog when --cards is omitted',
     async () => {

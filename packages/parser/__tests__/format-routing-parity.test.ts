@@ -113,7 +113,7 @@ describe('browser local text-parser buffer fallback', () => {
     ],
     [
       'statement.ofx',
-      `<OFX><BANKTRANLIST><STMTTRN>
+      `<OFX><CURDEF>KRW<BANKTRANLIST><STMTTRN>
 <DTPOSTED>20260723
 <TRNAMT>-10000
 <NAME>OFX 식당

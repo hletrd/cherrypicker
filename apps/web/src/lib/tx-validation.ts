@@ -54,7 +54,7 @@ export function isOptimizableTx(tx: unknown): tx is CategorizedTx {
   return (
     typeof obj.id === 'string' && obj.id.length > 0 &&
     typeof obj.date === 'string' && isValidISODate(obj.date) &&
-    typeof obj.merchant === 'string' &&
+    typeof obj.merchant === 'string' && obj.merchant.trim().length > 0 &&
     typeof obj.amount === 'number' &&
     Number.isSafeInteger(obj.amount) &&
     obj.amount !== 0 &&
