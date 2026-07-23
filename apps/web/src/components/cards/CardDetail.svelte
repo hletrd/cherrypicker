@@ -14,6 +14,7 @@
     buildSupportedRewardPresentation,
     buildIssuerCatalogUrl,
     formatPerformanceExclusion,
+    formatUnsupportedRewardReasonKo,
     type SupportedRewardPresentation,
   } from '../../lib/card-detail-display.js';
   import Icon from '../ui/Icon.svelte';
@@ -391,11 +392,11 @@
         data-testid="unsupported-reward-disclosure"
       >
         <h2 id="unsupported-catalog-rewards-heading" class="font-semibold">
-          조건 확인이 필요한 혜택
+          추천 계산에서 제외된 혜택
         </h2>
         <p class="mt-1 text-xs">
-          명세서만으로 적용 조건을 확인할 수 없어 아래 항목은 확정 혜택표와
-          추천 계산에서 제외했어요.
+          원화 가치나 적용 조건을 확정할 수 없는 항목은 확정 혜택표와 추천
+          계산에서 제외했어요.
         </p>
         <ul class="mt-3 space-y-2">
           {#each unsupportedRewards as reward}
@@ -412,8 +413,13 @@
                   {categoryLabels.get(categoryKey) ?? categoryKey}
                 </div>
               {/if}
-              <div class="mt-1 text-xs opacity-80">
-                적용 조건을 자동으로 확인할 수 없어요.
+              <div
+                class="mt-1 text-xs opacity-80"
+                data-testid="unsupported-reward-reason"
+              >
+                {reward.support.status === 'unsupported'
+                  ? formatUnsupportedRewardReasonKo(reward.support.reason)
+                  : ''}
               </div>
             </li>
           {/each}

@@ -158,8 +158,9 @@ All five plans are implemented with every acceptance item checked:
   conditions in card details, corrects benefit-area copy, and runtime-decodes
   every ordinary optimizer worker response through one cleanup path.
 - Plan 124 quarantines all mileage rewards until a program-aware Won valuation
-  exists, adds calculator and catalog defenses, and regenerates all catalog
-  projections and issuer documentation.
+  exists, adds calculator and catalog defenses, presents the valuation reason
+  in user-facing card details, and regenerates all catalog projections and
+  issuer documentation.
 
 The integrated Cycle 10 regression run passed 676 tests across 37 files with
 4,257 expectations. `bun run data:check` verified 683 cards and 551
@@ -167,6 +168,13 @@ optimizer-executable cards, `bun run web:build:check` built all five routes and
 passed the browser bundle budget, and the integrated web typecheck reported
 zero errors, warnings, or hints. Final repository-wide gates, signed-commit
 verification, and remote parity are recorded after the final gate pass.
+
+The final combined-diff review found one presentation gap before the full
+gates: card detail discarded the mileage valuation reason and used generic
+condition wording. Gate Fix 1 added an exact Korean no-Won-conversion
+disclosure, wired it to each unsupported reward reason, and added
+artifact-to-presentation coverage. Ten focused card-detail tests and the
+integrated web typecheck passed after the correction.
 
 ## Final missed-issue sweep
 

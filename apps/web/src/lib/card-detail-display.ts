@@ -8,6 +8,16 @@ import { buildPageUrl } from './formatters.js';
 export const ADDITIONAL_CONDITIONS_DISCLOSURE =
   '추가 적용 조건은 카드사 상품 설명서를 확인해 주세요.';
 
+const MILEAGE_VALUATION_REASON =
+  'mileage reward valuation contract is not modeled';
+
+export function formatUnsupportedRewardReasonKo(reason: string): string {
+  if (reason.trim() === MILEAGE_VALUATION_REASON) {
+    return '마일리지를 원화로 환산할 기준이 없어 확정 혜택표와 추천 계산에서 제외했어요.';
+  }
+  return '적용 조건을 자동으로 확인할 수 없어요.';
+}
+
 export const PERFORMANCE_EXCLUSION_LABELS: Readonly<Record<string, string>> = {
   annual_fee: '연회비',
   apartment_fee: '아파트 관리비',

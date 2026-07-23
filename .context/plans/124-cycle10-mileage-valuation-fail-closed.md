@@ -65,8 +65,13 @@ data generator. No external valuation research or deployment is authorized.
 - The 27 formerly supported unitless rules join the five existing Samsung
   rules under the same explicit valuation reason. No supported mileage rule
   remains; the affected cards and labels stay in detail artifacts.
+- Card detail translates that exact reason into a user-facing explanation that
+  miles have no Won conversion basis, rather than misclassifying the exclusion
+  as a generic unverifiable condition.
 - `bun run data:build` regenerated canonical data and documentation at 683
   catalog cards and 551 optimizer-executable cards. `data:check` and
   `docs:check` passed.
 - Focused schema, calculator, optimizer, publication-display, and existing
-  calculator/catalog suites passed with 127 tests and zero failures.
+  calculator/catalog suites passed with 127 tests and zero failures. A final
+  presentation regression additionally passed 10 focused card-detail tests
+  after the reason-aware disclosure was wired.
