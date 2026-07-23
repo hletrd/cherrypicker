@@ -7,6 +7,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  isRecommendationEligibleCard,
   loadAllCardRules,
   loadOptimizerCatalogArtifact,
   parseOptimizerCatalogArtifact,
@@ -129,6 +130,18 @@ describe('compiled optimizer artifact contract', () => {
         unexpected: true,
       }),
     ).toThrow('Unrecognized key');
+    expect(() =>
+      parseOptimizerCatalogArtifact({
+        sourceHash: HASH,
+        cards: [{
+          ...validCard,
+          card: {
+            ...validCard.card,
+            discontinued: true,
+          },
+        }],
+      }),
+    ).toThrow('discontinued cards are not recommendation eligible');
   });
 
   test('the Node reader rejects malformed JSON with its source path', async () => {
@@ -149,12 +162,18 @@ describe('compiled optimizer artifact contract', () => {
         loadOptimizerCatalogArtifact(optimizerArtifactPath),
         loadAllCardRules(join(dataDirectory, 'cards')),
       ]);
-      const sortedAuthored = [...authored].sort((left, right) =>
-        left.card.id.localeCompare(right.card.id),
-      );
+      const sortedAuthored = authored
+        .filter(isRecommendationEligibleCard)
+        .sort((left, right) =>
+          left.card.id < right.card.id
+            ? -1
+            : left.card.id > right.card.id
+              ? 1
+              : 0
+        );
 
       expect(compiled.sourceHash).toMatch(/^[a-f0-9]{64}$/);
-      expect(compiled.cards).toHaveLength(683);
+      expect(compiled.cards).toHaveLength(682);
       expect(compiled.cards).toEqual(sortedAuthored);
     },
     30_000,

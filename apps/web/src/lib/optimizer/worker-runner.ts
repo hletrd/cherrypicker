@@ -1,4 +1,4 @@
-import { greedyOptimize } from '@cherrypicker/core';
+import { greedyOptimize } from '@cherrypicker/core/optimizer';
 import type {
   CardRuleSet,
   OptimizationConstraints,

@@ -116,7 +116,10 @@ test('upload analysis fetches one optimizer artifact and never legacy data', asy
     .setInputFiles(uploadFixture);
   await page.getByRole('spinbutton').fill('300000');
   await page.getByRole('button', { name: /^분석 시작/ }).click();
-
+  const dashboardAction = page.getByRole('button', { name: '대시보드 보기' });
+  await expect(dashboardAction).toBeVisible({ timeout: 30_000 });
+  await expect(dashboardAction).toBeFocused();
+  await dashboardAction.click();
   await page.waitForURL('**/dashboard', { timeout: 30_000 });
   await expect(
     page.getByRole('heading', { name: '내 지출 분석' }),

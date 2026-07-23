@@ -1,5 +1,8 @@
 import { createHash } from 'node:crypto';
-import { cardRuleSetSchema } from '../packages/rules/src/index.js';
+import {
+  cardRuleSetSchema,
+  isRecommendationEligibleCard,
+} from '../packages/rules/src/index.js';
 import type { CardRuleSet } from '../packages/rules/src/index.js';
 
 export interface PublicationMeta {
@@ -34,6 +37,7 @@ export interface WebCatalogArtifacts {
       nameKo: string;
       type: CardRuleSet['card']['type'];
       annualFee: CardRuleSet['card']['annualFee'];
+      discontinued: boolean;
       rewardCategories: string[];
     }>;
   };
@@ -66,6 +70,7 @@ export interface IdentityFreeWebCatalogArtifacts {
       nameKo: string;
       type: CardRuleSet['card']['type'];
       annualFee: CardRuleSet['card']['annualFee'];
+      discontinued: boolean;
       rewardCategories: string[];
     }>;
   };
@@ -143,6 +148,7 @@ export function staleGeneratedShardNames(
 export function parsePublicationCard(
   raw: unknown,
   sourceName: string,
+  clock: () => Date = () => new Date(),
 ): CardRuleSet {
   const result = cardRuleSetSchema.safeParse(raw);
   if (!result.success) {
@@ -150,6 +156,18 @@ export function parsePublicationCard(
       .map((issue) => `  ${issue.path.join('.')}: ${issue.message}`)
       .join('\n');
     throw new Error(`Invalid card rule at ${sourceName}:\n${issues}`);
+  }
+  const now = clock();
+  if (!Number.isFinite(now.getTime())) {
+    throw new Error(`Invalid publication clock while reading ${sourceName}`);
+  }
+  const today = now.toISOString().slice(0, 10);
+  if (result.data.card.lastUpdated > today) {
+    throw new Error(
+      `Invalid card rule at ${sourceName}:\n` +
+        `  card.lastUpdated: future date ${result.data.card.lastUpdated} ` +
+        `is after ${today}`,
+    );
   }
   return result.data;
 }
@@ -190,7 +208,7 @@ export function buildIdentityFreeWebCatalogArtifacts(
       cards: CardRuleSet[];
     }
   >();
-  const optimizer: CardRuleSet[] = [];
+  const allCards: CardRuleSet[] = [];
 
   for (const issuer of sortedIssuers) {
     const cards = [...issuer.cards].sort((a, b) =>
@@ -201,9 +219,10 @@ export function buildIdentityFreeWebCatalogArtifacts(
       issuer: metadata,
       cards,
     });
-    optimizer.push(...cards);
+    allCards.push(...cards);
   }
-  optimizer.sort((a, b) => compareAscii(a.card.id, b.card.id));
+  allCards.sort((a, b) => compareAscii(a.card.id, b.card.id));
+  const optimizer = allCards.filter(isRecommendationEligibleCard);
 
   return {
     summary: {
@@ -215,13 +234,14 @@ export function buildIdentityFreeWebCatalogArtifacts(
         categories: [...meta.categories],
       },
       issuers: issuerMetadata,
-      cards: optimizer.map((rule) => ({
+      cards: allCards.map((rule) => ({
         id: rule.card.id,
         issuer: rule.card.issuer,
         name: rule.card.name,
         nameKo: rule.card.nameKo,
         type: rule.card.type,
         annualFee: rule.card.annualFee,
+        discontinued: rule.card.discontinued ?? false,
         rewardCategories: [
           ...new Set(
             rule.rewards

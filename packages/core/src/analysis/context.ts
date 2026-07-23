@@ -34,6 +34,20 @@ export interface AnalysisContext<T extends DatedAmount> {
   monthlyBreakdown: MonthlyBreakdown[];
 }
 
+export function sumMonthlySpending(
+  breakdown: readonly Pick<MonthlyBreakdown, 'spending'>[],
+): number {
+  return breakdown.reduce(
+    (total, { spending }) =>
+      addSafeNonnegativeIntegers(
+        total,
+        spending,
+        'total spending across months',
+      ),
+    0,
+  );
+}
+
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const YEAR_MONTH_PATTERN = /^(\d{4})-(\d{2})$/;
 
@@ -148,6 +162,9 @@ export function buildAnalysisContext<T extends DatedAmount>(
   const monthlyBreakdown = [...monthly]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([month, values]) => ({ month, ...values }));
+  // Individually safe month buckets can still overflow when combined by the
+  // multi-month dashboard.
+  sumMonthlySpending(monthlyBreakdown);
 
   return {
     validTransactions,

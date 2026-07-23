@@ -27,6 +27,7 @@ export interface CardSummary {
   nameKo: string;
   type: CardRuleSet['card']['type'];
   annualFee: { domestic: number; international: number };
+  discontinued: boolean;
   rewardCategories: string[];
   url?: string;
   lastUpdated?: string;
@@ -66,6 +67,7 @@ export interface CardSummaryArtifactEntry {
   nameKo: string;
   type: CardRuleSet['card']['type'];
   annualFee: { domestic: number; international: number };
+  discontinued: boolean;
   rewardCategories: string[];
 }
 
@@ -194,6 +196,7 @@ export function readCardsSummaryArtifact(value: unknown): CardsSummaryArtifact {
       !isNonEmptyString(rawCard.nameKo) ||
       !isCardType(rawCard.type) ||
       !isAnnualFee(rawCard.annualFee) ||
+      typeof rawCard.discontinued !== 'boolean' ||
       !Array.isArray(rawCard.rewardCategories) ||
       !rawCard.rewardCategories.every(isNonEmptyString)
     ) {

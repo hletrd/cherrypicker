@@ -361,13 +361,13 @@ describe('greedyOptimize - edge cases', () => {
     expect(result.bestSingleCard.cardId).toBe('shinhan-mr-life');
   });
 
-  test('tied zero rewards retain the first card identity', () => {
+  test('tied rewards use the ASCII card ID regardless of input order', () => {
     const first = structuredClone(mrLife);
     const second = structuredClone(mrLife);
-    first.card.id = 'zero-first';
-    first.card.nameKo = '첫 번째';
-    second.card.id = 'zero-second';
-    second.card.nameKo = '두 번째';
+    first.card.id = 'zero-z';
+    first.card.nameKo = 'Z 카드';
+    second.card.id = 'zero-a';
+    second.card.nameKo = 'A 카드';
     const constraints = makeConstraints(
       [makeTx('t1', 'entertainment', 50_000)],
       new Map([
@@ -379,10 +379,60 @@ describe('greedyOptimize - edge cases', () => {
     const result = greedyOptimize(constraints, [first, second]);
     expect(result.totalReward).toBe(0);
     expect(result.bestSingleCard).toEqual({
-      cardId: first.card.id,
-      cardName: first.card.nameKo,
+      cardId: second.card.id,
+      cardName: second.card.nameKo,
       totalReward: 0,
     });
+    expect(result.assignments[0]?.assignedCardId).toBe(second.card.id);
+    expect(result.assignments[0]?.alternatives[0]?.cardId).toBe(first.card.id);
+    expect(greedyOptimize(constraints, [second, first])).toEqual(result);
+  });
+
+  test('discontinued cards cannot enter recommendation results', () => {
+    const discontinued = structuredClone(simplePlan);
+    discontinued.card.id = 'a-discontinued';
+    discontinued.card.discontinued = true;
+    discontinued.rewards[0]!.tiers[0]!.rate = 100;
+    discontinued.rewards[0]!.tiers[0]!.value = {
+      kind: 'percentage',
+      amount: 100,
+    };
+    const constraints = makeConstraints(
+      [makeTx('t1', 'uncategorized', 10_000)],
+      new Map([
+        [discontinued.card.id, Number.NaN],
+        [simplePlan.card.id, 0],
+      ]),
+    );
+
+    const result = greedyOptimize(
+      constraints,
+      [discontinued, simplePlan],
+    );
+
+    expect(result.assignments[0]?.assignedCardId).toBe(simplePlan.card.id);
+    expect(result.bestSingleCard.cardId).toBe(simplePlan.card.id);
+    expect(result.cardResults.map((card) => card.cardId)).not.toContain(
+      discontinued.card.id,
+    );
+    expect(
+      result.assignments.flatMap((assignment) =>
+        assignment.alternatives.map((alternative) => alternative.cardId)
+      ),
+    ).not.toContain(discontinued.card.id);
+  });
+
+  test('rejects a catalog containing only discontinued cards', () => {
+    const discontinued = structuredClone(simplePlan);
+    discontinued.card.discontinued = true;
+    const constraints = makeConstraints(
+      [makeTx('t1', 'uncategorized', 10_000)],
+      new Map([[discontinued.card.id, 0]]),
+    );
+
+    expect(() => greedyOptimize(constraints, [discontinued])).toThrow(
+      /recommendation-eligible card/,
+    );
   });
 
   test('rejects an empty card catalog', () => {

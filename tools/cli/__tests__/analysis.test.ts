@@ -213,6 +213,98 @@ describe('CLI typed fact propagation', () => {
     expect(result.totalSpending).toBe(10_000);
     expect(result.totalReward).toBe(500);
   });
+
+  test('does not let an unresolved previous-month category unlock a tier', () => {
+    const card: CardRuleSet = {
+      ...cappedCard(null, null),
+      card: {
+        ...cappedCard(null, null).card,
+        id: 'category-trust-card',
+      },
+      performanceTiers: [
+        {
+          id: 'tier0',
+          label: '30만원 미만',
+          minSpending: 0,
+          maxSpending: 299_999,
+        },
+        {
+          id: 'tier1',
+          label: '30만원 이상',
+          minSpending: 300_000,
+          maxSpending: null,
+        },
+      ],
+      performanceExclusions: ['insurance'],
+      rewards: [{
+        ...cappedCard(null, null).rewards[0]!,
+        category: 'dining',
+        tiers: [
+          {
+            performanceTier: 'tier0',
+            rate: 0,
+            fixedAmount: null,
+            unit: null,
+            value: { kind: 'percentage', amount: 0 },
+            monthlyCap: null,
+            perTransactionCap: null,
+            annualCap: null,
+          },
+          {
+            performanceTier: 'tier1',
+            rate: 5,
+            fixedAmount: null,
+            unit: null,
+            value: { kind: 'percentage', amount: 5 },
+            monthlyCap: null,
+            perTransactionCap: null,
+            annualCap: null,
+          },
+        ],
+      }],
+    };
+    const categorized = categorizeRawTransactions(
+      [
+        {
+          date: '2026-02-10',
+          merchant: 'CURRENT',
+          amount: 10_000,
+        },
+        {
+          date: '2026-01-20',
+          merchant: 'UNKNOWN PREVIOUS',
+          amount: 300_000,
+        },
+      ],
+      {
+        match: (merchant) => merchant.startsWith('UNKNOWN')
+          ? { category: 'uncategorized', confidence: 0 }
+          : { category: 'dining', confidence: 1 },
+      },
+    );
+    const prepared = prepareCliAnalysis(categorized, [card]);
+    const result = optimize(
+      buildConstraints(
+        prepared.context.latestTransactions,
+        prepared.cardPreviousSpending,
+        labels,
+      ),
+      [card],
+    );
+
+    expect(categorized[1]).toMatchObject({
+      category: 'uncategorized',
+      confidence: 0,
+    });
+    expect(prepared.cardPreviousSpending.get(card.card.id)).toBe(0);
+    expect(prepared.performanceIssues).toEqual([
+      expect.objectContaining({
+        cardId: card.card.id,
+        reason: 'missing_performance_exclusion_fact',
+      }),
+    ]);
+    expect(result.totalReward).toBe(0);
+  });
 });
 
 describe('CLI calendar-scoped optimization', () => {

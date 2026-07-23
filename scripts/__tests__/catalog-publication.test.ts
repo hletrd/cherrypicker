@@ -73,6 +73,32 @@ describe('catalog publication boundary', () => {
     },
   );
 
+  test('rejects a future lastUpdated value against an injected publication clock', () => {
+    const raw = cardWithUrl('https://example.com/card');
+    raw.card.lastUpdated = '2026-07-24';
+
+    expect(() =>
+      parsePublicationCard(
+        raw,
+        'future.yaml',
+        () => new Date('2026-07-23T23:59:59.999Z'),
+      ),
+    ).toThrow(/future date 2026-07-24 is after 2026-07-23/);
+  });
+
+  test('accepts a leap-day lastUpdated value at the injected publication date', () => {
+    const raw = cardWithUrl('https://example.com/card');
+    raw.card.lastUpdated = '2024-02-29';
+
+    expect(
+      parsePublicationCard(
+        raw,
+        'leap-day.yaml',
+        () => new Date('2024-02-29T00:00:00.000Z'),
+      ).card.lastUpdated,
+    ).toBe('2024-02-29');
+  });
+
   test('keeps explicitly unsupported benefits out of ranking indexes', () => {
     const supported = parsePublicationCard(
       cardWithUrl('https://example.com/card'),
@@ -209,6 +235,59 @@ describe('catalog publication boundary', () => {
       status: 'unsupported',
       reason: 'unverified_merchant_scope',
     });
+  });
+
+  test('keeps discontinued availability in summaries and details but not recommendations', () => {
+    const active = parsePublicationCard(
+      cardWithUrl('https://example.com/active'),
+      'active.yaml',
+    );
+    const discontinued = parsePublicationCard(
+      {
+        ...cardWithUrl('https://example.com/discontinued'),
+        card: {
+          ...cardWithUrl('https://example.com/discontinued').card,
+          id: 'fixture-z-discontinued-card',
+          discontinued: true,
+        },
+      },
+      'discontinued.yaml',
+    );
+    const artifacts = buildWebCatalogArtifacts(
+      {
+        version: '1.0.0',
+        generatedAt: '2026-07-23T00:00:00.000Z',
+        totalIssuers: 1,
+        totalCards: 2,
+        categories: ['*'],
+      },
+      [{
+        id: 'fixture',
+        nameKo: '픽스처',
+        nameEn: 'Fixture',
+        website: 'https://example.com',
+        cardCount: 2,
+        cards: [discontinued, active],
+      }],
+      [{ id: '*' }],
+    );
+
+    expect(artifacts.summary.cards).toEqual([
+      expect.objectContaining({
+        id: active.card.id,
+        discontinued: false,
+      }),
+      expect.objectContaining({
+        id: discontinued.card.id,
+        discontinued: true,
+      }),
+    ]);
+    expect(artifacts.optimizer.cards.map((card) => card.card.id)).toEqual([
+      active.card.id,
+    ]);
+    expect(
+      artifacts.detailShards.get('fixture')?.cards.map((card) => card.card.id),
+    ).toEqual([active.card.id, discontinued.card.id]);
   });
 
   test('builds byte-stable sorted browser projections', () => {

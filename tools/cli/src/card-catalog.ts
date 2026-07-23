@@ -1,10 +1,13 @@
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import {
+  CategoryRegistry,
+  isRecommendationEligibleCard,
   loadAllCardRules,
   loadOptimizerCatalogArtifact,
+  validateCardCatalog,
 } from '@cherrypicker/rules';
-import type { CardRuleSet } from '@cherrypicker/rules';
+import type { CardRuleSet, CategoryNode } from '@cherrypicker/rules';
 
 export const DEFAULT_OPTIMIZER_CATALOG_PATH = resolve(
   fileURLToPath(new URL('../../..', import.meta.url)),
@@ -26,6 +29,7 @@ export type LoadedCliCardCatalog =
 
 export async function loadCliCardCatalog(
   authoringCardsDirectory?: string,
+  authoringCategories?: readonly CategoryNode[],
 ): Promise<LoadedCliCardCatalog> {
   if (authoringCardsDirectory !== undefined) {
     const cards = await loadAllCardRules(authoringCardsDirectory);
@@ -34,9 +38,22 @@ export async function loadCliCardCatalog(
         '카드 규칙 파일을 찾을 수 없습니다. --cards 옵션으로 규칙 디렉토리를 지정하세요.',
       );
     }
+    if (!authoringCategories) {
+      throw new Error(
+        '작성용 카드 규칙의 의미를 검증하려면 카테고리 데이터가 필요합니다.',
+      );
+    }
+    validateCardCatalog(
+      cards,
+      new CategoryRegistry([...authoringCategories]),
+    );
+    const eligibleCards = cards.filter(isRecommendationEligibleCard);
+    if (eligibleCards.length === 0) {
+      throw new Error('추천 가능한 카드 규칙을 찾을 수 없습니다.');
+    }
     return {
       mode: 'authoring',
-      cards,
+      cards: eligibleCards,
       path: authoringCardsDirectory,
     };
   }
@@ -44,9 +61,13 @@ export async function loadCliCardCatalog(
   const artifact = await loadOptimizerCatalogArtifact(
     DEFAULT_OPTIMIZER_CATALOG_PATH,
   );
+  const eligibleCards = artifact.cards.filter(isRecommendationEligibleCard);
+  if (eligibleCards.length === 0) {
+    throw new Error('추천 가능한 카드 규칙을 찾을 수 없습니다.');
+  }
   return {
     mode: 'compiled',
-    cards: artifact.cards,
+    cards: eligibleCards,
     sourceHash: artifact.sourceHash,
     path: DEFAULT_OPTIMIZER_CATALOG_PATH,
   };

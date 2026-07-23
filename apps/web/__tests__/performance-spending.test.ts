@@ -2,6 +2,35 @@ import { describe, expect, test } from 'bun:test';
 import { calculatePerformanceSpending } from '../src/lib/performance-spending.js';
 
 describe('performance spending exclusions', () => {
+  test('fails closed for confidence-zero uncategorized previous spending', () => {
+    const result = calculatePerformanceSpending(
+      [{
+        amount: 300_000,
+        category: 'uncategorized',
+        confidence: 0,
+      }],
+      ['insurance'],
+    );
+
+    expect(result).toEqual({
+      amount: 0,
+      unknownExclusions: ['insurance'],
+    });
+  });
+
+  test('accepts a user-confirmed category as trusted', () => {
+    const result = calculatePerformanceSpending(
+      [{
+        amount: 300_000,
+        category: 'dining',
+        confidence: 1,
+      }],
+      ['insurance'],
+    );
+
+    expect(result).toEqual({ amount: 300_000, unknownExclusions: [] });
+  });
+
   test('applies canonical category and child-category exclusions', () => {
     const result = calculatePerformanceSpending(
       [

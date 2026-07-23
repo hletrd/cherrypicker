@@ -276,6 +276,50 @@ describe('catalog semantic validation', () => {
     ).toBe(false);
   });
 
+  test('positive annual caps require an explicitly unsupported rule', () => {
+    const simplePlan = cards.find(
+      (card) => card.card.id === 'shinhan-simple-plan',
+    )!;
+    const annualCapCard = structuredClone(simplePlan);
+    annualCapCard.rewards[0]!.tiers[0]!.annualCap = 1_000;
+
+    expect(
+      collectCardRuleIssues(annualCapCard, registry),
+    ).toContainEqual(
+      expect.objectContaining({
+        code: 'unmodeled_annual_cap',
+        path: 'rewards.0.tiers.0.annualCap',
+      }),
+    );
+    expect(() => validateCardRuleSet(annualCapCard, registry)).toThrow(
+      /positive annualCap/,
+    );
+
+    annualCapCard.rewards[0]!.support = {
+      status: 'unsupported',
+      reason: 'year-to-date reward usage is not available',
+    };
+    expect(
+      collectCardRuleIssues(annualCapCard, registry)
+        .some((issue) => issue.code === 'unmodeled_annual_cap'),
+    ).toBe(false);
+  });
+
+  test('preserves the tracked explicitly unsupported annual-cap rule', () => {
+    const tracked = cards.find(
+      (card) => card.card.id === 'hyundai-three-body-a',
+    )!;
+    const annualCapRule = tracked.rewards.find((rule) =>
+      rule.tiers.some((tier) => (tier.annualCap ?? 0) > 0)
+    );
+
+    expect(annualCapRule?.support.status).toBe('unsupported');
+    expect(
+      collectCardRuleIssues(tracked, registry)
+        .some((issue) => issue.code === 'unmodeled_annual_cap'),
+    ).toBe(false);
+  });
+
   test('Samsung mileage rules fail closed until a valuation contract exists', () => {
     const samsungMileage = cards.find(
       (card) => card.card.id === 'samsung-and-mileage-platinum',

@@ -14,6 +14,7 @@ export interface PerformanceSpendingTransaction {
   amount: number;
   category: string;
   subcategory?: string;
+  confidence?: number;
   paymentType?: 'domestic' | 'overseas';
   performanceExclusionTags?: PerformanceExclusionId[];
 }
@@ -29,8 +30,8 @@ export interface CardPreviousSpendingResult {
 }
 
 /**
- * Calculate eligible statement spending. Missing non-category facts fail
- * closed so an unknown exclusion can never qualify a higher performance tier.
+ * Calculate eligible statement spending. Missing or untrusted exclusion facts
+ * fail closed so an unknown exclusion can never qualify a higher tier.
  */
 export function calculatePerformanceSpending(
   transactions: readonly PerformanceSpendingTransaction[],

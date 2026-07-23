@@ -1,5 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import { readFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import {
+  loadCardRule,
+  loadCategories,
+} from '@cherrypicker/rules';
 import {
   DEFAULT_OPTIMIZER_CATALOG_PATH,
   authoringCatalogDisclosure,
@@ -29,6 +41,81 @@ describe('compiled CLI card catalog', () => {
     ).toBe(true);
     expect(cliCatalog.sourceHash).toBe(webCatalog.sourceHash);
     expect(cliCatalog.cards).toEqual(webCatalog.cards);
+    expect(
+      cliCatalog.cards.some((card) => card.card.discontinued === true),
+    ).toBe(false);
+  });
+
+  test('sorts custom rules by card ID and excludes discontinued cards', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'cli-catalog-order-'));
+    try {
+      const dataDir = resolve(import.meta.dir, '../../../packages/rules/data');
+      const [base, categories] = await Promise.all([
+        loadCardRule(join(dataDir, 'cards/shinhan/simple-plan.yaml')),
+        loadCategories(join(dataDir, 'categories.yaml')),
+      ]);
+      const zCard = structuredClone(base);
+      zCard.card.id = 'fixture-z-card';
+      const aCard = structuredClone(base);
+      aCard.card.id = 'fixture-a-card';
+      const discontinued = structuredClone(base);
+      discontinued.card.id = 'fixture-m-discontinued';
+      discontinued.card.discontinued = true;
+
+      for (const [subdirectory, card] of [
+        ['z-first-created', zCard],
+        ['a-second-created', aCard],
+        ['m-third-created', discontinued],
+      ] as const) {
+        const targetDirectory = join(directory, subdirectory);
+        await mkdir(targetDirectory);
+        await writeFile(
+          join(targetDirectory, 'card.yaml'),
+          JSON.stringify(card),
+        );
+      }
+
+      const catalog = await loadCliCardCatalog(directory, categories);
+      expect(catalog.mode).toBe('authoring');
+      expect(catalog.cards.map((card) => card.card.id)).toEqual([
+        'fixture-a-card',
+        'fixture-z-card',
+      ]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('semantically rejects supported annual caps in custom catalogs', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'cli-annual-cap-'));
+    try {
+      const dataDir = resolve(import.meta.dir, '../../../packages/rules/data');
+      const [base, categories] = await Promise.all([
+        loadCardRule(join(dataDir, 'cards/shinhan/simple-plan.yaml')),
+        loadCategories(join(dataDir, 'categories.yaml')),
+      ]);
+      base.card.id = 'fixture-annual-cap';
+      base.rewards[0]!.tiers[0]!.annualCap = 1_000;
+      const file = join(directory, 'annual-cap.yaml');
+      await writeFile(file, JSON.stringify(base));
+
+      await expect(
+        loadCliCardCatalog(directory, categories),
+      ).rejects.toThrow(/positive annualCap/);
+
+      base.rewards[0]!.support = {
+        status: 'unsupported',
+        reason: 'year-to-date reward usage is not available',
+      };
+      await writeFile(file, JSON.stringify(base));
+      const catalog = await loadCliCardCatalog(directory, categories);
+      expect(catalog.cards).toHaveLength(1);
+      expect(
+        catalog.cards[0]?.rewards[0]?.support.status,
+      ).toBe('unsupported');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   test('authoring override disclosure remains terminal-safe', () => {

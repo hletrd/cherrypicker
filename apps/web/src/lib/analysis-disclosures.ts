@@ -1,6 +1,9 @@
 import type { PreviousSpendingBasis } from './analysis-context.js';
 import { formatWon } from './formatters.js';
 
+export const GROSS_MONTHLY_REWARD_DISCLOSURE =
+  '추천 결과는 포함된 모든 카드를 사용할 수 있다고 가정한 월간 총혜택이며, 연회비는 차감하지 않았어요.';
+
 export interface PreviousSpendingDisclosure {
   kind: PreviousSpendingBasis['kind'];
   tone: 'neutral' | 'warning';

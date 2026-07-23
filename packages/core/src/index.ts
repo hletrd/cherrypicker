@@ -28,6 +28,7 @@ export {
   isValidIsoDate,
   isYearMonth,
   previousCalendarMonth,
+  sumMonthlySpending,
   yearMonthOfDate,
 } from './analysis/context.js';
 export type {

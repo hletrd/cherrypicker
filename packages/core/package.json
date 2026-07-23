@@ -4,6 +4,13 @@
   "private": true,
   "type": "module",
   "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./analysis/context": "./src/analysis/context.ts",
+    "./analysis/performance": "./src/analysis/performance.ts",
+    "./categorizer/matcher": "./src/categorizer/matcher.ts",
+    "./optimizer": "./src/optimizer/index.ts"
+  },
   "scripts": {
     "build": "tsc",
     "test": "bun test",

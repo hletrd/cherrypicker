@@ -1,9 +1,9 @@
 export {
   calculatePerformanceSpending,
   resolveCardPreviousSpending,
-} from '@cherrypicker/core';
+} from '@cherrypicker/core/analysis/performance';
 export type {
   CardPreviousSpendingResult,
   PerformanceSpendingResult,
   PerformanceSpendingTransaction,
-} from '@cherrypicker/core';
+} from '@cherrypicker/core/analysis/performance';

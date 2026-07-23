@@ -42,6 +42,11 @@ export type PerformanceExclusionDescriptor =
 export interface PerformanceExclusionFacts {
   category: string;
   subcategory?: string;
+  /**
+   * Categorizer confidence. Omitted values preserve compatibility for trusted
+   * direct callers; zero identifies an unresolved categorization.
+   */
+  confidence?: number;
   paymentType?: 'domestic' | 'overseas';
   performanceExclusionTags?: readonly PerformanceExclusionId[];
 }
@@ -111,6 +116,9 @@ export function evaluatePerformanceExclusion(
 ): PerformanceExclusionOutcome {
   const descriptor = PERFORMANCE_EXCLUSION_CONTRACT[exclusion];
   if (descriptor.kind === 'category') {
+    if (facts.category === 'uncategorized' || facts.confidence === 0) {
+      return 'unknown';
+    }
     if (facts.category !== descriptor.category) return 'included';
     if (
       descriptor.subcategory !== undefined &&

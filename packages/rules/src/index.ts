@@ -25,6 +25,7 @@ export {
   rewardConditionsSchema,
   rewardSupportSchema,
   rewardRuleSchema,
+  isoCalendarDateSchema,
   cardMetaSchema,
   globalConstraintsSchema,
   cardRuleSetSchema,
@@ -108,3 +109,7 @@ export {
   sharedPerformanceTiers,
 } from './rule-semantics.js';
 export type { UnmodeledRestrictionReason } from './rule-semantics.js';
+
+export {
+  isRecommendationEligibleCard,
+} from './card-availability.js';

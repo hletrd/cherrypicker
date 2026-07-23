@@ -2,6 +2,7 @@ import {
   cardRuleSetSchema,
   categoriesFileSchema,
   CategoryRegistry,
+  isRecommendationEligibleCard,
 } from '@cherrypicker/rules/browser';
 import type {
   CardRuleSet,
@@ -116,9 +117,13 @@ export function readOptimizerCatalog(
   if (!isRecord(value)) {
     throw new Error('카드 혜택 데이터 형식이 올바르지 않아요');
   }
+  const cards = readCardRuleArray(value.cards, '카드 혜택 데이터');
+  if (cards.some((card) => !isRecommendationEligibleCard(card))) {
+    throw new Error('카드 혜택 데이터에 단종 카드가 포함되어 있어요');
+  }
   return {
     sourceHash: readCatalogSourceHash(value, '카드 혜택 데이터'),
-    cards: readCardRuleArray(value.cards, '카드 혜택 데이터'),
+    cards,
   };
 }
 

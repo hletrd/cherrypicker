@@ -1,10 +1,11 @@
-import {
-  MerchantMatcher,
-  buildConstraints,
-  resolveCardPreviousSpending,
-} from '@cherrypicker/core';
+import { MerchantMatcher } from '@cherrypicker/core/categorizer/matcher';
+import { buildConstraints } from '@cherrypicker/core/optimizer';
+import { resolveCardPreviousSpending } from '@cherrypicker/core/analysis/performance';
 import type { CategorizedTransaction } from '@cherrypicker/core';
-import type { PerformanceExclusionId } from '@cherrypicker/rules/browser';
+import {
+  isRecommendationEligibleCard,
+  type PerformanceExclusionId,
+} from '@cherrypicker/rules/browser';
 import { isValidFuelVolumeLiters } from '@cherrypicker/parser/browser';
 import { parseFile } from './parser/index.js';
 import type { RawTransaction } from './parser/types.js';
@@ -213,6 +214,7 @@ export async function optimizeFromTransactions(
   // Its loader validates and caches the original JSON object graph once.
   let coreRules = await loadOptimizerCatalog(execution?.run.signal);
   assertExecutionCurrent(execution);
+  coreRules = coreRules.filter(isRecommendationEligibleCard);
   assertCatalogAvailable(coreRules.length);
 
   // Apply cardIds filter AFTER cache retrieval to avoid returning stale

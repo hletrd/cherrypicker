@@ -1,5 +1,8 @@
 import { describe, test, expect } from 'bun:test';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'path';
+import { stringify } from 'yaml';
 import {
   cardRuleSetSchema,
   categoriesFileSchema,
@@ -205,6 +208,27 @@ describe('cardRuleSetSchema - invalid data', () => {
     expect(result.success).toBe(false);
   });
 
+  test.each([
+    '2026-02-29',
+    '2026-04-31',
+    '2026-13-01',
+    '2026-00-10',
+  ])('rejects impossible lastUpdated calendar date %s', (lastUpdated) => {
+    const bad = {
+      ...validCardRuleSet,
+      card: { ...validCardRuleSet.card, lastUpdated },
+    };
+    expect(cardRuleSetSchema.safeParse(bad).success).toBe(false);
+  });
+
+  test('accepts a real leap-day lastUpdated value', () => {
+    const leapDay = {
+      ...validCardRuleSet,
+      card: { ...validCardRuleSet.card, lastUpdated: '2024-02-29' },
+    };
+    expect(cardRuleSetSchema.safeParse(leapDay).success).toBe(true);
+  });
+
   test('rejects empty rewards array', () => {
     const bad = { ...validCardRuleSet, rewards: [] };
     const result = cardRuleSetSchema.safeParse(bad);
@@ -406,6 +430,39 @@ describe('loadCardRule', () => {
 });
 
 describe('loadAllCardRules', () => {
+  test('returns nested authoring rules in ASCII card ID order', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'rules-order-'));
+    try {
+      const firstCreatedDirectory = join(directory, 'a-first-created');
+      const secondCreatedDirectory = join(directory, 'z-second-created');
+      await mkdir(firstCreatedDirectory);
+      await mkdir(secondCreatedDirectory);
+
+      const zCard = structuredClone(validCardRuleSet);
+      zCard.card.id = 'fixture-z-card';
+      const aCard = structuredClone(validCardRuleSet);
+      aCard.card.id = 'fixture-a-card';
+
+      // Creation and path order intentionally disagree with card ID order.
+      await writeFile(
+        join(firstCreatedDirectory, 'first.yaml'),
+        stringify(zCard),
+      );
+      await writeFile(
+        join(secondCreatedDirectory, 'second.yaml'),
+        stringify(aCard),
+      );
+
+      const rules = await loadAllCardRules(directory);
+      expect(rules.map((rule) => rule.card.id)).toEqual([
+        'fixture-a-card',
+        'fixture-z-card',
+      ]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   test('loads the full supported dataset from data/cards', async () => {
     const rules = await loadAllCardRules(cardsDir);
     expect(rules.length).toBeGreaterThan(650);

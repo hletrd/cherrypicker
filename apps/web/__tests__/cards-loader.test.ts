@@ -121,6 +121,7 @@ function summaryArtifact(
         nameKo: '신한 테스트',
         type: 'credit',
         annualFee: { domestic: 10_000, international: 12_000 },
+        discontinued: false,
         rewardCategories: ['dining'],
       },
       {
@@ -130,6 +131,7 @@ function summaryArtifact(
         nameKo: 'KB 테스트',
         type: 'credit',
         annualFee: { domestic: 10_000, international: 12_000 },
+        discontinued: false,
         rewardCategories: ['dining'],
       },
     ],
@@ -290,11 +292,26 @@ describe('generated catalog readers', () => {
     expect(optimizer.sourceHash).toBe(summary.meta.sourceHash);
     expect(categories.sourceHash).toBe(summary.meta.sourceHash);
     expect(categories.categories.length).toBeGreaterThan(0);
-    expect(optimizer.cards).toHaveLength(summary.meta.totalCards);
+    const recommendationIds = new Set(
+      summary.cards
+        .filter((card) => !card.discontinued)
+        .map((card) => card.id),
+    );
+    expect(optimizer.cards).toHaveLength(recommendationIds.size);
     expect(detailCount).toBe(summary.meta.totalCards);
     expect(detailIds).toEqual(
-      new Set(optimizer.cards.map((card) => card.card.id)),
+      new Set(summary.cards.map((card) => card.id)),
     );
+    expect(
+      new Set(optimizer.cards.map((card) => card.card.id)),
+    ).toEqual(recommendationIds);
+
+    const discontinued = summary.cards.find(
+      (card) => card.id === 'bc-goat',
+    );
+    expect(discontinued?.discontinued).toBe(true);
+    expect(detailIds.has('bc-goat')).toBe(true);
+    expect(recommendationIds.has('bc-goat')).toBe(false);
   });
 
   test('returns normalized optimizer data that produces finite rewards', () => {
@@ -365,6 +382,16 @@ describe('generated catalog readers', () => {
     })).toThrow(
       '카드 혜택 데이터[0]',
     );
+    expect(() => readOptimizerCatalog({
+      sourceHash: SOURCE_HASH_A,
+      cards: [{
+        ...shinhanRule,
+        card: {
+          ...shinhanRule.card,
+          discontinued: true,
+        },
+      }],
+    })).toThrow('단종 카드');
     expect(() =>
       readCardDetailShard(detailShard(shinhanRule), 'kb'),
     ).toThrow('카드사 정보가 일치');

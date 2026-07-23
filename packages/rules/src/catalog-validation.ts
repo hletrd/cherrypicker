@@ -26,6 +26,7 @@ export type CatalogIssueCode =
   | 'unverified_merchant_scope'
   | 'unmodeled_reward_value'
   | 'unexecutable_reward_tier'
+  | 'unmodeled_annual_cap'
   | 'unmodeled_global_constraints'
   | 'unreachable_merchant'
   | 'missing_rule_contract'
@@ -251,6 +252,19 @@ export function collectCardRuleIssues(
           message:
             `supported reward tier uses unit "${String(tier.unit)}" in a ` +
             'shape the calculator cannot execute',
+        });
+      }
+      if (
+        rule.support?.status === 'supported' &&
+        (tier.annualCap ?? 0) > 0
+      ) {
+        issues.push({
+          code: 'unmodeled_annual_cap',
+          cardId,
+          path: `${path}.tiers.${tierIndex}.annualCap`,
+          message:
+            'supported reward tier has a positive annualCap, but the ' +
+            'calculator has no trusted year-to-date usage facts',
         });
       }
     });

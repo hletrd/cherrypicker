@@ -1,4 +1,7 @@
-import type { CardRuleSet } from '@cherrypicker/rules';
+import {
+  isRecommendationEligibleCard,
+  type CardRuleSet,
+} from '@cherrypicker/rules/browser';
 import type { CategorizedTransaction } from '../models/transaction.js';
 import type {
   OptimizationResult,
@@ -38,6 +41,10 @@ interface TxAssignment {
   reward: number;
   rate: number;
   alternatives: CardScore[];
+}
+
+function compareAscii(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function getCardName(rule: CardRuleSet): string {
@@ -103,7 +110,9 @@ function scoreCardsForTransaction(
   }
 
   return {
-    scores: scores.sort((a, b) => b.reward - a.reward),
+    scores: scores.sort(
+      (a, b) => b.reward - a.reward || compareAscii(a.cardId, b.cardId),
+    ),
     unsupportedRules,
   };
 }
@@ -192,7 +201,9 @@ function buildAssignments(txAssignments: TxAssignment[], categoryLabels: Map<str
         reward: value.reward,
         rate: assignment.spending > 0 ? value.reward / assignment.spending : 0,
       }))
-      .sort((a, b) => b.reward - a.reward)
+      .sort(
+        (a, b) => b.reward - a.reward || compareAscii(a.cardId, b.cardId),
+      )
       .slice(0, 5);
 
     assignment.alternatives = alternatives;
@@ -200,7 +211,12 @@ function buildAssignments(txAssignments: TxAssignment[], categoryLabels: Map<str
 
   // Reporting still stays category-based, but now reflects the real set of
   // transactions that ended up on each card instead of synthetic category totals.
-  return [...assignmentMap.values()].sort((a, b) => b.spending - a.spending);
+  return [...assignmentMap.values()].sort(
+    (a, b) =>
+      b.spending - a.spending ||
+      compareAscii(a.category, b.category) ||
+      compareAscii(a.assignedCardId, b.assignedCardId),
+  );
 }
 
 function buildCardResults(
@@ -259,6 +275,17 @@ export function greedyOptimize(
   if (cardRules.length === 0) {
     throw new Error('cardRules must contain at least one card');
   }
+  const eligibleCardRules = cardRules
+    .filter(isRecommendationEligibleCard)
+    .sort((left, right) => compareAscii(left.card.id, right.card.id));
+  if (eligibleCardRules.length === 0) {
+    throw new Error(
+      'cardRules must contain at least one recommendation-eligible card',
+    );
+  }
+  const eligibleCardIds = new Set(
+    eligibleCardRules.map((rule) => rule.card.id),
+  );
   for (const transaction of constraints.transactions) {
     if (
       !Number.isFinite(transaction.amount) ||
@@ -270,6 +297,7 @@ export function greedyOptimize(
     }
   }
   for (const card of constraints.cards) {
+    if (!eligibleCardIds.has(card.cardId)) continue;
     assertSafeNonnegativeInteger(
       card.previousMonthSpending,
       `previousMonthSpending for ${card.cardId}`,
@@ -280,7 +308,7 @@ export function greedyOptimize(
     constraints.cards.map((c) => [c.cardId, c.previousMonthSpending]),
   );
   const assignedTransactionsByCard = new Map<string, CategorizedTransaction[]>();
-  for (const rule of cardRules) {
+  for (const rule of eligibleCardRules) {
     assignedTransactionsByCard.set(rule.card.id, []);
   }
 
@@ -305,7 +333,7 @@ export function greedyOptimize(
   for (const transaction of sortedTransactions) {
     const scoring = scoreCardsForTransaction(
       transaction,
-      cardRules,
+      eligibleCardRules,
       cardPreviousSpending,
       assignedTransactionsByCard,
     );
@@ -336,7 +364,12 @@ export function greedyOptimize(
   }
 
   const assignments = buildAssignments(txAssignments, constraints.categoryLabels);
-  const cardResults = buildCardResults(cardRules, cardPreviousSpending, assignedTransactionsByCard, constraints.categoryLabels);
+  const cardResults = buildCardResults(
+    eligibleCardRules,
+    cardPreviousSpending,
+    assignedTransactionsByCard,
+    constraints.categoryLabels,
+  );
 
   const totalReward = cardResults.reduce(
     (sum, cardResult) => addSafeNonnegativeIntegers(
@@ -359,13 +392,17 @@ export function greedyOptimize(
   let bestSingleCard:
     | { cardId: string; cardName: string; totalReward: number }
     | undefined;
-  for (const rule of cardRules) {
+  for (const rule of eligibleCardRules) {
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
     const output = calculateCardOutput(sortedTransactions, previousMonthSpending, rule);
 
     if (
       bestSingleCard === undefined ||
-      output.totalReward > bestSingleCard.totalReward
+      output.totalReward > bestSingleCard.totalReward ||
+      (
+        output.totalReward === bestSingleCard.totalReward &&
+        compareAscii(rule.card.id, bestSingleCard.cardId) < 0
+      )
     ) {
       bestSingleCard = {
         cardId: rule.card.id,

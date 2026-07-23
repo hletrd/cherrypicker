@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { cardRuleSetSchema } from './schema.js';
+import { isRecommendationEligibleCard } from './card-availability.js';
 
 const PUBLICATION_ID_PATTERN = /^[a-f0-9]{64}$/;
 
@@ -23,6 +24,13 @@ export const optimizerCatalogArtifactSchema = z
         });
       }
       ids.add(card.card.id);
+      if (!isRecommendationEligibleCard(card)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['cards', index, 'card', 'discontinued'],
+          message: 'discontinued cards are not recommendation eligible',
+        });
+      }
     });
   });
 

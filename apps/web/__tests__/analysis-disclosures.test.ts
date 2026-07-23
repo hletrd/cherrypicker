@@ -2,8 +2,17 @@ import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import {
   describePreviousSpendingBasis,
+  GROSS_MONTHLY_REWARD_DISCLOSURE,
   summarizeUnsupportedRules,
 } from '../src/lib/analysis-disclosures.js';
+
+test('states the gross monthly reward and card-access assumptions', () => {
+  expect(GROSS_MONTHLY_REWARD_DISCLOSURE).toContain('월간 총혜택');
+  expect(GROSS_MONTHLY_REWARD_DISCLOSURE).toContain('연회비는 차감하지 않았어요');
+  expect(GROSS_MONTHLY_REWARD_DISCLOSURE).toContain(
+    '포함된 모든 카드를 사용할 수 있다고 가정',
+  );
+});
 
 describe('previous-spending provenance disclosure', () => {
   test('describes an explicit user total without inventing a statement month', () => {
@@ -184,5 +193,38 @@ describe('analysis disclosure production wiring', () => {
     expect(reportSource).toContain(
       'data-testid="report-unsupported-rules-summary"',
     );
+    expect(reportSource).toContain('GROSS_MONTHLY_REWARD_DISCLOSURE');
+    expect(reportSource).not.toContain('추가 절약');
+  });
+
+  test('labels dashboard and report recommendation amounts as gross monthly rewards', async () => {
+    const [comparisonSource, reportSource] = await Promise.all([
+      readFile(
+        new URL(
+          '../src/components/dashboard/SavingsComparison.svelte',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+      readFile(
+        new URL(
+          '../src/components/report/ReportContent.svelte',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    ]);
+
+    for (const source of [comparisonSource, reportSource]) {
+      expect(source).toContain('GROSS_MONTHLY_REWARD_DISCLOSURE');
+      expect(source).toContain('연회비 차감 전');
+      expect(source).toContain('월간 총혜택');
+      expect(source).not.toContain('추가 절약');
+      expect(source).not.toContain('추가 비용');
+    }
+    expect(comparisonSource).not.toContain('연간 약');
+    expect(comparisonSource).toContain('print:hidden');
+    expect(comparisonSource).toContain('class:hidden={!showBreakdown}');
+    expect(comparisonSource).toContain('print:block');
   });
 });

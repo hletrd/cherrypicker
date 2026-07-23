@@ -4,6 +4,10 @@ import { parse } from 'yaml';
 import { cardRuleSetSchema, categoriesFileSchema, issuersFileSchema } from './schema.js';
 import type { CardRuleSet, CategoryNode, IssuerMeta } from './types.js';
 
+function compareAscii(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 export async function loadCardRule(filePath: string): Promise<CardRuleSet> {
   const content = await readFile(filePath, 'utf-8');
   const raw = parse(content) as unknown;
@@ -30,7 +34,7 @@ async function collectYamlFiles(dir: string): Promise<string[]> {
 }
 
 export async function loadAllCardRules(baseDir: string): Promise<CardRuleSet[]> {
-  const yamlFiles = await collectYamlFiles(baseDir);
+  const yamlFiles = (await collectYamlFiles(baseDir)).sort(compareAscii);
   const settled = await Promise.allSettled(
     yamlFiles.map((filePath) => loadCardRule(filePath)),
   );
@@ -49,7 +53,9 @@ export async function loadAllCardRules(baseDir: string): Promise<CardRuleSet[]> 
       `Refusing to load a partial card catalog: ${failures.length} of ${yamlFiles.length} files failed`,
     );
   }
-  return results;
+  return results.sort((left, right) =>
+    compareAscii(left.card.id, right.card.id)
+  );
 }
 
 export async function loadCategories(filePath: string): Promise<CategoryNode[]> {

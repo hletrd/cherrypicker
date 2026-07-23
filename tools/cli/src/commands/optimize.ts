@@ -73,7 +73,7 @@ export async function runOptimize(args: string[]): Promise<void> {
     matcher,
   );
 
-  const cardCatalog = await loadCliCardCatalog(cardsDir);
+  const cardCatalog = await loadCliCardCatalog(cardsDir, categories);
   const authoringDisclosure = authoringCatalogDisclosure(cardCatalog);
   if (authoringDisclosure) {
     console.warn(sanitizeTerminalText(authoringDisclosure));

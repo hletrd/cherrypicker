@@ -9,6 +9,19 @@ export const cardTypeSchema = z.enum(['credit', 'check', 'prepaid']);
 const safeNonnegativeInteger = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const safeNonnegativeNumber = z.number().nonnegative().max(Number.MAX_SAFE_INTEGER);
 
+function isIsoCalendarDate(value: string): boolean {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
+}
+
+export const isoCalendarDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be ISO 8601 date (YYYY-MM-DD)')
+  .refine(isIsoCalendarDate, 'Must be a real ISO 8601 calendar date');
+
 export const performanceTierSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -241,7 +254,7 @@ export const cardMetaSchema = z.object({
     international: z.number().int().nonnegative(),
   }),
   url: safeExternalUrlSchema.optional(),
-  lastUpdated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be ISO 8601 date (YYYY-MM-DD)'),
+  lastUpdated: isoCalendarDateSchema,
   source: z.enum(['manual', 'llm-scrape', 'web']),
   discontinued: z.boolean().optional(),
 }).strict();

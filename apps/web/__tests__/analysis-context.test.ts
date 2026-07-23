@@ -81,4 +81,13 @@ describe('buildAnalysisContext', () => {
       { month: '2026-03', spending: 50_000, transactionCount: 1 },
     ]);
   });
+
+  test('fails before exposing an unsafe all-month dashboard total', () => {
+    expect(() =>
+      buildAnalysisContext([
+        tx('june', '2026-06-30', Number.MAX_SAFE_INTEGER),
+        tx('july', '2026-07-01', Number.MAX_SAFE_INTEGER),
+      ]),
+    ).toThrow(/total spending across months/);
+  });
 });
