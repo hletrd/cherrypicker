@@ -23,6 +23,9 @@ const cardCatalogModuleUrl = new URL(
   '../src/card-catalog.ts',
   import.meta.url,
 ).href;
+const rootPackage = await Bun.file(join(repositoryRoot, 'package.json')).json() as {
+  scripts: Record<string, string>;
+};
 const temporaryDirectories: string[] = [];
 const FRESH_PROCESS_RUNS = 3;
 // Shared CI hosts can add process-launch jitter. Peak RSS is the primary guard
@@ -39,6 +42,21 @@ interface CliResult {
 function runCli(args: readonly string[]): CliResult {
   const processResult = Bun.spawnSync({
     cmd: [process.execPath, cliEntry, ...args],
+    cwd: repositoryRoot,
+    env: { ...process.env, NO_COLOR: '1' },
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  return {
+    exitCode: processResult.exitCode,
+    stdout: processResult.stdout.toString(),
+    stderr: processResult.stderr.toString(),
+  };
+}
+
+function runRootParse(args: readonly string[]): CliResult {
+  const processResult = Bun.spawnSync({
+    cmd: [process.execPath, 'run', 'parse', '--', ...args],
     cwd: repositoryRoot,
     env: { ...process.env, NO_COLOR: '1' },
     stdout: 'pipe',
@@ -123,6 +141,46 @@ afterEach(async () => {
 });
 
 describe('CLI process contract', () => {
+  test('root parse routes to analyze help with the privacy contract', () => {
+    expect(rootPackage.scripts.parse).toBe(
+      'bun run tools/cli/src/index.ts analyze',
+    );
+
+    const result = runRootParse(['--help']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('CherryPicker analyze');
+    expect(result.stdout).toContain(
+      'cherrypicker analyze <statement-file> [options]',
+    );
+    expect(result.stdout).toContain('--allow-remote-llm');
+    expect(result.stdout).toContain('원격 LLM 폴백은 기본적으로 꺼져 있습니다');
+  });
+
+  test('root parse rejects missing and nonexistent statement input', () => {
+    const missing = runRootParse([]);
+    expect(missing.exitCode).toBe(1);
+    expect(missing.stderr).toContain('명세서 파일 경로를 지정하세요');
+    expect(missing.stdout).not.toContain('지출 내역 요약');
+
+    const nonexistent = runRootParse([
+      '/definitely/not/a/statement.csv',
+    ]);
+    expect(nonexistent.exitCode).toBe(1);
+    expect(nonexistent.stderr).toContain('명세서 파일을 찾을 수 없습니다');
+    expect(nonexistent.stdout).not.toContain('지출 내역 요약');
+  });
+
+  test('root parse analyzes a valid statement through the supported CLI', async () => {
+    const fixture = await createCommandFixture();
+    const result = runRootParse([fixture.statement]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('파싱된 거래 수: 2건');
+    expect(result.stdout).toContain('지출 내역 요약');
+    expect(result.stderr).not.toContain('오류:');
+  });
+
   test('scrape help exits successfully without starting the scraper', () => {
     for (const flag of ['--help', '-h']) {
       const result = runCli(['scrape', flag]);
