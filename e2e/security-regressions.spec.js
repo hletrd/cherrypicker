@@ -98,7 +98,7 @@ for (const unsafeUrl of [
   }) => {
     await installSplitCatalogFixture(page, unsafeUrl);
     await page.goto(
-      appUrl(`cards#${encodeURIComponent(fixtureSummaryCard.id)}`),
+      appUrl(`cards#card=${encodeURIComponent(fixtureSummaryCard.id)}`),
     );
 
     await expect(page.getByRole('alert')).toBeVisible();
@@ -117,7 +117,7 @@ test('C1-036 renders a safe HTTPS official link with opener isolation', async ({
   const safeUrl = 'https://cards.example.test/product?id=1#benefits';
   await installSplitCatalogFixture(page, safeUrl);
   await page.goto(
-    appUrl(`cards#${encodeURIComponent(fixtureSummaryCard.id)}`),
+    appUrl(`cards#card=${encodeURIComponent(fixtureSummaryCard.id)}`),
   );
 
   const officialLink = page.getByRole('link', {

@@ -55,10 +55,21 @@
   }
 
   function setupControls() {
+    var skipLink = document.getElementById('skip-link');
     var desktopTheme = document.getElementById('theme-toggle');
     var mobileTheme = document.getElementById('theme-toggle-mobile');
     var menuButton = document.getElementById('mobile-menu-btn');
     var mobileMenu = document.getElementById('mobile-menu');
+
+    // The static route pathname can differ from the browser's current
+    // trailing-slash form. Keep the absolute fragment link on the exact
+    // current document so activating it never reloads an Astro island.
+    if (skipLink) {
+      skipLink.setAttribute(
+        'href',
+        window.location.pathname + window.location.search + '#main-content',
+      );
+    }
 
     if (desktopTheme && desktopTheme.dataset.layoutBound !== 'true') {
       desktopTheme.dataset.layoutBound = 'true';

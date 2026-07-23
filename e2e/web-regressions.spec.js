@@ -144,24 +144,29 @@ test('built app bounds persisted-state migration and recovers safely', async ({ 
   await submitAndOpenDashboard(page);
   await expect(page.locator('#dashboard-data-content')).toBeVisible();
 
-  await page.evaluate(() => {
+  const validPersisted = await page.evaluate(() => {
     const key = 'cherrypicker:analysis';
-    const persisted = JSON.parse(sessionStorage.getItem(key));
+    const original = sessionStorage.getItem(key);
+    const persisted = JSON.parse(original);
     delete persisted._v;
     persisted.transactions = [{ id: '', date: 1 }];
     sessionStorage.setItem(key, JSON.stringify(persisted));
+    return original;
   });
   await page.reload();
 
-  await expect(page.locator('#dashboard-data-content')).toBeVisible();
-  await expect(page.getByText('거래 내역을 불러오지 못했어요. 다시 분석해 보세요.')).toBeVisible();
+  await expect(page.locator('#dashboard-error-state')).toBeVisible();
+  await expect(page.locator('#dashboard-data-content')).toBeHidden();
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('cherrypicker:analysis')),
+  ).toBeNull();
 
-  await page.evaluate(() => {
+  await page.evaluate((serialized) => {
     const key = 'cherrypicker:analysis';
-    const persisted = JSON.parse(sessionStorage.getItem(key));
+    const persisted = JSON.parse(serialized);
     persisted._v = 999;
     sessionStorage.setItem(key, JSON.stringify(persisted));
-  });
+  }, validPersisted);
   await page.reload();
 
   await expect(page.locator('#dashboard-error-state')).toBeVisible();
@@ -190,5 +195,12 @@ test('skip link stays on each nested route and focuses the main landmark', async
     await skipLink.press('Enter');
     await expect(page).toHaveURL(/#main-content$/);
     await expect(page.locator('main#main-content')).toBeFocused();
+    if (route === 'cards') {
+      await expect(
+        page.getByRole('heading', { level: 1, name: '카드 목록' }),
+      ).toBeVisible();
+      await expect(page.getByRole('alert')).toHaveCount(0);
+      await expect(page.getByTestId('card-grid-card').first()).toBeVisible();
+    }
   }
 });

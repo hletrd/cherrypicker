@@ -4,7 +4,11 @@
   import CardDetail from './CardDetail.svelte';
   import Icon from '../ui/Icon.svelte';
   import { getCardSummaryById } from '../../lib/cards.js';
-  import { buildPageUrl } from '../../lib/formatters.js';
+  import {
+    buildCardSelectionHash,
+    buildPageUrl,
+    parseCardSelectionHash,
+  } from '../../lib/formatters.js';
 
   const homeUrl = buildPageUrl('');
 
@@ -12,6 +16,7 @@
   let cardName = $state<string>('');
   let returnFocusCardId = $state<string | null>(null);
   let fetchGeneration = 0;
+  let hashGeneration = 0;
   let listDocumentTitle = '카드 목록 | CherryPicker';
 
   $effect(() => {
@@ -35,7 +40,7 @@
   function selectCard(id: string) {
     returnFocusCardId = id;
     selectedCardId = id;
-    window.location.hash = id;
+    window.location.hash = buildCardSelectionHash(id);
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }
@@ -61,19 +66,47 @@
 
   onMount(() => {
     listDocumentTitle = document.title;
-    // Read card ID from URL hash on load
-    const hash = window.location.hash.slice(1);
-    if (hash) selectedCardId = hash;
+    const syncSelectionFromHash = async () => {
+      const generation = ++hashGeneration;
+      const hash = window.location.hash;
+      const candidate = parseCardSelectionHash(hash);
+      if (!candidate) {
+        if (selectedCardId) returnFocusCardId = selectedCardId;
+        selectedCardId = null;
+        document.title = listDocumentTitle;
+        return;
+      }
+
+      try {
+        const summary = await getCardSummaryById(candidate);
+        if (
+          generation === hashGeneration &&
+          window.location.hash === hash
+        ) {
+          selectedCardId = summary ? candidate : null;
+          if (!summary) document.title = listDocumentTitle;
+        }
+      } catch {
+        if (
+          generation === hashGeneration &&
+          window.location.hash === hash
+        ) {
+          selectedCardId = null;
+          document.title = listDocumentTitle;
+        }
+      }
+    };
 
     // Listen for browser back/forward
     const handleHashChange = () => {
-      const h = window.location.hash.slice(1);
-      if (!h && selectedCardId) returnFocusCardId = selectedCardId;
-      selectedCardId = h || null;
-      if (!h) document.title = listDocumentTitle;
+      void syncSelectionFromHash();
     };
+    void syncSelectionFromHash();
     window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    return () => {
+      hashGeneration++;
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   });
 </script>
 

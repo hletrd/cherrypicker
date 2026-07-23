@@ -76,10 +76,24 @@ test('card list and one detail stay on split catalog artifacts', async ({
   expect(requestsOfKind(requests, 'optimizer')).toHaveLength(0);
   expect(requestsOfKind(requests, 'legacy')).toHaveLength(0);
 
+  const skipLink = page.getByRole('link', {
+    name: '본문으로 건너뛰기',
+  });
+  await skipLink.focus();
+  await skipLink.press('Enter');
+  await expect(page).toHaveURL(/#main-content$/);
+  await expect(page.locator('main#main-content')).toBeFocused();
+  await expect(page.getByRole('heading', { name: '카드 목록' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(requestsOfKind(requests, 'summary')).toHaveLength(1);
+  expect(requestsOfKind(requests, 'detail')).toHaveLength(0);
+
   await cardButtons.first().click();
   await page.waitForFunction(() => window.location.hash.length > 1);
 
-  const selectedCardId = decodeURIComponent(new URL(page.url()).hash.slice(1));
+  const selectedHash = new URL(page.url()).hash;
+  expect(selectedHash).toMatch(/^#card=/);
+  const selectedCardId = decodeURIComponent(selectedHash.slice('#card='.length));
   const selectedCard = summaryArtifact.cards.find(
     (card) => card.id === selectedCardId,
   );
