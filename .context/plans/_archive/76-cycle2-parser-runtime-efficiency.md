@@ -3,6 +3,7 @@
 **Findings:** C2-014, C2-015
 **Deploy mode:** none
 **Status:** completed
+**Archived:** 2026-07-23 after Cycle 2 closure
 
 ## Outcome
 

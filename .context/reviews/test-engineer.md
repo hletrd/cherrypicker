@@ -1,203 +1,180 @@
-# Test Engineering Review — Cycle 1
+# Test Engineer — Cycle 3
 
 **Reviewer:** test-engineer
 **Date:** 2026-07-23
-**Method:** Static review only. No unit, E2E, browser, or Chrome process was started.
+**Baseline:** `614ce5c`
+**Result:** 7 concrete regression gaps; current suites pass but do not exercise
+the newly identified boundaries.
 
-## Inventory and coverage map
+## Complete test inventory
 
-- Examined all 104 product source files under `apps/web/src`, `packages/*/src`, and `tools/*/src`.
-- Examined all 39 unit-test files and all 4 Playwright specs, plus root/workspace scripts, Vitest/Turbo/Playwright configuration, and the deployment workflow.
-- Scanned all 683 card YAML files, both generated card catalogs, the compact catalog, category JSON/YAML, issuer YAML, and all 18 issuer README files for interface/parity implications.
-- Final sweep covered public entry points, negative/boundary inputs, persistence, generated-data freshness, CLI/scraper error paths, and repeated-E2E lifecycle hygiene.
+| Area | Test files | Lines | Executed tests |
+|---|---:|---:|---:|
+| Web unit/contract | 28 | 4,411 | 302 |
+| Core | 5 | 2,432 | 129 |
+| Parser | 23 | 11,821 | 1,595 |
+| Rules/catalog | 5 | 1,154 | 84 |
+| Visualization | 1 | 120 | 4 |
+| CLI | 4 | 787 | 41 |
+| Scraper | 8 | 1,129 | 50 |
+| Root scripts/workflow | 6 | 1,240 | 49 |
+| Browser regression | 7 executed + 1 screenshot-only | 2,345 | 84 executed |
+| **Total executed** | **80 unit/script + 7 E2E** |  | **2,338** |
+
+The unit/script number is 2,254; the browser regression suite contributes 84.
+The inventory includes parser adapters/parity, calculator/optimizer, complete
+catalog semantics, browser loaders/workers/PDF lifecycle, persistence,
+upload/operation ownership, CLI consent/commands/disclosures, scraper
+network/writer/schema boundaries, publication/build budgets, workflow
+consistency, accessibility, security, and end-to-end product routes.
+
+## Gate execution
+
+- `bun run test`: **2,254 passed, 0 failed**.
+- `bun run test:e2e`: **84 passed, 0 failed** in 31.8 seconds; owned processes
+  were cleaned and port 4173 was free afterward.
+- `migrations:check`, `data:check`, `docs:check`, lint, typecheck, and
+  `web:build:check`: passed individually.
+- Catalog checks parsed all **683 cards across 24 issuers** and bundle budgets
+  passed.
+- `bun run verify`: stopped, as designed, at `toolchain:check` because the host
+  has Bun **1.3.12** while `packageManager` and CI pin **1.2.6**. This is an
+  environment limitation, not a repository failure; the full chained gate was
+  not represented as green.
+- The Pages workflow installs Bun 1.2.6, uses a frozen lockfile, runs `verify`,
+  then the 84-test regression suite before artifact upload. Screenshot capture
+  is intentionally separate.
 
 ## Findings
 
-### TE-01 — The deployment verification path never runs the Playwright suite
-
-**Severity:** High
-**Confidence:** High
-**Status:** Confirmed issue
-
-**Evidence**
-
-- `package.json:15` defines `test:e2e`, but `package.json:18` defines `verify` as lint + typecheck + `bun run test` only.
-- `.github/workflows/deploy.yml:34-39` runs `bun run verify` and then builds the web app; it never invokes `test:e2e`.
-- The browser specs live in top-level `e2e/`, outside every workspace's `test` script, so Turbo's normal test task cannot discover them.
-
-**Failure scenario**
-
-A change can break upload, navigation, hydration, session persistence, or the report/results pages while every deployment gate remains green. The broken static site is then built and published because the only tests that exercise those flows were never run.
-
-**Fix**
-
-Add an explicit browser setup and `bun run test:e2e` step before the Pages build. Keep screenshot-only work in a separate non-blocking project so the regression gate remains focused.
-
-### TE-02 — `core-regressions.spec.js` calls the current API with a missing required argument
-
-**Severity:** High
-**Confidence:** High
-**Status:** Confirmed issue
-
-**Evidence**
-
-- `e2e/core-regressions.spec.js:145-152` calls `buildConstraints(transactions, previousSpending)` with only two arguments.
-- `packages/core/src/optimizer/constraints.ts:9-25` requires a third `categoryLabels: Map<string, string>` and returns it unchanged.
-- `packages/core/src/optimizer/greedy.ts:73-96` unconditionally calls `categoryLabels.get(...)` while building the first assignment.
-- `package.json:15` rebuilds the current core package before invoking Playwright, so the stale call cannot be rescued by an older `dist/`.
-
-**Failure scenario**
-
-The test reaches assignment construction and throws `TypeError: Cannot read properties of undefined (reading 'get')`, making the configured E2E command red before it can validate the claimed optimizer regression.
-
-**Fix**
-
-Pass an explicit label map in the spec and assert the localized category labels. Add a small JavaScript-facing API smoke test so required-parameter changes cannot bypass TypeScript and silently stale the E2E fixture.
-
-### TE-03 — Several web “unit tests” test copied implementations, and the copies are already stale
-
-**Severity:** High
-**Confidence:** High
-**Status:** Confirmed issue
-
-**Evidence**
-
-- `apps/web/__tests__/analyzer-adapter.test.ts:1-6,22-72` explicitly reproduces private analyzer functions. Its copy converts an invalid reward type to `"none"` (`:61-66`), while production filters invalid reward rules out (`apps/web/src/lib/analyzer.ts:60-80`).
-- `apps/web/__tests__/parser-encoding.test.ts:17-49` copies an old three-encoding/early-exit algorithm. Production now tries only UTF-8 and CP949 and checks both candidates without early exit (`apps/web/src/lib/parser/index.ts:40-62`).
-- `apps/web/__tests__/store-persistence.test.ts:1-25,99-111` copies private persistence parsing/validation rather than loading the store.
-- `apps/web/__tests__/parser-pdf.test.ts:10-13,51-69` copies both the fallback regex and a local amount parser instead of executing `parsePDF`.
-
-**Failure scenario**
-
-Production behavior can regress or change while these tests stay green because they prove only that the copied test code behaves like itself. The invalid-reward and encoding cases already document behavior different from the application.
-
-**Fix**
-
-Extract pure production helpers into importable modules and test those exports. Test Svelte persistence through a browser page seeded with malformed `sessionStorage`, and run PDF fallback tests through a narrow production-exported parser helper or a real minimal fixture.
-
-### TE-04 — Local E2E accepts stale servers and does not own their shutdown lifecycle
-
-**Severity:** High
-**Confidence:** High
-**Status:** Confirmed configuration risk
-
-**Evidence**
-
-- `playwright.config.ts:16-20` sets `reuseExistingServer: !process.env.CI`.
-- An already-running process on port 4173 is therefore accepted locally; Playwright neither starts nor owns that process and consequently cannot terminate it after the run.
-- `e2e/core-regressions.spec.js:16-33` also merely warns when source is newer than `dist/` and continues importing stale output when Playwright is invoked directly.
-- No repository script or Playwright global teardown records owned server/browser process IDs for interrupted-run cleanup.
-
-**Failure scenario**
-
-On repeated review cycles, a prior Astro preview remains on port 4173. A later cycle reuses that stale process, exercises an old web build, and reports misleading pass/fail results. Because the process is external to Playwright, it remains after the cycle. An interrupted runner can likewise leave its owned browser process group behind.
-
-**Fix**
-
-Set `reuseExistingServer: false` for the repeatable test command, use an isolated/dynamic port, and make the runner own the preview process. Wrap the E2E command with `EXIT`/signal cleanup for only the recorded process group (never a broad system-wide Chrome kill). Make stale `dist/` a hard failure or always build it in the sole supported entry point.
-
-### TE-05 — Per-transaction caps are applied but never reported, and the test omits the contract assertion
-
-**Severity:** Medium
-**Confidence:** High
-**Status:** Confirmed issue
-
-**Evidence**
-
-- `packages/core/src/models/result.ts:23-29` exposes `CapInfo.capType: "per_transaction"`.
-- `packages/core/src/calculator/reward.ts:273-292` clips both rate and fixed rewards by `perTransactionCap`.
-- The only `capsHit.push` paths are for `monthly_total` (`:307-317`) and `monthly_category` (`:339-346`); no per-transaction entry is emitted.
-- `packages/core/__tests__/calculator.test.ts:486-495` verifies only the clipped reward value. It never checks `capsHit` or `capReached`.
-
-**Failure scenario**
-
-Reports show the reduced reward but omit why it was capped, even though the public result model promises per-transaction cap information. A UI or CLI consumer cannot explain the discrepancy to the user.
-
-**Fix**
-
-Emit a `per_transaction` `CapInfo` whenever the uncapped reward exceeds the per-transaction cap, mark the bucket capped, and assert the complete cap record for both percentage and fixed-amount rewards.
-
-### TE-06 — Source YAML and production JSON can diverge without any gate noticing
-
-**Severity:** Medium
-**Confidence:** High
-**Status:** Risk needing manual validation; artifacts are currently in sync
-
-**Evidence**
-
-- `scripts/build-json.ts:381-451` generates four production-facing artifacts, including `apps/web/public/data/cards.json`, `categories.json`, and the fallback label module.
-- `package.json:12-18` does not expose or run a data generation/parity check from `build`, `test`, or `verify`.
-- `.github/workflows/deploy.yml:34-39` verifies and builds the committed artifacts directly.
-- `packages/rules/__tests__/schema.test.ts:275-301` validates YAML loading with a loose `>650` count but never regenerates or compares the browser artifacts.
-
-**Failure scenario**
-
-A contributor changes a valid YAML rule or category and forgets the manual generation command. Unit tests pass against YAML, while the deployed browser continues serving stale JSON and stale fallback labels.
-
-**Fix**
-
-Add deterministic `data:build` and `data:check` scripts. Run generation before the web build and fail CI when normalized generated output differs from tracked files; handle `generatedAt` deterministically or exclude it from parity comparison.
-
-### TE-07 — Non-finite transaction amounts are untested at the public reward-calculator boundary
-
-**Severity:** Medium
-**Confidence:** High
-**Status:** Confirmed direct-API defect
-
-**Evidence**
-
-- `packages/core/src/calculator/reward.ts:226-260` rejects only `amount <= 0`; `NaN` passes that comparison and is added to category spending before reward math.
-- `packages/core/__tests__/calculator.test.ts:509-568` covers negative, zero, non-KRW, and null-rate inputs, but not `NaN` or infinities.
-- The non-finite tests at `packages/core/__tests__/calculator.test.ts:776-803` validate only `previousMonthSpending`.
-
-**Failure scenario**
-
-An unchecked library caller passes a transaction with `amount: NaN`; the calculator returns `NaN` spending/rates/rewards rather than a skipped transaction or descriptive error, contaminating downstream optimization/report serialization.
-
-**Fix**
-
-Define the boundary policy explicitly (reject or skip non-finite amounts), enforce `Number.isFinite(tx.amount)` before bucket creation, add a distinct skip reason if skipping, and cover `NaN`, `Infinity`, and `-Infinity`.
-
-### TE-08 — The scraper's encoding re-fetch and timeout paths have no tests and contain observable failure bugs
-
-**Severity:** Medium
-**Confidence:** High
-**Status:** Confirmed issue
-
-**Evidence**
-
-- `tools/scraper/__tests__/fetcher.test.ts:4-27` tests only `cleanHTML`.
-- `tools/scraper/src/fetcher.ts:47-60` performs a second fetch when a meta tag declares EUC-KR, but does not check the second response's `ok` status.
-- The second timeout is cleared only after a successful `.arrayBuffer()`; a rejected fetch leaves its timer pending until 30 seconds.
-
-**Failure scenario**
-
-A legacy issuer page declares EUC-KR, then its re-fetch returns HTTP 500. The scraper decodes the error page as card content and sends it to the LLM. If the re-fetch rejects quickly, the leftover timer can keep the CLI process alive after failure.
-
-**Fix**
-
-Extract a checked fetch helper with `try/finally` timeout cleanup and use it for both requests. Add mocked-fetch tests for EUC-KR headers/meta, second-fetch HTTP errors, aborts, rejection cleanup, and charset aliases.
-
-### TE-09 — Screenshot capture is mixed into the normal E2E regression suite
-
-**Severity:** Low
-**Confidence:** High
-**Status:** Confirmed test-hygiene issue
-
-**Evidence**
-
-- `playwright.config.ts:8` includes every file under `e2e/`.
-- `e2e/ui-ux-screenshots.spec.js:14-142` contains 14 artifact-capture cases, almost entirely without assertions.
-- The file uses repeated fixed waits of 300–3000 ms (`:17,26,34,42,53,64,68,80,92,99,106,118,131,138,140`).
-
-**Failure scenario**
-
-Every regression run pays for screenshot-only work and becomes timing-sensitive on slower machines. A sleep can expire before the UI settles, producing inconsistent artifacts or flaky failures unrelated to behavior.
-
-**Fix**
-
-Move captures to a separately tagged Playwright project/script, exclude it from the blocking regression command, and replace fixed sleeps with explicit readiness conditions.
-
-## Final missed-issue sweep
-
-The remaining notable gaps are lower-signal variants of the findings above: the public `parseStatement` dispatcher lacks direct multi-format integration coverage; most scraper validator/writer/CLI branches are untested; and parser format tests write fixed fixture paths inside the repository rather than isolated temporary directories. No relevant source, test, config, generated interface, or documentation family was skipped.
+### C3-TE-001 — Terminal safety tests cover the helper, not the real output sinks
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed gap
+- **Locations:** `tools/cli/__tests__/terminal.test.ts:1-28`;
+  `tools/cli/__tests__/disclosures.test.ts:1-70`;
+  untested sinks `packages/viz/src/terminal/summary.ts:24-109`,
+  `packages/viz/src/terminal/comparison.ts:16-79`, and
+  `tools/cli/src/disclosures.ts:36-72`
+
+The helper matrix proves `sanitizeTerminalText` removes OSC/CSI/CR/bidi
+controls, but no test sends those values through table cells, cap warnings,
+alternatives, best-card text, or unsupported-rule disclosures. A local sink
+probe retained payload control bytes, confirming this is not merely theoretical
+coverage. Add captured-console tests at each public visualization function and
+one CLI command-level regression. Assert absence of payload controls while
+allowing `cli-table3`'s own known styling.
+
+### C3-TE-002 — Output-path tests omit the exact `mustExist: false` symlink case
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed gap
+- **Locations:** `tools/cli/__tests__/commands.test.ts:373-415`;
+  production `tools/cli/src/commands/report.ts:82-87,144-152`
+
+The suite tests a symlink only with `mustExist: true`; report output uses
+`mustExist: false`. Add a temporary-root integration test with an existing
+final-component symlink and sentinel target, plus dangling symlink, ordinary
+existing file, exclusive create, explicit overwrite, and validation/open swap
+cases. Every rejection must leave the target byte-for-byte unchanged.
+
+### C3-TE-003 — Report escaping has no invalid numeric-entity matrix
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed gap
+- **Locations:** `packages/viz/__tests__/report.test.ts:56-76`;
+  production `packages/viz/src/report/generator.ts:46-63`
+
+The four report tests cover ordinary `<`, quotes, CSP, and branding only.
+They do not cover out-of-range code points, huge entities, surrogates,
+incomplete entities, or literal entity text. Add a table-driven no-throw test
+across every dynamic report field and verify the rendered DOM contains text,
+never a recursively decoded element.
+
+### C3-TE-004 — Persistence tests do not execute the store's analyze failure transition
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed gap
+- **Locations:** `apps/web/__tests__/store-persistence.test.ts:84-297`;
+  production `apps/web/src/lib/store.svelte.ts:335-384`
+
+Current tests call the side-effect-free serializer/deserializer. They never
+construct the rune store with controlled `sessionStorage` and a rejecting
+analyzer. Consequently, success A -> failure B -> reload is uncovered, and the
+old storage entry survives. Add a runtime store harness (dependency-injected
+analyzer/storage if needed) and a built-app test covering result, error,
+generation, persistence-warning state, storage bytes, and reload/direct-route
+behavior after both abort and non-abort failure.
+
+### C3-TE-005 — Scraper tests confuse response truncation coverage with source coverage
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed gap
+- **Locations:** `tools/scraper/__tests__/extractor.test.ts:36-100`;
+  production `tools/scraper/src/extractor.ts:8-55`
+
+The suite verifies a `max_tokens` response fails, but never crosses the
+40,000-character request boundary. Add 39,999/40,000/40,001 tests, Unicode
+boundary cases, and a long cleaned-page fixture with a material restriction
+near the tail. The contract should expose source truncation to the caller and
+block ordinary success/publication until completeness is resolved.
+
+### C3-TE-006 — Cancellation coverage ends at parser/PDF workers
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed gap
+- **Locations:** `apps/web/__tests__/file-parse-queue.test.ts:112-226`;
+  `apps/web/__tests__/pdf-lifecycle.test.ts:1-179`;
+  production `apps/web/src/lib/analyzer.ts:165-220,245-305,389-393`
+
+Queue and PDF tests are strong, but none cancels while categories or optimizer
+catalog loading is pending, or while optimization runs. Add deferred loader
+tests with two callers (one canceled, one live) to prove caller-scoped abort
+does not poison the shared cache, and an optimizer cancellation test proving
+prompt settlement/no stale commit/no further chunks.
+
+### C3-TE-007 — The success-countdown/drop overlap has no component or E2E test
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed gap
+- **Locations:** `apps/web/__tests__/upload-contract.test.ts:1-104`;
+  `apps/web/__tests__/operation-epoch.test.ts:1-84`;
+  `e2e/ui-ux-review.spec.js:163-236`;
+  production `apps/web/src/components/upload/FileDropzone.svelte:52-92,
+  162-169,196-236,319-337`
+
+Admission tests are pure and operation tests cover async ownership, but neither
+owns the component's 1.2-second navigation timer. Add a fake-timer component
+test and a real-browser page-wide drop immediately after the success state.
+Assert the timer is canceled/invalidated, the new file stays visible, old
+analysis is not presented as new, and navigation occurs only after a new
+successful analysis.
+
+## Flakiness and maintainability observations
+
+- `e2e/ui-ux-review.spec.js:420-446,597-623` uses five fixed two-second sleeps.
+  These add a ten-second floor and can still fail when the intended state takes
+  longer. Replace them with response/DOM/hydration predicates. CI retries (2)
+  should remain diagnostics, not the synchronization mechanism.
+- Browser tests repeat the full upload/analysis flow in many cases. Shared
+  fixtures are acceptable if they preserve test isolation; a setup helper that
+  waits on explicit UI state would reduce runtime and divergent timing logic.
+- The test runner's process ownership, alternate-port selection, status proof,
+  signal propagation, and cleanup tests are unusually thorough; no orphaned
+  process remained after this review run.
+
+## Final missed-regression sweep
+
+I mapped every Cycle 3 production finding to the nearest existing test and
+searched all unit/E2E names and assertions for the exact boundary. No hidden
+coverage was found for terminal sinks, no-follow report creation, invalid
+numeric entities, analyze failure/storage atomicity, scraper input truncation,
+post-parser cancellation, or the success timer/drop overlap. No further
+material gap was added after that mapping.

@@ -1,120 +1,159 @@
-# Debugger Review — Cycle 1
+# Debugger — Cycle 3
 
 **Reviewer:** debugger
 **Date:** 2026-07-23
-**Scope:** Parser edge cases, async failure paths, categorization state, month selection, and numeric integrity
-**Result:** 8 findings: 6 High, 2 Medium
+**Baseline:** `614ce5c`
+**Result:** 3 confirmed Medium findings and 1 confirmed Low finding.
+
+## Method
+
+I audited error paths, state transitions, timers, cancellation, malformed
+inputs, numeric/string conversion, persistence, and filesystem behavior across
+all current production source and their tests. Each candidate was challenged
+with an alternative explanation and, where a pure boundary allowed it, a safe
+local minimal reproduction.
 
 ## Findings
 
-### DBG-01 — PDF fallback strips two common negative markers before parsing
-
-- **Severity:** High
-- **Confidence:** 0.99
-- **Status:** Confirmed by focused regex/amount execution in both duplicated implementations
-- **Locations:** `packages/parser/src/pdf/index.ts:307-315`; `packages/parser/src/pdf/index.ts:335-382`; `apps/web/src/lib/parser/pdf.ts:527-542`; `apps/web/src/lib/parser/pdf.ts:561-598`
-
-The fallback regex matches parenthesized and `마이너스` negative amounts, but the selected capture group contains only the digits. `parseAmount()` receives `1,234`, not `(1,234)` or `마이너스1,234`, so the refund becomes a positive purchase. Full-width prefix minus and trailing minus remain in their captures and work, making the bug format-specific.
-
-**Failure scenario:** A fallback-scanned line `2026-07-01 환불가맹점 (50,000)` is returned as a +50,000 won transaction and enters optimization instead of being skipped as a refund.
-
-**Fix:** Parse the entire matched token after removing only currency wrappers/suffixes, or reattach the sign based on the matched alternative. Add end-to-end fallback tests for parentheses, `마이너스`, full-width minus, trailing minus, and ordinary positives in both server and web parsers.
-
-### DBG-02 — Structured PDF row fallback changes indices after caching stale cell values
-
-- **Severity:** High
-- **Confidence:** 0.99
-- **Status:** Confirmed by direct control-flow inspection
-- **Locations:** `packages/parser/src/pdf/index.ts:93-125`; `packages/parser/src/pdf/index.ts:193-206`; `apps/web/src/lib/parser/pdf.ts:294-321`; `apps/web/src/lib/parser/pdf.ts:386-405`
-
-Both implementations read `dateValue` and `amountValue` using header-derived indices, then detect that a particular row has shifted columns and update `dateIdx`/`amountIdx`. Date parsing later rereads the updated cell, but amount parsing uses the old cached `amountValue`; the early `dateValue` guard is stale too.
-
-**Failure scenario:** A PDF header says amount is column 4, while a split/merged row places it in column 3. The heuristic finds column 3, but the parser still parses column 4 and either drops the row or records the wrong amount.
-
-**Fix:** Resolve and validate per-row indices before reading values, or retain and use the `dateCell.value`/`amountCell.value` returned by the heuristic. Add a shifted-row table fixture to both parser suites.
-
-### DBG-03 — Server-side CP949 detection misclassifies ordinary Korean CSV bytes as UTF-8
-
-- **Severity:** High
-- **Confidence:** 0.99
-- **Status:** Confirmed by a realistic CP949-encoded Korean header execution
-- **Locations:** `packages/parser/src/detect.ts:22-55`; `packages/parser/src/detect.ts:58-73`; `packages/parser/src/index.ts:54-65`; `apps/web/src/lib/parser/index.ts:40-64`
-
-The detector counts a CP949 signal only when a `0x80-0xBF` byte follows ASCII. Ordinary Korean CP949 characters are high-byte pairs, so that condition usually contributes zero and the detector returns UTF-8. In a focused run, CP949 bytes for `이용일,가맹점,이용금액` were detected as UTF-8 and decoded as mojibake; `TextDecoder("euc-kr")` decoded them correctly. The web parser already uses a different replacement-character comparison.
-
-**Failure scenario:** A common Korean CP949 CSV loses recognizable headers and bank keywords, then fails parsing or silently falls into generic detection.
-
-**Fix:** Prefer strict/fatal UTF-8 validation; if the byte stream is not valid UTF-8, decode as CP949. If ambiguity remains, compare replacement-character counts. Add realistic CP949 files, including short and BOM-free inputs.
-
-### DBG-04 — XLSX files with a plausible partial header silently return no transactions and no errors
+### C3-DBG-001 — A failed replacement analysis clears memory but leaves the prior persisted result
 
 - **Severity:** Medium
-- **Confidence:** 0.99
-- **Status:** Confirmed by focused in-memory workbook execution
-- **Locations:** `packages/parser/src/xlsx/index.ts:240-284`; `packages/parser/src/xlsx/index.ts:445-459`; `apps/web/src/lib/parser/xlsx.ts:412-457`; `apps/web/src/lib/parser/xlsx.ts:620-636`
+- **Confidence:** High
+- **Status:** Confirmed
+- **Locations:** `apps/web/src/lib/store.svelte.ts:160-228,232-263,335-384,
+  480-492`; `apps/web/__tests__/store-persistence.test.ts:84-297`
 
-Header detection accepts keywords from two categories, but neither implementation verifies that required date and amount columns were found. With headers `날짜, 가맹점` and one data row, the web parser returned exactly `{ transactions: 0, errors: [] }` in a focused execution. The server path has the same missing guard.
+On a successful analysis, the store assigns `result` and writes it to
+`sessionStorage`. On a later current (non-abort) failure, the catch block sets
+`error` and `result = null`, but does not clear or replace the storage entry.
+The singleton now says no result exists while the same tab's storage still
+contains the previous analysis. A reload constructs the store with
+`loadFromStorage()` and resurrects that older result as though it were current.
 
-**Failure scenario:** A changed bank export omits or renames the amount header. Analysis reports an empty parse without explaining that a required column was missing.
+**Failure scenario:** Analysis A succeeds. The user tries to replace it with
+malformed statement B. B fails and the upload page shows an error. A refresh or
+direct results/dashboard navigation restores A, which can be mistaken for B's
+result.
 
-**Fix:** Immediately require `dateCol !== -1` and `amountCol !== -1` after column matching and return a targeted `ParseError` naming missing columns. Add web/server tests for date-only, amount-only, and multi-sheet partial headers.
+**Competing hypotheses:** Preserving the last good result can be a valid product
+policy, but the catch explicitly clears only the in-memory result and the UI
+presents the new attempt as failed. Preserving A would require preserving it in
+both state and storage with clear “last successful” labeling. Clearing B's
+failed replacement would require clearing both. The current split is not a
+coherent policy.
 
-### DBG-05 — Card-data timeout or cross-caller cancellation can produce a successful zero-card optimization
+**Suggested fix:** Make the transition atomic. Either retain the prior result
+in memory and storage on failure, or clear both result and storage before/when
+beginning a replacement. Add a runtime store test and built-app test for
+success A -> failure B -> reload/direct navigation.
 
-- **Severity:** High
-- **Confidence:** 0.98
-- **Status:** Confirmed async data-flow defect
-- **Locations:** `apps/web/src/lib/cards.ts:135-184`; `apps/web/src/lib/cards.ts:225-234`; `apps/web/src/lib/analyzer.ts:191-218`; `apps/web/src/lib/analyzer.ts:276-280`
-
-The internal ten-second timeout aborts the shared controller, but all `AbortError`s are swallowed into `undefined`. `getAllCardRules()` converts that into `[]`; analysis then permits empty `coreRules` and returns the greedy optimizer's zero-reward result. A later caller's signal is also chained to the same shared controller, so an unrelated component unmount can abort analysis's shared fetch.
-
-**Failure scenario:** The card grid starts loading, analysis joins the in-flight request, and grid unmount aborts it. Analysis completes with no recommendations and zero reward instead of reporting data unavailability.
-
-**Fix:** Distinguish internal timeout from caller cancellation and propagate failures to analysis. Never accept zero card rules as a valid full-catalog optimization. Isolate each caller's cancellation from the shared underlying fetch, for example by racing only that caller's await.
-
-### DBG-06 — Raw bank category fallback flattens leaf IDs into impossible top-level categories
-
-- **Severity:** High
-- **Confidence:** 0.99
-- **Status:** Confirmed by focused matcher execution; existing test locks the defect
-- **Locations:** `packages/core/src/categorizer/taxonomy.ts:113-126`; `packages/core/src/categorizer/matcher.ts:109-120`; `packages/core/__tests__/categorizer.test.ts:229-240`; `packages/core/src/calculator/reward.ts:69-71`
-
-`getAllCategories()` flattens parent and child IDs into one set. The raw-category fallback therefore treats a known child such as `cafe` as `{ category: "cafe" }` rather than `{ category: "dining", subcategory: "cafe" }`. A focused run also showed that the fully qualified `dining.cafe` form is rejected as unknown. Exact reward matching cannot use the flattened result.
-
-**Failure scenario:** An unknown merchant with bank-supplied raw category `cafe` is assigned a category that no canonical cafe reward can match, even though the taxonomy contains the parent relation.
-
-**Fix:** Build a canonical lookup from each accepted token to `{ parent, subcategory? }`. Accept qualified IDs and unambiguous leaf IDs, reject ambiguous leaves, and update the test to assert the canonical pair.
-
-### DBG-07 — “Previous month” means previous uploaded month, not the previous calendar month
-
-- **Severity:** High
-- **Confidence:** 0.98
-- **Status:** Confirmed control-flow defect
-- **Locations:** `apps/web/src/lib/analyzer.ts:407-419`; `apps/web/src/lib/store.svelte.ts:585-610`
-
-Both initial analysis and reoptimization sort the months present in the upload and choose the preceding entry. They do not calculate the calendar predecessor of the latest month.
-
-**Failure scenario:** A statement set contains January and March but no February. January spending is treated as March's “previous month” performance, potentially unlocking tiers that should use February's absent/zero/explicit value.
-
-**Fix:** Compute the exact preceding `YYYY-MM` with year rollover and look up only that key. When it is missing, use the explicit user value or a clearly disclosed default; do not substitute an older uploaded month. Add January/March and January/December rollover tests.
-
-### DBG-08 — Numeric JSON/XLSX amounts can exceed the safe-integer boundary
+### C3-DBG-002 — Invalid numeric character entities crash HTML report generation
 
 - **Severity:** Medium
-- **Confidence:** 0.99
-- **Status:** Confirmed numeric-integrity defect
-- **Locations:** `packages/parser/src/json/index.ts:85-96`; `apps/web/src/lib/parser/json.ts:85-92`; `packages/parser/src/amount.ts:15-30`; `packages/parser/src/csv/shared.ts:180-191`
+- **Confidence:** High
+- **Status:** Confirmed
+- **Location:** `packages/viz/src/report/generator.ts:46-63,65-267`;
+  `packages/viz/__tests__/report.test.ts:56-119`
 
-String amount parsing rejects values beyond `Number.MAX_SAFE_INTEGER`, but raw numeric JSON and XLSX cells are accepted whenever finite, then rounded. JSON has already irreversibly rounded a literal such as `9007199254740993` to `9007199254740992` before this check.
+The HTML escape helper first decodes decimal/hex numeric entities with
+`String.fromCodePoint(parseInt(...))`. Values outside the Unicode scalar range
+throw `RangeError`. A safe local call to `generateHTMLReport` with a card name
+containing `&#1114112;` reproduced:
+`RangeError: Arguments contain a value that is out of range of code points`.
+Card names, tier labels, taxonomy labels, cap categories, and alternatives can
+all reach this helper.
 
-**Failure scenario:** A malformed or hostile numeric amount is silently changed and retained, corrupting totals and comparisons rather than producing a parse error.
+**Failure scenario:** A malformed but schema-valid display string in a
+developer-supplied/scraped catalog causes `cherrypicker report` to abort before
+writing its report. The main CLI catches and prints the error, but the requested
+artifact is unavailable.
 
-**Fix:** Require `Number.isSafeInteger()` after rounding (and apply the same absolute bound as string parsing) for every numeric entry point. Add parity tests for numeric and string values at, below, and above the safe boundary.
+**Competing hypothesis:** The predecode comment says double-encoded numeric
+entities become executable HTML. HTML entity parsing is not recursive:
+escaping `&` to `&amp;` renders the original entity text, not a second-stage
+tag. Predecoding is unnecessary for injection prevention; the subsequent
+standard escaping is the relevant defense.
 
-## Coverage and final sweep
+**Suggested fix:** Remove entity predecoding and escape the original string
+directly. If normalization is retained, accept only valid scalar values and
+replace invalid entities without throwing. Test maximum valid code point,
+maximum+1, huge decimal/hex strings, surrogates, incomplete entities, and
+literal `&#x3C;script...` output.
 
-- Inventory traversed: `packages/core` 27 files, `packages/parser` 60, `packages/rules` 714, `packages/viz` 8, `tools/cli` 10, `tools/scraper` 20, `apps/web` 60, `scripts` 1, and `.github` 1, plus root workspace/configuration files.
-- Parser implementations and their web duplicates were compared across CSV, JSON, OFX, HTML, XLSX, PDF, amount/date normalization, detection, and analyzer/store handoff.
-- Focused executions reproduced the negative-capture behavior, CP949 misdetection, raw-category flattening, and silent XLSX partial-header result.
-- A final sweep checked test intent, async error propagation, date/month edge cases, and numeric boundaries. No additional actionable finding survived evidence verification.
-- No browser or E2E test was launched, so this reviewer created no Playwright/Chrome process requiring cleanup.
+### C3-DBG-003 — A second drop during the success countdown does not invalidate the old navigation
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed
+- **Location:** `apps/web/src/components/upload/FileDropzone.svelte:27-33,
+  52-92,162-169,196-236,278-351,439-509`
+
+After an analysis succeeds, the component sets `uploadStatus = "success"` and
+schedules dashboard navigation after 1,200 ms. Page-wide drop handling remains
+active. `addFiles()` calls `cancelActiveAnalysis()`, but that function returns
+unless status is exactly `"uploading"`; it neither invalidates
+`analysisRuns` nor clears `navigateTimeout` in the success state. Adding a file
+then changes the visible list/status to idle, while the old run remains current.
+The timer subsequently navigates to the dashboard with the old analysis.
+
+**Failure scenario:** During the “analysis complete” countdown, the user drops
+another statement intending to analyze it. The form briefly returns for the new
+selection, then the old timer takes the user to A's dashboard. The new file was
+never analyzed.
+
+**Competing hypothesis:** The success UI hides local file inputs, but the
+document-level drop listener at lines 55-92 stays active and calls the same
+`addFiles` path, so the overlap is reachable.
+
+**Suggested fix:** Centralize transition cancellation: any mutation after
+success should clear the pending timer and invalidate the old run, or disable
+drop admission until navigation completes. Add a fake-timer component test and
+an E2E drop test inside the 1.2-second success window.
+
+### C3-DBG-004 — Three main CLI parsers silently ignore unknown or incomplete options
+
+- **Severity:** Low
+- **Confidence:** High
+- **Status:** Confirmed
+- **Locations:** `tools/cli/src/commands/analyze.ts:17-48`;
+  `tools/cli/src/commands/optimize.ts:30-74`;
+  `tools/cli/src/commands/report.ts:31-80`;
+  contrast `tools/cli/src/commands/scrape.ts:19-73`
+
+Analyze, optimize, and report have no final `else` in their option loops.
+Unknown flags, stray values, and known options with a missing value are simply
+skipped. The scraper parser correctly rejects both classes.
+
+**Failure scenario:** A typo in `--prev-spending`, `--cards`, `--categories`,
+or `--output` silently selects a default. Recommendations may use the wrong
+performance basis/catalog, or a report may be written to the default filename
+instead of the requested one. Some downstream disclosures help, but argument
+acceptance itself incorrectly signals success.
+
+**Suggested fix:** Use one strict shared option parser or make every loop reject
+unknown arguments and require the next token for valued options. Add a table of
+unknown, missing-value, duplicate, and stray-positional tests for all four
+commands.
+
+## Error paths verified as sound
+
+- Operation epochs block stale analyze/reoptimize/reset/cancel commits.
+- Parse queues preserve settled order, stop dequeueing after cancellation, and
+  pass abort to active workers.
+- Browser PDF cleanup/destroy executes exactly once on success, failure, and
+  abort.
+- Empty/partial multi-file parses retain actionable parser diagnostics and file
+  identity.
+- Invalid calendar rows are quarantined from month selection and optimization.
+- Calculator boundaries reject non-finite/unsafe transaction amounts, and
+  catalog publication rejects unsupported executable reward shapes.
+- Generated artifacts fail closed when empty, malformed, duplicate, or from a
+  mismatched publication generation.
+
+## Final missed-issue sweep
+
+The final sweep inspected every `catch`, timer, mutable module cache,
+`JSON.parse`, numeric parse/code-point conversion, filesystem write, abort
+boundary, and result-reset path. I also compared the Cycle 1/2 closed findings
+against current source to avoid reopening fixed bugs. No additional
+well-evidenced Critical/High debugger finding remained.

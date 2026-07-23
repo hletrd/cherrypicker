@@ -1,85 +1,90 @@
-# Aggregate Review — CherryPicker Review/Plan/Fix Cycle 2
+# Aggregate Review — CherryPicker Review/Plan/Fix Cycle 3
 
 **Date:** 2026-07-23
-**Cycle:** 2 / 100
+**Cycle:** 3 / 100
 **Branch:** `codex/review-plan-fix-no-deploy-20260723`
-**Reviewers:** code-reviewer, perf-reviewer, architect, security-reviewer, critic, tracer, verifier, debugger, test-engineer, document-specialist, designer
+**Reviewers:** code-reviewer, critic, code-simplifier, verifier,
+document-specialist, security-reviewer, tracer, debugger, test-engineer,
+qa-tester, perf-reviewer, architect, dependency-expert, designer
 **Deploy mode:** none
 
 ## Executive summary
 
-The 11 role reports contain 36 raw findings. Cross-review deduplication plus the
-required final independent sweep produces **27 unique findings**: 11 High, 14
-Medium, and 2 Low. The largest correctness clusters are catalog/runtime contract
-drift, partial parser success that looks complete, CLI calendar semantics, and
-unowned asynchronous web work. The final sweep additionally confirmed that the
-skip link resolves against the document `<base>` instead of the current route,
-and that optimizer disclosures collapse same-named rules from different cards.
+The 14 role reports contain 36 raw findings. Cross-role deduplication and the
+required final independent sweep produced **28 unique findings**: 4 High, 18
+Medium, and 6 Low. Plans 79–83 implemented and verified every finding in this
+cycle; there are no Cycle 3 deferrals.
 
-Every unique finding is scheduled in Plans 73–78. No Cycle 2 finding is
-deferred. The six pre-existing untracked Cycle 42 artifacts remain outside this
-review and must not be edited or committed.
+Seven test-engineer findings and two QA findings correlate with production
+defects rather than inflating the unique count. The final sweep added three
+independently reproduced misses: occurrence limits consumed by unsupported
+transactions, long valid JSON misdetected as CSV, and report placeholder
+strings being reinterpreted during sequential template replacement.
+
+The completed implementation now fails closed on non-finite facts and incomplete
+scraper input, derives publication identity from all generated projections,
+uses a content-authenticated SheetJS archive, carries report qualifications
+into durable HTML, terminates canceled browser work, keeps replacement state
+atomic, and blocks UI focus/reflow/visual regressions. The six pre-existing
+untracked Cycle 42 artifacts remained outside this review and were neither
+edited nor committed.
 
 | Severity | Unique findings |
 |---|---:|
-| High | 11 |
-| Medium | 14 |
-| Low | 2 |
-| **Total** | **27** |
+| High | 4 |
+| Medium | 18 |
+| Low | 6 |
+| **Total** | **28** |
 
 ## Unique findings
 
-### Domain and catalog correctness
+### Domain, parser, and type correctness
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C2-001 | Medium | High | Merchant-scoped rules marked unsupported emit issues before merchant applicability is checked, so unrelated transactions acquire irrelevant disclosures. | C2-CR-001 |
-| C2-002 | High | High | Five Samsung mileage rules are published as supported with `rate + unit:miles`, but the calculator rejects that shape and returns zero. | C2-CR-002 |
-| C2-003 | High | High | The browser catalog reader validates Zod-normalized values but returns the raw graph; omitted normalized tier fields can pass validation and produce `NaN`. | C2-CR-003, C2-V-003, C2-ARCH-01, C2-TE-01 |
-| C2-004 | High | High | Typed payment/channel/fuel/performance facts supported by core and the catalog cannot enter or survive either product’s parsed transaction path. | C2-CT-001 |
-| C2-010 | Medium | High | Reward merchant allowlists compare raw case-sensitive strings while categorization uses normalized merchant text. | C2-V-002 |
-| C2-027 | Medium | High | Aggregate calculation issues omit card identity, so common rule IDs such as `reward-001` from different cards deduplicate into one issue and understate disclosures. | Final independent sweep |
+| C3-001 | High | High | An unbounded statement `fuelVolumeLiters` fact can overflow a supported won-per-liter reward to `Infinity`, corrupting totals and optimizer comparisons. | C3-CR-001 |
+| C3-002 | Medium | High | The browser category artifact is accepted after only array/nonempty checks and cast to `CategoryNode[]`; malformed nodes fail later inside `MerchantMatcher` and poison the session cache. | C3-CR-002 |
+| C3-003 | Medium | High | JSON transaction arrays silently discard non-objects and objects missing date/amount, so most rows can disappear while partial success reports zero warnings. | C3-CT-002 |
+| C3-004 | Medium | High | `maxUses` occurrence counters advance before tier/unit/fact validation, so an unsupported transaction can consume the only use and suppress a later executable reward. | Final independent sweep |
+| C3-005 | Medium | High | Web format sniffing parses only the first 1,024 characters of a 2,048-character prefix, so valid long JSON with an unknown/mismatched extension is classified as CSV. | Final independent sweep |
+| C3-006 | Low | High | Server and browser own separate copies of the complete JSON grammar and different test matrices, allowing future parser behavior to diverge. | C3-CS-002 |
+| C3-007 | Low | High | The Svelte store mirrors six public core result interfaces instead of importing them, allowing persistence/UI contracts to drift without a compile-time failure. | C3-CS-003 |
 
-### Parser and CLI completeness
-
-| ID | Severity | Confidence | Finding | Raw sources |
-|---|---|---|---|---|
-| C2-005 | High | High | CLI optimize/report pool every input month into one calculation whose monthly cap trackers span the whole file. | C2-CT-002, C2-TR-01 |
-| C2-006 | High | High | JSON/CSV/OFX invalid-date rows are warned about but still enter CLI optimization and reports. | C2-CT-002, C2-TR-02 |
-| C2-007 | High | High | Remote PDF fallback advertises a 100,000-character ceiling but silently sends only the first 8,000 characters and presents the subset as complete. | C2-CT-003 |
-| C2-008 | High | High | Remote PDF response parsing silently drops malformed model rows without exposing rejected-row counts or errors. | C2-CT-004 |
-| C2-009 | Medium | High | Web analysis replaces actionable zero-row parser errors with a generic “no transactions” message. | C2-V-001 |
-| C2-022 | Medium | High | Untrusted parser error fields reach CLI terminal sinks without control-sequence or bidi sanitization. | C2-SEC-02 |
-
-### Web lifecycle and admission
+### Runtime, publication, scraper, and dependency boundaries
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C2-011 | High | High | `reoptimize()` has no operation ownership guard and can overwrite a newer analysis/reset and clear its loading state. | C2-D-001, C2-ARCH-03, C2-TE-03 |
-| C2-012 | High | High | Queue cancellation does not reach active parser/PDF work, and browser PDF resources are not explicitly destroyed. | C2-PERF-01, C2-TE-02 |
-| C2-013 | Medium | High | The 50 MB aggregate upload limit is warning-only and there is no file-count admission limit. | C2-PERF-02, C2-TE-04 |
-| C2-026 | Medium | High | `href="#main-content"` resolves against `<base href="/cherrypicker/">`, so the skip link leaves nested routes instead of focusing their main landmark. | Final independent sweep |
+| C3-008 | High | High | Publication identity hashes source inputs but not normalized artifact bytes or the generator/schema contract, so old and new projections can share a `sourceHash` and pass mixed-generation checks. | C3-ARCH-001 |
+| C3-009 | Medium | High | Default CLI optimize/report reparses all 683 authoring YAML files instead of the canonical compiled optimizer catalog, creating web/CLI contract drift plus roughly 300 ms and 185 MiB startup cost. | C3-PERF-002, C3-ARCH-002 |
+| C3-010 | Medium | High | CSV “worker” parsing still decodes the full file, scans all bank signatures, counts replacement characters, and clones the string on the main thread before worker parsing. | C3-PERF-001 |
+| C3-011 | Medium | High | Scraper input beyond 40,000 UTF-16 units is silently omitted from the model-visible source while the caller and written catalog still receive an ordinary success result. | C3-TR-001, C3-TE-005 |
+| C3-012 | Medium | High | The scraper imports Zod directly without declaring it, so isolated or strict workspace installation cannot resolve a production dependency. | C3-DEP-002 |
+| C3-013 | High | High | The SheetJS runtime tarball is locked by HTTPS URL without a content-integrity digest; frozen resolution does not authenticate changed bytes at that URL. | C3-DEP-001 |
+| C3-014 | Low | High | Seven heavy direct dependencies have no production consumer, retaining unnecessary install, update, and supply-chain surface. | C3-DEP-003 |
 
-### Runtime efficiency and publication identity
-
-| ID | Severity | Confidence | Finding | Raw sources |
-|---|---|---|---|---|
-| C2-014 | Medium | High | The server parser’s default entry eagerly loads every format plus the Anthropic SDK even for a local CSV command. | C2-PERF-03, C2-ARCH-04, C2-TE-06 |
-| C2-015 | Medium | High | A normal CSV CLI parse reads and decodes the complete file once for detection and again for parsing. | C2-PERF-04, C2-TE-06 |
-| C2-016 | Medium | High | Summary, optimizer, detail, and category artifacts have no mandatory shared generation identity, so one session can mix publication generations undetectably. | C2-ARCH-02, C2-TE-05 |
-
-### Documentation, workflow, and report product
+### CLI and standalone report integrity
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C2-017 | Medium | High | Upload help and analyzer comments describe a retired current-month previous-spending fallback instead of exact previous-calendar-month behavior. | C2-DOC-01 |
-| C2-018 | High | High | The README YAML example fails the documented canonical schema. | C2-DOC-02 |
-| C2-019 | High | High | `.claude/AGENTS.md` teaches obsolete category, reward, and `discontinued` shapes that publication rejects. | C2-DOC-03 |
-| C2-020 | Medium | High | `.claude/AGENTS.md` documents manual copying instead of the multi-artifact `data:build`/`data:check` workflow. | C2-DOC-04 |
-| C2-021 | Medium | High | The deploy workflow uses mutable action tags and grants Pages/OIDC writes at workflow scope, including the build job. | C2-SEC-01 |
-| C2-023 | Medium | High | The standalone report CSP blocks its own inline stylesheet, leaving the HTML report entirely unstyled. | C2-DES-01 |
-| C2-024 | Low | High | Card detail describes inclusive tier maxima as “less than,” contradicting calculator boundary semantics. | C2-DES-02 |
-| C2-025 | Low | High | The generated report still exposes the retired `CardPick` product name. | C2-DES-03 |
+| C3-015 | High | High | The durable CLI HTML report omits parse/calendar exclusions, previous-spending basis, and unsupported-rule limitations that were disclosed only in the generating terminal. | C3-CT-001 |
+| C3-016 | Medium | High | The report escape helper pre-decodes unbounded numeric entities with `String.fromCodePoint`, so invalid or oversized entities crash report generation. | C3-CS-001, C3-DBG-002, C3-TE-003 |
+| C3-017 | Medium | High | Sequential `replaceAll` calls reinterpret user data matching later template placeholders; a card named `{{CARD_COMPARISON}}`, for example, injects a second report table. | Final independent sweep |
+| C3-018 | Medium | High | Catalog/taxonomy strings reach visualization tables and optimization disclosures without the existing terminal sanitizer, preserving OSC, CSI, control, and bidi payloads. | C3-SEC-001, C3-TE-001 |
+| C3-019 | Medium | High | Report output validation uses the input-style `mustExist: false` path and then follows an existing final-component symlink, truncating its target. | C3-SEC-002, C3-TE-002 |
+| C3-020 | Medium | High | Subcommand `--help` is treated as a statement path, and report usage omits correctness-critical catalog, bank, category, and previous-spending options. | C3-DOC-001 |
+| C3-021 | Low | High | Analyze, optimize, and report silently ignore unknown, stray, incomplete, or invalidly typed options, allowing typos to select defaults without failing. | C3-DBG-004 |
+
+### Web lifecycle, UI, and release regression coverage
+
+| ID | Severity | Confidence | Finding | Raw sources |
+|---|---|---|---|---|
+| C3-022 | Medium | High | The analysis abort signal stops parser work but is not threaded through category/catalog waits or optimizer execution, so canceled runs retain downstream network/validation/CPU work. | C3-TR-002, C3-TE-006 |
+| C3-023 | Medium | High | A failed replacement analysis clears the in-memory result but leaves the prior `sessionStorage` entry, which reload/navigation resurrects as if it were current. | C3-DBG-001, C3-TE-004, C3-QA-001 |
+| C3-024 | Medium | High | Dropping a new file during the 1.2-second success countdown does not cancel the old navigation timer, so the new selection is discarded by navigation to the prior result. | C3-DBG-003, C3-TE-007, C3-QA-002 |
+| C3-025 | Medium | High | Entering card detail from the keyboard removes the grid and leaves focus on `<body>`; returning likewise does not restore focus to the originating card. | C3-DES-001 |
+| C3-026 | Medium | High | The home hero’s `-mx-6` exceeds the mobile container padding and widens a 375 px document to 383 px, producing horizontal page overflow. | C3-DES-002 |
+| C3-027 | Low | High | The Korean card-detail navigation landmark exposes the untranslated accessible name “breadcrumb.” | C3-DES-003 |
+| C3-028 | Low | High | Screenshot tests only capture PNGs and are excluded from the release gate; no stable visual baseline or diff can fail on covered CSS/layout regressions. | C3-QA-003 |
 
 ## Raw-finding coverage matrix
 
@@ -87,55 +92,89 @@ Every raw role finding maps to at least one unique aggregate finding.
 
 | Review | Raw IDs → aggregate IDs |
 |---|---|
-| code-reviewer | C2-CR-001→C2-001; C2-CR-002→C2-002; C2-CR-003→C2-003 |
-| critic | C2-CT-001→C2-004; C2-CT-002→C2-005,C2-006; C2-CT-003→C2-007; C2-CT-004→C2-008 |
-| verifier | C2-V-001→C2-009; C2-V-002→C2-010; C2-V-003→C2-003 |
-| debugger | C2-D-001→C2-011 |
-| perf-reviewer | C2-PERF-01→C2-012; C2-PERF-02→C2-013; C2-PERF-03→C2-014; C2-PERF-04→C2-015 |
-| architect | C2-ARCH-01→C2-003; C2-ARCH-02→C2-016; C2-ARCH-03→C2-011; C2-ARCH-04→C2-014 |
-| test-engineer | C2-TE-01→C2-003; C2-TE-02→C2-012; C2-TE-03→C2-011; C2-TE-04→C2-013; C2-TE-05→C2-016; C2-TE-06→C2-014,C2-015 |
-| document-specialist | C2-DOC-01→C2-017; C2-DOC-02→C2-018; C2-DOC-03→C2-019; C2-DOC-04→C2-020 |
-| security-reviewer | C2-SEC-01→C2-021; C2-SEC-02→C2-022 |
-| tracer | C2-TR-01→C2-005; C2-TR-02→C2-006 |
-| designer | C2-DES-01→C2-023; C2-DES-02→C2-024; C2-DES-03→C2-025 |
-| final independent sweep | skip-link URL resolution→C2-026; cross-card issue identity reproduction→C2-027 |
+| code-reviewer | C3-CR-001→C3-001; C3-CR-002→C3-002 |
+| critic | C3-CT-001→C3-015; C3-CT-002→C3-003 |
+| code-simplifier | C3-CS-001→C3-016; C3-CS-002→C3-006; C3-CS-003→C3-007 |
+| verifier | verification matrix→C3-001,C3-002,C3-003,C3-006,C3-007,C3-015,C3-016,C3-020 |
+| document-specialist | C3-DOC-001→C3-020 |
+| security-reviewer | C3-SEC-001→C3-018; C3-SEC-002→C3-019 |
+| tracer | C3-TR-001→C3-011; C3-TR-002→C3-022 |
+| debugger | C3-DBG-001→C3-023; C3-DBG-002→C3-016; C3-DBG-003→C3-024; C3-DBG-004→C3-021 |
+| test-engineer | C3-TE-001→C3-018; C3-TE-002→C3-019; C3-TE-003→C3-016; C3-TE-004→C3-023; C3-TE-005→C3-011; C3-TE-006→C3-022; C3-TE-007→C3-024 |
+| qa-tester | C3-QA-001→C3-023; C3-QA-002→C3-024; C3-QA-003→C3-028 |
+| perf-reviewer | C3-PERF-001→C3-010; C3-PERF-002→C3-009 |
+| architect | C3-ARCH-001→C3-008; C3-ARCH-002→C3-009 |
+| dependency-expert | C3-DEP-001→C3-013; C3-DEP-002→C3-012; C3-DEP-003→C3-014 |
+| designer | C3-DES-001→C3-025; C3-DES-002→C3-026; C3-DES-003→C3-027 |
+| final independent sweep | premature occurrence accounting→C3-004; long-JSON detection reproduction→C3-005; report placeholder-collision reproduction→C3-017 |
+
+## Independent reproduction evidence
+
+- `maxUses: 1` fuel fixture, missing facts first and valid 10-liter
+  transaction second: `totalReward: 0`, one unsupported issue. The valid
+  transaction should receive the only use.
+- A 6,508-character valid JSON transaction wrapper named `statement.txt`:
+  `detectFormatFromFile()` returned `csv`.
+- A report whose best-card name is `{{CARD_COMPARISON}}`: the generated HTML
+  contained two “카드별 혜택 비교” table captions.
 
 ## Plan coverage
 
+Every Cycle 3 finding is scheduled. There are no Cycle 3 deferrals.
+
 | Plan | Scheduled findings |
 |---|---|
-| 73 — Domain and catalog correctness | C2-001, C2-002, C2-003, C2-004, C2-010, C2-027 |
-| 74 — Parser and CLI completeness | C2-005, C2-006, C2-007, C2-008, C2-009, C2-022 |
-| 75 — Web lifecycle, cancellation, and admission | C2-011, C2-012, C2-013, C2-026 |
-| 76 — Parser runtime efficiency | C2-014, C2-015 |
-| 77 — Publication identity and contributor documentation | C2-016, C2-017, C2-018, C2-019, C2-020, C2-024 |
-| 78 — Workflow and standalone report integrity | C2-021, C2-023, C2-025 |
+| 79 — Domain and parser correctness | C3-001 through C3-007 |
+| 80 — Publication, runtime, and dependency boundaries | C3-008 through C3-014 |
+| 81 — CLI and standalone report integrity | C3-015 through C3-021 |
+| 82 — Web cancellation and state transitions | C3-022 through C3-024 |
+| 83 — UI focus, reflow, localization, and visual regressions | C3-025 through C3-028 |
 
-No Cycle 2 finding is deferred.
+Plans 73–78 were already fully implemented and verified in Cycle 2 and were
+archived before Cycle 3 implementation. Plan 72 remains active only as the
+historical home for its explicitly recorded Cycle 1 deferrals.
+
+## Implementation closure
+
+| Plan | Status | Findings |
+|---|---|---|
+| 79 — Domain and parser correctness | completed | C3-001 through C3-007 |
+| 80 — Publication, runtime, and dependency boundaries | completed | C3-008 through C3-014 |
+| 81 — CLI and standalone report integrity | completed | C3-015 through C3-021 |
+| 82 — Web cancellation and state transitions | completed | C3-022 through C3-024 |
+| 83 — UI focus, reflow, localization, and visual regressions | completed | C3-025 through C3-028 |
+
+All 28 findings have implementation and regression evidence in their owning
+plan. No Cycle 3 item was deferred or silently dropped.
 
 ## Verification and process notes
 
-- Reviewer full-suite evidence: 2,196 tests passed, 0 failed on installed Bun
-  1.3.12. The repository pin is Bun 1.2.6, so the pinned release gates must
-  still run separately.
-- Focused reviewer evidence: 194 cross-boundary tests, 206 core/rules tests, 42
-  loader/queue/publication tests, and data/docs/migration checks passed.
-- No required reviewer failed or required a retry.
-- Browser review used an isolated CherryPicker preview/session. That session
-  and preview were closed, repository E2E status was clean, and port 4173 was
-  clear afterward. The pre-existing xylolabs agent-browser process was
-  preserved.
-- Cycle 1 Plans 68–71 were archived after their recorded implementation and
-  acceptance. Plan 72 remains active because Cycle 2 found publication
-  identity and parser-entry work that extends its quality-gate scope.
-
-## Cycle 2 implementation closure
-
-- Plans 73–78 are completed; all 27 unique findings were implemented with no
-  deferrals.
-- `lint`, `typecheck`, `build`, workspace tests, `test:bun`, standalone
-  Vitest, data/docs/migration checks, and `git diff --check` passed.
-- The final isolated Playwright rerun passed all 84 tests. Repository-owned
-  browser/server processes were cleaned, port 4173 was clear, and the
-  unrelated xylolabs agent-browser session remained intact.
-- Deploy mode remained `none`.
+- Required gates passed: repository lint, typecheck, and build; Turbo test;
+  `bun run test:bun` (1,660 tests); `bunx vitest run` (2,290 tests); and
+  `bun run test:e2e` (90 browser tests).
+- Data build/check published 683 cards across 24 issuer shards with identity
+  `392b610e498cc3fc793b41c8cfc572c1f75b50ae853f967433568b829c2cbffd`.
+- Dependency policy, catalog publication/parity, fresh-process CLI budgets,
+  scoped Astro diagnostics, and `git diff --check` passed.
+- The first E2E run identified a report-fixture contract omission and the
+  loading/detail-focus timing race; both were fixed. The first Vitest run also
+  identified one Bun-only process-contract file crossing the Node runner
+  boundary; it is now explicitly owned by the Bun suite. A Vite
+  static/dynamic import warning was removed by using one static card-catalog
+  boundary.
+- The two committed visual baselines passed after inspection. A deliberate
+  temporary test-only border change failed exactly those two assertions and
+  emitted inspectable diff artifacts; the change was removed afterward.
+- The first security/trace reviewer attempt was blocked by an automated content
+  classifier. The single permitted retry was narrowed to defensive local
+  correctness/error-path/test review and completed all five assigned reports.
+  No other reviewer failed.
+- Designer review used only the isolated
+  `AGENT_BROWSER_SESSION=c3-cherrypicker-designer` and port 43217. Its browser
+  and preview were closed; repository E2E ownership is clean and ports 43217
+  and 4173 are clear. Unrelated Travelback and xylolabs process trees were not
+  signalled.
+- Every managed browser run was preceded and followed by a repository-scoped
+  ownership audit. Port 4173 was clear after cleanup, and unrelated Travelback
+  and xylolabs process trees were not signalled.
+- No deployment was performed. Deploy mode remains `none`.

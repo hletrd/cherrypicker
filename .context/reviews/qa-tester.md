@@ -1,119 +1,157 @@
-# QA Test Plan — CherryPicker (Cycle 32)
+# QA Tester — Cycle 3
 
-**Reviewer:** qa-tester (self-completed after agent timeout)
-**Scope:** Manual validation, runtime checks, cross-browser and performance scenarios
-**Date:** 2026-05-06
+**Reviewer:** qa-tester
+**Date:** 2026-07-23
+**Baseline:** `614ce5c`
+**Disposition:** Core happy paths and the configured browser regression gate
+pass. Two user-visible state-transition defects are confirmed; visual
+regression detection remains manual.
 
----
+## Product and release coverage inventory
 
-## Summary
+The executed 84-test browser suite covers:
 
-Seven manual test scenarios derived from code-review findings. Three are data-integrity critical, two are compatibility checks, two are UX/resilience checks.
+- home metadata, navigation, mobile menu, theme persistence, upload selection,
+  bank controls, valid/invalid file handling, dashboard/results/report routes,
+  card search/detail, empty states, session restoration, aggregate totals, and
+  runtime error monitoring;
+- page-wide drop, previous-spending bounds, partial-warning identity,
+  card-loader retry, recommendation table/keyboard behavior, 320/375/400 px
+  geometry, reduced motion, WCAG AA contrast, printing, and narrow tables;
+- safe/unsafe external links, frame behavior, report CSP, catalog request
+  boundaries, optimizer fact propagation, bounded storage migration, and
+  nested-route skip links.
 
----
+The 2,254 passing unit/script tests additionally cover all statement formats,
+server/browser parser parity, malformed amounts/dates/encodings, calculator
+caps/conditions, catalog semantics for all 683 cards, artifact identity,
+network policy, writer containment, CLI consent, process ownership, workflow
+pins/permissions, and build budgets.
 
-## Manual Test Scenarios
+The following product-state matrix was checked against source, tests, and safe
+local boundary repros:
 
-### QA-01: UTF-16 LE CSV Upload (Compatibility)
+| Scenario | Current automated coverage | Current result |
+|---|---|---|
+| Normal CSV upload -> dashboard -> results -> report | E2E | Pass |
+| Partial multi-file parse warning survives routes/reload | E2E | Pass |
+| Corrupt/future persisted schema | unit + E2E | Pass/fails closed |
+| Cancel active parser/PDF work | unit | Pass |
+| Success A -> failed replacement B -> reload | None | Fail, C3-QA-001 |
+| Drop B during A's success countdown | None | Fail, C3-QA-002 |
+| Long scraper source with material tail section | None | Incomplete success |
+| Invalid numeric entity in CLI report data | None | Report aborts |
+| Existing symlink at CLI report destination | Wrong-mode unit only | Unsafe write |
+| Terminal controls in catalog display fields | Helper only | Controls survive sink |
 
-**Prerequisite:** Obtain or synthesize a UTF-16 LE CSV from a Korean bank export.
-**Steps:**
-1. Open the CherryPicker web app.
-2. Upload the UTF-16 LE CSV via FileDropzone.
-3. Observe encoding detection warning and parsed merchant names.
+## Findings
 
-**Expected:** Merchant names display correctly (e.g., "현대카드"). No replacement characters.
-**Actual (current):** Web-side `parseFile` only tries utf-8/cp949. Expect corruption or fallback warning.
-**Severity:** Medium — blocks users with older bank exports.
+### C3-QA-001 — Failed replacement analysis can reappear as a successful old result after reload
 
----
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed
+- **Locations:** `apps/web/src/lib/store.svelte.ts:335-384`;
+  persistence initialization `:191-263`;
+  missing scenario in `e2e/ui-ux-review.spec.js:632-663` and
+  `e2e/web-regressions.spec.js:81-118`
+- **Correlates with:** C3-DBG-001, C3-TE-004
 
-### QA-02: XLSX Multi-Section Upload with Blank Rows (Data Integrity)
+**User scenario:** Upload A and reach the dashboard. Return home and submit
+malformed B. The app reports B's failure and clears its in-memory result, but A
+is still in `sessionStorage`; refresh or direct navigation restores A. A user
+can reasonably interpret that dashboard as the result of the most recent
+upload.
 
-**Prerequisite:** Create an XLSX with two data sections separated by blank rows. Section A ends with merchant="스타벅스", amount=5000. Section B starts with a merged/empty merchant cell.
+**Acceptance requirement:** Product must choose and consistently present one
+policy. If “last good result” is retained, the failed attempt must not clear it
+in memory and the UI must label it as older. If replacement clears prior data,
+storage and every result route must stay empty after reload. Add browser
+coverage for both malformed and network/catalog failure, while an explicit
+abort must not surface an error.
 
-**Steps:**
-1. Upload the XLSX.
-2. Check the first transaction of Section B.
+### C3-QA-002 — A new file dropped during “complete” is discarded by the old navigation timer
 
-**Expected:** Merchant should be the actual value from Section B (or empty if genuinely merged).
-**Actual (current):** Forward-fill from Section A leaks in — merchant shows "스타벅스".
-**Severity:** High — silent data corruption.
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed
+- **Locations:** `apps/web/src/components/upload/FileDropzone.svelte:52-92,
+  162-169,196-236,319-337,439-509`;
+  missing scenario in `e2e/ui-ux-review.spec.js:163-236`
+- **Correlates with:** C3-DBG-003, C3-TE-007
 
----
+**User scenario:** During the 1.2-second “분석 완료” countdown for A, drop B
+anywhere on the page. B appears and the form returns to idle, but A's still
+current timer navigates to A's dashboard. No message says B was ignored.
 
-### QA-03: 1000+ Transaction Performance Check (Performance)
+**Acceptance requirement:** Either lock file admission during the transition
+or treat it as an explicit cancellation of A's pending navigation. B must
+remain selected, route and step indicators must agree, and no old result may
+be presented as B. Test mouse drop and file-picker mutations with fake timers
+and one real-browser path.
 
-**Prerequisite:** Generate a CSV with 1500 transactions.
-**Steps:**
-1. Upload the file.
-2. Click "Analyze".
-3. Measure time from click to result display.
+### C3-QA-003 — Screenshot checks capture artifacts but detect no visual differences
 
-**Expected:** Under 3 seconds on modern desktop; under 5 seconds on mid-range mobile.
-**Actual (current):** Greedy optimizer is O(T²·C). With 100 cards, could exceed 10 seconds and cause browser "page unresponsive" warning.
-**Severity:** Medium — UX degradation at scale.
+- **Severity:** Low
+- **Confidence:** High
+- **Status:** Confirmed gate gap
+- **Locations:** `playwright.config.ts:6-16`;
+  `playwright.screenshots.config.ts:6-16`;
+  `e2e/ui-ux-screenshots.spec.js:49-163`;
+  `.github/workflows/deploy.yml:38-55`
 
----
+The regression gate explicitly ignores the 13 screenshot-capture cases. The
+separate suite writes PNG files with `page.screenshot`, but has no
+`toHaveScreenshot` baselines or pixel/layout comparison. It is useful for
+manual review, yet a spacing, clipping, theme, or responsive visual regression
+cannot fail the deployment workflow unless it also violates a semantic or
+geometry assertion.
 
-### QA-04: sessionStorage QuotaExceededError Resilience (Resilience)
+**Failure scenario:** A CSS change preserves headings, roles, and the few
+asserted geometry boundaries while visibly breaking a covered screen. All
+configured release tests remain green and new captures are produced without a
+comparison.
 
-**Prerequisite:** Use browser dev-tools to set sessionStorage quota to near-zero, or open in Safari private mode.
-**Steps:**
-1. Upload and analyze a file.
-2. Dismiss any warning banner.
-3. Refresh the page.
+**Suggested fix:** Curate a small stable baseline set for the highest-value
+surfaces (home, selected upload, populated dashboard/results/report, cards,
+mobile, dark, and print) and compare with deterministic fonts/animations.
+Keep broader captures manual if their churn is too high; publish diffs on
+failure. This need not block on every antialiasing difference.
 
-**Expected:** App gracefully handles missing persistence. No uncaught exceptions.
-**Actual (current):** `store.svelte.ts` wraps sessionStorage in try/catch and silently drops persistence. The SpendingSummary banner handles QuotaExceededError. Generally resilient.
-**Severity:** Low — already handled, but worth regression-testing.
+## Cross-browser, locale, and resilience gaps
 
----
+- The release browser gate installs and runs Chromium only. Before a public
+  compatibility claim, manually smoke Firefox and WebKit for file inputs,
+  drag/drop, PDF workers, printing, local/session storage restrictions, and
+  View Transition fallback.
+- Korean locale formatting is covered functionally, but system timezone/locale
+  variation is not in the browser matrix. Calendar logic uses strict ISO/UTC
+  helpers and passed its unit suite; still run one non-Seoul host smoke for
+  report dates and statement-month selection.
+- Test retries are 2 only in CI, and traces begin on first retry. Five fixed
+  two-second waits in `ui-ux-review.spec.js` should be replaced with
+  state-based waits so a retry does not hide timing debt.
+- Private browsing/storage denial is handled defensively in source but lacks a
+  real-browser acceptance scenario; add one browser context with storage
+  methods denied and confirm analysis remains usable with a clear persistence
+  warning.
 
-### QA-05: Mobile Responsiveness — 375px Width (UX)
+## Release-gate assessment
 
-**Prerequisite:** Use Chrome DevTools device emulation (iPhone SE).
-**Steps:**
-1. Navigate to Dashboard.
-2. Scroll through TransactionReview, CategoryBreakdown, OptimalCardMap.
+The checked-in workflow is structurally sound: pinned actions, frozen
+dependencies, pinned Bun, scoped permissions, full repository verification,
+browser regressions before upload, and failure artifacts. On this host, all
+individually runnable gates and all 84 E2E tests passed. The chained `verify`
+gate correctly refused Bun 1.3.12 because the repository requires 1.2.6, so a
+release sign-off still requires the same commands under the pinned runtime.
 
-**Expected:** No horizontal scroll. Tap targets >= 44px. Text readable without zoom.
-**Actual (current):** Svelte components use Tailwind responsive classes. Likely acceptable, but FileDropzone drop zone may be small on narrow screens.
-**Severity:** Low — cosmetic.
+The current green suites do not invalidate the Cycle 3 findings: each failing
+scenario sits outside the asserted state transitions or sink boundaries.
 
----
+## Final missed-issue sweep
 
-### QA-06: Keyboard Navigation in TransactionReview Modal (Accessibility)
-
-**Prerequisite:** Use only keyboard (Tab, Shift+Tab, Enter, Escape).
-**Steps:**
-1. Open TransactionReview.
-2. Tab to category dropdown, change category.
-3. Tab to save, press Enter.
-4. Press Escape to close modal.
-
-**Expected:** Focus is trapped inside modal while open. Focus returns to trigger button on close. ARIA roles and labels are present.
-**Actual (current):** Not verified — needs manual check.
-**Severity:** Medium — accessibility compliance gap.
-
----
-
-### QA-07: Cross-Month Edit → Reoptimize Staleness (Data Integrity)
-
-**Prerequisite:** Analyze January data with previousMonthSpending manually set to 500000.
-**Steps:**
-1. Wait several minutes (or simulate time passage).
-2. Edit a December transaction category.
-3. Click Reoptimize.
-
-**Expected:** Previous month spending is recomputed from edited December transactions.
-**Actual (current):** `store.svelte.ts` caches `previousMonthSpendingOption`. If the cached value is older than the most recent edit to previous-month transactions, the optimizer uses stale baseline.
-**Severity:** Medium — incorrect performance tier calculation.
-
----
-
-## Verdict
-
-**RUN FIRST:** QA-02 (XLSX blank rows) and QA-07 (cross-month staleness) — data integrity.
-**RUN NEXT:** QA-01 (UTF-16), QA-03 (performance), QA-06 (accessibility).
-**RUN LAST:** QA-04 (resilience), QA-05 (responsive).
+I checked all upload states, route handoffs, persistence/reload paths, empty and
+warning states, mobile sizes, keyboard paths, theme/print modes, catalog
+loading failures, CLI visible outputs, and scraper completion messages against
+the complete test inventory. No additional reproducible Critical/High QA defect
+was found after the two state-transition defects and the visual-gate gap above.

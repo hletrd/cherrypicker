@@ -1,134 +1,37 @@
-# Performance Review — Cycle 1
+# Cycle 3 — Performance Reviewer
 
-**Reviewer:** perf-reviewer
-**Date:** 2026-07-23
-**Scope:** Entire current repository at `e6fe49b`; browser/CLI CPU, allocation, I/O, and scalability
-**Outcome:** 2 High, 2 Medium findings
+**Review target:** `614ce5c` on `codex/review-plan-fix-no-deploy-20260723`
+**Mode:** read-only performance review. Cycle 1/2 closures were checked first; the deferred Cycle 1 optimizer and merchant-matcher work (`D-C1-040`, `D-C1-041`) is intentionally not re-reported.
+
+## Inventory and method
+
+The review used the shared Cycle 3 inventory of 2,072 tracked paths / 1,067 current non-historical artifacts. I traced startup, catalog publication/loading, browser parse and analysis queues, worker boundaries, persistence, reports, CLI defaults, and build budgets. Validation included a production web build/budget check, decoded/gzip asset sizing, a 10 MiB text-preprocessing microbenchmark, and fresh-process catalog-load probes.
 
 ## Findings
 
-### PERF-01 — Default optimization synchronously rescans all assigned history against all 683 cards
+### C3-PERF-001 — CSV worker parsing still performs the full-file decode and bank scan on the main thread
 
-**Severity:** High
-**Confidence:** High
-**Status:** Confirmed by code inspection and local benchmark
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed
+- **Location:** `apps/web/src/lib/parser/index.ts:29-58`; `packages/parser/src/shared/encoding.ts:3-46,49-59`; `apps/web/src/lib/parser/detect.ts:156-197`; `apps/web/src/lib/parser/worker-runner.ts:112-116`
+- **Concrete failure scenario:** A user selects one or two 10 MiB CSV statements on a lower-powered phone. Before either worker can parse, the UI thread reads and decodes every byte, tests the complete decoded string against every bank signature, clones that string into the worker, and later scans it again for replacement characters. Two permitted parse lanes can enter this path together, producing visible input/animation delay even though the feature is presented as worker-backed.
+- **Evidence:** The CSV branch calls `file.arrayBuffer()`, `detectTextEncoding()`, `decodeTextBytes()`, and `detectBankFromText()` before `parseWithWorker()`. UTF-8 detection itself performs a fatal full-buffer decode; the next call decodes the buffer again. Bank detection loops over all signature regexes against the full string. Unlike XLSX, the CSV payload is a string, so `postMessage()` cannot transfer it and must structured-clone it. A seven-run 10 MiB probe of the pre-worker encoding/decode/bank/replacement path on this desktop measured **14.66–16.24 ms, 15.63 ms median** in Bun; that already consumes essentially a 60 Hz frame before browser cloning, worker startup, or mobile slowdown.
+- **Suggested fix:** Transfer the original `ArrayBuffer` to the CSV worker and perform encoding detection, decoding, bank detection, replacement counting, and parsing there. Return the detected bank/encoding warning with the parse result. If bank detection must remain outside the parser, limit it to a bounded header sample. Add a browser test with a heartbeat/long-task assertion for the maximum per-file size and two concurrent lanes.
 
-**Evidence**
+### C3-PERF-002 — Default CLI optimize/report startup reparses all 683 YAML rules instead of using the compiled catalog
 
-- The upload UI supplies no `cardIds`, so `apps/web/src/lib/analyzer.ts:191-219` passes all 683 generated card rules to the optimizer.
-- For every transaction and card, `packages/core/src/optimizer/greedy.ts:39-70` calculates the card result before and after adding the transaction. The `after` path allocates `[...currentTransactions, transaction]`.
-- Each calculation walks assigned transactions and calls `findRule`; `packages/core/src/calculator/reward.ts:67-94` allocates a filtered candidate array, sorts it, and calls `rules.indexOf` inside the comparator.
-- `packages/core/src/optimizer/greedy.ts:70` fully sorts all 683 scores even though only the best six are retained, and lines 243-244 allocate another filtered array.
-- After assignment, `packages/core/src/optimizer/greedy.ts:247-265` recalculates card outputs again for reporting and best-single-card comparison.
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed
+- **Location:** `tools/cli/src/commands/optimize.ts:97-127`; `tools/cli/src/commands/report.ts:104-133`; `packages/rules/src/loader.ts:17-52`; generated artifact `scripts/build-json.ts:424`
+- **Concrete failure scenario:** Every ordinary `optimize` or `report` invocation recursively enumerates 683 rule files, launches one read/YAML-parse/Zod-validation promise per file, and retains the resulting graph before doing any user analysis. Repeated CLI use and constrained CI/container runs pay this source-authoring cost even though the repository already publishes a compact optimizer artifact.
+- **Evidence:** Both commands select `DEFAULT_CARDS_DIR` when `--cards` is absent and call `loadAllCardRules()`. That loader recursively collects every YAML path and feeds the entire array to `Promise.allSettled()` without a concurrency bound. Three fresh-process probes loaded 683 rules in **305/313/339 ms** and peaked at approximately **184–186 MiB RSS**. Reading and parsing the generated optimizer JSON took approximately **6 ms** and **33 MiB RSS** in the comparison probe. The custom `--cards` path legitimately needs source YAML; the default path does not.
+- **Suggested fix:** Make the generated, schema-validated optimizer catalog the default CLI runtime input, while retaining YAML loading for explicit `--cards` development overrides. If source loading remains supported, bound read/parse concurrency. Add a CLI startup/RSS budget test that exercises the default 683-card catalog.
 
-The work is at least `2 * cards * transactions` calculator invocations, while the total assigned-history replay grows quadratically with transaction count. All of it runs synchronously on the browser main thread.
+## Build and missed-issue sweep
 
-**Benchmark**
-
-Using the real 683-card `cards.json` and ordinary categorized transactions on this development host:
-
-| Transactions | Optimizer only |
-|---:|---:|
-| 100 | 376 ms |
-| 250 | 744 ms |
-| 500 | 1,660 ms |
-| 1,000 | 3,893 ms |
-
-This excludes parsing, categorization, rendering, and slower mobile hardware.
-
-**Concrete failure**
-
-A 500–1,000-row statement can freeze interaction for seconds. Category editing calls the same optimizer again (`apps/web/src/lib/store.svelte.ts:613-619`), repeating the stall.
-
-**Fix**
-
-Pre-index rules by canonical category and compile them once. Maintain incremental per-card cap/tier state so a marginal score does not replay prior transactions. Track only the top six scores without sorting all cards. Move the solver to a Web Worker and expose progress/cancellation. If product semantics permit, prefilter obviously ineligible cards before scoring.
-
----
-
-### PERF-02 — Every uncached merchant miss scans 12,740 static keywords and then the taxonomy
-
-**Severity:** High
-**Confidence:** High
-**Status:** Confirmed by code inspection and local benchmark
-
-**Evidence**
-
-- `packages/core/src/categorizer/matcher.ts:8-19` builds 12,740 effective static keyword entries.
-- Exact lookup is O(1), but `packages/core/src/categorizer/matcher.ts:72-91` linearly checks every entry for both forward and reverse substring matches.
-- If that misses, `packages/core/src/categorizer/taxonomy.ts:58-107` linearly scans its keyword map up to two more times.
-- The LRU holds only 500 keys (`packages/core/src/categorizer/matcher.ts:31-33,129-139`), so larger/high-cardinality statements churn it.
-
-**Benchmark**
-
-Unique unmatched merchant names on this development host:
-
-| Names | Categorization time |
-|---:|---:|
-| 100 | 255 ms |
-| 500 | 604 ms |
-| 1,000 | 734 ms |
-| 5,000 | 3,684 ms |
-
-The 1,000-row categorization plus optimizer measurements already exceed 4.5 seconds before UI work.
-
-**Concrete failure**
-
-Statements containing issuer-specific merchant suffixes or mostly unique small merchants take the worst path. The shared matcher in `apps/web/src/lib/analyzer.ts:300-337` avoids reconstruction but not the per-name full scan.
-
-**Fix**
-
-Normalize merchant names once, then use a compiled multi-pattern matcher (Aho–Corasick/trie) or token/prefix indexes. Separate forward substring and reverse-fuzzy indexes by length. Cache all unique names for the duration of one analysis rather than evicting at 500. The category-contract cleanup should also remove duplicate/conflicting patterns before compilation.
-
----
-
-### PERF-03 — Multi-file parsing is unbounded parallel CPU/memory work on the main thread
-
-**Severity:** Medium
-**Confidence:** High
-**Status:** Confirmed by code inspection; device profiling required
-
-**Evidence**
-
-- Each file may be 10 MB and there is no file-count limit (`apps/web/src/components/upload/FileDropzone.svelte:154-220`).
-- Exceeding the 50 MB aggregate threshold only shows a warning and explicitly lets the user proceed (`apps/web/src/components/upload/FileDropzone.svelte:201-205`).
-- `apps/web/src/lib/analyzer.ts:325-337` starts every parse concurrently with `Promise.all`.
-- `apps/web/src/lib/parser/index.ts:21-94` materializes an ArrayBuffer or full string per file. PDF and SheetJS parsing are CPU-heavy synchronous work after the await.
-
-**Concrete failure**
-
-Ten 10 MB XLSX/PDF files can retain source buffers, decoded text/workbooks, row arrays, parsed transactions, and categorization results at once. Promise concurrency does not create parallel CPU execution in the browser; it increases peak memory while still blocking the main thread.
-
-**Fix**
-
-Enforce a hard aggregate limit or stream files through a bounded queue (one or two at a time). Release parser intermediates before starting the next file. Move PDF/XLSX work to workers and yield between batches. Show per-file progress and allow cancellation.
-
----
-
-### PERF-04 — Analysis eagerly downloads and transforms the complete catalog for every new session
-
-**Severity:** Medium
-**Confidence:** Medium
-**Status:** Confirmed code path; network/device impact requires field measurement
-
-**Evidence**
-
-- `apps/web/public/data/cards.json` is 3,421,389 bytes (171,107 bytes with local gzip), containing 683 cards and 2,286 reward rules.
-- `apps/web/src/lib/cards.ts:135-185,231-234` fetches and parses the whole object.
-- `apps/web/src/lib/analyzer.ts:191-212` copies every rule and every reward/tier into another object graph before optimization.
-- The transformation is cached only in memory and invalidated on store reset (`apps/web/src/lib/analyzer.ts:50-89`).
-
-**Concrete failure**
-
-On a cold mobile session the analysis must fetch/parse the entire catalog and allocate both JSON and transformed graphs before scoring can begin. A reset repeats the transformation even though static data did not change.
-
-**Fix**
-
-Generate a compact, calculator-ready artifact with interned category/rule IDs, or shard/index it by candidate category/issuer. Cache the immutable compiled artifact independently of analysis-store reset. Measure transfer decompression, JSON parse, and retained heap on a representative mobile device before choosing sharding.
-
-## Coverage and validation
-
-- Covered all 920 tracked non-`.context` files, including 152 code files, 683 card YAML files, generated JSON, build/config scripts, UI paths, and tests.
-- Benchmarks used in-memory Bun execution and real repository artifacts; they did not create files or change source.
-- No Playwright, Chrome, browser process, or deployment was started.
-- Final sweep checked repeated scans, sorts, allocations, cache bounds, main-thread CPU, file concurrency, catalog transfer, and cleanup/cancellation paths.
+- `bun run web:build:check` passed. The initial client graph was 181.9 KiB decoded / 62.5 KiB gzip; compact catalog and optimizer budgets also passed.
+- Large parser chunks were confirmed lazy/worker-scoped (PDF worker 1.38 MiB raw; analyzer 451.7 KiB; XLSX/HTML workers about 390 KiB each), so they were not reported as initial-load regressions.
+- Cycle 2 cancellation, PDF cleanup, aggregate upload limits, parser entry isolation, and CSV double-file-read fixes remain present.
+- Final searches covered synchronous full-file operations, `Promise.all` fan-out, worker transfer lists, cache lifetime, storage serialization, timers/listeners, generated-data loading, and bundle-budget coverage. No additional performance issue met the evidence threshold.

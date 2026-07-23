@@ -1,124 +1,155 @@
-# Security Reviewer — Current-State Review
+# Security Reviewer — Cycle 3
 
 **Reviewer:** security-reviewer
 **Date:** 2026-07-23
-**Baseline:** working tree based on `e6fe49b` (including pre-existing local edits)
-**Scope:** browser trust boundaries, generated catalog data, scraper/CLI network and filesystem boundaries, XSS, clickjacking, secrets, and resource exhaustion
+**Baseline:** `614ce5c` (`docs(reviews,plans): close cycle 2 findings`)
+**Result:** 2 confirmed Medium findings; no Critical or High finding.
 
-## Summary
+## Scope and method
 
-| ID | Severity | Confidence | Status | Finding |
-|---|---|---|---|---|
-| SR-01 | High | High | Confirmed | LLM-controlled card metadata can escape the scraper output directory and overwrite arbitrary writable files |
-| SR-02 | Medium | High | Confirmed dormant path | Unvalidated catalog URLs reach a clickable `href`, allowing a stored `javascript:` URL |
-| SR-03 | Medium | High | Confirmed | The apparent clickjacking headers are meta tags that browsers do not enforce as response headers |
-| SR-04 | Medium | High | Confirmed / known-deferred | Scraper URL overrides permit SSRF and unbounded response buffering |
+I inventoried and reviewed every current production/configuration surface relevant
+to a trust boundary: the 66 web source files, 25 core files, 27 parser files,
+11 rules files, 4 visualization files, 11 CLI files, 11 scraper files, 16
+scripts, all workspace manifests/configuration, the Pages workflow, generated
+catalog readers, and the exhaustive 683-card/24-issuer validation path. I also
+searched tracked files for common secret formats and dangerous execution/HTML,
+filesystem, network, deserialization, terminal, and subprocess sinks.
 
-No critical finding was identified. The current 683-card corpus contains no active non-HTTP(S) URL, but the data-generation boundary still accepts one.
+The material data flows are:
 
-## SR-01 — LLM output controls a filesystem path outside the scraper output root
+1. statement file -> local/browser parser -> categorizer/optimizer ->
+   terminal, generated HTML, or browser `sessionStorage`;
+2. remote issuer page -> pinned-DNS scraper -> Anthropic structured output ->
+   canonical schema -> YAML -> generated catalog -> web/CLI renderers;
+3. CLI arguments -> local filesystem reads/writes or scraper child process; and
+4. generated JSON -> strict browser readers -> Svelte's escaped text/authorized
+   external links.
 
-**Severity:** High
-**Confidence:** High
-**Status:** Confirmed
-**Files/regions:**
+The web application is static and has no account, session, authorization, or
+server-side API surface. Authentication/authorization findings are therefore
+not applicable at this baseline. No credential, private-key, or API-token
+material was found in tracked production/configuration files.
 
-- `tools/scraper/src/extractor.ts:23-31,52-61`
-- `tools/scraper/src/prompts/schemas.ts:8-16`
-- `tools/scraper/src/validators.ts:14-30`
-- `packages/rules/src/schema.ts:41-57`
-- `tools/scraper/src/writer.ts:10-17,44`
+## Findings
 
-**Evidence:** Remote page text is embedded directly into the LLM message. The returned tool input is accepted by `cardRuleSetSchema`, where `card.id` and `card.issuer` are unrestricted `z.string()` values. The tool schema describes `id` as lower-case/hyphenated but supplies no pattern, and the runtime schema does not require the returned issuer to equal the CLI-selected issuer. `writeCardRule()` then constructs:
+### C3-SEC-001 — Catalog-controlled terminal strings bypass the terminal sanitizer
 
-```text
-join(outputDir, rule.card.issuer, `${rule.card.id}.yaml`)
-```
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed
+- **Locations:** `packages/viz/src/terminal/summary.ts:24-73,75-109`;
+  `packages/viz/src/terminal/comparison.ts:16-79`;
+  `tools/cli/src/disclosures.ts:36-56,62-72`;
+  call sites `tools/cli/src/commands/optimize.ts:130-135` and
+  `tools/cli/src/commands/report.ts:137-142`
+- **Trust boundary:** scraped/manual catalog and taxonomy strings -> terminal
 
-without resolving the destination and checking containment. A read-only probe using `card.id = "../../../../.github/workflows/pwn"` showed `cardRuleSetSchema.safeParse()` succeeds and the normalized path is outside the card root.
+`tools/cli/src/terminal.ts:1-26` correctly strips OSC, CSI, other escape
+sequences, C0/C1 controls, and bidi controls, but it is used only for paths,
+parser diagnostics, card numbers, and top-level error text. The visualization
+package sends category labels, card names, performance tiers, cap categories,
+assignment names, and alternatives directly to `cli-table3` or `console.log`.
+The disclosure builder similarly emits `cardId`, `ruleId`, `reason`, and
+`detail` without final-sink sanitization.
 
-**Exploit scenario:** An issuer page, redirected page, or page fragment contains prompt-injection text telling the model to return a traversal string as the card ID. A developer runs the intended scraper command. The validated result overwrites a source file, configuration file, or workflow reachable with the developer's permissions. The generated-file review comment is not a security boundary because the overwrite happens before review.
+Those values are not inherently trusted. `packages/rules/src/schema.ts:12-17,
+166-199,207-236,254-282` permits unrestricted display strings, and the scraper
+can author card names and rule-support prose from a remote page. A safe local
+probe passed an OSC clipboard sequence and CSI sequence through
+`printCardComparison`; the captured table still contained the exact OSC, BEL,
+and CSI bytes. This is distinct from Cycle 2's parser-warning fix: that fix
+covered one producer, while these sinks remain unsanitized.
 
-**Fix:**
+**Failure scenario:** A malformed or adversarial catalog supplied to
+`optimize`/`report` places terminal controls in a display field. Printing the
+otherwise schema-valid result can rewrite visible lines, create deceptive
+links, change styling, or request terminal clipboard behavior.
 
-1. Require a strict slug such as `/^[a-z0-9]+(?:-[a-z0-9]+)*$/` for `card.id`.
-2. Require `parsed.card.issuer === issuer` after extraction and keep an issuer allowlist in the runtime validator.
-3. Compute both root and destination with `resolve()`, then reject unless `relative(root, destination)` is non-empty, does not start with `..`, and is not absolute.
-4. Refuse to overwrite an existing file unless an explicit `--force` option is supplied.
-5. Add a test that feeds traversal values through the real validator and writer path using a temporary directory.
+**Suggested fix:** Put a shared terminal-safe text renderer at every terminal
+sink (preferably in `@cherrypicker/viz`, with CLI disclosures using the same
+function). Sanitize cells before handing them to `cli-table3`, not only error
+producers. Add direct sink tests for OSC-8, OSC-52, CSI, CR/LF, C1, and bidi
+payloads in card names, tier/category labels, cap rows, alternatives, and
+unsupported-rule details.
 
-## SR-02 — Catalog URL reaches a clickable anchor without a safe-protocol check
+### C3-SEC-002 — HTML report output validation follows an existing symlink
 
-**Severity:** Medium
-**Confidence:** High
-**Status:** Confirmed vulnerable path; current corpus is clean
-**Files/regions:**
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** Confirmed
+- **Locations:** `tools/cli/src/validation.ts:23-64`;
+  `tools/cli/src/commands/report.ts:82-87,144-152`
+- **Trust boundary:** CLI output coordinate -> local filesystem
 
-- `packages/rules/src/schema.ts:41-57`
-- `scripts/build-json.ts:54-67,224-239,381-428`
-- `apps/web/src/lib/cards.ts:135-157,261-309`
-- `apps/web/src/components/cards/CardDetail.svelte:172-176`
-- `apps/web/src/layouts/Layout.astro:38-50`
+`runReport` validates the output with `mustExist: false`, then uses
+`writeFileSync(output, html, 'utf-8')`. `validateFilePath` performs `lstat`
+only when `mustExist` is true, so an existing output symlink passes validation.
+The subsequent write follows it and truncates its target. A defensive temporary
+directory probe confirmed that validation returned successfully and the
+symlink target changed from its sentinel contents to the report contents.
 
-**Evidence:** Both the canonical schema and the relaxed build schema accept any string for `card.url`. The build copies the value into public JSON; the browser casts fetched JSON to `CardsJson` without runtime validation; `getCardById()` forwards the string; and `CardDetail` binds it directly to `href`. The CSP explicitly permits inline script through `'unsafe-inline'`, so a user-clicked `javascript:` URL is not neutralized by the current policy.
+The condition is particularly relevant to the default
+`cherrypicker-report.html` name in a shared or attacker-writable working
+directory. It also leaves ordinary existing files subject to unannounced
+replacement. This is a local filesystem race/overwrite issue, not a remote web
+vulnerability.
 
-The current data audit found 480 HTTP(S) URLs, 203 empty URLs, and zero other protocols. This prevents an immediate exploit in the checked-in artifact but does not close the generation/deployment path. The prior cycle-1 plan scheduled this fix, yet the current source still has no guard.
+**Failure scenario:** A user runs the report command in a directory containing
+a pre-existing report-name symlink. Report creation replaces the symlink's
+writable target with HTML under the user's privileges.
 
-**Exploit scenario:** A scraper prompt injection or overlooked manual edit emits `url: "javascript:..."`. The catalog is rebuilt and deployed. A visitor clicks “공식 카드 페이지,” executing script in the application origin and exposing same-origin `sessionStorage` analysis data.
+**Suggested fix:** Treat outputs differently from input validation. Open the
+final component with no-follow semantics, default to exclusive create, reject
+non-regular existing destinations, and require an explicit overwrite option
+for a regular file. If overwrite is supported, revalidate containment/type at
+open time and use an atomic temporary-file/rename policy that cannot follow a
+symlink. Test final-component symlinks, dangling symlinks, regular-file
+replacement policy, and a swap attempt between validation and open.
 
-**Fix:**
+## Verified defensive controls
 
-1. Validate with a shared refinement that parses the URL and permits only `http:` and `https:`.
-2. Reuse the canonical schema in `build-json.ts`; do not maintain a relaxed URL contract.
-3. Add a runtime `safeExternalUrl()` guard before rendering the anchor and omit invalid links.
-4. Add build and component tests for `javascript:`, `data:`, protocol-relative, whitespace/control-character, and malformed URLs.
+- The scraper allowlists hosts, resolves only public IPs, pins DNS resolution,
+  checks the connected address, revalidates redirects, bounds responses, and
+  rejects unexpected media/encoding (`tools/scraper/src/network-policy.ts`,
+  `fetcher.ts`).
+- Scraper catalog writes validate issuer/card ID, enforce real-path
+  containment, reject symlinks, use `O_NOFOLLOW`, and default to exclusive
+  creation (`tools/scraper/src/writer.ts:73-157`).
+- Card and issuer external URLs are restricted to absolute credential-free
+  HTTP(S), and `_blank` links isolate the opener.
+- Browser catalog shards require canonical schema validation and a common
+  `sourceHash`; corrupt or mixed generations fail closed.
+- Persisted analysis JSON rejects prototype-pollution keys, bounds migrations
+  and payload size, and validates restored structures before use. The known
+  shallow nested optimizer validation is already tracked as deferred item
+  D-91 and is not re-reported here.
+- Generated CLI HTML escapes all dynamic text and has a hash-authorized
+  stylesheet with scripts disabled. C3-DBG-002 is an availability bug in that
+  escaping function, not an HTML injection bypass.
+- The Pages workflow pins action SHAs, installs with a frozen lockfile, keeps
+  default permissions empty, and grants Pages/OIDC write authority only to the
+  deploy job.
+- The local-first PDF LLM path requires explicit authorization and does not
+  send statement contents merely because local parsing failed.
 
-## SR-03 — Clickjacking protection is expressed in ineffective meta tags
+## Competing hypotheses checked
 
-**Severity:** Medium
-**Confidence:** High
-**Status:** Confirmed
-**Files/regions:**
+- `cli-table3` adds its own ANSI styling, but it does not neutralize embedded
+  payload controls; captured output retained the exact injected OSC/CSI bytes.
+- The report output path rejects symlinks for inputs, but the output call uses
+  `mustExist: false`; the guarded branch is therefore unreachable for the
+  relevant call.
+- Svelte text interpolation is escaped and no production `innerHTML`/raw-HTML
+  sink was found, so catalog display strings do not produce a parallel browser
+  XSS finding.
+- No shell interpolation is used for scraper forwarding; `spawnSync` receives
+  an argument array.
 
-- `apps/web/src/layouts/Layout.astro:50-53`
-- `.github/workflows/deploy.yml:37-55`
+## Final missed-issue sweep
 
-**Evidence:** `frame-ancestors 'none'` appears in a CSP meta element, but `frame-ancestors` is not enforced when delivered through meta CSP. `X-Frame-Options` and `X-Content-Type-Options` likewise require HTTP response headers; `<meta http-equiv>` does not turn them into response headers. The deployment uploads a static artifact to GitHub Pages and contains no header-producing middleware, proxy, or host configuration. The cycle-34 verification only checked that the meta elements existed, not that a browser received enforceable headers.
-
-**Exploit scenario:** A malicious site frames the upload/dashboard UI and overlays controls to induce clicks or file-selection actions. Same-origin policy limits direct reading by the parent, but UI redressing remains possible around a financial-statement workflow.
-
-**Fix:** Serve the application through a host/CDN/worker that can emit an actual response CSP with `frame-ancestors 'none'`, plus `X-Content-Type-Options: nosniff`, an appropriate `Referrer-Policy`, and preferably HSTS. If GitHub Pages must remain the origin, document that the meta entries do not provide those controls rather than treating them as verified protection.
-
-## SR-04 — Scraper accepts arbitrary network targets and buffers unbounded bodies
-
-**Severity:** Medium
-**Confidence:** High
-**Status:** Confirmed; SSRF portion is known-deferred, but its recorded rationale is stale
-**Files/regions:**
-
-- `tools/scraper/src/cli.ts:19-37,88-104`
-- `tools/cli/src/commands/scrape.ts:18-26,40-64`
-- `tools/scraper/src/fetcher.ts:13-63`
-- `.context/plans/00-deferred-items.md:1894-1901`
-
-**Evidence:** `--url` is forwarded verbatim to `fetch()`. Redirects are followed by default, with no scheme, hostname, resolved-IP, or redirect-target validation. Both `response.text()` and `response.arrayBuffer()` buffer the full response; the 40,000-character truncation occurs later in `extractor.ts`, after download and allocation. The EUC-KR refetch repeats the request and does not check the second response's status. The deferred-item rationale claims “URL validation already exists (hostname whitelist),” but no such check exists in the current fetch path.
-
-**Exploit scenario:** If a wrapper, CI job, or copied command takes a URL from an issue or other untrusted source, the scraper can request loopback/private/link-local services. A hostile public endpoint can also stream a very large response within the 30-second window and exhaust the CLI process's memory.
-
-**Fix:**
-
-1. Parse URLs before fetching and permit only HTTP(S).
-2. Default to the configured issuer host; require an explicit unsafe override for other hosts.
-3. Resolve and reject loopback, private, link-local, and metadata IP ranges, and repeat validation for every redirect.
-4. Stream with a hard byte limit and validate `Content-Length` when present.
-5. Check status/content type on the EUC-KR refetch and clear its timeout in `finally`.
-
-## Final security sweep
-
-- No committed API key/private-key material was found by targeted secret-pattern and key-file scans.
-- The CLI's remote LLM fallback has an explicit consent path and validates its structured response.
-- Generated HTML report strings consistently pass through `esc()` at user/catalog text insertion points.
-- The only Svelte raw-HTML sink is `Icon.svelte:56`, indexed from a compile-time constant map rather than user data.
-- The client fetches card/category data from same-origin relative paths.
-- Plaintext statement persistence in `sessionStorage` and CSP `'unsafe-inline'` are already documented threat-model/deferred items; this review does not duplicate them as new findings.
-- No Playwright, Chrome, browser, or E2E process was started during this review.
+The final sweep rechecked raw HTML/script sinks, URL and redirect handling,
+worker messages, storage deserialization, CLI subprocesses, path resolution,
+all filesystem writes, terminal writes, report interpolation, workflow
+permissions/action pins, and tracked secret patterns. It found no additional
+actionable Critical/High security issue. Cycle 1/2 controls were not
+re-reported unless a present sink remained defective.
