@@ -1,18 +1,24 @@
 import { describe, expect, it } from 'bun:test';
-import { safeExternalHref } from '../src/lib/external-url.js';
+import { safeExternalSourceLink } from '../src/lib/external-url.js';
 
-describe('safeExternalHref', () => {
-  it('returns an unchanged absolute HTTP(S) URL', () => {
-    const value = 'https://cards.example.com/product?id=1#benefits';
-    expect(safeExternalHref(value)).toBe(value);
-    expect(safeExternalHref('http://cards.example.com/product')).toBe(
-      'http://cards.example.com/product',
-    );
+describe('safeExternalSourceLink', () => {
+  it('returns an unchanged safe href and normalized destination hostname', () => {
+    const value = 'https://Cards.Example.COM./product?id=1#benefits';
+    expect(safeExternalSourceLink(value)).toEqual({
+      href: value,
+      hostname: 'cards.example.com',
+    });
+    expect(
+      safeExternalSourceLink('http://cards.example.com/product'),
+    ).toEqual({
+      href: 'http://cards.example.com/product',
+      hostname: 'cards.example.com',
+    });
   });
 
   it('treats absent catalog links as absent', () => {
-    expect(safeExternalHref(undefined)).toBeUndefined();
-    expect(safeExternalHref('')).toBeUndefined();
+    expect(safeExternalSourceLink(undefined)).toBeUndefined();
+    expect(safeExternalSourceLink('')).toBeUndefined();
   });
 
   it('suppresses unsafe and malformed catalog values', () => {
@@ -28,7 +34,7 @@ describe('safeExternalHref', () => {
       'https://cards.example.com/product\n',
       'https://cards.example.com/\u0000product',
     ]) {
-      expect(safeExternalHref(value)).toBeUndefined();
+      expect(safeExternalSourceLink(value)).toBeUndefined();
     }
   });
 });

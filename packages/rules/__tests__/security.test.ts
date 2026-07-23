@@ -102,7 +102,7 @@ describe('safeExternalUrl', () => {
     expect(cardMetaSchema.safeParse({ ...base, url: 'javascript:alert(1)' }).success).toBe(false);
   });
 
-  test('requires explicit reviewed provenance before publishing an official card URL', () => {
+  test('requires explicit reviewed provenance before publishing a card source URL', () => {
     const base = {
       id: 'shinhan-safe-card',
       issuer: 'shinhan',

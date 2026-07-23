@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import {
   catalogRewardCategoryKey,
   partitionCatalogRewards,
@@ -206,6 +206,97 @@ describe('catalog reward display boundary', () => {
 });
 
 describe('card detail labels and issuer navigation', () => {
+  test('presents every generic card URL as a neutral source with its destination host', async () => {
+    const source = await readFile(
+      new URL('../src/components/cards/CardDetail.svelte', import.meta.url),
+      'utf8',
+    );
+
+    expect(source).toContain(
+      "import { safeExternalSourceLink } from '../../lib/external-url.js'",
+    );
+    expect(source).toContain(
+      'let cardSourceLink = $derived(safeExternalSourceLink(card?.url))',
+    );
+    expect(source).toContain('{#if cardSourceLink}');
+    expect(source).toContain('data-testid="card-source-link"');
+    expect(source).toContain('href={cardSourceLink.href}');
+    expect(source).toContain('상품 정보 출처');
+    expect(source).toContain('{cardSourceLink.hostname}');
+    expect(source).not.toContain('공식 카드 페이지');
+    expect(source).not.toContain('officialCardUrl');
+    expect(source).toContain('target="_blank"');
+    expect(source).toContain('rel="noopener noreferrer"');
+  });
+
+  test('keeps all known third-party catalog URLs under the neutral source contract', async () => {
+    const shardDirectory = new URL(
+      '../public/data/card-details/',
+      import.meta.url,
+    );
+    const shardFiles = (await readdir(shardDirectory))
+      .filter(fileName => fileName.endsWith('.json'))
+      .sort();
+    const cards: Array<{
+      card: {
+        id: string;
+        issuer: string;
+        source: 'manual' | 'web' | 'llm-scrape';
+        url?: string;
+      };
+    }> = [];
+
+    for (const fileName of shardFiles) {
+      const shard = JSON.parse(
+        await readFile(new URL(fileName, shardDirectory), 'utf8'),
+      ) as { cards: typeof cards };
+      cards.push(...shard.cards);
+    }
+
+    const thirdPartyHosts = new Set([
+      'www.banksalad.com',
+      'm.card-gorilla.com',
+      'namu.wiki',
+      'www.etoday.co.kr',
+      'www.financialpost.co.kr',
+      'www.hidomin.com',
+      'www.industrynews.co.kr',
+    ]);
+    const thirdPartyCards = cards
+      .filter(({ card }) =>
+        card.url !== undefined
+        && card.url !== ''
+        && card.source !== 'llm-scrape'
+        && thirdPartyHosts.has(new URL(card.url).hostname),
+      )
+      .map(({ card }) => ({
+        id: card.id,
+        issuer: card.issuer,
+        source: card.source,
+        hostname: new URL(card.url!).hostname,
+      }));
+
+    expect(thirdPartyCards).toHaveLength(26);
+    expect(
+      thirdPartyCards.filter(({ source }) => source === 'manual'),
+    ).toHaveLength(25);
+    expect(
+      thirdPartyCards.filter(({ source }) => source === 'web'),
+    ).toHaveLength(1);
+    expect(thirdPartyCards).toContainEqual({
+      id: 'kb-need-edu',
+      issuer: 'kb',
+      source: 'manual',
+      hostname: 'www.financialpost.co.kr',
+    });
+    expect(thirdPartyCards).toContainEqual({
+      id: 'lotte-loca-for-auto',
+      issuer: 'lotte',
+      source: 'manual',
+      hostname: 'm.card-gorilla.com',
+    });
+  });
+
   test('localizes every shipped exclusion and humanizes future identifiers', async () => {
     const catalog = JSON.parse(
       await readFile(

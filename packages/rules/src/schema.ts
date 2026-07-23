@@ -279,7 +279,7 @@ export const cardMetaSchema = z.object({
       code: 'custom',
       path: ['url'],
       message:
-        'llm-scrape cards cannot publish an official card URL before trusted review',
+        'llm-scrape cards cannot publish a card source URL before trusted review',
     });
   }
 });

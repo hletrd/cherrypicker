@@ -9,7 +9,7 @@
     catalogRewardCategoryKey,
     partitionCatalogRewards,
   } from '../../lib/catalog-reward-display.js';
-  import { safeExternalHref } from '../../lib/external-url.js';
+  import { safeExternalSourceLink } from '../../lib/external-url.js';
   import {
     buildSupportedRewardPresentation,
     buildIssuerCatalogUrl,
@@ -144,7 +144,7 @@
     if (!card?.globalConstraints) return null;
     return card.globalConstraints.monthlyTotalDiscountCap;
   });
-  let officialCardUrl = $derived(safeExternalHref(card?.url));
+  let cardSourceLink = $derived(safeExternalSourceLink(card?.url));
 
   $effect(() => {
     const retryAttempt = retryKey;
@@ -265,14 +265,20 @@
             </span>
           {/if}
         </div>
-        {#if officialCardUrl}
+        {#if cardSourceLink}
           <a
-            href={officialCardUrl}
+            data-testid="card-source-link"
+            href={cardSourceLink.href}
             target="_blank"
             rel="noopener noreferrer"
             class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary-fg)] hover:underline"
           >
-            공식 카드 페이지
+            <span>상품 정보 출처</span>
+            <span aria-hidden="true">·</span>
+            <span
+              class="font-normal text-[var(--color-text-muted)]"
+              data-testid="card-source-host"
+            >{cardSourceLink.hostname}</span>
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

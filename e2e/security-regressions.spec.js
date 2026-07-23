@@ -93,7 +93,7 @@ for (const unsafeUrl of [
   'javascript:alert(document.domain)',
   'data:text/html,<script>alert(document.domain)</script>',
 ]) {
-  test(`C1-036 suppresses an official link for ${unsafeUrl.split(':')[0]} URLs`, async ({
+  test(`C1-036 suppresses a card source link for ${unsafeUrl.split(':')[0]} URLs`, async ({
     page,
   }) => {
     await installSplitCatalogFixture(page, unsafeUrl);
@@ -102,16 +102,14 @@ for (const unsafeUrl of [
     );
 
     await expect(page.getByRole('alert')).toBeVisible();
-    await expect(
-      page.getByRole('link', { name: '공식 카드 페이지' }),
-    ).toHaveCount(0);
+    await expect(page.getByTestId('card-source-link')).toHaveCount(0);
     await expect(
       page.locator('a[href^="javascript:"], a[href^="data:"]'),
     ).toHaveCount(0);
   });
 }
 
-test('C1-036 renders a safe HTTPS official link with opener isolation', async ({
+test('C1-036 renders a safe HTTPS source link with host and opener isolation', async ({
   page,
 }) => {
   const safeUrl = 'https://cards.example.test/product?id=1#benefits';
@@ -120,13 +118,16 @@ test('C1-036 renders a safe HTTPS official link with opener isolation', async ({
     appUrl(`cards?card=${encodeURIComponent(fixtureSummaryCard.id)}`),
   );
 
-  const officialLink = page.getByRole('link', {
-    name: '공식 카드 페이지',
+  const sourceLink = page.getByRole('link', {
+    name: /상품 정보 출처.*cards\.example\.test/,
   });
-  await expect(officialLink).toBeVisible();
-  await expect(officialLink).toHaveAttribute('href', safeUrl);
-  await expect(officialLink).toHaveAttribute('target', '_blank');
-  await expect(officialLink).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(sourceLink).toBeVisible();
+  await expect(sourceLink).toHaveAttribute('href', safeUrl);
+  await expect(sourceLink).toHaveAttribute('target', '_blank');
+  await expect(sourceLink).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(page.getByTestId('card-source-host')).toHaveText(
+    'cards.example.test',
+  );
 });
 
 test('C1-037 reveals top-level content without ineffective header meta claims', async ({

@@ -73,12 +73,12 @@ describe('catalog publication boundary', () => {
     },
   );
 
-  test('rejects a safe-scheme model-authored URL without reviewed provenance', () => {
+  test('rejects a safe-scheme model-authored source URL without reviewed provenance', () => {
     const scraped = cardWithUrl('https://attacker.example/phish');
     scraped.card.source = 'llm-scrape';
 
     expect(() => parsePublicationCard(scraped, 'scraped.yaml')).toThrow(
-      /llm-scrape.*official card URL/i,
+      /llm-scrape.*card source URL/i,
     );
     expect(
       parsePublicationCard(

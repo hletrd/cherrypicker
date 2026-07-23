@@ -29,7 +29,7 @@ describe('decorative inline SVG accessibility semantics', () => {
     expect(source).toContain('문제가 생겼어요');
   });
 
-  test('the official-card link keeps its text name without an exposed SVG', async () => {
+  test('the card source link keeps its text name without an exposed SVG', async () => {
     const source = await readFile(
       new URL('../src/components/cards/CardDetail.svelte', import.meta.url),
       'utf8',
@@ -39,7 +39,9 @@ describe('decorative inline SVG accessibility semantics', () => {
     expect(svgTags).toHaveLength(1);
     expect(svgTags[0]).toContain('aria-hidden="true"');
     expect(svgTags[0]).toContain('focusable="false"');
-    expect(source).toContain('공식 카드 페이지');
+    expect(source).toContain('상품 정보 출처');
+    expect(source).toContain('{cardSourceLink.hostname}');
+    expect(source).not.toContain('공식 카드 페이지');
     expect(source).toContain('target="_blank"');
     expect(source).toContain('rel="noopener noreferrer"');
   });
