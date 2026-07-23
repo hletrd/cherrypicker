@@ -166,8 +166,7 @@ The integrated Cycle 10 regression run passed 676 tests across 37 files with
 4,257 expectations. `bun run data:check` verified 683 cards and 551
 optimizer-executable cards, `bun run web:build:check` built all five routes and
 passed the browser bundle budget, and the integrated web typecheck reported
-zero errors, warnings, or hints. Final repository-wide gates, signed-commit
-verification, and remote parity are recorded after the final gate pass.
+zero errors, warnings, or hints.
 
 The final combined-diff review found one presentation gap before the full
 gates: card detail discarded the mileage valuation reason and used generic
@@ -175,6 +174,31 @@ condition wording. Gate Fix 1 added an exact Korean no-Won-conversion
 disclosure, wired it to each unsupported reward reason, and added
 artifact-to-presentation coverage. Ten focused card-detail tests and the
 integrated web typecheck passed after the correction.
+
+## Final verification
+
+The complete required gate sequence passed on the committed Cycle 10 tree:
+
+- `bun run lint`
+- `bun run typecheck`
+- `bun run build`
+- `bun run test`
+- `bun run test:bun` — 1,624 tests passed
+- `bunx vitest run` — 121 files and 2,943 tests passed
+- `bun run test:e2e` — 96 Playwright tests passed
+
+The E2E runner reported no owned run before launch and selected its exact
+repository-owned `127.0.0.1:4173` target. After completion,
+`status --assert-clean` again reported no owned run, port 4173 was free, and
+no repository-attributable preview, Playwright, browser, profile, or process
+remained. The unrelated `rpf-cycle7-designer-3086a3` agent-browser session was
+observed before and after the run and was not signaled, closed, or modified.
+
+Cycle 10 closes in eight fine-grained GPG-signed commits, including one
+separate gate-fix commit. Signature verification reports `G` with signer
+`Jiyong Youn <01@0101010101.com>` throughout. The staging area is empty, and
+the six protected untracked Cycle 42 artifacts remain byte-identical at their
+recorded SHA-256 values. Deploy mode remained `none`.
 
 ## Final missed-issue sweep
 
