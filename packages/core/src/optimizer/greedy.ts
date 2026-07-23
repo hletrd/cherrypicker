@@ -40,7 +40,6 @@ interface TxAssignment {
   assignedCardName: string;
   reward: number;
   rate: number;
-  alternatives: CardScore[];
 }
 
 function compareAscii(left: string, right: string): number {
@@ -134,9 +133,31 @@ function deduplicateCalculationIssues(
   return [...unique.values()];
 }
 
-function buildAssignments(txAssignments: TxAssignment[], categoryLabels: Map<string, string>): CardAssignment[] {
+function buildAssignments(
+  txAssignments: TxAssignment[],
+  categoryLabels: Map<string, string>,
+  cardRules: CardRuleSet[],
+  cardPreviousSpending: Map<string, number>,
+  assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
+): CardAssignment[] {
   const assignmentMap = new Map<string, CardAssignment>();
-  const alternativeRewardMap = new Map<string, Map<string, { cardName: string; reward: number }>>();
+  const transactionsByAssignment = new Map<string, CategorizedTransaction[]>();
+  const finalRewardByCard = new Map(
+    cardRules.map((rule) => {
+      const previousMonthSpending =
+        cardPreviousSpending.get(rule.card.id) ?? 0;
+      const actualTransactions =
+        assignedTransactionsByCard.get(rule.card.id) ?? [];
+      return [
+        rule.card.id,
+        calculateCardOutput(
+          actualTransactions,
+          previousMonthSpending,
+          rule,
+        ).totalReward,
+      ] as const;
+    }),
+  );
 
   for (const assignment of txAssignments) {
     const categoryKey = buildCategoryKey(assignment.tx.category, assignment.tx.subcategory);
@@ -174,33 +195,38 @@ function buildAssignments(txAssignments: TxAssignment[], categoryLabels: Map<str
       });
     }
 
-    const alternativesForAssignment = alternativeRewardMap.get(key) ?? new Map<string, { cardName: string; reward: number }>();
-    for (const alternative of assignment.alternatives) {
-      const currentAlternative = alternativesForAssignment.get(alternative.cardId);
-      if (currentAlternative) {
-        currentAlternative.reward = addSafeNonnegativeIntegers(
-          currentAlternative.reward,
-          alternative.reward,
-          'alternative reward',
-        );
-      } else {
-        alternativesForAssignment.set(alternative.cardId, {
-          cardName: alternative.cardName,
-          reward: alternative.reward,
-        });
-      }
-    }
-    alternativeRewardMap.set(key, alternativesForAssignment);
+    const groupTransactions = transactionsByAssignment.get(key) ?? [];
+    groupTransactions.push(assignment.tx);
+    transactionsByAssignment.set(key, groupTransactions);
   }
 
   for (const [key, assignment] of assignmentMap) {
-    const alternatives = [...(alternativeRewardMap.get(key)?.entries() ?? [])]
-      .map(([cardId, value]) => ({
-        cardId,
-        cardName: value.cardName,
-        reward: value.reward,
-        rate: assignment.spending > 0 ? value.reward / assignment.spending : 0,
-      }))
+    const groupTransactions = transactionsByAssignment.get(key) ?? [];
+    const alternatives = cardRules
+      .filter((rule) => rule.card.id !== assignment.assignedCardId)
+      .map((rule) => {
+        const previousMonthSpending =
+          cardPreviousSpending.get(rule.card.id) ?? 0;
+        const actualTransactions =
+          assignedTransactionsByCard.get(rule.card.id) ?? [];
+        const before = finalRewardByCard.get(rule.card.id) ?? 0;
+        const after = calculateCardOutput(
+          [...actualTransactions, ...groupTransactions],
+          previousMonthSpending,
+          rule,
+        ).totalReward;
+        const reward = after - before;
+        assertSafeNonnegativeInteger(
+          reward,
+          `alternative reward for ${rule.card.id}`,
+        );
+        return {
+          cardId: rule.card.id,
+          cardName: getCardName(rule),
+          reward,
+          rate: assignment.spending > 0 ? reward / assignment.spending : 0,
+        };
+      })
       .sort(
         (a, b) => b.reward - a.reward || compareAscii(a.cardId, b.cardId),
       )
@@ -359,11 +385,16 @@ export function greedyOptimize(
       assignedCardName: best.cardName,
       reward: best.reward,
       rate: best.rate,
-      alternatives: scores.filter((score) => score.cardId !== best.cardId).slice(0, 5),
     });
   }
 
-  const assignments = buildAssignments(txAssignments, constraints.categoryLabels);
+  const assignments = buildAssignments(
+    txAssignments,
+    constraints.categoryLabels,
+    eligibleCardRules,
+    cardPreviousSpending,
+    assignedTransactionsByCard,
+  );
   const cardResults = buildCardResults(
     eligibleCardRules,
     cardPreviousSpending,

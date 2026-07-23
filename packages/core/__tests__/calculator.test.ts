@@ -11,7 +11,7 @@ import type { CardRuleSet } from '@cherrypicker/rules';
 
 // NOTE: Reward rate values in test fixtures use percentage form
 // (e.g., rate: 2 means 2%, rate: 5 means 5%) matching YAML convention.
-// calculateRewards() normalizes these via normalizeRate (divides by 100).
+// calculateRewards() evaluates the authored percentage points exactly.
 
 const rulesDir = join(import.meta.dir, '../../../packages/rules/data/cards');
 
@@ -789,7 +789,7 @@ describe('calculateRewards - filtering and edge cases', () => {
     expect(dining!.reward).toBe(0);
   });
 
-  test('normalizeRate: percentage form (5) is converted to decimal (0.05)', () => {
+  test('percentage form (5) is evaluated as 5 percent', () => {
     // 5% rate on 10000 = 500 reward
     const output = calculateRewards({
       transactions: [makeTx('t1', 'dining', 10000)],
@@ -1382,7 +1382,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
   });
 
   test.each(['transaction', 'monthly', 'global'] as const)(
-    'positive reward clipped to zero by a %s cap still consumes maxUses',
+    'a zero %s cap makes the rule inapplicable before cap accounting',
     (capKind) => {
       const fixture = structuredClone(simplePlan);
       const reward = fixture.rewards[0]!;
@@ -1404,7 +1404,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
       });
 
       expect(output.totalReward).toBe(0);
-      expect(output.capsHit).toHaveLength(1);
+      expect(output.capsHit).toHaveLength(0);
     },
   );
 

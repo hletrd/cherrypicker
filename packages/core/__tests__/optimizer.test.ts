@@ -8,7 +8,7 @@ import type { CardRuleSet } from '@cherrypicker/rules';
 
 // NOTE: Reward rate values in test fixtures use percentage form
 // (e.g., rate: 2 means 2%, rate: 5 means 5%) matching YAML convention.
-// calculateRewards() normalizes these via normalizeRate (divides by 100).
+// calculateRewards() evaluates the authored percentage points exactly.
 
 const rulesDir = join(import.meta.dir, '../../../packages/rules/data/cards');
 

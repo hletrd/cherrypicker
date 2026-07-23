@@ -13,9 +13,6 @@ import type {
   UnsupportedReason,
   UnsupportedRule,
 } from './types.js';
-import { calculateDiscount } from './discount.js';
-import { calculatePoints } from './points.js';
-import { calculateCashback } from './cashback.js';
 import { normalizeMerchantText } from '../categorizer/normalize.js';
 import {
   addSafeNonnegativeIntegers,
@@ -50,6 +47,25 @@ function selectTier(
 
 function findTierRate(rule: RewardRule, tierId: string): RewardTierRate | undefined {
   return rule.tiers.find((t) => t.performanceTier === tierId);
+}
+
+function assertUniqueRewardTierReferences(rules: RewardRule[]): void {
+  rules.forEach((rule, ruleIndex) => {
+    const firstTierIndex = new Map<string, number>();
+    rule.tiers.forEach((tier, tierIndex) => {
+      const firstIndex = firstTierIndex.get(tier.performanceTier);
+      if (firstIndex !== undefined) {
+        const ruleId = rule.id ??
+          `${buildCategoryKey(rule.category, rule.subcategory)}#${ruleIndex}`;
+        throw new Error(
+          `duplicate performance tier reference "${tier.performanceTier}" ` +
+          `in reward rule "${ruleId}" at tiers.${tierIndex} ` +
+          `(first referenced at tiers.${firstIndex})`,
+        );
+      }
+      firstTierIndex.set(tier.performanceTier, tierIndex);
+    });
+  });
 }
 
 export function buildCategoryKey(category: string, subcategory?: string): string {
@@ -203,6 +219,22 @@ interface RuleSelection {
   unsupported: UnsupportedRule[];
 }
 
+interface RuleSelectionState {
+  tierId: string;
+  ruleMonthUsed: Map<string, number>;
+  dayRewardTracker: Set<string>;
+  globalRemaining: number | null;
+}
+
+type RuleAvailability =
+  | { status: 'executable' }
+  | { status: 'inapplicable' }
+  | {
+      status: 'unsupported';
+      reason: UnsupportedReason;
+      detail?: string;
+    };
+
 function compareRuleCandidates(
   a: SelectedRule,
   b: SelectedRule,
@@ -216,11 +248,145 @@ function compareRuleCandidates(
   return a.ruleIndex - b.ruleIndex;
 }
 
+function previewRuleAvailability(
+  candidate: SelectedRule,
+  tx: CategorizedTransaction,
+  state: RuleSelectionState,
+): RuleAvailability {
+  const { rule, ruleIndex } = candidate;
+  const tierRate = findTierRate(rule, state.tierId);
+  if (!tierRate) return { status: 'inapplicable' };
+
+  const rewardKey = buildRuleKey(rule, ruleIndex);
+  const currentRuleMonthUsed = state.ruleMonthUsed.get(rewardKey) ?? 0;
+  const monthlyCap = tierRate.monthlyCap;
+  const perTransactionCap = tierRate.perTransactionCap;
+  let capExhausted =
+    state.globalRemaining !== null && state.globalRemaining <= 0;
+  if (monthlyCap !== null) {
+    assertSafeNonnegativeInteger(monthlyCap, 'monthly reward cap');
+    if (currentRuleMonthUsed >= monthlyCap) {
+      capExhausted = true;
+    }
+  }
+  if (perTransactionCap !== null) {
+    assertSafeNonnegativeInteger(
+      perTransactionCap,
+      'per-transaction reward cap',
+    );
+    if (perTransactionCap === 0) capExhausted = true;
+  }
+
+  const rewardValue = rewardValueForTier(tierRate);
+  if (rewardValue.amount <= 0) return { status: 'inapplicable' };
+
+  if (rewardValue.kind === 'percentage') {
+    if (tierRate.unit !== null && tierRate.unit !== undefined) {
+      return {
+        status: 'unsupported',
+        reason: 'unsupported_reward_unit',
+        detail: `rate-based reward carries unit ${tierRate.unit}`,
+      };
+    }
+    assertKnownRewardType(rule.type);
+    const reward = floorSafeIntegerDecimalProduct(
+      tx.amount,
+      rewardValue.amount,
+      100,
+    );
+    // An invalid direct-call value must still reach the checked execution path
+    // and throw rather than being mistaken for an inapplicable zero benefit.
+    if (reward !== null && reward <= 0) return { status: 'inapplicable' };
+    return capExhausted
+      ? { status: 'inapplicable' }
+      : { status: 'executable' };
+  }
+
+  // Preview fixed rewards against a copy because fixed-per-day evaluation
+  // records the day when it succeeds.
+  const fixed = calculateFixedReward(
+    tx,
+    rewardValue,
+    rewardKey,
+    new Set(state.dayRewardTracker),
+  );
+  if (fixed.unsupportedReason) {
+    return {
+      status: 'unsupported',
+      reason: fixed.unsupportedReason,
+      detail: fixed.detail,
+    };
+  }
+  if (fixed.reward <= 0) return { status: 'inapplicable' };
+  return capExhausted
+    ? { status: 'inapplicable' }
+    : { status: 'executable' };
+}
+
+function projectRuleExecution(
+  candidate: SelectedRule,
+  tx: CategorizedTransaction,
+  state: RuleSelectionState,
+): void {
+  const { rule, ruleIndex } = candidate;
+  const tierRate = findTierRate(rule, state.tierId);
+  if (!tierRate) return;
+
+  const rewardKey = buildRuleKey(rule, ruleIndex);
+  const rewardValue = rewardValueForTier(tierRate);
+  let uncappedReward = 0;
+  if (rewardValue.kind === 'percentage' && rewardValue.amount > 0) {
+    if (tierRate.unit !== null && tierRate.unit !== undefined) return;
+    assertKnownRewardType(rule.type);
+    const exactReward = floorSafeIntegerDecimalProduct(
+      tx.amount,
+      rewardValue.amount,
+      100,
+    );
+    if (exactReward === null) {
+      throw new Error(
+        `calculated reward is not safely representable for percentage-point rate ${rewardValue.amount}`,
+      );
+    }
+    uncappedReward = exactReward;
+  } else if (rewardValue.kind !== 'percentage' && rewardValue.amount > 0) {
+    const fixed = calculateFixedReward(
+      tx,
+      rewardValue,
+      rewardKey,
+      state.dayRewardTracker,
+    );
+    if (fixed.unsupportedReason) return;
+    uncappedReward = fixed.reward;
+  }
+
+  const perTransactionReward = tierRate.perTransactionCap === null
+    ? uncappedReward
+    : Math.min(uncappedReward, tierRate.perTransactionCap);
+  const currentRuleMonthUsed = state.ruleMonthUsed.get(rewardKey) ?? 0;
+  const ruleResult = applyMonthlyCap(
+    perTransactionReward,
+    tierRate.monthlyCap,
+    currentRuleMonthUsed,
+  );
+  const appliedReward = state.globalRemaining === null
+    ? ruleResult.reward
+    : Math.min(ruleResult.reward, state.globalRemaining);
+  state.ruleMonthUsed.set(
+    rewardKey,
+    ruleResult.newMonthUsed - (ruleResult.reward - appliedReward),
+  );
+  if (state.globalRemaining !== null) {
+    state.globalRemaining -= appliedReward;
+  }
+}
+
 function findRules(
   cardId: string,
   rules: RewardRule[],
   tx: CategorizedTransaction,
   occurrenceUses: Map<string, number>,
+  state: RuleSelectionState,
 ): RuleSelection {
   const candidates: SelectedRule[] = [];
   const unsupported: UnsupportedRule[] = [];
@@ -262,6 +428,12 @@ function findRules(
 
   if (candidates.length === 0) return { rules: [], unsupported };
 
+  const projectedState: RuleSelectionState = {
+    tierId: state.tierId,
+    ruleMonthUsed: new Map(state.ruleMonthUsed),
+    dayRewardTracker: new Set(state.dayRewardTracker),
+    globalRemaining: state.globalRemaining,
+  };
   const groups = new Map<string, SelectedRule[]>();
   for (const candidate of candidates) {
     const group = candidate.rule.stackingGroup ?? '__default__';
@@ -276,48 +448,60 @@ function findRules(
     const additive = members
       .filter(({ rule }) => rule.combination === 'additive')
       .sort(compareRuleCandidates);
-    selected.push(...additive);
+    for (const candidate of additive) {
+      selected.push(candidate);
+      projectRuleExecution(candidate, tx, projectedState);
+    }
 
     const exclusive = members
       .filter(({ rule }) => rule.combination !== 'additive')
       .sort(compareRuleCandidates);
-    if (exclusive[0]) selected.push(exclusive[0]);
+    for (const candidate of exclusive) {
+      const availability = previewRuleAvailability(
+        candidate,
+        tx,
+        projectedState,
+      );
+      if (availability.status === 'unsupported') {
+        const ruleId = candidate.rule.id ??
+          `${buildCategoryKey(
+            candidate.rule.category,
+            candidate.rule.subcategory,
+          )}#${candidate.ruleIndex}`;
+        unsupported.push({
+          cardId,
+          transactionId: tx.id,
+          ruleId,
+          category: buildCategoryKey(
+            candidate.rule.category,
+            candidate.rule.subcategory,
+          ),
+          reason: availability.reason,
+          detail: availability.detail,
+        });
+        continue;
+      }
+      if (availability.status === 'executable') {
+        selected.push(candidate);
+        projectRuleExecution(candidate, tx, projectedState);
+        break;
+      }
+    }
   }
 
   return { rules: selected, unsupported };
 }
 
-type RewardCalcFn = (
-  amount: number,
-  rate: number,
-  monthlyCap: number | null,
-  currentMonthUsed: number,
-) => { reward: number; newMonthUsed: number; capReached: boolean };
-
-function getCalcFn(type: string): RewardCalcFn {
+function assertKnownRewardType(type: string): void {
   switch (type) {
     case 'discount':
-      return calculateDiscount;
     case 'points':
-      return calculatePoints;
     case 'cashback':
-      return calculateCashback;
     case 'mileage':
-      // Mileage calculated same as points (Won-equivalent)
-      return calculatePoints;
+      return;
     default:
       throw new Error(`Unknown reward type: ${type}. Expected one of: discount, points, cashback, mileage`);
   }
-}
-
-function normalizeRate(ruleType: string, rate: number | null): number | null {
-  if (rate === null) return null;
-  // All YAML rates are stored in percentage form (e.g., 1.5 means 1.5%).
-  // For mileage rules, the rate represents Won-equivalent percentage return
-  // rather than literal "miles per 1,500 Won". For example, rate: 1.0 means
-  // "1% Won-equivalent return as mileage value" which yields ~15 Won per
-  // 1,500 Won transaction (approximately 1 mile at ~15 Won/mile valuation).
-  return rate / 100;
 }
 
 function legacyRewardValue(tier: RewardTierRate): RewardValue {
@@ -354,12 +538,15 @@ function rewardValueForTier(tier: RewardTierRate): RewardValue {
 function floorSafeIntegerDecimalProduct(
   integer: number,
   decimal: number,
+  divisor = 1,
 ): number | null {
   if (
     !Number.isSafeInteger(integer) ||
     integer < 0 ||
     !Number.isFinite(decimal) ||
-    decimal < 0
+    decimal < 0 ||
+    !Number.isSafeInteger(divisor) ||
+    divisor <= 0
   ) {
     return null;
   }
@@ -385,6 +572,7 @@ function floorSafeIntegerDecimalProduct(
     numerator *= 10n ** BigInt(-scale);
   }
 
+  denominator *= BigInt(divisor);
   const result = (BigInt(integer) * numerator) / denominator;
   const maximum = BigInt(Number.MAX_SAFE_INTEGER);
   return result <= maximum ? Number(result) : null;
@@ -532,6 +720,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
   );
 
   const { card, performanceTiers, rewards: rewardRules, globalConstraints } = cardRule;
+  assertUniqueRewardTierReferences(rewardRules);
 
   // 1. Determine performance tier
   const tier = selectTier(performanceTiers, previousMonthSpending);
@@ -588,7 +777,13 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     const categoryKey = buildCategoryKey(tx.category, tx.subcategory);
     const selection: RuleSelection = tierId === 'none'
       ? { rules: [], unsupported: [] as UnsupportedRule[] }
-      : findRules(card.id, rewardRules, tx, occurrenceUses);
+      : findRules(card.id, rewardRules, tx, occurrenceUses, {
+          tierId,
+          ruleMonthUsed,
+          dayRewardTracker,
+          globalRemaining:
+            globalCap === null ? null : Math.max(0, globalCap - globalMonthUsed),
+        });
     unsupportedRules.push(...selection.unsupported);
     const firstRule = selection.rules[0]?.rule;
     // Register the bucket in the Map immediately after creation so that it is
@@ -630,9 +825,6 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     }
 
     const rewardValue = rewardValueForTier(tierRate);
-    const normalizedRate = rewardValue.kind === 'percentage'
-      ? normalizeRate(rule.type, rewardValue.amount)
-      : null;
     const perTxCap = tierRate.perTransactionCap;
     const monthlyCap = tierRate.monthlyCap;
     const currentRuleMonthUsed = ruleMonthUsed.get(rewardKey) ?? 0;
@@ -642,7 +834,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
     const hasFixedReward =
       rewardValue.kind !== 'percentage' && rewardValue.amount > 0;
-    if (normalizedRate !== null && normalizedRate > 0) {
+    if (rewardValue.kind === 'percentage' && rewardValue.amount > 0) {
       if (tierRate.unit !== null && tierRate.unit !== undefined) {
         unsupportedRules.push({
           cardId: card.id,
@@ -654,8 +846,18 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         });
         continue;
       }
-      const calcFn = getCalcFn(rule.type);
-      uncappedReward = calcFn(tx.amount, normalizedRate, null, 0).reward;
+      assertKnownRewardType(rule.type);
+      const exactReward = floorSafeIntegerDecimalProduct(
+        tx.amount,
+        rewardValue.amount,
+        100,
+      );
+      if (exactReward === null) {
+        throw new Error(
+          `calculated reward is not safely representable for percentage-point rate ${rewardValue.amount}`,
+        );
+      }
+      uncappedReward = exactReward;
       rawReward = perTxCap !== null ? Math.min(uncappedReward, perTxCap) : uncappedReward;
       ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
     } else if (hasFixedReward) {
@@ -716,7 +918,14 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     }
 
     ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed);
-    if (ruleResult.capReached) {
+    if (
+      ruleResult.capReached ||
+      (
+        monthlyCap !== null &&
+        ruleResult.newMonthUsed >= monthlyCap &&
+        rawReward > 0
+      )
+    ) {
       bucket.capReached = true;
     }
 
