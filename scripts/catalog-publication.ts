@@ -160,6 +160,17 @@ export function isIndexableReward(
   return reward.support.status === 'supported';
 }
 
+export type PublicationRewardValueKind = 'rate' | 'fixedAmount';
+
+export function publicationRewardIndexValue(
+  tier: CardRuleSet['rewards'][number]['tiers'][number],
+): { amount: number; kind: PublicationRewardValueKind } {
+  return {
+    amount: tier.value.amount,
+    kind: tier.value.kind === 'percentage' ? 'rate' : 'fixedAmount',
+  };
+}
+
 /**
  * Project the canonically validated catalog into the three browser payloads.
  * All collections have explicit stable ordering and runtime JSON stays flat

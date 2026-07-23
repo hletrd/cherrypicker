@@ -77,6 +77,15 @@ function deriveRewardValue(
   return { kind: 'percentage', amount: 0 };
 }
 
+function canonicalRewardRate(
+  rate: number | null,
+  fixedAmount: number | null,
+): number | null {
+  return rate === 0 && fixedAmount !== null && fixedAmount > 0
+    ? null
+    : rate;
+}
+
 export const rewardTierRateSchema = z.object({
   performanceTier: z.string(),
   // Authored percentage points: 5 means 5%, never the fraction 0.05.
@@ -95,6 +104,7 @@ export const rewardTierRateSchema = z.object({
   value: rewardValueSchema.optional(),
 }).strict().superRefine((tier, ctx) => {
   const fixedAmount = tier.fixedAmountPerLiter ?? tier.fixedAmount;
+  const rate = canonicalRewardRate(tier.rate, fixedAmount);
   const unit = tier.fixedAmountPerLiter !== undefined
     ? 'won_per_liter' as const
     : tier.unit;
@@ -104,7 +114,7 @@ export const rewardTierRateSchema = z.object({
       message: 'fixedAmountPerLiter and fixedAmount are mutually exclusive',
     });
   }
-  if (tier.rate !== null && tier.rate > 0 && fixedAmount !== null && fixedAmount > 0) {
+  if (rate !== null && rate > 0 && fixedAmount !== null && fixedAmount > 0) {
     ctx.addIssue({
       code: 'custom',
       message: 'rate and fixedAmount are mutually exclusive — use one or the other, not both',
@@ -131,7 +141,7 @@ export const rewardTierRateSchema = z.object({
     });
   }
   const derivedValue = deriveRewardValue({
-    rate: tier.rate,
+    rate,
     fixedAmount,
     unit,
   });
@@ -149,6 +159,7 @@ export const rewardTierRateSchema = z.object({
   }
 }).transform((tier) => {
   const fixedAmount = tier.fixedAmountPerLiter ?? tier.fixedAmount;
+  const rate = canonicalRewardRate(tier.rate, fixedAmount);
   const unit = tier.fixedAmountPerLiter !== undefined ? 'won_per_liter' as const : tier.unit;
   const {
     fixedAmountPerLiter: _legacyFixedAmountPerLiter,
@@ -156,11 +167,11 @@ export const rewardTierRateSchema = z.object({
     ...rest
   } = tier;
   const value = deriveRewardValue({
-    rate: tier.rate,
+    rate,
     fixedAmount,
     unit,
   });
-  return { ...rest, fixedAmount, unit, value };
+  return { ...rest, rate, fixedAmount, unit, value };
 });
 
 export const rewardConditionsSchema = z.object({

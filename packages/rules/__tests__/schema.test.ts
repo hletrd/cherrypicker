@@ -116,6 +116,32 @@ describe('cardRuleSetSchema - valid data', () => {
     });
   });
 
+  test('derives fractional mileage rates as mileage-per-spend values', () => {
+    const fractionalMileageRule = structuredClone(validCardRuleSet);
+    fractionalMileageRule.rewards[0] = {
+      ...fractionalMileageRule.rewards[0]!,
+      category: 'travel',
+      subcategory: undefined,
+      type: 'mileage',
+      tiers: [
+        {
+          performanceTier: 'tier1',
+          rate: null,
+          fixedAmount: 0.5,
+          unit: 'mile_per_1500won',
+          monthlyCap: null,
+          perTransactionCap: null,
+        },
+      ],
+    };
+
+    const result = cardRuleSetSchema.parse(fractionalMileageRule);
+    expect(result.rewards[0]?.tiers[0]?.value).toEqual({
+      kind: 'mileage_per_spend',
+      amount: 0.5,
+    });
+  });
+
   test('publishes authored percentage points as a discriminated value', () => {
     const result = cardRuleSetSchema.parse(validCardRuleSet);
     expect(result.rewards[0]?.tiers[0]?.value).toEqual({
@@ -288,13 +314,18 @@ describe('cardRuleSetSchema - invalid data', () => {
     expect(result.success).toBe(false);
   });
 
-  test('allows tier with rate=0 and fixedAmount>0', () => {
+  test('canonicalizes rate=0 plus fixedAmount>0 to a fixed value', () => {
     const ok = structuredClone(validCardRuleSet);
     ok.rewards[0]!.tiers[0]!.rate = 0;
     ok.rewards[0]!.tiers[0]!.fixedAmount = 100;
     const result = cardRuleSetSchema.safeParse(ok);
     expect(result.success).toBe(true);
+    expect(result.data!.rewards[0]!.tiers[0]!.rate).toBeNull();
     expect(result.data!.rewards[0]!.tiers[0]!.fixedAmount).toBe(100);
+    expect(result.data!.rewards[0]!.tiers[0]!.value).toEqual({
+      kind: 'fixed_per_transaction',
+      amount: 100,
+    });
   });
 
   test('allows tier with rate>0 and fixedAmount=0', () => {
@@ -332,6 +363,25 @@ describe('loadCardRule', () => {
     expect(tier?.rate).toBeNull();
     expect(tier?.fixedAmount).toBe(100);
     expect(tier?.unit).toBe('won_per_liter');
+  });
+
+  test('loads LOCA 365 subscription as the canonical 1,500-won fixed value', async () => {
+    const rule = await loadCardRule(join(cardsDir, 'lotte/loca-365.yaml'));
+    const subscription = rule.rewards.find(
+      (reward) => reward.id === 'reward-007',
+    )!;
+    const tier = subscription.tiers.find(
+      (entry) => entry.performanceTier === 'tier1',
+    );
+
+    expect(tier).toMatchObject({
+      rate: null,
+      fixedAmount: 1_500,
+      value: {
+        kind: 'fixed_per_transaction',
+        amount: 1_500,
+      },
+    });
   });
 
   test('loads subcategory-specific rewards intact', async () => {

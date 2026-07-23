@@ -1,4 +1,9 @@
-import type { RewardRule, RewardTierRate, PerformanceTier } from '@cherrypicker/rules';
+import type {
+  PerformanceTier,
+  RewardRule,
+  RewardTierRate,
+  RewardValue,
+} from '@cherrypicker/rules';
 import type { CategorizedTransaction } from '../models/transaction.js';
 import type { CategoryReward, CapInfo } from '../models/result.js';
 import type {
@@ -49,6 +54,15 @@ function findTierRate(rule: RewardRule, tierId: string): RewardTierRate | undefi
 
 export function buildCategoryKey(category: string, subcategory?: string): string {
   return subcategory ? `${category}.${subcategory}` : category;
+}
+
+export function isRewardEligibleTransaction(
+  transaction: Pick<CategorizedTransaction, 'amount' | 'currency'>,
+): boolean {
+  return (
+    transaction.amount > 0 &&
+    (!transaction.currency || transaction.currency === 'KRW')
+  );
 }
 
 function buildRuleKey(rule: RewardRule, ruleIndex: number): string {
@@ -306,6 +320,76 @@ function normalizeRate(ruleType: string, rate: number | null): number | null {
   return rate / 100;
 }
 
+function legacyRewardValue(tier: RewardTierRate): RewardValue {
+  const fixedAmount = tier.fixedAmount ?? null;
+  if (tier.rate !== null && tier.rate > 0) {
+    return { kind: 'percentage', amount: tier.rate };
+  }
+  if (fixedAmount !== null && fixedAmount > 0) {
+    return {
+      kind:
+        tier.unit === 'won_per_day'
+          ? 'fixed_per_day'
+          : tier.unit === 'won_per_liter'
+            ? 'fuel_per_liter'
+            : tier.unit === 'mile_per_1500won' || tier.unit === 'miles'
+              ? 'mileage_per_spend'
+              : 'fixed_per_transaction',
+      amount: fixedAmount,
+    };
+  }
+  if (tier.rate !== null) {
+    return { kind: 'percentage', amount: tier.rate };
+  }
+  return {
+    kind: 'fixed_per_transaction',
+    amount: fixedAmount ?? 0,
+  };
+}
+
+function rewardValueForTier(tier: RewardTierRate): RewardValue {
+  return tier.value ?? legacyRewardValue(tier);
+}
+
+function floorSafeIntegerDecimalProduct(
+  integer: number,
+  decimal: number,
+): number | null {
+  if (
+    !Number.isSafeInteger(integer) ||
+    integer < 0 ||
+    !Number.isFinite(decimal) ||
+    decimal < 0
+  ) {
+    return null;
+  }
+
+  const [coefficient, exponentText] = decimal.toString().toLowerCase().split('e');
+  if (coefficient === undefined) return null;
+
+  const exponent = exponentText === undefined ? 0 : Number(exponentText);
+  if (!Number.isSafeInteger(exponent)) return null;
+
+  const decimalPoint = coefficient.indexOf('.');
+  const fractionalDigits =
+    decimalPoint === -1 ? 0 : coefficient.length - decimalPoint - 1;
+  const digits = coefficient.replace('.', '');
+  if (!/^\d+$/.test(digits)) return null;
+
+  let numerator = BigInt(digits);
+  let denominator = 1n;
+  const scale = fractionalDigits - exponent;
+  if (scale > 0) {
+    denominator = 10n ** BigInt(scale);
+  } else if (scale < 0) {
+    numerator *= 10n ** BigInt(-scale);
+  }
+
+  const result = (BigInt(integer) * numerator) / denominator;
+  const maximum = BigInt(Number.MAX_SAFE_INTEGER);
+  return result <= maximum ? Number(result) : null;
+}
+
 function applyMonthlyCap(
   rawReward: number,
   monthlyCap: number | null,
@@ -343,49 +427,60 @@ function applyMonthlyCap(
 
 function calculateFixedReward(
   tx: CategorizedTransaction,
-  tierRate: RewardTierRate,
+  rewardValue: RewardValue,
   ruleKey: string,
   dayRewardTracker: Set<string>,
 ): {
   reward: number;
-  occurrenceApplied: boolean;
   unsupportedReason?: UnsupportedReason;
   detail?: string;
 } {
-  const fixedAmount = tierRate.fixedAmount ?? 0;
-  if (fixedAmount <= 0) return { reward: 0, occurrenceApplied: false };
+  const fixedAmount = rewardValue.amount;
+  if (fixedAmount <= 0) return { reward: 0 };
+
+  if (rewardValue.kind === 'mileage_per_spend') {
+    if (
+      !Number.isFinite(fixedAmount) ||
+      fixedAmount > Number.MAX_SAFE_INTEGER
+    ) {
+      return {
+        reward: 0,
+        unsupportedReason: 'unsupported_reward_unit',
+        detail: `mileage rate is not safely representable: ${fixedAmount}`,
+      };
+    }
+    const reward = floorSafeIntegerDecimalProduct(
+      Math.floor(tx.amount / 1500),
+      fixedAmount,
+    );
+    if (reward === null) {
+      return {
+        reward: 0,
+        unsupportedReason: 'unsupported_reward_unit',
+        detail: `mileage reward is not safely representable for rate ${fixedAmount}`,
+      };
+    }
+    return { reward };
+  }
+
   if (!Number.isSafeInteger(fixedAmount)) {
     return {
       reward: 0,
-      occurrenceApplied: false,
       unsupportedReason: 'unsupported_reward_unit',
       detail: `fixed reward is not safely representable: ${fixedAmount}`,
     };
   }
 
-  if (tierRate.unit === 'won_per_day') {
+  if (rewardValue.kind === 'fixed_per_day') {
     const dayKey = `${ruleKey}:${tx.date}`;
     if (dayRewardTracker.has(dayKey)) {
-      return { reward: 0, occurrenceApplied: false };
+      return { reward: 0 };
     }
     dayRewardTracker.add(dayKey);
-    return { reward: fixedAmount, occurrenceApplied: true };
+    return { reward: fixedAmount };
   }
 
-  if (tierRate.unit === 'mile_per_1500won') {
-    const reward = Math.floor(tx.amount / 1500) * fixedAmount;
-    if (!Number.isSafeInteger(reward) || reward < 0) {
-      return {
-        reward: 0,
-        occurrenceApplied: false,
-        unsupportedReason: 'unsupported_reward_unit',
-        detail: `mileage reward is not safely representable: ${reward}`,
-      };
-    }
-    return { reward, occurrenceApplied: true };
-  }
-
-  if (tierRate.unit === 'won_per_liter') {
+  if (rewardValue.kind === 'fuel_per_liter') {
     const liters = tx.fuelVolumeLiters;
     if (
       !Number.isFinite(liters) ||
@@ -394,7 +489,6 @@ function calculateFixedReward(
     ) {
       return {
         reward: 0,
-        occurrenceApplied: false,
         unsupportedReason: 'missing_fuel_volume',
         detail: 'fuel-per-liter reward requires positive volume with provenance',
       };
@@ -402,7 +496,6 @@ function calculateFixedReward(
     if (liters! > MAX_REWARDABLE_FUEL_VOLUME_LITERS) {
       return {
         reward: 0,
-        occurrenceApplied: false,
         unsupportedReason: 'invalid_fuel_volume',
         detail:
           `fuel volume exceeds the ${MAX_REWARDABLE_FUEL_VOLUME_LITERS} L consumer transaction bound`,
@@ -412,36 +505,31 @@ function calculateFixedReward(
     if (!Number.isSafeInteger(reward) || reward < 0) {
       return {
         reward: 0,
-        occurrenceApplied: false,
         unsupportedReason: 'unsupported_reward_unit',
         detail: 'fuel-per-liter reward is not safely representable',
       };
     }
-    return { reward, occurrenceApplied: true };
+    return { reward };
   }
 
-  if (tierRate.unit === null || tierRate.unit === undefined) {
-    return { reward: fixedAmount, occurrenceApplied: true };
+  if (rewardValue.kind === 'fixed_per_transaction') {
+    return { reward: fixedAmount };
   }
 
   return {
     reward: 0,
-    occurrenceApplied: false,
     unsupportedReason: 'unsupported_reward_unit',
-    detail: `unsupported reward unit: ${String(tierRate.unit)}`,
+    detail: `unsupported fixed reward kind: ${rewardValue.kind}`,
   };
 }
 
 export function calculateRewards(input: CalculationInput): CalculationOutput {
   const { transactions, previousMonthSpending, cardRule } = input;
 
-  // Guard against NaN/Infinity/negative previousMonthSpending which would
-  // silently produce zero rewards (no tier matches NaN comparisons) (C39-BUG01).
-  if (!Number.isFinite(previousMonthSpending) || previousMonthSpending < 0) {
-    throw new Error(
-      `previousMonthSpending must be a non-negative finite number, got ${previousMonthSpending}`
-    );
-  }
+  assertSafeNonnegativeInteger(
+    previousMonthSpending,
+    'previousMonthSpending',
+  );
 
   const { card, performanceTiers, rewards: rewardRules, globalConstraints } = cardRule;
 
@@ -492,8 +580,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       skippedTransactions.push({ id: tx.id, amount: tx.amount, currency: tx.currency ?? 'KRW', reason: 'negative_amount' });
       continue;
     }
-    // Skip non-KRW transactions — reward math assumes Won amounts
-    if (tx.currency && tx.currency !== 'KRW') {
+    if (!isRewardEligibleTransaction(tx)) {
       skippedTransactions.push({ id: tx.id, amount: tx.amount, currency: tx.currency, reason: 'non_krw' });
       continue;
     }
@@ -542,7 +629,10 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       continue;
     }
 
-    const normalizedRate = normalizeRate(rule.type, tierRate.rate);
+    const rewardValue = rewardValueForTier(tierRate);
+    const normalizedRate = rewardValue.kind === 'percentage'
+      ? normalizeRate(rule.type, rewardValue.amount)
+      : null;
     const perTxCap = tierRate.perTransactionCap;
     const monthlyCap = tierRate.monthlyCap;
     const currentRuleMonthUsed = ruleMonthUsed.get(rewardKey) ?? 0;
@@ -550,8 +640,8 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     let rawReward = 0;
     let uncappedReward = 0;
     let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
-    let occurrenceApplied = false;
-    const hasFixedReward = (tierRate.fixedAmount ?? 0) > 0;
+    const hasFixedReward =
+      rewardValue.kind !== 'percentage' && rewardValue.amount > 0;
     if (normalizedRate !== null && normalizedRate > 0) {
       if (tierRate.unit !== null && tierRate.unit !== undefined) {
         unsupportedRules.push({
@@ -568,9 +658,13 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       uncappedReward = calcFn(tx.amount, normalizedRate, null, 0).reward;
       rawReward = perTxCap !== null ? Math.min(uncappedReward, perTxCap) : uncappedReward;
       ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
-      occurrenceApplied = true;
     } else if (hasFixedReward) {
-      const fixed = calculateFixedReward(tx, tierRate, rewardKey, dayRewardTracker);
+      const fixed = calculateFixedReward(
+        tx,
+        rewardValue,
+        rewardKey,
+        dayRewardTracker,
+      );
       if (fixed.unsupportedReason) {
         unsupportedRules.push({
           cardId: card.id,
@@ -583,7 +677,6 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         continue;
       }
       uncappedReward = fixed.reward;
-      occurrenceApplied = fixed.occurrenceApplied;
       rawReward = perTxCap !== null
         ? Math.min(uncappedReward, perTxCap)
         : uncappedReward;
@@ -600,7 +693,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
 
     // Consume an occurrence only after the tier and reward facts have produced
     // an executable reward. Cap clipping happens later and still counts.
-    if (occurrenceKey && occurrenceApplied) {
+    if (occurrenceKey && uncappedReward > 0) {
       occurrenceUses.set(
         occurrenceKey,
         addSafeNonnegativeIntegers(

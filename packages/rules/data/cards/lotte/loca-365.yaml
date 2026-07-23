@@ -175,7 +175,7 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
       - performanceTier: tier1
-        rate: 0
+        rate: null
         fixedAmount: 1500
         monthlyCap: 1500
         perTransactionCap: null

@@ -48,7 +48,11 @@ export type {
 } from './analysis/performance.js';
 
 // Calculator
-export { calculateRewards, buildCategoryKey } from './calculator/reward.js';
+export {
+  calculateRewards,
+  buildCategoryKey,
+  isRewardEligibleTransaction,
+} from './calculator/reward.js';
 export { calculateDiscount } from './calculator/discount.js';
 export { calculatePoints } from './calculator/points.js';
 export { calculateCashback } from './calculator/cashback.js';

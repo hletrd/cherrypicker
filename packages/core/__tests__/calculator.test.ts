@@ -1,7 +1,11 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { join } from 'path';
 import { calculateRewards } from '../src/calculator/reward.js';
-import { loadAllCardRules, loadCardRule } from '@cherrypicker/rules';
+import {
+  cardRuleSetSchema,
+  loadAllCardRules,
+  loadCardRule,
+} from '@cherrypicker/rules';
 import type { CategorizedTransaction } from '../src/models/transaction.js';
 import type { CardRuleSet } from '@cherrypicker/rules';
 
@@ -24,6 +28,7 @@ let shinhanAliExpress: CardRuleSet;
 let wooriDiscount: CardRuleSet;
 let wooriPoint: CardRuleSet;
 let samsungPaycoTaptap: CardRuleSet;
+let loca365: CardRuleSet;
 
 beforeAll(async () => {
   simplePlan = await loadCardRule(join(rulesDir, 'shinhan/simple-plan.yaml'));
@@ -51,6 +56,7 @@ beforeAll(async () => {
   samsungPaycoTaptap = catalogCards.find(
     (card) => card.card.id === 'samsung-payco-taptap',
   )!;
+  loca365 = catalogCards.find((card) => card.card.id === 'lotte-loca-365')!;
 });
 
 function makeTx(
@@ -929,6 +935,137 @@ describe('calculateRewards - fixed reward types', () => {
     expect(output.totalReward).toBe(6_000);
   });
 
+  test('rate-floor zero does not consume maxUses', () => {
+    const fixture = structuredClone(simplePlan);
+    fixture.rewards[0]!.conditions = {
+      maxUses: 1,
+      usePeriod: 'month',
+    };
+
+    const output = calculateRewards({
+      transactions: [
+        makeTx('floored-zero', 'uncategorized', 50),
+        makeTx('positive-second', 'uncategorized', 100),
+      ],
+      previousMonthSpending: 0,
+      cardRule: fixture,
+    });
+
+    expect(output.totalReward).toBe(1);
+  });
+
+  test('sub-1,500-won mileage zero does not consume maxUses', () => {
+    const fixture = structuredClone(fixedRewardPerDayFixture);
+    const rule = fixture.rewards[0]!;
+    rule.category = 'travel';
+    rule.type = 'mileage';
+    rule.conditions = { maxUses: 1, usePeriod: 'month' };
+    rule.tiers[0] = {
+      performanceTier: 'tier0',
+      rate: null,
+      fixedAmount: 1,
+      unit: 'mile_per_1500won',
+      value: { kind: 'mileage_per_spend', amount: 1 },
+      monthlyCap: null,
+      perTransactionCap: null,
+    };
+
+    const output = calculateRewards({
+      transactions: [
+        makeTx('sub-threshold', 'travel', 1_499),
+        makeTx('threshold', 'travel', 1_500),
+      ],
+      previousMonthSpending: 0,
+      cardRule: fixture,
+    });
+
+    expect(output.totalReward).toBe(1);
+  });
+
+  test('calculates schema-valid fractional mileage rates in whole miles', () => {
+    const fixture = cardRuleSetSchema.parse({
+      ...structuredClone(simplePlan),
+      rewards: [{
+        ...structuredClone(simplePlan.rewards[0]!),
+        id: 'fractional-mileage',
+        category: 'travel',
+        type: 'mileage',
+        conditions: undefined,
+        tiers: [{
+          performanceTier: 'tier0',
+          rate: null,
+          fixedAmount: 0.5,
+          unit: 'mile_per_1500won',
+          monthlyCap: null,
+          perTransactionCap: null,
+        }],
+      }],
+    });
+
+    expect(fixture.rewards[0]?.tiers[0]?.value).toEqual({
+      kind: 'mileage_per_spend',
+      amount: 0.5,
+    });
+
+    const fractionalZero = calculateRewards({
+      transactions: [makeTx('fractional-zero', 'travel', 1_500)],
+      previousMonthSpending: 0,
+      cardRule: fixture,
+    });
+    expect(fractionalZero.totalReward).toBe(0);
+    expect(fractionalZero.unsupportedRules).toHaveLength(0);
+
+    const wholeMile = calculateRewards({
+      transactions: [makeTx('fractional-mile', 'travel', 3_000)],
+      previousMonthSpending: 0,
+      cardRule: fixture,
+    });
+    expect(wholeMile.totalReward).toBe(1);
+    expect(wholeMile.unsupportedRules).toHaveLength(0);
+  });
+
+  test('floors decimal mileage after exact multiplication at a whole-mile boundary', () => {
+    const fixture = cardRuleSetSchema.parse({
+      ...structuredClone(simplePlan),
+      rewards: [{
+        ...structuredClone(simplePlan.rewards[0]!),
+        id: 'decimal-mileage-boundary',
+        category: 'travel',
+        type: 'mileage',
+        conditions: undefined,
+        tiers: [{
+          performanceTier: 'tier0',
+          rate: null,
+          fixedAmount: 0.29,
+          unit: 'mile_per_1500won',
+          monthlyCap: null,
+          perTransactionCap: null,
+        }],
+      }],
+    });
+
+    expect(fixture.rewards[0]?.tiers[0]?.value).toEqual({
+      kind: 'mileage_per_spend',
+      amount: 0.29,
+    });
+
+    const belowBoundary = calculateRewards({
+      transactions: [makeTx('decimal-below', 'travel', 149_999)],
+      previousMonthSpending: 0,
+      cardRule: fixture,
+    });
+    expect(belowBoundary.totalReward).toBe(28);
+    expect(belowBoundary.unsupportedRules).toHaveLength(0);
+
+    const wholeMileBoundary = calculateRewards({
+      transactions: [makeTx('decimal-boundary', 'travel', 150_000)],
+      previousMonthSpending: 0,
+      cardRule: fixture,
+    });
+    expect(wholeMileBoundary.totalReward).toBe(29);
+    expect(wholeMileBoundary.unsupportedRules).toHaveLength(0);
+  });
+
   test('mileage type uses same math as points', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'travel', 50000)],
@@ -1023,6 +1160,25 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     const telecom = output.rewards.find((reward) => reward.category === 'telecom');
     expect(telecom).toBeDefined();
     expect(telecom!.reward).toBe(2500);
+  });
+
+  test('LOCA 365 fixed subscription value pays the canonical 1,500 won', () => {
+    const fixture = structuredClone(loca365);
+    const subscription = fixture.rewards.find(
+      (reward) => reward.id === 'reward-007',
+    )!;
+    subscription.support = { status: 'supported' };
+    fixture.rewards = [subscription];
+
+    const output = calculateRewards({
+      transactions: [
+        makeTx('subscription', 'subscription', 15_000, '넷플릭스'),
+      ],
+      previousMonthSpending: 500_000,
+      cardRule: fixture,
+    });
+
+    expect(output.totalReward).toBe(1_500);
   });
 
   test('won_per_liter benefit is not guessed when statement volume is missing', () => {
@@ -1125,6 +1281,10 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     )!;
     for (const tier of unsafeFuelRule.tiers) {
       tier.fixedAmount = Number.MAX_SAFE_INTEGER;
+      tier.value = {
+        kind: 'fuel_per_liter',
+        amount: Number.MAX_SAFE_INTEGER,
+      };
       tier.perTransactionCap = 500;
     }
     const unsafeProduct = calculateRewards({
@@ -1151,6 +1311,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     const fixture = structuredClone(simplePlan);
     const tier = fixture.rewards[0]!.tiers[0]!;
     tier.rate = Number.MAX_VALUE;
+    tier.value = { kind: 'percentage', amount: Number.MAX_VALUE };
     tier.perTransactionCap = 500;
 
     expect(() => calculateRewards({
@@ -1191,6 +1352,61 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
       'missing-first',
     ]);
   });
+
+  test('a fractional fuel reward floored to zero does not consume maxUses', () => {
+    const fixture = structuredClone(mrLife);
+    const fuelRule = fixture.rewards.find(
+      (rule) => rule.category === 'transportation',
+    )!;
+    fuelRule.conditions = {
+      ...fuelRule.conditions,
+      maxUses: 1,
+      usePeriod: 'month',
+    };
+
+    const fuelTransaction = (id: string, fuelVolumeLiters: number) => ({
+      ...makeTx(id, 'transportation', 50_000),
+      fuelVolumeLiters,
+      factProvenance: { fuelVolumeLiters: 'statement' as const },
+    });
+    const output = calculateRewards({
+      transactions: [
+        fuelTransaction('floored-zero', 0.01),
+        fuelTransaction('positive-second', 20),
+      ],
+      previousMonthSpending: 300_000,
+      cardRule: fixture,
+    });
+
+    expect(output.totalReward).toBe(1_200);
+  });
+
+  test.each(['transaction', 'monthly', 'global'] as const)(
+    'positive reward clipped to zero by a %s cap still consumes maxUses',
+    (capKind) => {
+      const fixture = structuredClone(simplePlan);
+      const reward = fixture.rewards[0]!;
+      reward.conditions = { maxUses: 1, usePeriod: 'month' };
+      const tier = reward.tiers[0]!;
+      if (capKind === 'transaction') tier.perTransactionCap = 0;
+      if (capKind === 'monthly') tier.monthlyCap = 0;
+      if (capKind === 'global') {
+        fixture.globalConstraints.monthlyTotalDiscountCap = 0;
+      }
+
+      const output = calculateRewards({
+        transactions: [
+          makeTx('first', 'uncategorized', 100),
+          makeTx('blocked-second', 'uncategorized', 100),
+        ],
+        previousMonthSpending: 0,
+        cardRule: fixture,
+      });
+
+      expect(output.totalReward).toBe(0);
+      expect(output.capsHit).toHaveLength(1);
+    },
+  );
 
   test('counts an executable maxUses application even when a cap clips it', () => {
     const maxUseFixture = structuredClone(mrLife);
@@ -1323,7 +1539,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
         previousMonthSpending: NaN,
         cardRule: simplePlan,
       })
-    ).toThrow(/previousMonthSpending must be a non-negative finite number/);
+    ).toThrow(/previousMonthSpending must be a non-negative safe integer/);
   });
 
   test('rejects Infinity previousMonthSpending (C39-BUG01)', () => {
@@ -1333,7 +1549,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
         previousMonthSpending: Infinity,
         cardRule: simplePlan,
       })
-    ).toThrow(/previousMonthSpending must be a non-negative finite number/);
+    ).toThrow(/previousMonthSpending must be a non-negative safe integer/);
   });
 
   test('rejects negative previousMonthSpending (C39-BUG01)', () => {
@@ -1343,7 +1559,20 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
         previousMonthSpending: -1000,
         cardRule: simplePlan,
       })
-    ).toThrow(/previousMonthSpending must be a non-negative finite number/);
+    ).toThrow(/previousMonthSpending must be a non-negative safe integer/);
+  });
+
+  test.each([
+    Number.MAX_SAFE_INTEGER + 1,
+    1.5,
+  ])('rejects non-canonical previousMonthSpending %s', (previousMonthSpending) => {
+    expect(() =>
+      calculateRewards({
+        transactions: [makeTx('t1', 'dining', 10_000)],
+        previousMonthSpending,
+        cardRule: simplePlan,
+      }),
+    ).toThrow(/previousMonthSpending must be a non-negative safe integer/);
   });
 });
 

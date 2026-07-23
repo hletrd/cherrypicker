@@ -314,6 +314,32 @@ describe('greedyOptimize - edge cases', () => {
     expect(result.totalSpending).toBe(100000);
   });
 
+  test('non-KRW rows are excluded from every optimizer spending view', () => {
+    const krw = makeTx('krw', 'uncategorized', 10_000);
+    const usd = {
+      ...makeTx('usd', 'uncategorized', 90_000),
+      currency: 'USD',
+    };
+    const constraints = makeConstraints(
+      [krw, usd],
+      new Map([['shinhan-simple-plan', 0]]),
+    );
+
+    const result = greedyOptimize(constraints, [simplePlan]);
+    const assignmentSpending = result.assignments.reduce(
+      (sum, assignment) => sum + assignment.spending,
+      0,
+    );
+    const cardResultSpending = result.cardResults.reduce(
+      (sum, card) => sum + card.totalSpending,
+      0,
+    );
+
+    expect(result.totalSpending).toBe(10_000);
+    expect(assignmentSpending).toBe(result.totalSpending);
+    expect(cardResultSpending).toBe(result.totalSpending);
+  });
+
   test('all-merchant wildcard rewards a categorized transaction', () => {
     const constraints = makeConstraints([
       makeTx('t1', 'dining', 50000),
@@ -332,6 +358,59 @@ describe('greedyOptimize - edge cases', () => {
     const result = greedyOptimize(constraints, [mrLife]);
     expect(result.assignments.length).toBeGreaterThan(0);
     expect(result.totalReward).toBe(0);
+    expect(result.bestSingleCard.cardId).toBe('shinhan-mr-life');
+  });
+
+  test('tied zero rewards retain the first card identity', () => {
+    const first = structuredClone(mrLife);
+    const second = structuredClone(mrLife);
+    first.card.id = 'zero-first';
+    first.card.nameKo = '첫 번째';
+    second.card.id = 'zero-second';
+    second.card.nameKo = '두 번째';
+    const constraints = makeConstraints(
+      [makeTx('t1', 'entertainment', 50_000)],
+      new Map([
+        [first.card.id, 0],
+        [second.card.id, 0],
+      ]),
+    );
+
+    const result = greedyOptimize(constraints, [first, second]);
+    expect(result.totalReward).toBe(0);
+    expect(result.bestSingleCard).toEqual({
+      cardId: first.card.id,
+      cardName: first.card.nameKo,
+      totalReward: 0,
+    });
+  });
+
+  test('rejects an empty card catalog', () => {
+    const constraints = makeConstraints(
+      [makeTx('t1', 'uncategorized', 10_000)],
+      new Map(),
+    );
+
+    expect(() => greedyOptimize(constraints, [])).toThrow(
+      /cardRules must contain at least one card/,
+    );
+  });
+
+  test.each([
+    Number.MAX_SAFE_INTEGER + 1,
+    1.5,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+  ])('rejects invalid previousMonthSpending %s', (previousMonthSpending) => {
+    const constraints = makeConstraints(
+      [makeTx('t1', 'uncategorized', 10_000)],
+      new Map([['shinhan-simple-plan', previousMonthSpending]]),
+    );
+
+    expect(() => greedyOptimize(constraints, [simplePlan])).toThrow(
+      /previousMonthSpending for shinhan-simple-plan must be a non-negative safe integer/,
+    );
   });
 
   test.each([201, 1e308])(

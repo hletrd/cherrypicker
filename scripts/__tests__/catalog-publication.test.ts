@@ -6,6 +6,7 @@ import {
   injectPublicationIdentity,
   isIndexableReward,
   parsePublicationCard,
+  publicationRewardIndexValue,
   staleGeneratedShardNames,
 } from '../catalog-publication.js';
 
@@ -87,6 +88,26 @@ describe('catalog publication boundary', () => {
         },
       }),
     ).toBe(false);
+  });
+
+  test('indexes legacy rate-zero fixed rewards by their canonical value', () => {
+    const raw = cardWithUrl('https://example.com/card');
+    Object.assign(raw.rewards[0]!.tiers[0]!, {
+      rate: 0,
+      fixedAmount: 1_500,
+    });
+    const tier = parsePublicationCard(raw, 'fixed.yaml')
+      .rewards[0]!.tiers[0]!;
+
+    expect(tier.rate).toBeNull();
+    expect(tier.value).toEqual({
+      kind: 'fixed_per_transaction',
+      amount: 1_500,
+    });
+    expect(publicationRewardIndexValue(tier)).toEqual({
+      amount: 1_500,
+      kind: 'fixedAmount',
+    });
   });
 
   test('excludes unsupported rewards only from summary categories', () => {

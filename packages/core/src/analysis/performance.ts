@@ -4,6 +4,10 @@ import {
   type PerformanceExclusionId,
 } from '@cherrypicker/rules/browser';
 import type { CalculationIssue } from '../models/result.js';
+import {
+  addSafeNonnegativeIntegers,
+  assertSafeNonnegativeInteger,
+} from '../numeric.js';
 import type { PreviousSpendingBasis } from './context.js';
 
 export interface PerformanceSpendingTransaction {
@@ -46,7 +50,13 @@ export function calculatePerformanceSpending(
         excluded = true;
       }
     }
-    if (!excluded) amount += transaction.amount;
+    if (!excluded) {
+      amount = addSafeNonnegativeIntegers(
+        amount,
+        transaction.amount,
+        'eligible performance spending',
+      );
+    }
   }
 
   return unknownExclusions.size > 0
@@ -59,13 +69,28 @@ export function resolveCardPreviousSpending(
   previousTransactions: readonly PerformanceSpendingTransaction[],
   basis?: PreviousSpendingBasis,
 ): CardPreviousSpendingResult {
+  if (basis?.kind === 'user-total') {
+    assertSafeNonnegativeInteger(
+      basis.amount,
+      'previous spending user total',
+    );
+  } else if (basis?.kind === 'missing-calendar-month') {
+    assertSafeNonnegativeInteger(
+      basis.assumedAmount,
+      'previous spending assumed amount',
+    );
+  }
+
   const cardPreviousSpending = new Map<string, number>();
   const issues: CalculationIssue[] = [];
-  const totalPositiveSpending = previousTransactions.reduce(
-    (sum, transaction) =>
-      sum + (transaction.amount > 0 ? transaction.amount : 0),
-    0,
-  );
+  const totalPositiveSpending = previousTransactions.reduce((sum, transaction) => {
+    if (transaction.amount <= 0) return sum;
+    return addSafeNonnegativeIntegers(
+      sum,
+      transaction.amount,
+      'previous spending total',
+    );
+  }, 0);
 
   for (const rule of cardRules) {
     if (basis?.kind === 'user-total') {

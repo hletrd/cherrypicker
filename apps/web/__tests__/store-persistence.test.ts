@@ -13,6 +13,72 @@ import {
   STORAGE_VERSION,
 } from '../src/lib/persistence.js';
 
+function assignmentFixture(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    assignedCardId: 'card-1',
+    assignedCardName: '카드 1',
+    category: 'dining',
+    categoryNameKo: '외식',
+    spending: 10_000,
+    reward: 500,
+    rate: 0.05,
+    alternatives: [],
+    ...overrides,
+  };
+}
+
+function categoryRewardFixture(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    category: 'dining',
+    categoryNameKo: '외식',
+    spending: 10_000,
+    reward: 500,
+    rate: 0.05,
+    rewardType: 'discount',
+    capReached: false,
+    ...overrides,
+  };
+}
+
+function cardResultFixture(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    cardId: 'card-1',
+    cardName: '카드 1',
+    totalReward: 500,
+    totalSpending: 10_000,
+    effectiveRate: 0.05,
+    byCategory: [categoryRewardFixture()],
+    performanceTier: 'tier0',
+    capsHit: [],
+    ...overrides,
+  };
+}
+
+function optimizationFixture(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    assignments: [assignmentFixture()],
+    cardResults: [],
+    totalReward: 500,
+    totalSpending: 10_000,
+    effectiveRate: 0.05,
+    savingsVsSingleCard: 100,
+    bestSingleCard: {
+      cardId: 'card-1',
+      cardName: '카드 1',
+      totalReward: 400,
+    },
+    ...overrides,
+  };
+}
+
 function persistedFixture(overrides: Record<string, unknown> = {}): string {
   return JSON.stringify({
     _v: STORAGE_VERSION,
@@ -20,19 +86,7 @@ function persistedFixture(overrides: Record<string, unknown> = {}): string {
     bank: 'shinhan',
     format: 'csv',
     transactionCount: 1,
-    optimization: {
-      assignments: [
-        {
-          assignedCardId: 'card-1',
-          category: 'dining',
-          spending: 10_000,
-        },
-      ],
-      cardResults: [],
-      totalReward: 500,
-      totalSpending: 10_000,
-      effectiveRate: 0.05,
-    },
+    optimization: optimizationFixture(),
     ...overrides,
   });
 }
@@ -117,35 +171,268 @@ describe('production persistence parser', () => {
     }
   });
 
-  test('filters unsafe assignments and reports corrupted transactions', () => {
+  test('filters corrupted transactions while preserving valid optimization', () => {
     const result = deserializeAnalysis(
       persistedFixture({
         transactions: [{ id: '', date: 1 }],
-        optimization: {
-          assignments: [
-            {
-              assignedCardId: 'card-1',
-              category: 'dining',
-              spending: 10_000,
-            },
-            { assignedCardId: '', category: 'dining', spending: 10_000 },
-            {
-              assignedCardId: 'card-2',
-              category: 'dining',
-              spending: -1,
-            },
-          ],
-          cardResults: [],
-          totalReward: 500,
-          totalSpending: 10_000,
-          effectiveRate: 0.05,
-        },
       }),
     );
 
     expect(result.data?.optimization.assignments).toHaveLength(1);
+    expect(result.data?.optimization.cardResults).toHaveLength(0);
     expect(result.data?.transactions).toBeUndefined();
     expect(result.warningKind).toBe('corrupted');
+  });
+
+  test('accepts fully shaped nested optimization entries', () => {
+    const issue = {
+      cardId: 'card-1',
+      transactionId: 'tx-1',
+      ruleId: 'reward-1',
+      category: 'dining',
+      reason: 'unsupported-rule',
+    };
+    const result = deserializeAnalysis(
+      persistedFixture({
+        optimization: optimizationFixture({
+          assignments: [
+            assignmentFixture({
+              alternatives: [
+                {
+                  cardId: 'card-2',
+                  cardName: '카드 2',
+                  reward: 400,
+                  rate: 0.04,
+                },
+              ],
+            }),
+          ],
+          cardResults: [
+            cardResultFixture({
+              capsHit: [
+                {
+                  category: 'dining',
+                  capType: 'monthly_category',
+                  capAmount: 500,
+                  actualReward: 600,
+                  appliedReward: 500,
+                },
+              ],
+              unsupportedRules: [issue],
+            }),
+          ],
+          unsupportedRules: [issue],
+        }),
+      }),
+    );
+
+    expect(result.warningKind).toBeNull();
+    expect(result.shouldRemove).toBe(false);
+    expect(
+      result.data?.optimization.assignments[0]?.alternatives,
+    ).toHaveLength(1);
+    expect(
+      result.data?.optimization.cardResults[0]?.byCategory,
+    ).toHaveLength(1);
+    expect(result.data?.optimization.cardResults[0]?.capsHit).toHaveLength(1);
+  });
+
+  test.each([
+    ['missing cardResults', optimizationFixture({ cardResults: undefined })],
+    [
+      'missing savings comparison',
+      optimizationFixture({ savingsVsSingleCard: undefined }),
+    ],
+    [
+      'missing best single card',
+      optimizationFixture({ bestSingleCard: undefined }),
+    ],
+    ['non-array cardResults', optimizationFixture({ cardResults: {} })],
+    [
+      'non-array optimization issues',
+      optimizationFixture({ unsupportedRules: {} }),
+    ],
+    [
+      'non-array assignment alternatives',
+      optimizationFixture({
+        assignments: [assignmentFixture({ alternatives: {} })],
+      }),
+    ],
+    [
+      'non-array category rewards',
+      optimizationFixture({
+        cardResults: [cardResultFixture({ byCategory: {} })],
+      }),
+    ],
+    [
+      'non-array cap details',
+      optimizationFixture({
+        cardResults: [cardResultFixture({ capsHit: {} })],
+      }),
+    ],
+    [
+      'non-array card issues',
+      optimizationFixture({
+        cardResults: [cardResultFixture({ unsupportedRules: {} })],
+      }),
+    ],
+  ])('rejects malformed optimization container: %s', (_case, optimization) => {
+    const result = deserializeAnalysis(persistedFixture({ optimization }));
+
+    expect(result).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
+  test.each([
+    ['assignment', optimizationFixture({ assignments: [{}] })],
+    [
+      'alternative',
+      optimizationFixture({
+        assignments: [assignmentFixture({ alternatives: [{}] })],
+      }),
+    ],
+    ['card result', optimizationFixture({ cardResults: [{}] })],
+    [
+      'category reward',
+      optimizationFixture({
+        cardResults: [cardResultFixture({ byCategory: [{}] })],
+      }),
+    ],
+    [
+      'cap detail',
+      optimizationFixture({
+        cardResults: [cardResultFixture({ capsHit: [{}] })],
+      }),
+    ],
+    [
+      'optimization issue',
+      optimizationFixture({ unsupportedRules: [{}] }),
+    ],
+    [
+      'card issue',
+      optimizationFixture({
+        cardResults: [cardResultFixture({ unsupportedRules: [{}] })],
+      }),
+    ],
+    [
+      'fractional card result reward',
+      optimizationFixture({
+        cardResults: [cardResultFixture({ totalReward: 1.5 })],
+      }),
+    ],
+    [
+      'empty best-card identity',
+      optimizationFixture({
+        bestSingleCard: {
+          cardId: '',
+          cardName: '',
+          totalReward: 400,
+        },
+      }),
+    ],
+  ])('rejects malformed nested optimization entry: %s', (_case, optimization) => {
+    const result = deserializeAnalysis(persistedFixture({ optimization }));
+
+    expect(result.data).toBeNull();
+    expect(result.warningKind).toBe('corrupted');
+    expect(result.shouldRemove).toBe(true);
+  });
+
+  test.each([
+    Number.MAX_SAFE_INTEGER + 1,
+    1.5,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+  ])('rejects non-canonical optimization money %s', (amount) => {
+    for (const field of ['totalReward', 'totalSpending'] as const) {
+      const optimization = optimizationFixture({
+        [field]: amount,
+      });
+      const result = deserializeAnalysis(
+        persistedFixture({ optimization }),
+      );
+      expect(result.data).toBeNull();
+      expect(result.shouldRemove).toBe(true);
+    }
+  });
+
+  test.each([
+    Number.MAX_SAFE_INTEGER + 1,
+    1.5,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+  ])('rejects invalid persisted previous spending %s', (amount) => {
+    const result = deserializeAnalysis(
+      persistedFixture({ previousMonthSpendingOption: amount }),
+    );
+    expect(result.data).toBeNull();
+    expect(result.warningKind).toBe('corrupted');
+  });
+
+  test('rejects unsafe or fractional persisted count fields', () => {
+    for (const overrides of [
+      { transactionCount: 1.5 },
+      { totalTransactionCount: Number.MAX_SAFE_INTEGER + 1 },
+      { _truncatedTxCount: -1 },
+      {
+        monthlyBreakdown: [
+          { month: '2026-07', spending: 10_000, transactionCount: 1.5 },
+        ],
+      },
+      {
+        monthlyBreakdown: [
+          {
+            month: '2026-07',
+            spending: Number.MAX_SAFE_INTEGER + 1,
+            transactionCount: 1,
+          },
+        ],
+      },
+    ]) {
+      expect(deserializeAnalysis(persistedFixture(overrides)).data).toBeNull();
+    }
+  });
+
+  test('accepts safe-integer aggregate and count boundaries', () => {
+    const result = deserializeAnalysis(
+      persistedFixture({
+        transactionCount: Number.MAX_SAFE_INTEGER,
+        totalTransactionCount: Number.MAX_SAFE_INTEGER,
+        previousMonthSpendingOption: Number.MAX_SAFE_INTEGER,
+        monthlyBreakdown: [
+          {
+            month: '2026-07',
+            spending: Number.MAX_SAFE_INTEGER,
+            transactionCount: Number.MAX_SAFE_INTEGER,
+          },
+        ],
+        optimization: optimizationFixture({
+          assignments: [
+            assignmentFixture({
+              spending: Number.MAX_SAFE_INTEGER,
+            }),
+          ],
+          cardResults: [],
+          totalReward: Number.MAX_SAFE_INTEGER,
+          totalSpending: Number.MAX_SAFE_INTEGER,
+          effectiveRate: 1,
+        }),
+      }),
+    );
+
+    expect(result.shouldRemove).toBe(false);
+    expect(result.data?.optimization.totalReward).toBe(
+      Number.MAX_SAFE_INTEGER,
+    );
+    expect(result.data?.monthlyBreakdown?.[0]?.transactionCount).toBe(
+      Number.MAX_SAFE_INTEGER,
+    );
   });
 });
 
@@ -170,7 +457,7 @@ describe('production persistence serializer', () => {
     );
   });
 
-  test('round-trips card-aware calculation issues and drops legacy identities', () => {
+  test('round-trips card-aware calculation issues and rejects malformed identities', () => {
     const analysis = analysisFixture();
     analysis.optimization.unsupportedRules = [
       {
@@ -196,10 +483,12 @@ describe('production persistence serializer', () => {
 
     const legacy = JSON.parse(serializeAnalysis(analysis).serialized);
     delete legacy.optimization.unsupportedRules[0].cardId;
-    expect(
-      deserializeAnalysis(JSON.stringify(legacy))
-        .data?.optimization.unsupportedRules,
-    ).toEqual([analysis.optimization.unsupportedRules[1]]);
+    expect(deserializeAnalysis(JSON.stringify(legacy))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
   });
 
   test('round-trips typed facts and their provenance for reoptimization', () => {

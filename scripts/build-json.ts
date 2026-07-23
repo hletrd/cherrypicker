@@ -30,6 +30,7 @@ import {
   buildWebCatalogArtifacts,
   isIndexableReward,
   parsePublicationCard,
+  publicationRewardIndexValue,
   staleGeneratedShardNames,
 } from './catalog-publication.js';
 
@@ -76,7 +77,7 @@ interface OrganizedOutput {
 }
 
 function getTierComparableValue(tier: CardEntry['rewards'][number]['tiers'][number]): number {
-  return tier.rate ?? tier.fixedAmount ?? 0;
+  return publicationRewardIndexValue(tier).amount;
 }
 
 function pickBestTier(tiers: CardEntry['rewards'][number]['tiers']) {
@@ -254,7 +255,7 @@ for (const card of cards) {
       issuer: card.card.issuer,
       type: reward.type,
       rewardValue: getTierComparableValue(bestTier),
-      rewardValueKind: bestTier.rate !== null ? 'rate' : 'fixedAmount',
+      rewardValueKind: publicationRewardIndexValue(bestTier).kind,
       unit: bestTier.unit,
       monthlyCap: bestTier.monthlyCap,
       subcategory: reward.subcategory,
@@ -387,7 +388,9 @@ const compactOutput = {
           category: r.subcategory ? `${r.category}.${r.subcategory}` : r.category,
           type: r.type,
           bestValue: getTierComparableValue(pickBestTier(r.tiers)),
-          bestValueKind: pickBestTier(r.tiers).rate !== null ? 'rate' : 'fixedAmount',
+          bestValueKind: publicationRewardIndexValue(
+            pickBestTier(r.tiers),
+          ).kind,
           unit: pickBestTier(r.tiers).unit,
         }))
         .sort((a, b) => b.bestValue - a.bestValue)

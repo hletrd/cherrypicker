@@ -1,3 +1,5 @@
+import { addSafeNonnegativeIntegers } from '../numeric.js';
+
 export type YearMonth = `${number}-${string}`;
 
 export type PreviousSpendingBasis =
@@ -133,7 +135,13 @@ export function buildAnalysisContext<T extends DatedAmount>(
   for (const transaction of validTransactions) {
     const month = yearMonthOfDate(transaction.date)!;
     const current = monthly.get(month) ?? { spending: 0, transactionCount: 0 };
-    if (transaction.amount > 0) current.spending += transaction.amount;
+    if (transaction.amount > 0) {
+      current.spending = addSafeNonnegativeIntegers(
+        current.spending,
+        transaction.amount,
+        `monthly spending for ${month}`,
+      );
+    }
     current.transactionCount += 1;
     monthly.set(month, current);
   }

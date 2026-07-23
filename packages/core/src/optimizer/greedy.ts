@@ -9,7 +9,11 @@ import type {
   CalculationIssue,
 } from '../models/result.js';
 import type { OptimizationConstraints } from './constraints.js';
-import { calculateRewards, buildCategoryKey } from '../calculator/reward.js';
+import {
+  buildCategoryKey,
+  calculateRewards,
+  isRewardEligibleTransaction,
+} from '../calculator/reward.js';
 import {
   addSafeNonnegativeIntegers,
   assertSafeNonnegativeInteger,
@@ -60,7 +64,10 @@ function scoreCardsForTransaction(
 ): CardScoringResult {
   // Defensive guard: callers should pre-filter, but division by zero
   // would produce Infinity and corrupt sort ordering.
-  if (transaction.amount <= 0 || !Number.isSafeInteger(transaction.amount)) {
+  if (
+    !Number.isSafeInteger(transaction.amount) ||
+    !isRewardEligibleTransaction(transaction)
+  ) {
     return { scores: [], unsupportedRules: [] };
   }
   const scores: CardScore[] = [];
@@ -249,6 +256,9 @@ export function greedyOptimize(
   constraints: OptimizationConstraints,
   cardRules: CardRuleSet[],
 ): OptimizationResult {
+  if (cardRules.length === 0) {
+    throw new Error('cardRules must contain at least one card');
+  }
   for (const transaction of constraints.transactions) {
     if (
       !Number.isFinite(transaction.amount) ||
@@ -258,6 +268,12 @@ export function greedyOptimize(
         `transaction amount must be a finite safe integer, got ${transaction.amount} for ${transaction.id}`,
       );
     }
+  }
+  for (const card of constraints.cards) {
+    assertSafeNonnegativeInteger(
+      card.previousMonthSpending,
+      `previousMonthSpending for ${card.cardId}`,
+    );
   }
 
   const cardPreviousSpending = new Map(
@@ -273,7 +289,7 @@ export function greedyOptimize(
   // but Number.isFinite also guards the sort comparator against NaN
   // comparisons which sort inconsistently across JS engines.
   const sortedTransactions = [...constraints.transactions]
-    .filter((tx) => tx.amount > 0)
+    .filter(isRewardEligibleTransaction)
     .sort((a, b) => {
       const amountDiff = b.amount - a.amount;
       if (amountDiff !== 0) return amountDiff;
@@ -340,12 +356,17 @@ export function greedyOptimize(
   );
   const effectiveRate = totalSpending > 0 ? totalReward / totalSpending : 0;
 
-  let bestSingleCard = { cardId: '', cardName: '', totalReward: 0 };
+  let bestSingleCard:
+    | { cardId: string; cardName: string; totalReward: number }
+    | undefined;
   for (const rule of cardRules) {
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
     const output = calculateCardOutput(sortedTransactions, previousMonthSpending, rule);
 
-    if (output.totalReward > bestSingleCard.totalReward) {
+    if (
+      bestSingleCard === undefined ||
+      output.totalReward > bestSingleCard.totalReward
+    ) {
       bestSingleCard = {
         cardId: rule.card.id,
         cardName: getCardName(rule),
@@ -354,6 +375,9 @@ export function greedyOptimize(
     }
   }
 
+  if (bestSingleCard === undefined) {
+    throw new Error('cardRules must contain at least one card');
+  }
   const savingsVsSingleCard = totalReward - bestSingleCard.totalReward;
   if (!Number.isSafeInteger(savingsVsSingleCard)) {
     throw new Error(

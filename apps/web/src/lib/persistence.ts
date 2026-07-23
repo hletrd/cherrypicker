@@ -77,8 +77,7 @@ const MIGRATIONS: Readonly<
     ...data,
     parseErrors: Array.isArray(data.parseErrors) ? data.parseErrors : [],
     previousSpendingBasis:
-      finiteNumber(data.previousMonthSpendingOption) &&
-      data.previousMonthSpendingOption >= 0
+      safeNonnegativeInteger(data.previousMonthSpendingOption)
         ? { kind: 'user-total', amount: data.previousMonthSpendingOption }
         : undefined,
     _v: 2,
@@ -187,11 +186,62 @@ function validAssignment(value: unknown): boolean {
   return (
     typeof value.assignedCardId === 'string' &&
     value.assignedCardId.length > 0 &&
+    typeof value.assignedCardName === 'string' &&
+    value.assignedCardName.length > 0 &&
     typeof value.category === 'string' &&
     value.category.length > 0 &&
-    typeof value.spending === 'number' &&
-    Number.isFinite(value.spending) &&
-    value.spending >= 0
+    typeof value.categoryNameKo === 'string' &&
+    value.categoryNameKo.length > 0 &&
+    safeNonnegativeInteger(value.spending) &&
+    safeNonnegativeInteger(value.reward) &&
+    finiteNonnegativeNumber(value.rate) &&
+    Array.isArray(value.alternatives) &&
+    value.alternatives.every(validAlternative)
+  );
+}
+
+function validAlternative(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    typeof value.cardId === 'string' &&
+    value.cardId.length > 0 &&
+    typeof value.cardName === 'string' &&
+    value.cardName.length > 0 &&
+    safeNonnegativeInteger(value.reward) &&
+    finiteNonnegativeNumber(value.rate)
+  );
+}
+
+function validCategoryReward(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    typeof value.category === 'string' &&
+    value.category.length > 0 &&
+    typeof value.categoryNameKo === 'string' &&
+    value.categoryNameKo.length > 0 &&
+    safeNonnegativeInteger(value.spending) &&
+    safeNonnegativeInteger(value.reward) &&
+    finiteNonnegativeNumber(value.rate) &&
+    typeof value.rewardType === 'string' &&
+    value.rewardType.length > 0 &&
+    typeof value.capReached === 'boolean' &&
+    (value.capAmount === undefined || safeNonnegativeInteger(value.capAmount))
+  );
+}
+
+function validCapInfo(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    typeof value.category === 'string' &&
+    value.category.length > 0 &&
+    (
+      value.capType === 'monthly_category' ||
+      value.capType === 'monthly_total' ||
+      value.capType === 'per_transaction'
+    ) &&
+    safeNonnegativeInteger(value.capAmount) &&
+    safeNonnegativeInteger(value.actualReward) &&
+    safeNonnegativeInteger(value.appliedReward)
   );
 }
 
@@ -200,10 +250,29 @@ function validCardResult(value: unknown): boolean {
   return (
     typeof value.cardId === 'string' &&
     value.cardId.length > 0 &&
-    typeof value.totalReward === 'number' &&
-    Number.isFinite(value.totalReward) &&
-    value.totalReward >= 0 &&
-    Array.isArray(value.byCategory)
+    typeof value.cardName === 'string' &&
+    value.cardName.length > 0 &&
+    safeNonnegativeInteger(value.totalReward) &&
+    safeNonnegativeInteger(value.totalSpending) &&
+    finiteNonnegativeNumber(value.effectiveRate) &&
+    Array.isArray(value.byCategory) &&
+    value.byCategory.every(validCategoryReward) &&
+    typeof value.performanceTier === 'string' &&
+    value.performanceTier.length > 0 &&
+    Array.isArray(value.capsHit) &&
+    value.capsHit.every(validCapInfo) &&
+    validOptionalCalculationIssues(value.unsupportedRules)
+  );
+}
+
+function validBestSingleCard(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    typeof value.cardId === 'string' &&
+    value.cardId.length > 0 &&
+    typeof value.cardName === 'string' &&
+    value.cardName.length > 0 &&
+    safeNonnegativeInteger(value.totalReward)
   );
 }
 
@@ -224,8 +293,31 @@ function validCalculationIssue(value: unknown): boolean {
   );
 }
 
+function validOptionalCalculationIssues(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (Array.isArray(value) && value.every(validCalculationIssue))
+  );
+}
+
 function finiteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function finiteNonnegativeNumber(value: unknown): value is number {
+  return finiteNumber(value) && value >= 0;
+}
+
+function safeNonnegativeInteger(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isSafeInteger(value) &&
+    value >= 0
+  );
+}
+
+function safeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value);
 }
 
 function truncateEnd(value: string, maxLength: number): string {
@@ -396,30 +488,38 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
   const optimization = migrated.optimization;
   if (
     !Array.isArray(optimization.assignments) ||
-    !finiteNumber(optimization.totalReward) ||
-    !finiteNumber(optimization.totalSpending) ||
-    !finiteNumber(optimization.effectiveRate)
+    !optimization.assignments.every(validAssignment) ||
+    !safeNonnegativeInteger(optimization.totalReward) ||
+    !safeNonnegativeInteger(optimization.totalSpending) ||
+    !finiteNonnegativeNumber(optimization.effectiveRate) ||
+    !safeInteger(optimization.savingsVsSingleCard) ||
+    !validBestSingleCard(optimization.bestSingleCard) ||
+    !Array.isArray(optimization.cardResults) ||
+    !optimization.cardResults.every(validCardResult) ||
+    !validOptionalCalculationIssues(optimization.unsupportedRules)
   ) {
     return invalidResult();
   }
 
-  optimization.assignments = optimization.assignments.filter(validAssignment);
-  if (Array.isArray(optimization.unsupportedRules)) {
-    optimization.unsupportedRules =
-      optimization.unsupportedRules.filter(validCalculationIssue);
-  }
-  if (Array.isArray(optimization.cardResults)) {
-    const cardResults = optimization.cardResults.filter(validCardResult);
-    optimization.cardResults = cardResults;
-    for (const cardResult of cardResults) {
-      if (
-        isPlainObject(cardResult) &&
-        Array.isArray(cardResult.unsupportedRules)
-      ) {
-        cardResult.unsupportedRules =
-          cardResult.unsupportedRules.filter(validCalculationIssue);
-      }
-    }
+  if (
+    (
+      migrated.transactionCount !== undefined &&
+      !safeNonnegativeInteger(migrated.transactionCount)
+    ) ||
+    (
+      migrated.totalTransactionCount !== undefined &&
+      !safeNonnegativeInteger(migrated.totalTransactionCount)
+    ) ||
+    (
+      migrated._truncatedTxCount !== undefined &&
+      !safeNonnegativeInteger(migrated._truncatedTxCount)
+    ) ||
+    (
+      migrated.previousMonthSpendingOption !== undefined &&
+      !safeNonnegativeInteger(migrated.previousMonthSpendingOption)
+    )
+  ) {
+    return invalidResult();
   }
 
   let warningKind: PersistWarningKind = null;
@@ -432,25 +532,29 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
       warningKind = 'corrupted';
     }
   } else if (
-    finiteNumber(migrated._truncatedTxCount) &&
-    migrated._truncatedTxCount >= 0
+    safeNonnegativeInteger(migrated._truncatedTxCount)
   ) {
     warningKind = 'truncated';
     truncatedTxCount = migrated._truncatedTxCount;
   }
 
-  const monthlyBreakdown = Array.isArray(migrated.monthlyBreakdown)
-    ? migrated.monthlyBreakdown.map((item) => {
-        const entry = isPlainObject(item) ? item : {};
-        return {
-          month: typeof entry.month === 'string' ? entry.month : '',
-          spending: finiteNumber(entry.spending) ? entry.spending : 0,
-          transactionCount: finiteNumber(entry.transactionCount)
-            ? entry.transactionCount
-            : 0,
-        };
-      })
-    : undefined;
+  let monthlyBreakdown: AnalysisResult['monthlyBreakdown'];
+  if (Array.isArray(migrated.monthlyBreakdown)) {
+    if (
+      !migrated.monthlyBreakdown.every(
+        (item) =>
+          isPlainObject(item) &&
+          typeof item.month === 'string' &&
+          safeNonnegativeInteger(item.spending) &&
+          safeNonnegativeInteger(item.transactionCount),
+      )
+    ) {
+      return invalidResult();
+    }
+    monthlyBreakdown = migrated.monthlyBreakdown as NonNullable<
+      AnalysisResult['monthlyBreakdown']
+    >;
+  }
 
   const format = typeof migrated.format === 'string' ? migrated.format : 'unknown';
   const parseErrors = Array.isArray(migrated.parseErrors)
@@ -465,6 +569,16 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
           ),
       )
     : [];
+  const restoredPreviousSpendingBasis = previousSpendingBasis(
+    migrated.previousSpendingBasis,
+  );
+  if (
+    migrated.previousSpendingBasis !== undefined &&
+    restoredPreviousSpendingBasis === undefined
+  ) {
+    return invalidResult();
+  }
+
   const data: AnalysisResult = {
     success: Boolean(migrated.success),
     bank:
@@ -475,20 +589,20 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
     statementPeriod: isPlainObject(migrated.statementPeriod)
       ? (migrated.statementPeriod as { start: string; end: string })
       : undefined,
-    transactionCount: finiteNumber(migrated.transactionCount)
+    transactionCount: safeNonnegativeInteger(migrated.transactionCount)
       ? migrated.transactionCount
       : 0,
     fullStatementPeriod: isPlainObject(migrated.fullStatementPeriod)
       ? (migrated.fullStatementPeriod as { start: string; end: string })
       : undefined,
-    totalTransactionCount: finiteNumber(migrated.totalTransactionCount)
+    totalTransactionCount: safeNonnegativeInteger(migrated.totalTransactionCount)
       ? migrated.totalTransactionCount
       : undefined,
     parseErrors,
     transactions,
     optimization: optimization as unknown as AnalysisResult['optimization'],
     monthlyBreakdown,
-    previousMonthSpendingOption: finiteNumber(
+    previousMonthSpendingOption: safeNonnegativeInteger(
       migrated.previousMonthSpendingOption,
     )
       ? migrated.previousMonthSpendingOption
@@ -498,9 +612,7 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
           (cardId): cardId is string => typeof cardId === 'string',
         )
       : undefined,
-    previousSpendingBasis: previousSpendingBasis(
-      migrated.previousSpendingBasis,
-    ),
+    previousSpendingBasis: restoredPreviousSpendingBasis,
   };
 
   return {
