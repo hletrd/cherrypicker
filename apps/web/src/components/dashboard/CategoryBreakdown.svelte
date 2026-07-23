@@ -116,37 +116,32 @@
   );
 
   let categories = $derived.by((): CategoryData[] => {
-    const assignments = analysisStore.assignments;
-    if (!assignments.length) return [];
+    const summaries = analysisStore.result?.categoryBreakdown ?? [];
+    if (!summaries.length) return [];
 
-    const totalSpending = assignments.reduce((sum, a) => sum + a.spending, 0);
+    const totalSpending = summaries.reduce((sum, a) => sum + a.spending, 0);
     if (totalSpending === 0) return [];
 
-    // The optimizer already returns assignments sorted by spending, so this
-    // re-sort is technically redundant. However, the "other" grouping logic
-    // below requires spending-sorted data, so keeping the explicit sort makes
-    // the dependency visible and prevents a hidden coupling to the optimizer's
-    // sort order (C9-07).
-    const sorted = [...assignments].sort((a, b) => b.spending - a.spending);
+    const sorted = [...summaries].sort((a, b) => b.spending - a.spending);
 
     const main: CategoryData[] = [];
     const others: typeof sorted = [];
 
-    for (const a of sorted) {
-      const rawPct = (a.spending / totalSpending) * 100;
+    for (const summary of sorted) {
+      const rawPct = (summary.spending / totalSpending) * 100;
       const pct = Math.round(rawPct * 10) / 10;
       // Use the rounded percentage for the threshold decision so the
       // grouping matches the displayed value: a category showing 2.0%
       // stays visible, while 1.9% goes into "other" (C89-02).
       if (pct < 2) {
-        others.push(a);
+        others.push(summary);
       } else {
         main.push({
-          category: a.category,
-          labelKo: a.categoryNameKo,
-          amount: a.spending,
+          category: summary.category,
+          labelKo: summary.categoryNameKo,
+          amount: summary.spending,
           percentage: pct,
-          color: getCategoryColor(a.category),
+          color: getCategoryColor(summary.category),
         });
       }
     }

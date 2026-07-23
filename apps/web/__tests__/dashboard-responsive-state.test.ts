@@ -38,4 +38,33 @@ describe('dashboard responsive and disclosure wiring', () => {
     expect(source).toContain('onfocusin={() => (focusedIndex = i)}');
     expect(source).not.toContain('aria-expanded={hoveredIndex === i}');
   });
+
+  test('category spending views use canonical spending instead of reward assignments', async () => {
+    const [breakdown, summary, dashboard] = await Promise.all([
+      readFile(
+        new URL(
+          '../src/components/dashboard/CategoryBreakdown.svelte',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+      readFile(
+        new URL(
+          '../src/components/dashboard/SpendingSummary.svelte',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+      readFile(
+        new URL('../src/pages/dashboard.astro', import.meta.url),
+        'utf8',
+      ),
+    ]);
+
+    expect(dashboard).toContain('data-testid="category-breakdown-panel"');
+    expect(breakdown).not.toContain('data-testid="category-breakdown-panel"');
+    expect(breakdown).toContain('analysisStore.result?.categoryBreakdown');
+    expect(breakdown).not.toContain('analysisStore.assignments');
+    expect(summary).toContain('analysisStore.result.categoryBreakdown');
+  });
 });

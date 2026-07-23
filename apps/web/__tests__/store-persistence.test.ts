@@ -13,6 +13,19 @@ import {
   STORAGE_VERSION,
 } from '../src/lib/persistence.js';
 
+interface MutablePersistenceWitness {
+  categoryBreakdown: Array<{ spending: number }>;
+  monthlyBreakdown: Array<{ spending: number }>;
+  transactions?: unknown;
+  optimization: {
+    assignments: Array<{ category: string; transactionCount: number }>;
+    cardResults: Array<{
+      byCategory: Array<{ category: string; capReached: boolean }>;
+      capsHit: unknown[];
+    }>;
+  };
+}
+
 function assignmentFixture(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
@@ -22,6 +35,7 @@ function assignmentFixture(
     category: 'dining',
     categoryNameKo: '외식',
     spending: 10_000,
+    transactionCount: 1,
     reward: 500,
     rate: 0.05,
     alternatives: [],
@@ -111,6 +125,14 @@ function persistedFixture(overrides: Record<string, unknown> = {}): string {
     monthlyBreakdown: [
       { month: '2026-07', spending: 10_000, transactionCount: 1 },
     ],
+    categoryBreakdown: [
+      {
+        category: 'dining',
+        categoryNameKo: '외식',
+        spending: 10_000,
+        transactionCount: 1,
+      },
+    ],
     optimization: optimizationFixture(),
     ...overrides,
   });
@@ -150,6 +172,14 @@ function analysisFixture(merchant = '테스트 식당'): AnalysisResult {
         category: 'dining',
         subcategory: undefined,
         confidence: 1,
+      },
+    ],
+    categoryBreakdown: [
+      {
+        category: 'dining',
+        categoryNameKo: '외식',
+        spending: 10_000,
+        transactionCount: 1,
       },
     ],
     optimization: {
@@ -192,16 +222,20 @@ describe('production persistence parser', () => {
     expect(isPlainObject(null)).toBe(false);
   });
 
-  test('loads legacy version-zero data through the bounded migration path', () => {
+  test('fails closed on version-zero data without an exact allocation witness', () => {
     const legacy = JSON.parse(persistedFixture()) as Record<string, unknown>;
     delete legacy._v;
     const result = deserializeAnalysis(JSON.stringify(legacy));
 
-    expect(result.shouldRemove).toBe(false);
-    expect(result.data?.bank).toBe('shinhan');
+    expect(result).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
   });
 
-  test('migrates version-two optimizer results with assigned-only defaults', () => {
+  test('fails closed on version-two assigned-only optimizer results', () => {
     const legacy = JSON.parse(persistedFixture()) as {
       _v: number;
       optimization: Record<string, unknown>;
@@ -212,9 +246,12 @@ describe('production persistence parser', () => {
 
     const result = deserializeAnalysis(JSON.stringify(legacy));
 
-    expect(result.shouldRemove).toBe(false);
-    expect(result.data?.optimization.unassignedSpending).toBe(0);
-    expect(result.data?.optimization.unassignedTransactionCount).toBe(0);
+    expect(result).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
   });
 
   test('rejects a version-two mixed aggregate whose assignment status is ambiguous', () => {
@@ -475,8 +512,27 @@ describe('production persistence parser', () => {
         performanceExclusionTags: 'user',
       },
     };
+    const category = 'dining.cafe';
     const result = deserializeAnalysis(
-      persistedFixture({ transactions: [transaction] }),
+      persistedFixture({
+        transactions: [transaction],
+        categoryBreakdown: [
+          {
+            category,
+            categoryNameKo: '카페',
+            spending: 10_000,
+            transactionCount: 1,
+          },
+        ],
+        optimization: optimizationFixture({
+          assignments: [assignmentFixture({ category })],
+          cardResults: [
+            cardResultFixture({
+              byCategory: [categoryRewardFixture({ category })],
+            }),
+          ],
+        }),
+      }),
     );
 
     expect(result.warningKind).toBeNull();
@@ -546,6 +602,17 @@ describe('production persistence parser', () => {
           { month: '2026-06', spending: 0, transactionCount: 1 },
           { month: '2026-07', spending: 10_000, transactionCount: 2 },
         ],
+        categoryBreakdown: [
+          {
+            category: 'dining',
+            categoryNameKo: '외식',
+            spending: 10_000,
+            transactionCount: 2,
+          },
+        ],
+        optimization: optimizationFixture({
+          assignments: [assignmentFixture({ transactionCount: 2 })],
+        }),
       }),
     );
 
@@ -604,6 +671,12 @@ describe('production persistence parser', () => {
           ],
           cardResults: [
             cardResultFixture({
+              byCategory: [
+                categoryRewardFixture({
+                  capReached: true,
+                  capAmount: 500,
+                }),
+              ],
               capsHit: [
                 {
                   category: 'dining',
@@ -857,6 +930,14 @@ describe('production persistence parser', () => {
             transactionCount: 1,
           },
         ],
+        categoryBreakdown: [
+          {
+            category: 'dining',
+            categoryNameKo: '외식',
+            spending: Number.MAX_SAFE_INTEGER,
+            transactionCount: 1,
+          },
+        ],
         optimization: optimizationFixture({
           assignments: [
             assignmentFixture({
@@ -899,6 +980,70 @@ describe('production persistence parser', () => {
     expect(result.data?.previousMonthSpendingOption).toBe(
       Number.MAX_SAFE_INTEGER,
     );
+  });
+
+  test.each([
+    [
+      'canonical category spending',
+      (payload: MutablePersistenceWitness) => {
+        payload.categoryBreakdown[0].spending += 1;
+      },
+    ],
+    [
+      'exact assignment transaction count',
+      (payload: MutablePersistenceWitness) => {
+        payload.optimization.assignments[0].transactionCount = 2;
+      },
+    ],
+    [
+      'coordinated optimizer category relabel',
+      (payload: MutablePersistenceWitness) => {
+        payload.optimization.assignments[0].category = 'grocery';
+        payload.optimization.cardResults[0].byCategory[0].category = 'grocery';
+      },
+    ],
+    [
+      'cap reward ordering',
+      (payload: MutablePersistenceWitness) => {
+        payload.optimization.cardResults[0].byCategory[0].capReached = true;
+        payload.optimization.cardResults[0].capsHit = [
+          {
+            category: 'dining',
+            capType: 'monthly_total',
+            capAmount: 500,
+            actualReward: 99,
+            appliedReward: 100,
+          },
+        ];
+      },
+    ],
+  ])('rejects a persisted contradiction in %s', (_name, mutate) => {
+    const payload = JSON.parse(
+      persistedFixture(),
+    ) as MutablePersistenceWitness;
+    mutate(payload);
+    expect(deserializeAnalysis(JSON.stringify(payload))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
+  test('rejects a truncated snapshot whose latest-month facts were changed', () => {
+    const oversized = analysisFixture('x'.repeat(MAX_PERSIST_SIZE));
+    const payload = JSON.parse(
+      serializeAnalysis(oversized).serialized,
+    ) as MutablePersistenceWitness;
+    expect(payload.transactions).toBeUndefined();
+    payload.monthlyBreakdown[0].spending += 1;
+
+    expect(deserializeAnalysis(JSON.stringify(payload))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
   });
 
   test.each([
@@ -1095,6 +1240,13 @@ describe('production persistence serializer', () => {
     expect(restored.truncatedTxCount).toBe(1);
     expect(restored.shouldRemove).toBe(false);
     expect(restored.data?.transactions).toBeUndefined();
+    expect(restored.data?.transactionCount).toBe(oversized.transactionCount);
+    expect(restored.data?.totalTransactionCount).toBe(
+      oversized.totalTransactionCount,
+    );
+    expect(restored.data?.categoryBreakdown).toEqual(
+      oversized.categoryBreakdown,
+    );
     expect(restored.data?.optimization).toEqual(oversized.optimization);
   });
 

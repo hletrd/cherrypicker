@@ -67,9 +67,11 @@
     return startStr === endStr ? startStr : `${startStr} ~ ${endStr}`;
   }
 
-  function getTopCategory(assignments: typeof analysisStore.assignments): string {
-    if (!assignments.length) return '-';
-    const top = [...assignments].sort((a, b) => b.spending - a.spending)[0];
+  function getTopCategory(
+    categories: NonNullable<typeof analysisStore.result>['categoryBreakdown'],
+  ): string {
+    if (!categories.length) return '-';
+    const top = [...categories].sort((a, b) => b.spending - a.spending)[0];
     return top?.categoryNameKo ?? '-';
   }
 </script>
@@ -141,7 +143,7 @@
         <span>최다 지출 카테고리</span>
       </div>
       <div class="mt-1 text-lg font-semibold text-green-700 dark:text-green-400">
-        {getTopCategory(analysisStore.assignments)}
+        {getTopCategory(analysisStore.result.categoryBreakdown)}
       </div>
     </div>
 

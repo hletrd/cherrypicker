@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import {
+  buildCategorySpendingSummary,
   isAnalysisResultCoherent,
   normalizeCardIdsOption,
   type AnalysisResult,
@@ -42,6 +43,14 @@ function coherentResult(): AnalysisResult {
         confidence: 1,
       },
     ],
+    categoryBreakdown: [
+      {
+        category: 'dining',
+        categoryNameKo: '외식',
+        spending: 10_000,
+        transactionCount: 1,
+      },
+    ],
     optimization: {
       assignments: [
         {
@@ -50,6 +59,7 @@ function coherentResult(): AnalysisResult {
           category: 'dining',
           categoryNameKo: '외식',
           spending: 10_000,
+          transactionCount: 1,
           reward: 500,
           rate: 0.05,
           alternatives: [
@@ -112,6 +122,36 @@ function cloneResult(): AnalysisResult {
 }
 
 describe('analysis result coherence', () => {
+  test('builds category spending independently of card reward selection', () => {
+    const current = coherentResult().transactions![1]!;
+    const summary = buildCategorySpendingSummary(
+      [
+        current,
+        { ...current, id: 'tx-cafe', amount: 2_000, subcategory: 'cafe' },
+        { ...current, id: 'tx-refund', amount: -500 },
+      ],
+      new Map([
+        ['dining', '외식'],
+        ['dining.cafe', '카페'],
+      ]),
+    );
+
+    expect(summary).toEqual([
+      {
+        category: 'dining',
+        categoryNameKo: '외식',
+        spending: 10_000,
+        transactionCount: 1,
+      },
+      {
+        category: 'dining.cafe',
+        categoryNameKo: '카페',
+        spending: 2_000,
+        transactionCount: 1,
+      },
+    ]);
+  });
+
   test('keeps domain producers independent of the Svelte store', () => {
     for (const relativePath of [
       '../src/lib/analysis-result.ts',
@@ -164,8 +204,6 @@ describe('analysis result coherence', () => {
   test('requires explicit honest provenance for an intentional truncation', () => {
     const result = coherentResult();
     result.transactions = undefined;
-    result.transactionCount = 0;
-    result.totalTransactionCount = 0;
 
     expect(isAnalysisResultCoherent(result)).toBe(false);
     expect(
@@ -174,6 +212,10 @@ describe('analysis result coherence', () => {
     expect(
       isAnalysisResultCoherent(result, { truncatedTransactionCount: 2 }),
     ).toBe(true);
+    result.transactionCount = 0;
+    expect(
+      isAnalysisResultCoherent(result, { truncatedTransactionCount: 2 }),
+    ).toBe(false);
   });
 
   test('normalizes an explicit replacement card selection before validation', () => {
@@ -229,6 +271,14 @@ describe('analysis result coherence', () => {
     expect(isAnalysisResultCoherent(result)).toBe(false);
   });
 
+  test('rejects coordinated assignment and card category relabeling', () => {
+    const result = cloneResult();
+    result.optimization.assignments[0]!.category = 'grocery';
+    result.optimization.cardResults[0]!.byCategory[0]!.category = 'grocery';
+
+    expect(isAnalysisResultCoherent(result)).toBe(false);
+  });
+
   test('requires the exact transaction count when every purchase is unassigned', () => {
     const result = coherentResult();
     const current = result.transactions![1]!;
@@ -246,6 +296,8 @@ describe('analysis result coherence', () => {
     result.monthlyBreakdown = [
       { month: '2026-07', spending: 15_000, transactionCount: 2 },
     ];
+    result.categoryBreakdown[0]!.spending = 15_000;
+    result.categoryBreakdown[0]!.transactionCount = 2;
     result.previousSpendingBasis = {
       kind: 'missing-calendar-month',
       month: '2026-06',
@@ -263,6 +315,66 @@ describe('analysis result coherence', () => {
       bestSingleCard: null,
     };
 
+    expect(isAnalysisResultCoherent(result)).toBe(false);
+  });
+
+  test.each([
+    [
+      'applied reward above actual reward',
+      (result: AnalysisResult) => {
+        const category = result.optimization.cardResults[0]!.byCategory[0]!;
+        category.capReached = true;
+        result.optimization.cardResults[0]!.capsHit = [
+          {
+            category: 'dining',
+            capType: 'monthly_total',
+            capAmount: 500,
+            actualReward: 100,
+            appliedReward: 101,
+          },
+        ];
+      },
+    ],
+    [
+      'unknown cap category',
+      (result: AnalysisResult) => {
+        result.optimization.cardResults[0]!.capsHit = [
+          {
+            category: 'grocery',
+            capType: 'monthly_total',
+            capAmount: 500,
+            actualReward: 100,
+            appliedReward: 100,
+          },
+        ];
+      },
+    ],
+    [
+      'capReached without telemetry',
+      (result: AnalysisResult) => {
+        result.optimization.cardResults[0]!.byCategory[0]!.capReached = true;
+      },
+    ],
+    [
+      'monthly-category cap amount mismatch',
+      (result: AnalysisResult) => {
+        const category = result.optimization.cardResults[0]!.byCategory[0]!;
+        category.capReached = true;
+        category.capAmount = 500;
+        result.optimization.cardResults[0]!.capsHit = [
+          {
+            category: 'dining',
+            capType: 'monthly_category',
+            capAmount: 400,
+            actualReward: 500,
+            appliedReward: 400,
+          },
+        ];
+      },
+    ],
+  ])('rejects impossible cap telemetry: %s', (_name, mutate) => {
+    const result = cloneResult();
+    mutate(result);
     expect(isAnalysisResultCoherent(result)).toBe(false);
   });
 

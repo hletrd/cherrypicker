@@ -33,6 +33,14 @@ function analysisFixture(): AnalysisResult {
         confidence: 1,
       },
     ],
+    categoryBreakdown: [
+      {
+        category: 'dining',
+        categoryNameKo: '외식',
+        spending: 10_000,
+        transactionCount: 1,
+      },
+    ],
     optimization: {
       assignments: [],
       totalReward: 0,

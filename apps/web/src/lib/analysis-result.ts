@@ -34,6 +34,14 @@ export interface CategorizedTx {
   factProvenance?: RawTransaction['factProvenance'];
 }
 
+export interface CategorySpendingSummary {
+  category: string;
+  categoryNameKo: string;
+  spending: number;
+  /** Number of positive transactions represented by this category. */
+  transactionCount: number;
+}
+
 export interface AnalysisParseWarning {
   fileName: string;
   format: string;
@@ -57,6 +65,8 @@ export interface AnalysisResult {
   totalTransactionCount?: number;
   parseErrors: AnalysisParseWarning[];
   transactions?: CategorizedTx[];
+  /** Canonical latest-month positive spending, independent of card rewards. */
+  categoryBreakdown: CategorySpendingSummary[];
   optimization: OptimizationResult;
   monthlyBreakdown?: {
     month: string;
@@ -98,6 +108,60 @@ export function normalizeCardIdsOption(
   const source = requested === undefined ? fallback : requested;
   if (!source || source.length === 0) return undefined;
   return [...new Set(source)];
+}
+
+function compareAscii(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function categoryKeyOf(transaction: CategorizedTx): string {
+  return transaction.subcategory
+    ? `${transaction.category}.${transaction.subcategory}`
+    : transaction.category;
+}
+
+/**
+ * Builds the compact canonical spending witness used by persistence and UI.
+ * Callers pass only the latest-month transactions.
+ */
+export function buildCategorySpendingSummary(
+  transactions: readonly CategorizedTx[],
+  categoryLabels: ReadonlyMap<string, string>,
+): CategorySpendingSummary[] {
+  const summaries = new Map<string, CategorySpendingSummary>();
+  for (const transaction of transactions) {
+    if (transaction.amount <= 0) continue;
+    const category = categoryKeyOf(transaction);
+    const current = summaries.get(category);
+    if (current) {
+      const spending = addSafe(current.spending, transaction.amount);
+      if (spending === null) {
+        throw new RangeError(`category spending overflow for ${category}`);
+      }
+      current.spending = spending;
+      current.transactionCount += 1;
+      if (!Number.isSafeInteger(current.transactionCount)) {
+        throw new RangeError(
+          `category transaction count overflow for ${category}`,
+        );
+      }
+      continue;
+    }
+    summaries.set(category, {
+      category,
+      categoryNameKo:
+        categoryLabels.get(category) ??
+        categoryLabels.get(transaction.category) ??
+        category,
+      spending: transaction.amount,
+      transactionCount: 1,
+    });
+  }
+  return [...summaries.values()].sort(
+    (left, right) =>
+      right.spending - left.spending ||
+      compareAscii(left.category, right.category),
+  );
 }
 
 function addSafe(total: number, value: number): number | null {
@@ -142,6 +206,8 @@ function isOptimizationCoherent(optimization: OptimizationResult): boolean {
   for (const assignment of optimization.assignments) {
     if (
       assignment.spending <= 0 ||
+      !Number.isSafeInteger(assignment.transactionCount) ||
+      assignment.transactionCount <= 0 ||
       assignment.reward <= 0 ||
       !sameRate(assignment.rate, assignment.reward, assignment.spending)
     ) {
@@ -199,6 +265,24 @@ function isOptimizationCoherent(optimization: OptimizationResult): boolean {
     );
     const categoryKeys = card.byCategory.map(({ category }) => category);
     if (!unique(categoryKeys)) return false;
+    const capsByCategory = new Map<string, typeof card.capsHit>();
+    for (const cap of card.capsHit) {
+      if (
+        !Number.isSafeInteger(cap.capAmount) ||
+        cap.capAmount < 0 ||
+        !Number.isSafeInteger(cap.actualReward) ||
+        cap.actualReward < 0 ||
+        !Number.isSafeInteger(cap.appliedReward) ||
+        cap.appliedReward < 0 ||
+        cap.appliedReward > cap.actualReward ||
+        !assignmentByCategory.has(cap.category)
+      ) {
+        return false;
+      }
+      const categoryCaps = capsByCategory.get(cap.category) ?? [];
+      categoryCaps.push(cap);
+      capsByCategory.set(cap.category, categoryCaps);
+    }
     const categorySpending = sumSafe(
       card.byCategory.map(({ spending }) => spending),
     );
@@ -220,6 +304,16 @@ function isOptimizationCoherent(optimization: OptimizationResult): boolean {
             category.spending ||
           assignmentByCategory.get(category.category)?.reward !==
             category.reward ||
+          category.capReached !== capsByCategory.has(category.category) ||
+          (
+            capsByCategory
+              .get(category.category)
+              ?.some(
+                (cap) =>
+                  cap.capType === 'monthly_category' &&
+                  cap.capAmount !== category.capAmount,
+              ) ?? false
+          ) ||
           !sameRate(category.rate, category.reward, category.spending),
       )
     ) {
@@ -282,6 +376,117 @@ function isOptimizationCoherent(optimization: OptimizationResult): boolean {
   );
 }
 
+function categorySummaryTotals(
+  categoryBreakdown: readonly CategorySpendingSummary[],
+): { spending: number; transactionCount: number } | null {
+  if (
+    !unique(categoryBreakdown.map(({ category }) => category)) ||
+    categoryBreakdown.some(
+      ({ category, categoryNameKo, spending, transactionCount }) =>
+        category.length === 0 ||
+        categoryNameKo.length === 0 ||
+        !Number.isSafeInteger(spending) ||
+        spending <= 0 ||
+        !Number.isSafeInteger(transactionCount) ||
+        transactionCount <= 0,
+    )
+  ) {
+    return null;
+  }
+  const spending = sumSafe(categoryBreakdown.map((summary) => summary.spending));
+  const transactionCount = sumSafe(
+    categoryBreakdown.map((summary) => summary.transactionCount),
+  );
+  return spending === null || transactionCount === null
+    ? null
+    : { spending, transactionCount };
+}
+
+function hasSameCategoryFacts(
+  actual: readonly CategorySpendingSummary[],
+  expected: readonly CategorySpendingSummary[],
+): boolean {
+  if (actual.length !== expected.length) return false;
+  const actualByCategory = new Map(
+    actual.map((summary) => [summary.category, summary]),
+  );
+  return expected.every((summary) => {
+    const candidate = actualByCategory.get(summary.category);
+    return (
+      candidate?.spending === summary.spending &&
+      candidate.transactionCount === summary.transactionCount
+    );
+  });
+}
+
+function hasCoherentCategoryAllocation(result: AnalysisResult): boolean {
+  const totals = categorySummaryTotals(result.categoryBreakdown);
+  if (
+    totals === null ||
+    totals.spending !== result.optimization.totalSpending
+  ) {
+    return false;
+  }
+
+  const canonical = new Map(
+    result.categoryBreakdown.map((summary) => [
+      summary.category,
+      { spending: summary.spending, transactionCount: summary.transactionCount },
+    ]),
+  );
+  const assigned = new Map<
+    string,
+    { spending: number; transactionCount: number }
+  >();
+  for (const assignment of result.optimization.assignments) {
+    if (!canonical.has(assignment.category)) return false;
+    const current = assigned.get(assignment.category) ?? {
+      spending: 0,
+      transactionCount: 0,
+    };
+    const spending = addSafe(current.spending, assignment.spending);
+    const transactionCount = addSafe(
+      current.transactionCount,
+      assignment.transactionCount,
+    );
+    if (spending === null || transactionCount === null) return false;
+    current.spending = spending;
+    current.transactionCount = transactionCount;
+    assigned.set(assignment.category, current);
+  }
+
+  let unassignedSpending = 0;
+  let unassignedTransactionCount = 0;
+  for (const [category, summary] of canonical) {
+    const allocation = assigned.get(category) ?? {
+      spending: 0,
+      transactionCount: 0,
+    };
+    if (
+      allocation.spending > summary.spending ||
+      allocation.transactionCount > summary.transactionCount
+    ) {
+      return false;
+    }
+    const spending = addSafe(
+      unassignedSpending,
+      summary.spending - allocation.spending,
+    );
+    const transactionCount = addSafe(
+      unassignedTransactionCount,
+      summary.transactionCount - allocation.transactionCount,
+    );
+    if (spending === null || transactionCount === null) return false;
+    unassignedSpending = spending;
+    unassignedTransactionCount = transactionCount;
+  }
+  return (
+    unassignedSpending === result.optimization.unassignedSpending &&
+    unassignedTransactionCount ===
+      result.optimization.unassignedTransactionCount
+  );
+}
+
 function expectedPeriod(
   transactions: readonly CategorizedTx[],
 ): { start: string; end: string } {
@@ -297,7 +502,12 @@ export function isAnalysisResultCoherent(
   result: AnalysisResult,
   context?: AnalysisCoherenceContext,
 ): boolean {
-  if (!isOptimizationCoherent(result.optimization)) return false;
+  if (
+    !isOptimizationCoherent(result.optimization) ||
+    !hasCoherentCategoryAllocation(result)
+  ) {
+    return false;
+  }
 
   const selectedCardIds = result.cardIdsOption;
   if (
@@ -325,21 +535,32 @@ export function isAnalysisResultCoherent(
 
   if (!result.transactions) {
     const truncatedCount = context?.truncatedTransactionCount;
-    const representedTransactionCount = result.monthlyBreakdown
-      ? sumSafe(
-          result.monthlyBreakdown.map(({ transactionCount }) =>
-            transactionCount
-          ),
-        )
-      : null;
+    if (
+      !result.monthlyBreakdown ||
+      result.monthlyBreakdown.length === 0 ||
+      !unique(result.monthlyBreakdown.map(({ month }) => month))
+    ) {
+      return false;
+    }
+    const representedTransactionCount = sumSafe(
+      result.monthlyBreakdown.map(({ transactionCount }) => transactionCount),
+    );
+    const latest = [...result.monthlyBreakdown]
+      .sort((left, right) => compareAscii(left.month, right.month))
+      .at(-1)!;
+    const categoryTotals = categorySummaryTotals(result.categoryBreakdown);
     return (
       Number.isSafeInteger(truncatedCount) &&
       (truncatedCount ?? 0) > 0 &&
-      result.transactionCount === 0 &&
-      result.totalTransactionCount === 0 &&
       representedTransactionCount !== null &&
       representedTransactionCount > 0 &&
-      (truncatedCount ?? 0) >= representedTransactionCount
+      (truncatedCount ?? 0) >= representedTransactionCount &&
+      result.transactionCount === latest.transactionCount &&
+      result.totalTransactionCount === representedTransactionCount &&
+      categoryTotals !== null &&
+      latest.transactionCount >= categoryTotals.transactionCount &&
+      latest.spending === categoryTotals.spending &&
+      latest.spending === result.optimization.totalSpending
     );
   }
   if (!unique(result.transactions.map(({ id }) => id))) return false;
@@ -357,22 +578,29 @@ export function isAnalysisResultCoherent(
   );
   const positiveLatest = latestTransactions.filter(({ amount }) => amount > 0);
   const latestSpending = sumSafe(positiveLatest.map(({ amount }) => amount));
+  let expectedCategoryBreakdown: CategorySpendingSummary[];
+  try {
+    expectedCategoryBreakdown = buildCategorySpendingSummary(
+      latestTransactions,
+      new Map(
+        result.categoryBreakdown.map(({ category, categoryNameKo }) => [
+          category,
+          categoryNameKo,
+        ]),
+      ),
+    );
+  } catch {
+    return false;
+  }
   if (
     latestSpending === null ||
+    !hasSameCategoryFacts(result.categoryBreakdown, expectedCategoryBreakdown) ||
     result.transactionCount !== latestTransactions.length ||
     (
       result.totalTransactionCount !== undefined &&
       result.totalTransactionCount !== validTransactions.length
     ) ||
     result.optimization.totalSpending !== latestSpending ||
-    result.optimization.unassignedTransactionCount > positiveLatest.length ||
-    (
-      result.optimization.assignments.length === 0 &&
-      result.optimization.unassignedTransactionCount !== positiveLatest.length
-    ) ||
-    result.optimization.assignments.length +
-      result.optimization.unassignedTransactionCount >
-      positiveLatest.length ||
     !samePeriod(
       result.statementPeriod,
       expectedPeriod(latestTransactions),

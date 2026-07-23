@@ -12,7 +12,7 @@ import {
 import { isValidISODate } from '@cherrypicker/parser/browser';
 
 export const STORAGE_KEY = 'cherrypicker:analysis';
-export const STORAGE_VERSION = 3;
+export const STORAGE_VERSION = 4;
 export const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
 export const MAX_PERSISTED_WARNINGS = 100;
 export const MAX_WARNING_FILENAME_LENGTH = 160;
@@ -53,6 +53,7 @@ type PersistedAnalysisResult = Pick<
   | 'fullStatementPeriod'
   | 'totalTransactionCount'
   | 'optimization'
+  | 'categoryBreakdown'
   | 'monthlyBreakdown'
   | 'transactions'
   | 'previousMonthSpendingOption'
@@ -98,6 +99,10 @@ const MIGRATIONS: Readonly<
       : data.optimization,
     _v: 3,
   }),
+  // Version 4 adds a canonical category witness and exact assignment counts.
+  // They cannot be reconstructed soundly from legacy aggregate assignments,
+  // so deserialization deliberately fails closed after this marker migration.
+  3: (data) => ({ ...data, _v: 4 }),
 };
 
 export function safeJSONParse(text: string): unknown {
@@ -129,6 +134,7 @@ function persistedProjection(data: AnalysisResult): PersistedAnalysisResult {
     fullStatementPeriod: data.fullStatementPeriod,
     totalTransactionCount: data.totalTransactionCount,
     optimization: data.optimization,
+    categoryBreakdown: data.categoryBreakdown,
     monthlyBreakdown: data.monthlyBreakdown,
     transactions: data.transactions,
     parseErrors: boundedParseWarnings(data.parseErrors),
@@ -153,8 +159,6 @@ export function serializeAnalysis(data: AnalysisResult): SerializedAnalysis {
   const withoutTransactions: PersistedAnalysisResult = {
     ...persisted,
     transactions: undefined,
-    transactionCount: 0,
-    totalTransactionCount: 0,
     _truncatedTxCount: truncatedTxCount,
   };
   return {
@@ -209,10 +213,26 @@ function validAssignment(value: unknown): boolean {
     typeof value.categoryNameKo === 'string' &&
     value.categoryNameKo.length > 0 &&
     safeNonnegativeInteger(value.spending) &&
+    safeNonnegativeInteger(value.transactionCount) &&
+    value.transactionCount > 0 &&
     safeNonnegativeInteger(value.reward) &&
     finiteNonnegativeNumber(value.rate) &&
     Array.isArray(value.alternatives) &&
     value.alternatives.every(validAlternative)
+  );
+}
+
+function validCategorySpendingSummary(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    typeof value.category === 'string' &&
+    value.category.length > 0 &&
+    typeof value.categoryNameKo === 'string' &&
+    value.categoryNameKo.length > 0 &&
+    safeNonnegativeInteger(value.spending) &&
+    value.spending > 0 &&
+    safeNonnegativeInteger(value.transactionCount) &&
+    value.transactionCount > 0
   );
 }
 
@@ -398,6 +418,8 @@ function validCurrentPayloadShape(value: Record<string, unknown>): boolean {
     safeNonnegativeInteger(value.transactionCount) &&
     Array.isArray(value.parseErrors) &&
     value.parseErrors.every(validPersistedParseWarning) &&
+    Array.isArray(value.categoryBreakdown) &&
+    value.categoryBreakdown.every(validCategorySpendingSummary) &&
     (
       value.monthlyBreakdown === undefined ||
       Array.isArray(value.monthlyBreakdown)
@@ -585,47 +607,6 @@ function invalidResult(): DeserializedAnalysis {
   };
 }
 
-function legacyFullyAssignedSemanticsProven(
-  data: AnalysisResult,
-): boolean {
-  if (
-    !data.transactions ||
-    data.optimization.unassignedSpending !== 0 ||
-    data.optimization.unassignedTransactionCount !== 0
-  ) {
-    return false;
-  }
-  const latestMonth = data.transactions
-    .map(({ date }) => date.slice(0, 7))
-    .sort()
-    .at(-1);
-  if (!latestMonth) return false;
-
-  const transactionGroups = data.transactions
-    .filter(
-      ({ date, amount }) =>
-        date.startsWith(latestMonth) && amount > 0,
-    )
-    .map(({ category, subcategory, amount }) =>
-      JSON.stringify([
-        subcategory ? `${category}.${subcategory}` : category,
-        amount,
-      ]),
-    )
-    .sort();
-  const assignmentGroups = data.optimization.assignments
-    .map(({ category, spending }) =>
-      JSON.stringify([category, spending]),
-    )
-    .sort();
-  return (
-    transactionGroups.length === assignmentGroups.length &&
-    transactionGroups.every(
-      (group, index) => group === assignmentGroups[index],
-    )
-  );
-}
-
 export function deserializeAnalysis(raw: string): DeserializedAnalysis {
   let parsed: unknown;
   try {
@@ -665,6 +646,12 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
     !Array.isArray(optimization.cardResults) ||
     !optimization.cardResults.every(validCardResult) ||
     !validOptionalCalculationIssues(optimization.unsupportedRules)
+  ) {
+    return invalidResult();
+  }
+  if (
+    !Array.isArray(migrated.categoryBreakdown) ||
+    !migrated.categoryBreakdown.every(validCategorySpendingSummary)
   ) {
     return invalidResult();
   }
@@ -790,6 +777,8 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
       : undefined,
     parseErrors,
     transactions,
+    categoryBreakdown:
+      migrated.categoryBreakdown as AnalysisResult['categoryBreakdown'],
     optimization: optimization as unknown as AnalysisResult['optimization'],
     monthlyBreakdown,
     previousMonthSpendingOption: safeNonnegativeInteger(
@@ -812,10 +801,7 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
         ? undefined
         : { truncatedTransactionCount: truncatedTxCount },
     ) ||
-    (
-      version < STORAGE_VERSION &&
-      !legacyFullyAssignedSemanticsProven(data)
-    )
+    version < STORAGE_VERSION
   ) {
     return invalidResult();
   }

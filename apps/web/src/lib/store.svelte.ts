@@ -16,6 +16,7 @@ export type {
 } from '@cherrypicker/core';
 import { buildAnalysisContext } from './analysis-context.js';
 import {
+  buildCategorySpendingSummary,
   isAnalysisResultCoherent,
   normalizeCardIdsOption,
   type AnalysisResult,
@@ -405,6 +406,10 @@ function createAnalysisStore() {
         const nextResult: AnalysisResult = {
           ...snapshot,
           transactions: editedTransactions,
+          categoryBreakdown: buildCategorySpendingSummary(
+            context.latestTransactions,
+            categoryLabels,
+          ),
           optimization,
           monthlyBreakdown: context.monthlyBreakdown,
           transactionCount: context.latestTransactions.length,

@@ -22,7 +22,10 @@ import type {
   AnalyzeOptions,
   CategorizedTx,
 } from './analysis-result.js';
-import { isAnalysisResultCoherent } from './analysis-result.js';
+import {
+  buildCategorySpendingSummary,
+  isAnalysisResultCoherent,
+} from './analysis-result.js';
 export type { CategorizedTx } from './analysis-result.js';
 import {
   buildAnalysisContext,
@@ -434,6 +437,10 @@ export async function analyzeMultipleFiles(
     totalTransactionCount: context.validTransactions.length,
     parseErrors: allErrors,
     transactions: allTransactions,
+    categoryBreakdown: buildCategorySpendingSummary(
+      context.latestTransactions,
+      categoryLabels ?? new Map(),
+    ),
     optimization,
     monthlyBreakdown: context.monthlyBreakdown,
     previousSpendingBasis: context.previousSpendingBasis,
