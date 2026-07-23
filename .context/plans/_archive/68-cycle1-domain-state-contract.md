@@ -1,5 +1,6 @@
 # Cycle 1 Domain and State Contract Plan — C1-001 through C1-016
 
+**Archived:** 2026-07-23 after recorded implementation and verification
 **Date:** 2026-07-23
 **Scope:** Category/reward contracts and analysis state/provenance
 **Findings:** C1-001 through C1-016

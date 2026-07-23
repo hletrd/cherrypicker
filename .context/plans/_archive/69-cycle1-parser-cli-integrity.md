@@ -1,5 +1,6 @@
 # Cycle 1 Parser and CLI Integrity Plan
 
+**Archived:** 2026-07-23 after recorded implementation and verification
 **Date:** 2026-07-23
 **Source:** `.context/reviews/_aggregate.md`, C1-017 through C1-025 and their raw review evidence
 **Mode:** Implemented in cycle 1; no deployment

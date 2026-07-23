@@ -1,5 +1,6 @@
 # Cycle 1 Web Correctness, UI, and Accessibility Plan
 
+**Archived:** 2026-07-23 after recorded product/browser acceptance; harness deferral remains in the plan
 **Status:** Product implementation and browser verification complete; dedicated Svelte component harness explicitly deferred
 **Date:** 2026-07-23
 **Deploy mode:** None — do not deploy

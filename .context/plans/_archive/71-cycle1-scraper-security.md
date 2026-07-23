@@ -1,5 +1,6 @@
 # Plan 71 — Cycle 1 Scraper and Web Security Boundaries
 
+**Archived:** 2026-07-23 after recorded implementation and verification
 **Date:** 2026-07-23
 **Source:** `.context/reviews/_aggregate.md` C1-035 through C1-039; raw findings SR-01 through SR-04, TR-06, and TE-08
 **Status:** IMPLEMENTED AND VERIFIED — all five boundaries, publication fixtures, documentation, and focused browser regressions pass
