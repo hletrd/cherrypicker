@@ -42,6 +42,9 @@ export function inspectCardExtractionInput(
   if (originalChars > CARD_EXTRACTION_MAX_INPUT_CHARS) {
     throw new CardExtractionInputTooLargeError(originalChars);
   }
+  if (pageContent.trim().length === 0) {
+    throw new Error('추출할 카드 상품 내용이 없습니다.');
+  }
   return {
     originalChars,
     sentChars: originalChars,
@@ -102,8 +105,8 @@ function stampTrustedExtractionBoundary(
   if (card === null || typeof card !== 'object' || Array.isArray(card)) {
     return raw;
   }
-  // Official destinations remain absent until a reviewer promotes the
-  // provenance; page text and model output never choose the published link.
+  // Trusted code stamps only issuer, source, and lastUpdated. Any
+  // model-authored URL is deleted; a reviewer may author a source link later.
   const quarantinedCard = { ...card } as Record<string, unknown>;
   delete quarantinedCard['url'];
   return {

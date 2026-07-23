@@ -202,6 +202,32 @@ describe('card extraction Sonnet contract', () => {
     expect(modelCalls).toBe(0);
   });
 
+  test.each(['', ' \n\t '])(
+    'rejects normalized-empty source %j at the request boundary',
+    (source) => {
+      expect(() =>
+        buildCardExtractionRequest(source, 'shinhan', 'claude-sonnet-5')
+      ).toThrow('추출할 카드 상품 내용이 없습니다');
+    },
+  );
+
+  test('fails before the model call when normalized source content is empty', async () => {
+    let modelCalls = 0;
+    const client: CardExtractionClient = {
+      messages: {
+        create: async () => {
+          modelCalls++;
+          return message([]);
+        },
+      },
+    };
+
+    await expect(
+      extractCardRules(' \n\t ', 'shinhan', client),
+    ).rejects.toThrow('추출할 카드 상품 내용이 없습니다');
+    expect(modelCalls).toBe(0);
+  });
+
   test('counts Unicode input in the same UTF-16 units used by the request boundary', () => {
     const exact = '😀'.repeat(20_000);
     expect(exact.length).toBe(40_000);
@@ -242,7 +268,7 @@ describe('card extraction Sonnet contract', () => {
     });
   });
 
-  test('stamps trusted issuer, source, and freshness outside model authority', () => {
+  test('stamps trusted issuer, source, and extraction date while deleting model URL', () => {
     const result = parseCardExtractionResponse(
       message([
         {

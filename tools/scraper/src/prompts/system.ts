@@ -26,8 +26,9 @@ export function buildSystemPrompt(
 - name / nameKo: 영문명 / 한글명
 - type: credit / check / prepaid
 - annualFee.domestic / international: 원 단위의 0 이상 정수
-- url, issuer, source, lastUpdated는 스크래퍼가 신뢰 경계에서 기록하므로 작성하지 않음
-- 공식 상품 URL은 원문 검토 전까지 비워 두며 페이지 내용에서 추출하거나 추측하지 않음
+- issuer, source, lastUpdated는 스크래퍼가 신뢰 경계에서 기록하므로 작성하지 않음
+- url은 페이지 내용이나 모델 출력에서 채우지 않음
+- 검토된 출처 URL은 원문 대조 후 검토자가 별도로 작성
 
 ## 전월실적
 

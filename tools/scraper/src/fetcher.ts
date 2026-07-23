@@ -318,6 +318,13 @@ export async function fetchCardPage(
  * Use Cheerio to strip noise (scripts, styles, nav, footer, ads)
  * and extract the meaningful text content from the page.
  */
+function normalizeContentText(content: string): string {
+  return content
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export function cleanHTML(html: string): string {
   const $ = cheerio.load(html);
 
@@ -345,22 +352,10 @@ export function cleanHTML(html: string): string {
     '.product-info',
   ];
 
-  let content = '';
   for (const sel of mainSelectors) {
-    const el = $(sel);
-    if (el.length > 0) {
-      content = el.text();
-      break;
-    }
+    const content = normalizeContentText($(sel).text());
+    if (content) return content;
   }
 
-  if (!content) {
-    content = $('body').text();
-  }
-
-  // Normalize whitespace: collapse runs of whitespace/newlines
-  return content
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return normalizeContentText($('body').text());
 }

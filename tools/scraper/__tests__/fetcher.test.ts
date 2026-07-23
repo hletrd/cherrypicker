@@ -59,6 +59,53 @@ describe('cleanHTML', () => {
     expect(cleaned).not.toContain('footer chrome');
     expect(cleaned).not.toContain('__secret');
   });
+
+  test('skips a whitespace-only earlier selector for populated later content', () => {
+    const cleaned = cleanHTML(`
+      <html>
+        <body>
+          <main>
+          </main>
+          <section id="content">
+            <h1>카드 혜택</h1>
+            <p>대중교통 10% 할인</p>
+          </section>
+        </body>
+      </html>
+    `);
+
+    expect(cleaned).toContain('카드 혜택');
+    expect(cleaned).toContain('대중교통 10% 할인');
+  });
+
+  test('returns empty when every selected area and the body normalize empty', () => {
+    expect(
+      cleanHTML(`
+        <html>
+          <body>
+            <main> \n\t </main>
+            <section id="content"> \n\t </section>
+          </body>
+        </html>
+      `),
+    ).toBe('');
+  });
+
+  test('falls back to normalized body text after empty content selectors', () => {
+    expect(
+      cleanHTML(`
+        <html>
+          <body>
+            <main> \n\t </main>
+            <article>
+              <h1>본문 카드 혜택</h1>
+              <p>편의점 5% 할인</p>
+            </article>
+          </body>
+        </html>
+      `),
+    ).toContain('본문 카드 혜택');
+  });
 });
 
 describe('fetchCardPage security controls', () => {

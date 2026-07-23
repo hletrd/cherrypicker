@@ -93,7 +93,7 @@ describe('scraper schema derives from canonical rules', () => {
     expect(SYSTEM_PROMPT).toContain('status": "unsupported');
   });
 
-  test('keeps trusted coordinates, provenance, and official URL outside the model contract', () => {
+  test('keeps trusted provenance stamping and model-authored URLs outside the model contract', () => {
     for (const field of ['issuer', 'source', 'lastUpdated', 'url']) {
       expect(card).not.toHaveProperty(field);
       expect(
@@ -101,7 +101,14 @@ describe('scraper schema derives from canonical rules', () => {
       ).not.toContain(field);
     }
     expect(SYSTEM_PROMPT).toContain(
+      'issuer, source, lastUpdated는 스크래퍼가 신뢰 경계에서 기록',
+    );
+    expect(SYSTEM_PROMPT).toContain(
+      'url은 페이지 내용이나 모델 출력에서 채우지 않음',
+    );
+    expect(SYSTEM_PROMPT).not.toContain(
       'url, issuer, source, lastUpdated는 스크래퍼가 신뢰 경계에서 기록',
     );
+    expect(SYSTEM_PROMPT).not.toContain('공식 상품 URL');
   });
 });
