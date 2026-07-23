@@ -174,6 +174,7 @@ describe('E2E process ownership', () => {
 
     const environment = buildOwnedCommandEnvironment(
       record({ port: 49_321 }),
+      'playwright',
       { PATH: '/test/bin' },
     );
     expect(environment).toMatchObject({
@@ -183,6 +184,30 @@ describe('E2E process ownership', () => {
       CHERRYPICKER_E2E_RUN_DIR: runDir,
       CHERRYPICKER_E2E_RUN_ID: 'run-1',
     });
+  });
+
+  test('removes inherited NO_COLOR only from the Playwright process tree', () => {
+    const inheritedEnvironment = {
+      PATH: '/test/bin',
+      NO_COLOR: '1',
+      FORCE_COLOR: '2',
+    };
+
+    const playwrightEnvironment = buildOwnedCommandEnvironment(
+      record(),
+      'playwright',
+      inheritedEnvironment,
+    );
+    const buildEnvironment = buildOwnedCommandEnvironment(
+      record(),
+      'build',
+      inheritedEnvironment,
+    );
+
+    expect(playwrightEnvironment.NO_COLOR).toBeUndefined();
+    expect(playwrightEnvironment.FORCE_COLOR).toBe('2');
+    expect(buildEnvironment.NO_COLOR).toBe('1');
+    expect(inheritedEnvironment.NO_COLOR).toBe('1');
   });
 
   test('treats a foreign default listener as unavailable but repository-clean', () => {

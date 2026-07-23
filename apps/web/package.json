@@ -17,7 +17,7 @@
     "@cherrypicker/core": "workspace:*",
     "@cherrypicker/parser": "workspace:*",
     "@cherrypicker/rules": "workspace:*",
-    "astro": "^6.0.8",
+    "astro": "^6.1.4",
     "pdfjs-dist": "^4.10.38",
     "svelte": "^5.55.0",
     "xlsx": "file:../../vendor/xlsx-0.20.3.tgz"

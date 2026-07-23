@@ -122,9 +122,10 @@ function commandFor(kind: OwnedCommandKind, suite: E2ESuite): string[] {
 
 export function buildOwnedCommandEnvironment(
   record: E2EOwnershipRecord,
+  kind: OwnedCommandKind,
   baseEnvironment: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
-  return {
+  const environment: NodeJS.ProcessEnv = {
     ...baseEnvironment,
     TMPDIR: record.tempDir,
     TMP: record.tempDir,
@@ -134,6 +135,13 @@ export function buildOwnedCommandEnvironment(
     CHERRYPICKER_E2E_PORT: String(record.port),
     PLAYWRIGHT_BASE_URL: buildE2EBaseURL(record.port),
   };
+
+  // Playwright forces color output for its web server and workers. Passing
+  // through NO_COLOR makes Node warn in every one of those child processes,
+  // even though Playwright ignores it there.
+  if (kind === 'playwright') delete environment.NO_COLOR;
+
+  return environment;
 }
 
 interface LaunchedOwnedCommand {
@@ -148,7 +156,7 @@ async function launchOwnedCommand(
   const child = spawn(command[0]!, command.slice(1), {
     cwd: record.repoRoot,
     detached: true,
-    env: buildOwnedCommandEnvironment(record),
+    env: buildOwnedCommandEnvironment(record, kind),
     stdio: 'inherit',
   });
   const completion = waitForChild(child);
