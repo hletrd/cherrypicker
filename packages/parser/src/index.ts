@@ -16,6 +16,8 @@ export { parseAmount, parseAmountString } from './amount.js';
 export { normalizeHTML } from './csv/shared.js';
 export {
   extractTransactionFacts,
+  isValidFuelVolumeLiters,
+  MAX_CONSUMER_FUEL_VOLUME_LITERS,
   PERFORMANCE_EXCLUSION_TAGS,
 } from './shared/transaction-facts.js';
 export type {

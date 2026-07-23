@@ -37,6 +37,24 @@ export interface ExtractedTransactionFacts {
   errors: string[];
 }
 
+/**
+ * Upper bound for a single consumer fuel purchase.
+ *
+ * 200 L covers passenger vehicles and light commercial vehicles while keeping
+ * statement facts outside bulk/commercial delivery volumes. The same bound is
+ * used by parser and persistence handoffs before facts reach reward math.
+ */
+export const MAX_CONSUMER_FUEL_VOLUME_LITERS = 200;
+
+export function isValidFuelVolumeLiters(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= MAX_CONSUMER_FUEL_VOLUME_LITERS
+  );
+}
+
 const PAYMENT_TYPE_ALIASES = [
   'paymentType',
   'payment_type',
@@ -127,7 +145,7 @@ function parseFuelVolume(value: unknown): number | undefined {
     typeof value === 'number'
       ? value
       : Number(value.replaceAll(',', '').trim());
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  return isValidFuelVolumeLiters(parsed) ? parsed : undefined;
 }
 
 function parsePerformanceTags(

@@ -23,6 +23,7 @@ export type UnsupportedReason =
   | 'missing_payment_type'
   | 'missing_channel'
   | 'missing_fuel_volume'
+  | 'invalid_fuel_volume'
   | 'missing_occurrence_context'
   | 'unsupported_reward_unit';
 
@@ -76,19 +77,54 @@ export function calculatePercentageReward(
   monthlyCap: number | null,
   currentMonthUsed: number,
 ): RewardCalcResult {
+  if (!Number.isSafeInteger(amount) || amount < 0) {
+    throw new Error(`amount must be a non-negative safe integer, got ${amount}`);
+  }
+  if (!Number.isFinite(rate) || rate < 0) {
+    throw new Error(`rate must be a non-negative finite number, got ${rate}`);
+  }
+  if (!Number.isSafeInteger(currentMonthUsed) || currentMonthUsed < 0) {
+    throw new Error(
+      `currentMonthUsed must be a non-negative safe integer, got ${currentMonthUsed}`,
+    );
+  }
+  if (
+    monthlyCap !== null &&
+    (!Number.isSafeInteger(monthlyCap) || monthlyCap < 0)
+  ) {
+    throw new Error(
+      `monthlyCap must be null or a non-negative safe integer, got ${monthlyCap}`,
+    );
+  }
+
   const raw = Math.floor(amount * rate);
+  if (!Number.isSafeInteger(raw) || raw < 0) {
+    throw new Error(`calculated reward is not safely representable: ${raw}`);
+  }
 
   if (monthlyCap === null) {
-    return { reward: raw, newMonthUsed: currentMonthUsed + raw, capReached: false };
+    const newMonthUsed = currentMonthUsed + raw;
+    if (!Number.isSafeInteger(newMonthUsed)) {
+      throw new Error(
+        `monthly reward total is not safely representable: ${newMonthUsed}`,
+      );
+    }
+    return { reward: raw, newMonthUsed, capReached: false };
   }
 
   const remaining = Math.max(0, monthlyCap - currentMonthUsed);
   const reward = Math.min(raw, remaining);
   const capReached = raw > remaining;
 
+  const newMonthUsed = currentMonthUsed + reward;
+  if (!Number.isSafeInteger(newMonthUsed)) {
+    throw new Error(
+      `monthly reward total is not safely representable: ${newMonthUsed}`,
+    );
+  }
   return {
     reward,
-    newMonthUsed: currentMonthUsed + reward,
+    newMonthUsed,
     capReached,
   };
 }

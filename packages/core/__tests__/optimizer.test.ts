@@ -333,6 +333,57 @@ describe('greedyOptimize - edge cases', () => {
     expect(result.assignments.length).toBeGreaterThan(0);
     expect(result.totalReward).toBe(0);
   });
+
+  test.each([201, 1e308])(
+    'fails closed with a disclosure for oversized fuel volume %s',
+    (fuelVolumeLiters) => {
+    const transaction = {
+      ...makeTx('oversized-fuel', 'transportation', 50_000),
+      fuelVolumeLiters,
+      factProvenance: { fuelVolumeLiters: 'statement' as const },
+    };
+    const constraints = makeConstraints(
+      [transaction],
+      new Map([['shinhan-mr-life', 300_000]]),
+    );
+
+    const result = greedyOptimize(constraints, [mrLife]);
+    expect(result.totalReward).toBe(0);
+    expect(Number.isSafeInteger(result.totalReward)).toBe(true);
+    expect(Number.isSafeInteger(result.totalSpending)).toBe(true);
+    expect(result.unsupportedRules).toEqual([
+      expect.objectContaining({
+        transactionId: 'oversized-fuel',
+        reason: 'invalid_fuel_volume',
+      }),
+    ]);
+    },
+  );
+
+  test('rejects a cross-card spending aggregate beyond the safe boundary', () => {
+    const diningCard = structuredClone(simplePlan);
+    diningCard.card.id = 'safe-dining-card';
+    diningCard.rewards[0]!.category = 'dining';
+    const telecomCard = structuredClone(simplePlan);
+    telecomCard.card.id = 'safe-telecom-card';
+    telecomCard.rewards[0]!.category = 'telecom';
+    const amount = 2 ** 52;
+    const constraints = makeConstraints(
+      [
+        makeTx('dining-max', 'dining', amount),
+        makeTx('telecom-max', 'telecom', amount),
+      ],
+      new Map([
+        [diningCard.card.id, 0],
+        [telecomCard.card.id, 0],
+      ]),
+    );
+
+    expect(() => greedyOptimize(
+      constraints,
+      [diningCard, telecomCard],
+    )).toThrow(/(?:calculator|optimizer) total spending/);
+  });
 });
 
 describe('greedyOptimize - bestSingleCard', () => {

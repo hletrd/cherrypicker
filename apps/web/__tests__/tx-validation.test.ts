@@ -30,6 +30,14 @@ describe('isOptimizableTx', () => {
     expect(isOptimizableTx({ ...baseTx, amount: 999999 })).toBe(true);
   });
 
+  test('accepts only bounded consumer fuel-volume facts', () => {
+    expect(isOptimizableTx({ ...baseTx, fuelVolumeLiters: 18.5 })).toBe(true);
+    expect(isOptimizableTx({ ...baseTx, fuelVolumeLiters: 200 })).toBe(true);
+    expect(isOptimizableTx({ ...baseTx, fuelVolumeLiters: 200.01 })).toBe(false);
+    expect(isOptimizableTx({ ...baseTx, fuelVolumeLiters: 1e308 })).toBe(false);
+    expect(isOptimizableTx({ ...baseTx, fuelVolumeLiters: Infinity })).toBe(false);
+  });
+
   test('rejects zero amounts (balance inquiries)', () => {
     expect(isOptimizableTx({ ...baseTx, amount: 0 })).toBe(false);
   });

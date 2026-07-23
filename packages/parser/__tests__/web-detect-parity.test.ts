@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import { detectFormatFromFile, detectBank } from '../../../apps/web/src/lib/parser/detect.ts';
+import { parseJSON } from '../../../apps/web/src/lib/parser/json.ts';
 
 describe('detectFormatFromFile (C21-TEST04)', () => {
   test('detects xlsx from .xlsx extension', async () => {
@@ -92,6 +93,29 @@ describe('detectFormatFromFile (C21-TEST04)', () => {
     const file = new File(['{"transactions":[{"date":"2024-01-15"}]}'], 'test.txt');
     expect(await detectFormatFromFile(file)).toBe('json');
   });
+
+  test.each(['statement.txt', 'statement.csv'])(
+    'detects a JSON statement larger than 2 KiB under %s',
+    async (fileName) => {
+      const content = JSON.stringify([{
+        date: '2026-07-23',
+        merchant: '가'.repeat(3_000),
+        amount: 10_000,
+      }]);
+      expect(new TextEncoder().encode(content).length).toBeGreaterThan(2_048);
+      expect(await detectFormatFromFile(new File([content], fileName))).toBe('json');
+    },
+  );
+
+  test.each(['[{broken', '{"transactions": [}'])(
+    'classifies a leading JSON container token and leaves syntax to the parser',
+    async (content) => {
+      expect(
+        await detectFormatFromFile(new File([content], 'statement.dat')),
+      ).toBe('json');
+      expect(parseJSON(content).errors[0]?.code).toBe('json_syntax');
+    },
+  );
 
   test('sniffs XML-OFX from <?xml + OFX tags', async () => {
     const file = new File(['<?xml version="1.0"?>\n<OFX>\n<BANKTRANLIST>\n</BANKTRANLIST>\n</OFX>'], 'test.xml');

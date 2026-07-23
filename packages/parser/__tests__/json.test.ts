@@ -115,7 +115,7 @@ describe('parseJSON', () => {
     expect(result.transactions[0]!.amount).toBe(10000);
   });
 
-  it('skips entries missing required fields', () => {
+  it('reports one rejected-row diagnostic for each entry missing required fields', () => {
     const input = JSON.stringify([
       { date: '2024-12-01' }, // missing amount
       { merchant: '테스트' }, // missing date
@@ -124,6 +124,11 @@ describe('parseJSON', () => {
     const result = parseJSON(input);
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]!.amount).toBe(5000);
+    expect(
+      result.errors
+        .filter((error) => error.code === 'json_row_rejected')
+        .map((error) => error.line),
+    ).toEqual([1, 2]);
   });
 
   it('returns error for invalid JSON', () => {
@@ -186,6 +191,9 @@ describe('parseJSON', () => {
     const result = parseJSON(input);
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]!.merchant).toBe('OK');
+    expect(
+      result.errors.filter((error) => error.code === 'json_row_rejected'),
+    ).toHaveLength(4);
   });
 
   it('skips Infinity string amounts as unparseable (C10-07)', () => {
@@ -238,7 +246,7 @@ describe('parseJSON', () => {
     expect(result.errors[0]!.message).toContain('boolean');
   });
 
-  it('silently skips null and undefined amounts without error (C30-HIGH-01)', () => {
+  it('reports null and missing amounts as rejected rows (C30-HIGH-01)', () => {
     const input = JSON.stringify([
       { date: '2024-01-01', merchant: 'NullTest', amount: null },
       { date: '2024-01-02', merchant: 'UndefTest' }, // amount is undefined (missing key)
@@ -247,8 +255,11 @@ describe('parseJSON', () => {
     const result = parseJSON(input);
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]!.merchant).toBe('OK');
-    // No errors for null/undefined — they are valid "missing amount" indicators
-    expect(result.errors.filter(e => e.message.includes('null') || e.message.includes('undefined'))).toHaveLength(0);
+    expect(
+      result.errors
+        .filter((error) => error.code === 'json_row_rejected')
+        .map((error) => error.line),
+    ).toEqual([1, 2]);
   });
 
   it('rejects numeric amounts beyond the safe-integer boundary', () => {
@@ -299,6 +310,35 @@ describe('parseJSON', () => {
         performanceExclusionTags: 'statement',
       },
     });
+  });
+
+  it('enforces the consumer fuel-volume boundary', () => {
+    const result = parseJSON(JSON.stringify([
+      {
+        date: '2026-02-10',
+        merchant: 'Maximum',
+        amount: 10_000,
+        fuelVolumeLiters: 200,
+      },
+      {
+        date: '2026-02-11',
+        merchant: 'Next',
+        amount: 10_000,
+        fuelVolumeLiters: 200.01,
+      },
+      {
+        date: '2026-02-12',
+        merchant: 'Huge',
+        amount: 10_000,
+        fuelVolumeLiters: 1e308,
+      },
+    ]));
+
+    expect(result.transactions.map((transaction) => transaction.fuelVolumeLiters))
+      .toEqual([200, undefined, undefined]);
+    expect(
+      result.errors.filter((error) => error.code === 'json_fact_invalid'),
+    ).toHaveLength(2);
   });
 
   it('quarantines calendar-invalid JSON rows', () => {

@@ -89,7 +89,7 @@ describe('JSON Parser (web)', () => {
     expect(result.transactions[0]!.amount).toBe(10000);
   });
 
-  it('skips entries missing required fields', () => {
+  it('reports one rejected-row diagnostic for each entry missing required fields', () => {
     const input = JSON.stringify([
       { date: '2024-12-01' }, // missing amount
       { merchant: '테스트' }, // missing date
@@ -98,6 +98,11 @@ describe('JSON Parser (web)', () => {
     const result = parseJSON(input);
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]!.amount).toBe(5000);
+    expect(
+      result.errors
+        .filter((error) => error.code === 'json_row_rejected')
+        .map((error) => error.line),
+    ).toEqual([1, 2]);
   });
 
   it('returns error for invalid JSON', () => {
@@ -161,7 +166,7 @@ describe('JSON Parser (web)', () => {
     expect(result.errors[0]!.message).toContain('boolean');
   });
 
-  it('silently skips null and undefined amounts without error (C30-HIGH-01)', () => {
+  it('reports null and missing amounts as rejected rows (C30-HIGH-01)', () => {
     const input = JSON.stringify([
       { date: '2024-01-01', merchant: 'NullTest', amount: null },
       { date: '2024-01-02', merchant: 'UndefTest' }, // amount is undefined (missing key)
@@ -170,8 +175,11 @@ describe('JSON Parser (web)', () => {
     const result = parseJSON(input);
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]!.merchant).toBe('OK');
-    // No errors for null/undefined — they are valid "missing amount" indicators
-    expect(result.errors.filter(e => e.message.includes('null') || e.message.includes('undefined'))).toHaveLength(0);
+    expect(
+      result.errors
+        .filter((error) => error.code === 'json_row_rejected')
+        .map((error) => error.line),
+    ).toEqual([1, 2]);
   });
 
   it('rejects numeric amounts beyond the safe-integer boundary', () => {

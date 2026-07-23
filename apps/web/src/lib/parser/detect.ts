@@ -123,12 +123,10 @@ export async function detectFormatFromFile(file: File): Promise<'csv' | 'xlsx' |
     if (/^<\?OFX/i.test(head) || /<OFX/i.test(head)) return 'ofx';
     // HTML
     if (/^<!doctype\s+html/i.test(head) || /^<html/i.test(head) || /<table[\s>]/i.test(head)) return 'html';
-    // JSON
+    // A fixed-size prefix cannot prove that a JSON document is complete.
+    // Classify by the container token and let the full JSON parser own syntax.
     if (head.startsWith('[') || head.startsWith('{')) {
-      try {
-        JSON.parse(head.slice(0, 1024));
-        return 'json';
-      } catch { /* not JSON */ }
+      return 'json';
     }
     // XML with OFX content
     if (/^<\?xml/i.test(head) && /<OFX|<BANKTRANLIST|<STMTTRN/i.test(head)) return 'ofx';

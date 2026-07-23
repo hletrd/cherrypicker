@@ -10,6 +10,10 @@ import type {
 } from '../models/result.js';
 import type { OptimizationConstraints } from './constraints.js';
 import { calculateRewards, buildCategoryKey } from '../calculator/reward.js';
+import {
+  addSafeNonnegativeIntegers,
+  assertSafeNonnegativeInteger,
+} from '../numeric.js';
 
 interface CardScore {
   cardId: string;
@@ -56,7 +60,7 @@ function scoreCardsForTransaction(
 ): CardScoringResult {
   // Defensive guard: callers should pre-filter, but division by zero
   // would produce Infinity and corrupt sort ordering.
-  if (transaction.amount <= 0 || !Number.isFinite(transaction.amount)) {
+  if (transaction.amount <= 0 || !Number.isSafeInteger(transaction.amount)) {
     return { scores: [], unsupportedRules: [] };
   }
   const scores: CardScore[] = [];
@@ -69,6 +73,7 @@ function scoreCardsForTransaction(
     const before = calculateCardOutput(currentTransactions, previousMonthSpending, rule).totalReward;
     const after = calculateCardOutput([...currentTransactions, transaction], previousMonthSpending, rule);
     const reward = Math.max(0, after.totalReward - before);
+    assertSafeNonnegativeInteger(reward, 'marginal reward');
     // transaction.amount is guaranteed positive here (pre-filtered at line 198).
     const rate = reward / transaction.amount;
 
@@ -123,8 +128,16 @@ function buildAssignments(txAssignments: TxAssignment[], categoryLabels: Map<str
     const current = assignmentMap.get(key);
 
     if (current) {
-      current.spending += assignment.tx.amount;
-      current.reward += assignment.reward;
+      current.spending = addSafeNonnegativeIntegers(
+        current.spending,
+        assignment.tx.amount,
+        'assignment spending',
+      );
+      current.reward = addSafeNonnegativeIntegers(
+        current.reward,
+        assignment.reward,
+        'assignment reward',
+      );
       // Recalculate effective rate from accumulated spending/reward.
       // For the first transaction in a category, assignment.rate (marginal
       // rate from scoreCardsForTransaction) equals reward/spending — the
@@ -149,7 +162,11 @@ function buildAssignments(txAssignments: TxAssignment[], categoryLabels: Map<str
     for (const alternative of assignment.alternatives) {
       const currentAlternative = alternativesForAssignment.get(alternative.cardId);
       if (currentAlternative) {
-        currentAlternative.reward += alternative.reward;
+        currentAlternative.reward = addSafeNonnegativeIntegers(
+          currentAlternative.reward,
+          alternative.reward,
+          'alternative reward',
+        );
       } else {
         alternativesForAssignment.set(alternative.cardId, {
           cardName: alternative.cardName,
@@ -198,7 +215,7 @@ function buildCardResults(
     // IMPORTANT: buildCardResults requires pre-filtered positive-amount
     // transactions as input. If called with unfiltered data (including negative
     // or zero amounts), totalSpending and effectiveRate would be incorrect (C40-04).
-    const totalSpending = assignedTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    const totalSpending = output.totalSpending;
     // Replace English categoryKey in categoryNameKo with the Korean label
     // from the taxonomy (if available). calculateRewards sets categoryNameKo
     // to the raw categoryKey (e.g. "dining.cafe"); we want "카페" instead.
@@ -232,6 +249,17 @@ export function greedyOptimize(
   constraints: OptimizationConstraints,
   cardRules: CardRuleSet[],
 ): OptimizationResult {
+  for (const transaction of constraints.transactions) {
+    if (
+      !Number.isFinite(transaction.amount) ||
+      !Number.isSafeInteger(transaction.amount)
+    ) {
+      throw new Error(
+        `transaction amount must be a finite safe integer, got ${transaction.amount} for ${transaction.id}`,
+      );
+    }
+  }
+
   const cardPreviousSpending = new Map(
     constraints.cards.map((c) => [c.cardId, c.previousMonthSpending]),
   );
@@ -245,7 +273,7 @@ export function greedyOptimize(
   // but Number.isFinite also guards the sort comparator against NaN
   // comparisons which sort inconsistently across JS engines.
   const sortedTransactions = [...constraints.transactions]
-    .filter((tx) => tx.amount > 0 && Number.isFinite(tx.amount))
+    .filter((tx) => tx.amount > 0)
     .sort((a, b) => {
       const amountDiff = b.amount - a.amount;
       if (amountDiff !== 0) return amountDiff;
@@ -294,8 +322,22 @@ export function greedyOptimize(
   const assignments = buildAssignments(txAssignments, constraints.categoryLabels);
   const cardResults = buildCardResults(cardRules, cardPreviousSpending, assignedTransactionsByCard, constraints.categoryLabels);
 
-  const totalReward = cardResults.reduce((sum, cardResult) => sum + cardResult.totalReward, 0);
-  const totalSpending = txAssignments.reduce((sum, assignment) => sum + assignment.tx.amount, 0);
+  const totalReward = cardResults.reduce(
+    (sum, cardResult) => addSafeNonnegativeIntegers(
+      sum,
+      cardResult.totalReward,
+      'optimizer total reward',
+    ),
+    0,
+  );
+  const totalSpending = txAssignments.reduce(
+    (sum, assignment) => addSafeNonnegativeIntegers(
+      sum,
+      assignment.tx.amount,
+      'optimizer total spending',
+    ),
+    0,
+  );
   const effectiveRate = totalSpending > 0 ? totalReward / totalSpending : 0;
 
   let bestSingleCard = { cardId: '', cardName: '', totalReward: 0 };
@@ -313,6 +355,11 @@ export function greedyOptimize(
   }
 
   const savingsVsSingleCard = totalReward - bestSingleCard.totalReward;
+  if (!Number.isSafeInteger(savingsVsSingleCard)) {
+    throw new Error(
+      `optimizer savings is not safely representable: ${savingsVsSingleCard}`,
+    );
+  }
   const unsupportedRules = deduplicateCalculationIssues([
     ...candidateUnsupportedRules,
     ...cardResults.flatMap((result) => result.unsupportedRules ?? []),

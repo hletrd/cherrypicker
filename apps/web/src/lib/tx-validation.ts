@@ -1,4 +1,5 @@
 import type { CategorizedTx } from './analyzer.js';
+import { isValidFuelVolumeLiters } from '@cherrypicker/parser/browser';
 
 /** Validate that a transaction is suitable for display and optimization.
  *  Zero-amount entries (e.g., balance inquiries, declined transactions)
@@ -15,6 +16,10 @@ export function isOptimizableTx(tx: unknown): tx is CategorizedTx {
     typeof obj.amount === 'number' &&
     Number.isSafeInteger(obj.amount) &&
     obj.amount !== 0 &&
-    typeof obj.category === 'string' && obj.category.length > 0
+    typeof obj.category === 'string' && obj.category.length > 0 &&
+    (
+      obj.fuelVolumeLiters === undefined ||
+      isValidFuelVolumeLiters(obj.fuelVolumeLiters)
+    )
   );
 }

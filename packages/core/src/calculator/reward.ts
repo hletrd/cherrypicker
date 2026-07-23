@@ -12,6 +12,15 @@ import { calculateDiscount } from './discount.js';
 import { calculatePoints } from './points.js';
 import { calculateCashback } from './cashback.js';
 import { normalizeMerchantText } from '../categorizer/normalize.js';
+import {
+  addSafeNonnegativeIntegers,
+  assertSafeNonnegativeInteger,
+} from '../numeric.js';
+
+// Defense-in-depth for direct core callers that bypass the parser-owned
+// canonical fact validator. Kept local to avoid reversing core→parser package
+// direction; parser/web handoffs remain the source of normalized facts.
+const MAX_REWARDABLE_FUEL_VOLUME_LITERS = 200;
 
 function selectTier(
   performanceTiers: PerformanceTier[],
@@ -302,15 +311,32 @@ function applyMonthlyCap(
   monthlyCap: number | null,
   currentMonthUsed: number,
 ): { reward: number; newMonthUsed: number; capReached: boolean } {
+  assertSafeNonnegativeInteger(rawReward, 'raw reward');
+  assertSafeNonnegativeInteger(currentMonthUsed, 'current monthly reward');
+  if (monthlyCap !== null) {
+    assertSafeNonnegativeInteger(monthlyCap, 'monthly reward cap');
+  }
   if (monthlyCap === null) {
-    return { reward: rawReward, newMonthUsed: currentMonthUsed + rawReward, capReached: false };
+    return {
+      reward: rawReward,
+      newMonthUsed: addSafeNonnegativeIntegers(
+        currentMonthUsed,
+        rawReward,
+        'monthly reward total',
+      ),
+      capReached: false,
+    };
   }
 
   const remaining = Math.max(0, monthlyCap - currentMonthUsed);
   const reward = Math.min(rawReward, remaining);
   return {
     reward,
-    newMonthUsed: currentMonthUsed + reward,
+    newMonthUsed: addSafeNonnegativeIntegers(
+      currentMonthUsed,
+      reward,
+      'monthly reward total',
+    ),
     capReached: rawReward > remaining,
   };
 }
@@ -320,19 +346,43 @@ function calculateFixedReward(
   tierRate: RewardTierRate,
   ruleKey: string,
   dayRewardTracker: Set<string>,
-): { reward: number; unsupportedReason?: UnsupportedReason; detail?: string } {
+): {
+  reward: number;
+  occurrenceApplied: boolean;
+  unsupportedReason?: UnsupportedReason;
+  detail?: string;
+} {
   const fixedAmount = tierRate.fixedAmount ?? 0;
-  if (fixedAmount <= 0) return { reward: 0 };
+  if (fixedAmount <= 0) return { reward: 0, occurrenceApplied: false };
+  if (!Number.isSafeInteger(fixedAmount)) {
+    return {
+      reward: 0,
+      occurrenceApplied: false,
+      unsupportedReason: 'unsupported_reward_unit',
+      detail: `fixed reward is not safely representable: ${fixedAmount}`,
+    };
+  }
 
   if (tierRate.unit === 'won_per_day') {
     const dayKey = `${ruleKey}:${tx.date}`;
-    if (dayRewardTracker.has(dayKey)) return { reward: 0 };
+    if (dayRewardTracker.has(dayKey)) {
+      return { reward: 0, occurrenceApplied: false };
+    }
     dayRewardTracker.add(dayKey);
-    return { reward: fixedAmount };
+    return { reward: fixedAmount, occurrenceApplied: true };
   }
 
   if (tierRate.unit === 'mile_per_1500won') {
-    return { reward: Math.floor(tx.amount / 1500) * fixedAmount };
+    const reward = Math.floor(tx.amount / 1500) * fixedAmount;
+    if (!Number.isSafeInteger(reward) || reward < 0) {
+      return {
+        reward: 0,
+        occurrenceApplied: false,
+        unsupportedReason: 'unsupported_reward_unit',
+        detail: `mileage reward is not safely representable: ${reward}`,
+      };
+    }
+    return { reward, occurrenceApplied: true };
   }
 
   if (tierRate.unit === 'won_per_liter') {
@@ -344,19 +394,39 @@ function calculateFixedReward(
     ) {
       return {
         reward: 0,
+        occurrenceApplied: false,
         unsupportedReason: 'missing_fuel_volume',
         detail: 'fuel-per-liter reward requires positive volume with provenance',
       };
     }
-    return { reward: fixedAmount * liters! };
+    if (liters! > MAX_REWARDABLE_FUEL_VOLUME_LITERS) {
+      return {
+        reward: 0,
+        occurrenceApplied: false,
+        unsupportedReason: 'invalid_fuel_volume',
+        detail:
+          `fuel volume exceeds the ${MAX_REWARDABLE_FUEL_VOLUME_LITERS} L consumer transaction bound`,
+      };
+    }
+    const reward = Math.floor(fixedAmount * liters!);
+    if (!Number.isSafeInteger(reward) || reward < 0) {
+      return {
+        reward: 0,
+        occurrenceApplied: false,
+        unsupportedReason: 'unsupported_reward_unit',
+        detail: 'fuel-per-liter reward is not safely representable',
+      };
+    }
+    return { reward, occurrenceApplied: true };
   }
 
   if (tierRate.unit === null || tierRate.unit === undefined) {
-    return { reward: fixedAmount };
+    return { reward: fixedAmount, occurrenceApplied: true };
   }
 
   return {
     reward: 0,
+    occurrenceApplied: false,
     unsupportedReason: 'unsupported_reward_unit',
     detail: `unsupported reward unit: ${String(tierRate.unit)}`,
   };
@@ -394,6 +464,9 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
   const occurrenceUses = new Map<string, number>();
   let globalMonthUsed = 0;
   const globalCap = globalConstraints.monthlyTotalDiscountCap;
+  if (globalCap !== null) {
+    assertSafeNonnegativeInteger(globalCap, 'global monthly reward cap');
+  }
 
   const categoryRewards = new Map<string, CategoryReward>();
   const capsHit: CapInfo[] = [];
@@ -450,7 +523,11 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       categoryRewards.set(categoryKey, bucket);
     }
 
-    bucket.spending += tx.amount;
+    bucket.spending = addSafeNonnegativeIntegers(
+      bucket.spending,
+      tx.amount,
+      `category spending for ${categoryKey}`,
+    );
 
     if (selection.rules.length === 0) {
       continue;
@@ -459,12 +536,6 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     for (const selectedRule of selection.rules) {
       const { rule, ruleIndex, occurrenceKey } = selectedRule;
       const rewardKey = buildRuleKey(rule, ruleIndex);
-      if (occurrenceKey) {
-        occurrenceUses.set(
-          occurrenceKey,
-          (occurrenceUses.get(occurrenceKey) ?? 0) + 1,
-        );
-      }
     const tierRate = findTierRate(rule, tierId);
     if (!tierRate) {
       bucket.rewardType = rule.type;
@@ -479,6 +550,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     let rawReward = 0;
     let uncappedReward = 0;
     let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
+    let occurrenceApplied = false;
     const hasFixedReward = (tierRate.fixedAmount ?? 0) > 0;
     if (normalizedRate !== null && normalizedRate > 0) {
       if (tierRate.unit !== null && tierRate.unit !== undefined) {
@@ -496,6 +568,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       uncappedReward = calcFn(tx.amount, normalizedRate, null, 0).reward;
       rawReward = perTxCap !== null ? Math.min(uncappedReward, perTxCap) : uncappedReward;
       ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
+      occurrenceApplied = true;
     } else if (hasFixedReward) {
       const fixed = calculateFixedReward(tx, tierRate, rewardKey, dayRewardTracker);
       if (fixed.unsupportedReason) {
@@ -510,6 +583,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         continue;
       }
       uncappedReward = fixed.reward;
+      occurrenceApplied = fixed.occurrenceApplied;
       rawReward = perTxCap !== null
         ? Math.min(uncappedReward, perTxCap)
         : uncappedReward;
@@ -519,6 +593,22 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       // Wildcard rules (category === '*') legitimately have no rate.
       rawReward = 0;
       ruleResult = applyMonthlyCap(0, monthlyCap, currentRuleMonthUsed);
+    }
+
+    assertSafeNonnegativeInteger(uncappedReward, 'uncapped reward');
+    assertSafeNonnegativeInteger(rawReward, 'per-transaction reward');
+
+    // Consume an occurrence only after the tier and reward facts have produced
+    // an executable reward. Cap clipping happens later and still counts.
+    if (occurrenceKey && occurrenceApplied) {
+      occurrenceUses.set(
+        occurrenceKey,
+        addSafeNonnegativeIntegers(
+          occurrenceUses.get(occurrenceKey) ?? 0,
+          1,
+          `occurrence count for ${occurrenceKey}`,
+        ),
+      );
     }
 
     if (perTxCap !== null && uncappedReward > perTxCap) {
@@ -559,15 +649,30 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed - overcount);
         bucket.capReached = true;
       }
-      globalMonthUsed += appliedReward;
+      globalMonthUsed = addSafeNonnegativeIntegers(
+        globalMonthUsed,
+        appliedReward,
+        'global monthly reward total',
+      );
     }
 
-    bucket.reward += appliedReward;
+    bucket.reward = addSafeNonnegativeIntegers(
+      bucket.reward,
+      appliedReward,
+      `category reward for ${categoryKey}`,
+    );
     // Accumulate reward per rewardType so we can determine the dominant
     // type (highest cumulative reward) at the end of the loop, rather than
     // unconditionally overwriting with the last transaction's type.
     const typeMap = rewardTypeAccum.get(categoryKey) ?? new Map<string, number>();
-    typeMap.set(rule.type, (typeMap.get(rule.type) ?? 0) + appliedReward);
+    typeMap.set(
+      rule.type,
+      addSafeNonnegativeIntegers(
+        typeMap.get(rule.type) ?? 0,
+        appliedReward,
+        `reward type total for ${rule.type}`,
+      ),
+    );
     rewardTypeAccum.set(categoryKey, typeMap);
     bucket.capAmount = monthlyCap ?? undefined;
 
@@ -606,8 +711,22 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     };
   });
 
-  const totalReward = categoryRewardList.reduce((sum, categoryReward) => sum + categoryReward.reward, 0);
-  const totalSpending = categoryRewardList.reduce((sum, categoryReward) => sum + categoryReward.spending, 0);
+  const totalReward = categoryRewardList.reduce(
+    (sum, categoryReward) => addSafeNonnegativeIntegers(
+      sum,
+      categoryReward.reward,
+      'calculator total reward',
+    ),
+    0,
+  );
+  const totalSpending = categoryRewardList.reduce(
+    (sum, categoryReward) => addSafeNonnegativeIntegers(
+      sum,
+      categoryReward.spending,
+      'calculator total spending',
+    ),
+    0,
+  );
 
   return {
     cardId: card.id,

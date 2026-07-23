@@ -38,6 +38,8 @@ export {
 } from './date-utils.js';
 export {
   extractTransactionFacts,
+  isValidFuelVolumeLiters,
+  MAX_CONSUMER_FUEL_VOLUME_LITERS,
   PERFORMANCE_EXCLUSION_TAGS,
 } from './shared/transaction-facts.js';
 export type {
@@ -47,3 +49,9 @@ export type {
   ParsedPerformanceExclusionTag,
   ParsedTransactionFacts,
 } from './shared/transaction-facts.js';
+export { parseJSONTransactions } from './shared/json.js';
+export type {
+  JSONParseDiagnostic,
+  JSONParseKernelResult,
+  JSONTransaction,
+} from './shared/json.js';

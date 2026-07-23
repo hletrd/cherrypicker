@@ -910,6 +910,25 @@ describe('calculateRewards - fixed reward types', () => {
     expect(telecom!.reward).toBe(6000);
   });
 
+  test('a won_per_day no-op does not consume a later monthly occurrence', () => {
+    const fixture = structuredClone(fixedRewardPerDayFixture);
+    fixture.rewards[0]!.conditions = {
+      maxUses: 2,
+      usePeriod: 'month',
+    };
+    const output = calculateRewards({
+      transactions: [
+        { ...makeTx('t1', 'telecom', 55_000), date: '2026-02-01' },
+        { ...makeTx('t2', 'telecom', 30_000), date: '2026-02-01' },
+        { ...makeTx('t3', 'telecom', 40_000), date: '2026-02-02' },
+      ],
+      previousMonthSpending: 0,
+      cardRule: fixture,
+    });
+
+    expect(output.totalReward).toBe(6_000);
+  });
+
   test('mileage type uses same math as points', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'travel', 50000)],
@@ -1040,6 +1059,179 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     expect(transportation).toBeDefined();
     expect(transportation!.reward).toBe(1200);
     expect(output.unsupportedRules).toHaveLength(0);
+  });
+
+  test('rounds a normal fractional-liter reward down to integer Won', () => {
+    const output = calculateRewards({
+      transactions: [{
+        ...makeTx('fractional-fuel', 'transportation', 50_000),
+        fuelVolumeLiters: 12.345,
+        factProvenance: { fuelVolumeLiters: 'statement' as const },
+      }],
+      previousMonthSpending: 300_000,
+      cardRule: mrLife,
+    });
+
+    expect(output.totalReward).toBe(740);
+    expect(Number.isSafeInteger(output.totalReward)).toBe(true);
+  });
+
+  test.each([201, 1e308])(
+    'discloses out-of-bound fuel volume %s for direct core callers',
+    (fuelVolumeLiters) => {
+      const output = calculateRewards({
+        transactions: [{
+          ...makeTx('oversized-fuel', 'transportation', 50_000),
+          fuelVolumeLiters,
+          factProvenance: { fuelVolumeLiters: 'statement' as const },
+        }],
+        previousMonthSpending: 300_000,
+        cardRule: mrLife,
+      });
+
+      expect(output.totalReward).toBe(0);
+      expect(output.capsHit).toEqual([]);
+      expect(output.unsupportedRules).toEqual([
+        expect.objectContaining({
+          transactionId: 'oversized-fuel',
+          reason: 'invalid_fuel_volume',
+          detail: expect.stringContaining('200 L'),
+        }),
+      ]);
+      expect(Number.isSafeInteger(output.totalReward)).toBe(true);
+    },
+  );
+
+  test('accepts the maximum bounded volume and rejects unsafe reward products before caps', () => {
+    const maxVolumeFixture = structuredClone(mrLife);
+    const fuelRule = maxVolumeFixture.rewards.find(
+      (rule) => rule.category === 'transportation',
+    )!;
+    for (const tier of fuelRule.tiers) tier.monthlyCap = null;
+    const maximum = calculateRewards({
+      transactions: [{
+        ...makeTx('maximum-fuel', 'transportation', 500_000),
+        fuelVolumeLiters: 200,
+        factProvenance: { fuelVolumeLiters: 'statement' as const },
+      }],
+      previousMonthSpending: 300_000,
+      cardRule: maxVolumeFixture,
+    });
+    expect(maximum.totalReward).toBe(12_000);
+
+    const unsafeProductFixture = structuredClone(maxVolumeFixture);
+    const unsafeFuelRule = unsafeProductFixture.rewards.find(
+      (rule) => rule.category === 'transportation',
+    )!;
+    for (const tier of unsafeFuelRule.tiers) {
+      tier.fixedAmount = Number.MAX_SAFE_INTEGER;
+      tier.perTransactionCap = 500;
+    }
+    const unsafeProduct = calculateRewards({
+      transactions: [{
+        ...makeTx('unsafe-product', 'transportation', 500_000),
+        fuelVolumeLiters: 200,
+        factProvenance: { fuelVolumeLiters: 'statement' as const },
+      }],
+      previousMonthSpending: 300_000,
+      cardRule: unsafeProductFixture,
+    });
+    expect(unsafeProduct.totalReward).toBe(0);
+    expect(unsafeProduct.capsHit).toEqual([]);
+    expect(unsafeProduct.unsupportedRules).toEqual([
+      expect.objectContaining({
+        transactionId: 'unsafe-product',
+        reason: 'unsupported_reward_unit',
+        detail: expect.stringContaining('not safely representable'),
+      }),
+    ]);
+  });
+
+  test('rejects a non-finite percentage product before a cap can mask it', () => {
+    const fixture = structuredClone(simplePlan);
+    const tier = fixture.rewards[0]!.tiers[0]!;
+    tier.rate = Number.MAX_VALUE;
+    tier.perTransactionCap = 500;
+
+    expect(() => calculateRewards({
+      transactions: [makeTx('non-finite-product', 'uncategorized', 10_000)],
+      previousMonthSpending: 0,
+      cardRule: fixture,
+    })).toThrow(/calculated reward is not safely representable/);
+  });
+
+  test('does not consume maxUses until a fuel reward is executable', () => {
+    const maxUseFixture = structuredClone(mrLife);
+    const fuelRule = maxUseFixture.rewards.find(
+      (rule) => rule.category === 'transportation',
+    )!;
+    fuelRule.conditions = {
+      ...fuelRule.conditions,
+      maxUses: 1,
+      usePeriod: 'month',
+    };
+    const validFuel = (id: string) => ({
+      ...makeTx(id, 'transportation', 50_000),
+      fuelVolumeLiters: 20,
+      factProvenance: { fuelVolumeLiters: 'statement' as const },
+    });
+
+    const output = calculateRewards({
+      transactions: [
+        makeTx('missing-first', 'transportation', 50_000),
+        validFuel('valid-second'),
+        validFuel('blocked-third'),
+      ],
+      previousMonthSpending: 300_000,
+      cardRule: maxUseFixture,
+    });
+
+    expect(output.totalReward).toBe(1_200);
+    expect(output.unsupportedRules.map((issue) => issue.transactionId)).toEqual([
+      'missing-first',
+    ]);
+  });
+
+  test('counts an executable maxUses application even when a cap clips it', () => {
+    const maxUseFixture = structuredClone(mrLife);
+    const fuelRule = maxUseFixture.rewards.find(
+      (rule) => rule.category === 'transportation',
+    )!;
+    fuelRule.conditions = {
+      ...fuelRule.conditions,
+      maxUses: 1,
+      usePeriod: 'month',
+    };
+    for (const tier of fuelRule.tiers) tier.perTransactionCap = 500;
+    const transactions = ['first', 'second'].map((id) => ({
+      ...makeTx(id, 'transportation', 50_000),
+      fuelVolumeLiters: 20,
+      factProvenance: { fuelVolumeLiters: 'statement' as const },
+    }));
+
+    const output = calculateRewards({
+      transactions,
+      previousMonthSpending: 300_000,
+      cardRule: maxUseFixture,
+    });
+
+    expect(output.totalReward).toBe(500);
+    expect(output.capsHit).toHaveLength(1);
+    expect(output.capsHit[0]).toMatchObject({
+      actualReward: 1_200,
+      appliedReward: 500,
+    });
+  });
+
+  test('rejects a category spending aggregate beyond the safe-integer boundary', () => {
+    expect(() => calculateRewards({
+      transactions: [
+        makeTx('safe-1', 'uncategorized', Number.MAX_SAFE_INTEGER),
+        makeTx('safe-2', 'uncategorized', Number.MAX_SAFE_INTEGER),
+      ],
+      previousMonthSpending: 0,
+      cardRule: simplePlan,
+    })).toThrow(/category spending/);
   });
 
   test('subcategory-specific rules win over broad category rules', () => {
