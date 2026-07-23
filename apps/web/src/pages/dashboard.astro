@@ -7,6 +7,7 @@ import SavingsComparison from '../components/dashboard/SavingsComparison.svelte'
 import TransactionReview from '../components/dashboard/TransactionReview.svelte';
 import VisibilityToggle from '../components/ui/VisibilityToggle.svelte';
 import AnalysisWarnings from '../components/ui/AnalysisWarnings.svelte';
+import CapDisclosures from '../components/ui/CapDisclosures.svelte';
 import { buildPageUrl } from '../lib/formatters.js';
 
 const homeUrl = buildPageUrl('');
@@ -77,6 +78,7 @@ const resultsUrl = buildPageUrl('results');
   <!-- Dashboard content (hidden until data available) -->
   <div id="dashboard-data-content" class="hidden">
     <AnalysisWarnings client:load />
+    <CapDisclosures client:load />
     <!-- Top row: summary + breakdown -->
     <div class="grid grid-cols-1 gap-6 min-[1100px]:grid-cols-2">
       <div

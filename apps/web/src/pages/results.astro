@@ -4,6 +4,7 @@ import SavingsComparison from '../components/dashboard/SavingsComparison.svelte'
 import OptimalCardMap from '../components/dashboard/OptimalCardMap.svelte';
 import VisibilityToggle from '../components/ui/VisibilityToggle.svelte';
 import AnalysisWarnings from '../components/ui/AnalysisWarnings.svelte';
+import CapDisclosures from '../components/ui/CapDisclosures.svelte';
 import { buildPageUrl } from '../lib/formatters.js';
 
 const homeUrl = buildPageUrl('');
@@ -75,12 +76,13 @@ const reportUrl = buildPageUrl('report');
 
   <!-- Data-driven content (hidden until VisibilityToggle shows it) -->
   <div id="results-data-content" class="hidden">
-  <AnalysisWarnings client:load />
-  <!-- Summary statistics -->
-  <div
-    class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3 animate-[slideUp_0.4s_0.05s_ease_both]"
-    style="opacity:0;animation-fill-mode:forwards;"
-  >
+    <AnalysisWarnings client:load />
+    <CapDisclosures client:load />
+    <!-- Summary statistics -->
+    <div
+      class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3 animate-[slideUp_0.4s_0.05s_ease_both]"
+      style="opacity:0;animation-fill-mode:forwards;"
+    >
     <div class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center shadow-[var(--shadow-card)]">
       <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">최근 월 지출</p>
       <p class="mt-2 text-2xl font-bold text-[var(--color-text)]" id="stat-total-spending">—</p>

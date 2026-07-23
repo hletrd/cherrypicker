@@ -7,6 +7,7 @@
     summarizeUnsupportedRules,
   } from '../../lib/analysis-disclosures.js';
   import IssuerBadge from '../ui/IssuerBadge.svelte';
+  import CapDisclosures from '../ui/CapDisclosures.svelte';
 
   const homeUrl = buildPageUrl('');
 
@@ -106,6 +107,8 @@
   >
     {GROSS_MONTHLY_REWARD_DISCLOSURE}
   </p>
+
+  <CapDisclosures />
 
   {#if unsupportedRulesSummary}
     <section
