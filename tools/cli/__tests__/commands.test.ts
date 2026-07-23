@@ -200,6 +200,9 @@ describe('CLI command argument guards', () => {
     await runScrape(['--help'], dependencies);
     expect(logs.join('\n')).toContain('cherrypicker scrape --issuer');
     expect(logs.join('\n')).toContain('--allow-host');
+    expect(logs.join('\n')).toContain('pending_source_review');
+    expect(logs.join('\n')).toContain('원문과 대조');
+    expect(logs.join('\n')).toContain('support.status를 supported');
     expect(spawnCalls).toBe(0);
 
     await expect(

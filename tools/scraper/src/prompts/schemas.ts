@@ -1,6 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { CARD_ID_MAX_LENGTH, CARD_ID_PATTERN } from '@cherrypicker/rules';
-import { SCRAPER_ISSUERS } from '../config.js';
 import {
   getCanonicalScraperRuleContract,
 } from '../rule-contract.js';
@@ -28,12 +27,10 @@ export function buildCardRuleExtractionTool(
           additionalProperties: false,
           required: [
             'id',
-            'issuer',
             'name',
             'nameKo',
             'type',
             'annualFee',
-            'source',
           ],
           properties: {
             id: {
@@ -42,11 +39,6 @@ export function buildCardRuleExtractionTool(
               maxLength: CARD_ID_MAX_LENGTH,
               pattern: CARD_ID_PATTERN.source,
               description: '카드 고유 식별자 (영문 소문자, 숫자, 하이픈, 점)',
-            },
-            issuer: {
-              type: 'string',
-              enum: SCRAPER_ISSUERS,
-              description: '카드사 ID',
             },
             name: { type: 'string', description: '카드 영문명' },
             nameKo: { type: 'string', description: '카드 한글명' },
@@ -73,11 +65,6 @@ export function buildCardRuleExtractionTool(
               },
             },
             url: { type: 'string', description: '카드 상품 페이지 URL' },
-            source: {
-              type: 'string',
-              const: 'llm-scrape',
-              description: '데이터 출처',
-            },
           },
         },
         performanceTiers: {

@@ -130,6 +130,8 @@ ${formatScraperEnvironmentHelp()}
   기본 URL과 공식 허용 호스트는 카드사 설정에서 가져옵니다.
   공식 호스트 외 대상은 --allow-host를 반복 지정해 명시적으로 추가합니다.
   출력 기본값은 ${DEFAULT_SCRAPER_OUTPUT}이며, --force는 기존 일반 카드 파일을 덮어씁니다.
+  LLM이 supported로 추출한 혜택도 pending_source_review 상태로 저장되어 계산에 쓰이지 않습니다.
+  원문과 대조해 검토한 각 혜택만 YAML에서 support.status를 supported로 직접 승격한 뒤 게시합니다.
 
 예시:
   ${invocation} --issuer hyundai

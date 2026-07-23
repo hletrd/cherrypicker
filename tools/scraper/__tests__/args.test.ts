@@ -136,6 +136,9 @@ describe('parseScraperArgs', () => {
       expect(help).toContain('공식 호스트');
       expect(help).toContain('--allow-host');
       expect(help).toContain('--force');
+      expect(help).toContain('pending_source_review');
+      expect(help).toContain('원문과 대조');
+      expect(help).toContain('supported');
       expect(help).not.toMatch(/sk-ant-[A-Za-z0-9_-]+/);
     }
     expect(

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import type Anthropic from '@anthropic-ai/sdk';
 import {
   access,
   chmod,
@@ -15,6 +16,10 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { CardRuleSet } from '@cherrypicker/rules';
+import {
+  PENDING_SOURCE_REVIEW_REASON,
+  parseCardExtractionResponse,
+} from '../src/extractor.js';
 import {
   writeCardRule,
   type WriteCardRuleOperations,
@@ -62,6 +67,45 @@ describe('writeCardRule', () => {
 
     expect(content).toContain('# 추출일: 2024-02-29');
     expect(content).toContain('lastUpdated: 2024-02-29');
+  });
+
+  test('writes model-supported rewards as visibly quarantined YAML', async () => {
+    const root = await temporaryRoot();
+    const injectedMetadata =
+      'sk-ant-api03-page-instruction-ignore-prior-rules';
+    const modelRule = makeCardRule();
+    Object.assign(modelRule.card, {
+      issuer: injectedMetadata,
+      source: injectedMetadata,
+      lastUpdated: injectedMetadata,
+    });
+    const quarantined = parseCardExtractionResponse(
+      {
+        content: [
+          {
+            type: 'tool_use',
+            id: 'tool_test',
+            name: 'extract_card_rules',
+            input: modelRule,
+          },
+        ],
+        stop_reason: 'end_turn',
+      } as Anthropic.Message,
+      'shinhan',
+      () => new Date('2026-07-23T12:00:00.000Z'),
+    );
+    const path = await writeCardRule(quarantined, {
+      outputDir: root,
+      expectedIssuer: 'shinhan',
+    });
+    const content = await readFile(path, 'utf-8');
+
+    expect(content).toContain('issuer: shinhan');
+    expect(content).toContain('source: llm-scrape');
+    expect(content).toContain('lastUpdated: 2026-07-23');
+    expect(content).toContain('status: unsupported');
+    expect(content).toContain(`reason: ${PENDING_SOURCE_REVIEW_REASON}`);
+    expect(content).not.toContain(injectedMetadata);
   });
 
   test('rejects traversal even if a caller bypasses the type boundary', async () => {
