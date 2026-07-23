@@ -161,7 +161,11 @@ function classifySingleName(name: string): Exclude<AmountFieldRole, 'ambiguous'>
 
 export function classifyAmountFieldName(name: string): AmountFieldRole | null {
   const normalized = normalizeFieldName(name);
-  const parts = normalized.split(/[/|,+＋]/).filter(Boolean);
+  const compact = normalized.replace(/[/|,+＋·ㆍ]/g, '');
+  if (/^(?:입출금|출입금|입금출금|출금입금)(?:금액|액)$/.test(compact)) {
+    return 'ambiguous';
+  }
+  const parts = normalized.split(/[/|,+＋·ㆍ]/).filter(Boolean);
   const roles = new Set(
     parts
       .map(classifySingleName)
@@ -224,6 +228,28 @@ function preferredOrFirst(
   return candidates.find(({ preferred }) => preferred) ?? candidates[0]!;
 }
 
+function normalizedComparableAmount(
+  candidate: AmountFieldCandidate,
+  raw: unknown,
+): number | null {
+  const parsed = parseAmount(raw);
+  if (parsed === null) return null;
+  return candidate.role === 'outgoing' || candidate.role === 'incoming'
+    ? Math.abs(parsed)
+    : parsed;
+}
+
+function hasConflictingSameRoleValues(
+  candidates: readonly AmountFieldCandidate[],
+  valueAt: (index: number) => unknown,
+): boolean {
+  if (candidates.length < 2) return false;
+  const values = candidates.map((candidate) =>
+    normalizedComparableAmount(candidate, valueAt(candidate.index)));
+  return values.some((value) => value === null)
+    || values.some((value) => !Object.is(value, values[0]));
+}
+
 export function resolveAmountField(
   plan: AmountFieldPlan,
   valueAt: (index: number) => unknown,
@@ -251,6 +277,15 @@ export function resolveAmountField(
     return {
       kind: 'ambiguous',
       indexes: populated.map(({ index }) => index),
+    };
+  }
+
+  const conflicting = [outgoing, incoming, neutral]
+    .find((candidates) => hasConflictingSameRoleValues(candidates, valueAt));
+  if (conflicting) {
+    return {
+      kind: 'ambiguous',
+      indexes: conflicting.map(({ index }) => index),
     };
   }
 
@@ -298,3 +333,4 @@ export function normalizeResolvedSpendingAmount(
 
 export const AMBIGUOUS_AMOUNT_MESSAGE =
   '금액 컬럼의 입출금 방향을 하나로 판단할 수 없습니다.';
+import { parseAmount } from './amount.js';

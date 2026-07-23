@@ -5,26 +5,26 @@ import xlsx from 'xlsx';
 import { MerchantMatcher } from '@cherrypicker/core';
 import { loadCategories } from '@cherrypicker/rules';
 
-import { parseFile } from '../../../../apps/web/src/lib/parser/index.js';
-import { parseCSV as parseBrowserCSV } from '../../../../apps/web/src/lib/parser/csv.js';
-import { detectCSVDelimiter as detectBrowserDelimiter } from '../../../../apps/web/src/lib/parser/detect.js';
-import { parseOFX as parseBrowserOFX } from '../../../../apps/web/src/lib/parser/ofx.js';
-import { parseXLSX as parseBrowserXLSX } from '../../../../apps/web/src/lib/parser/xlsx.js';
-import { parseCSV as parseServerCSV } from '../../src/csv/index.js';
-import { parseGenericCSV } from '../../src/csv/generic.js';
-import { detectCSVDelimiter as detectServerDelimiter } from '../../src/detect.js';
-import { parseOFX as parseServerOFX } from '../../src/ofx/index.js';
-import { parseStatement } from '../../src/statement.js';
-import { parseXLSXBuffer } from '../../src/xlsx/index.js';
+import { parseFile } from '../src/lib/parser/index.js';
+import { parseCSV as parseBrowserCSV } from '../src/lib/parser/csv.js';
+import { detectCSVDelimiter as detectBrowserDelimiter } from '../src/lib/parser/detect.js';
+import { parseOFX as parseBrowserOFX } from '../src/lib/parser/ofx.js';
+import { parseXLSX as parseBrowserXLSX } from '../src/lib/parser/xlsx.js';
+import { parseCSV as parseServerCSV } from '../../../packages/parser/src/csv/index.js';
+import { parseGenericCSV } from '../../../packages/parser/src/csv/generic.js';
+import { detectCSVDelimiter as detectServerDelimiter } from '../../../packages/parser/src/detect.js';
+import { parseOFX as parseServerOFX } from '../../../packages/parser/src/ofx/index.js';
+import { parseStatement } from '../../../packages/parser/src/statement.js';
+import { parseXLSXBuffer } from '../../../packages/parser/src/xlsx/index.js';
 import {
   MAX_REQUIRED_FIELD_ROW_ERRORS,
   REQUIRED_DATE_ERROR_CODE,
   REQUIRED_MERCHANT_ERROR_CODE,
-} from '../../src/shared/required-fields.js';
+} from '../../../packages/parser/src/shared/required-fields.js';
 import {
   DELIMITER_SAMPLE_CHARACTER_LIMIT,
   sampleNonEmptyDelimitedLines,
-} from '../../src/shared/delimiter.js';
+} from '../../../packages/parser/src/shared/delimiter.js';
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return Uint8Array.from(bytes).buffer;
@@ -93,7 +93,7 @@ let matcher: MerchantMatcher;
 
 beforeAll(async () => {
   const categories = await loadCategories(
-    join(import.meta.dir, '../../../rules/data/categories.yaml'),
+    join(import.meta.dir, '../../../packages/rules/data/categories.yaml'),
   );
   matcher = new MerchantMatcher(categories);
 });
@@ -359,7 +359,11 @@ describe('Cycle 5 required merchant contract', () => {
     expect(browser.transactions).toEqual(server.transactions);
     expect(
       server.errors.filter((error) => error.code === REQUIRED_MERCHANT_ERROR_CODE),
-    ).toHaveLength(MAX_REQUIRED_FIELD_ROW_ERRORS);
+    ).toHaveLength(MAX_REQUIRED_FIELD_ROW_ERRORS - 1);
+    expect(server.errors.at(-1)).toMatchObject({
+      code: 'parse_diagnostics_omitted',
+      count: 6,
+    });
     expect(
       browser.errors.map(({ code, line, raw, message }) => ({ code, line, raw, message })),
     ).toEqual(

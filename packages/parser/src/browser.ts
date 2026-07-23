@@ -2,6 +2,23 @@
  * Browser-safe parser primitives. This entrypoint must remain free of Node
  * filesystem imports and remote-LLM SDKs.
  */
+export type { BankId, FileFormat } from './types.js';
+export {
+  BANK_COLUMN_CONFIGS,
+  getBankColumnConfig,
+  type ColumnConfig,
+} from './xlsx/adapters/index.js';
+export {
+  createBoundedDiagnosticArray,
+  MAX_PARSE_DIAGNOSTICS,
+  MAX_PARSE_DIAGNOSTIC_EXAMPLES,
+  MAX_PARSE_DIAGNOSTIC_MESSAGE_LENGTH,
+  MAX_PARSE_DIAGNOSTIC_RAW_LENGTH,
+  PARSE_DIAGNOSTICS_OMITTED_ERROR_CODE,
+  PARSE_DIAGNOSTICS_OMITTED_MESSAGE,
+  truncateParseDiagnosticRaw,
+  type BoundedParseDiagnostic,
+} from './shared/diagnostics.js';
 export { parseAmount, parseAmountString } from './shared/amount.js';
 export {
   AMBIGUOUS_AMOUNT_ERROR_CODE,
@@ -119,3 +136,16 @@ export type {
   JSONParseKernelResult,
   JSONTransaction,
 } from './shared/json.js';
+export {
+  MAX_XLSX_ARCHIVE_ENTRIES,
+  MAX_XLSX_COMPRESSED_BYTES,
+  MAX_XLSX_COMPRESSION_RATIO,
+  MAX_XLSX_ENTRY_UNCOMPRESSED_BYTES,
+  MAX_XLSX_TOTAL_UNCOMPRESSED_BYTES,
+  preflightXLSXArchive,
+  XLSX_ARCHIVE_REJECTED_ERROR_CODE,
+  XLSX_ARCHIVE_REJECTED_MESSAGE,
+  XLSXArchiveValidationError,
+  type XLSXArchivePreflightResult,
+  type XLSXArchiveRejectionReason,
+} from './shared/xlsx-archive.js';

@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
-import { detectFormatFromFile, detectBank } from '../../../apps/web/src/lib/parser/detect.ts';
-import { parseJSON } from '../../../apps/web/src/lib/parser/json.ts';
+import { detectFormatFromFile, detectBank } from '../src/lib/parser/detect.ts';
+import { parseJSON } from '../src/lib/parser/json.ts';
 
 describe('detectFormatFromFile (C21-TEST04)', () => {
   test('detects xlsx from .xlsx extension', async () => {

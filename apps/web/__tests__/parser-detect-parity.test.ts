@@ -1,8 +1,20 @@
-import { describe, test, expect } from 'bun:test';
-import { join } from 'path';
-import { detectBank, detectCSVDelimiter, detectFormat, detectEncoding, decodeBuffer } from '../src/detect.js';
-import { sampleNonEmptyDelimitedLines } from '../src/shared/delimiter.js';
-import { detectCSVDelimiter as detectBrowserCSVDelimiter } from '../../../apps/web/src/lib/parser/detect.js';
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  test,
+} from 'bun:test';
+import {
+  mkdtemp,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { detectBank, detectCSVDelimiter, detectFormat, detectEncoding, decodeBuffer } from '../../../packages/parser/src/detect.js';
+import { sampleNonEmptyDelimitedLines } from '../../../packages/parser/src/shared/delimiter.js';
+import { detectCSVDelimiter as detectBrowserCSVDelimiter } from '../src/lib/parser/detect.js';
 
 describe('detectBank', () => {
   test('detects KB from content', () => {
@@ -151,7 +163,10 @@ describe('detectCSVDelimiter', () => {
 });
 
 describe('detectFormat', () => {
-  const fixturesDir = join(import.meta.dir, 'fixtures');
+  const fixturesDir = join(
+    import.meta.dir,
+    '../../../packages/parser/__tests__/fixtures',
+  );
 
   test('detects CSV from .csv extension', async () => {
     const result = await detectFormat(join(fixturesDir, 'sample-kb.csv'));
@@ -285,34 +300,43 @@ describe('decodeBuffer', () => {
 // ---------------------------------------------------------------------------
 
 describe('detectFormat - OFX', () => {
-  const { writeFile, mkdir } = require('fs/promises');
-  const { join: pathJoin } = require('path');
-  const tmpDir = pathJoin(import.meta.dir, '__tmp_ofx');
+  let temporaryDirectory = '';
+
+  beforeAll(async () => {
+    temporaryDirectory = await mkdtemp(
+      join(tmpdir(), 'cherrypicker-parser-detect-ofx-'),
+    );
+  });
+
+  afterAll(async () => {
+    if (temporaryDirectory) {
+      await rm(temporaryDirectory, { recursive: true, force: true });
+    }
+  });
 
   test('detects OFX from .ofx extension', async () => {
-    await mkdir(tmpDir, { recursive: true });
-    const filePath = pathJoin(tmpDir, 'test.ofx');
+    const filePath = join(temporaryDirectory, 'test.ofx');
     await writeFile(filePath, 'OFXHEADER:100\nDATA:OFXSGML\n');
     const result = await detectFormat(filePath);
     expect(result.format).toBe('ofx');
   });
 
   test('detects OFX from .qfx extension', async () => {
-    const filePath = pathJoin(tmpDir, 'test.qfx');
+    const filePath = join(temporaryDirectory, 'test.qfx');
     await writeFile(filePath, 'OFXHEADER:100\nDATA:OFXSGML\n');
     const result = await detectFormat(filePath);
     expect(result.format).toBe('ofx');
   });
 
   test('detects OFX from content sniffing (<?OFX header)', async () => {
-    const filePath = pathJoin(tmpDir, 'test.txt');
+    const filePath = join(temporaryDirectory, 'test.txt');
     await writeFile(filePath, '<?OFX OFXHEADER="200" VERSION="220"?>\n<OFX>\n</OFX>');
     const result = await detectFormat(filePath);
     expect(result.format).toBe('ofx');
   });
 
   test('detects OFX 2.x from XML content with OFX tags', async () => {
-    const filePath = pathJoin(tmpDir, 'test.xml');
+    const filePath = join(temporaryDirectory, 'test.xml');
     await writeFile(filePath, '<?xml version="1.0"?>\n<OFX>\n<BANKTRANLIST>\n</BANKTRANLIST>\n</OFX>');
     const result = await detectFormat(filePath);
     expect(result.format).toBe('ofx');
@@ -320,34 +344,43 @@ describe('detectFormat - OFX', () => {
 });
 
 describe('detectFormat - HTML', () => {
-  const { writeFile, mkdir } = require('fs/promises');
-  const { join: pathJoin } = require('path');
-  const tmpDir = pathJoin(import.meta.dir, '__tmp_html');
+  let temporaryDirectory = '';
+
+  beforeAll(async () => {
+    temporaryDirectory = await mkdtemp(
+      join(tmpdir(), 'cherrypicker-parser-detect-html-'),
+    );
+  });
+
+  afterAll(async () => {
+    if (temporaryDirectory) {
+      await rm(temporaryDirectory, { recursive: true, force: true });
+    }
+  });
 
   test('detects HTML from .html extension', async () => {
-    await mkdir(tmpDir, { recursive: true });
-    const filePath = pathJoin(tmpDir, 'test.html');
+    const filePath = join(temporaryDirectory, 'test.html');
     await writeFile(filePath, '<html><body><table><tr><td>test</td></tr></table></body></html>');
     const result = await detectFormat(filePath);
     expect(result.format).toBe('html');
   });
 
   test('detects HTML from .htm extension', async () => {
-    const filePath = pathJoin(tmpDir, 'test.htm');
+    const filePath = join(temporaryDirectory, 'test.htm');
     await writeFile(filePath, '<html><body><table><tr><td>test</td></tr></table></body></html>');
     const result = await detectFormat(filePath);
     expect(result.format).toBe('html');
   });
 
   test('detects HTML from content sniffing (<table tag)', async () => {
-    const filePath = pathJoin(tmpDir, 'test.txt');
+    const filePath = join(temporaryDirectory, 'test.txt');
     await writeFile(filePath, '<table><tr><td>test</td></tr></table>');
     const result = await detectFormat(filePath);
     expect(result.format).toBe('html');
   });
 
   test('detects HTML from <!DOCTYPE html content', async () => {
-    const filePath = pathJoin(tmpDir, 'test.dat');
+    const filePath = join(temporaryDirectory, 'test.dat');
     await writeFile(filePath, '<!DOCTYPE html>\n<html><body>test</body></html>');
     const result = await detectFormat(filePath);
     expect(result.format).toBe('html');
@@ -355,13 +388,22 @@ describe('detectFormat - HTML', () => {
 });
 
 describe('detectFormat - BOM-aware content sniffing', () => {
-  const { writeFile, mkdir, rm } = require('fs/promises');
-  const { join: pathJoin } = require('path');
-  const tmpDir = pathJoin(import.meta.dir, '__tmp_bom');
+  let temporaryDirectory = '';
+
+  beforeAll(async () => {
+    temporaryDirectory = await mkdtemp(
+      join(tmpdir(), 'cherrypicker-parser-detect-bom-'),
+    );
+  });
+
+  afterAll(async () => {
+    if (temporaryDirectory) {
+      await rm(temporaryDirectory, { recursive: true, force: true });
+    }
+  });
 
   test('detects JSON with UTF-8 BOM prefix', async () => {
-    await mkdir(tmpDir, { recursive: true });
-    const filePath = pathJoin(tmpDir, 'bom.json');
+    const filePath = join(temporaryDirectory, 'bom.json');
     // UTF-8 BOM + valid JSON
     const content = Buffer.concat([
       Buffer.from([0xEF, 0xBB, 0xBF]),
@@ -373,7 +415,7 @@ describe('detectFormat - BOM-aware content sniffing', () => {
   });
 
   test('detects OFX with BOM prefix', async () => {
-    const filePath = pathJoin(tmpDir, 'bom.ofx');
+    const filePath = join(temporaryDirectory, 'bom.ofx');
     const content = Buffer.concat([
       Buffer.from([0xEF, 0xBB, 0xBF]),
       Buffer.from('<?OFX OFXHEADER="200"?>'),

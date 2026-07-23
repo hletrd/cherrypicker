@@ -1,5 +1,5 @@
 import type { BankId, ParseResult, RawTransaction } from '../types.js';
-import { ParseError } from '../types.js';
+import { createParseErrorCollector, ParseError } from '../types.js';
 import { detectCSVDelimiter } from '../detect.js';
 import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from '../date-utils.js';
 import { splitCSVLine, splitCSVRecords, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
@@ -16,7 +16,6 @@ import {
   isValidHeaderRow,
 } from './column-matcher.js';
 import {
-  MAX_REQUIRED_FIELD_ROW_ERRORS,
   missingRequiredColumnLabels,
   normalizeRequiredMerchant,
   REQUIRED_DATE_ERROR_CODE,
@@ -34,6 +33,7 @@ import {
   resolveAmountField,
   withInferredNeutralAmountField,
 } from '../shared/amount-fields.js';
+import { truncateParseDiagnosticRaw } from '../shared/diagnostics.js';
 
 // Korean date patterns — must cover all formats that parseDateStringToISO
 // handles. Kept in sync with the web-side DATE_PATTERNS (C1-01).
@@ -110,7 +110,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   const delimiter = detectCSVDelimiter(content);
   const records = splitCSVRecords(content, delimiter);
   const lines = records.map((record) => record.content);
-  const errors: ParseError[] = [];
+  const errors = createParseErrorCollector();
   const transactions: RawTransaction[] = [];
 
   if (lines.length === 0) {
@@ -253,8 +253,6 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   }
 
   // Parse data rows
-  let requiredMerchantErrorCount = 0;
-  let requiredDateErrorCount = 0;
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const line = lines[i] ?? '';
     const physicalLine = records[i]?.line ?? i + 1;
@@ -281,14 +279,11 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     const rowText = line;
     const merchant = normalizeRequiredMerchant(merchantRaw);
     if (!merchant) {
-      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
-        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
-          code: REQUIRED_MERCHANT_ERROR_CODE,
-          line: physicalLine,
-          raw: rowText,
-        }));
-        requiredMerchantErrorCount++;
-      }
+      errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+        code: REQUIRED_MERCHANT_ERROR_CODE,
+        line: physicalLine,
+        raw: rowText,
+      }));
       continue;
     }
     if (amountResolution.kind === 'non-spending') {
@@ -331,7 +326,8 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
         errors.length > 0
         && errors[errors.length - 1]!.line === physicalLine
       ) {
-        errors[errors.length - 1]!.raw = rowText;
+        errors[errors.length - 1]!.raw =
+          truncateParseDiagnosticRaw(rowText);
       }
       continue;
     }
@@ -340,14 +336,11 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     if (!isValidISODate(parsedDate)) {
       const trimmedDate = dateRaw.trim();
       if (!trimmedDate) {
-        if (requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
-          errors.push(new ParseError(REQUIRED_DATE_ERROR_MESSAGE, {
-            code: REQUIRED_DATE_ERROR_CODE,
-            line: physicalLine,
-            raw: rowText,
-          }));
-          requiredDateErrorCount++;
-        }
+        errors.push(new ParseError(REQUIRED_DATE_ERROR_MESSAGE, {
+          code: REQUIRED_DATE_ERROR_CODE,
+          line: physicalLine,
+          raw: rowText,
+        }));
       } else {
         errors.push(new ParseError(
           `날짜를 해석할 수 없습니다: ${trimmedDate}`,

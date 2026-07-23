@@ -1,12 +1,11 @@
 import type { BankAdapter, BankId, ParseResult, RawTransaction } from './types.js';
-import { ParseError } from './types.js';
+import { createParseErrorCollector, ParseError } from './types.js';
 import {
   decodeTextBytes,
   detectTextEncoding,
   AMBIGUOUS_AMOUNT_ERROR_CODE,
   AMBIGUOUS_AMOUNT_MESSAGE,
   compileAmountFieldPlan,
-  MAX_REQUIRED_FIELD_ROW_ERRORS,
   missingRequiredColumnLabels,
   normalizeRequiredMerchant,
   REQUIRED_DATE_ERROR_CODE,
@@ -19,6 +18,7 @@ import {
   resolveAmountField,
   splitDelimitedRecord,
   splitDelimitedRecordsWithLines,
+  truncateParseDiagnosticRaw,
   withInferredNeutralAmountField,
   type DelimitedLogicalRecord,
 } from '@cherrypicker/parser/browser';
@@ -266,7 +266,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   const delimiter = detectCSVDelimiter(content);
   const records = splitCSVRecords(content, delimiter);
   const lines = records.map((record) => record.content);
-  const errors: ParseError[] = [];
+  const errors = createParseErrorCollector();
   const transactions: RawTransaction[] = [];
 
   if (lines.length === 0) {
@@ -400,8 +400,6 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
     };
   }
 
-  let requiredMerchantErrorCount = 0;
-  let requiredDateErrorCount = 0;
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const line = lines[i] ?? '';
     const physicalLine = records[i]?.line ?? i + 1;
@@ -427,14 +425,11 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
 
     const merchant = normalizeRequiredMerchant(merchantRaw);
     if (!merchant) {
-      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
-        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
-          code: REQUIRED_MERCHANT_ERROR_CODE,
-          line: physicalLine,
-          raw: line,
-        }));
-        requiredMerchantErrorCount++;
-      }
+      errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+        code: REQUIRED_MERCHANT_ERROR_CODE,
+        line: physicalLine,
+        raw: line,
+      }));
       continue;
     }
     if (amountResolution.kind === 'non-spending') {
@@ -476,26 +471,20 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
         errors.length > 0
         && errors[errors.length - 1]!.line === physicalLine
       ) {
-        errors[errors.length - 1]!.raw = line;
+        errors[errors.length - 1]!.raw =
+          truncateParseDiagnosticRaw(line);
       }
       continue;
     }
 
-    const missingDate = !dateRaw.trim();
     const parsedDate = parseRequiredDateToISO(
       dateRaw,
       errors,
       physicalLine - 1,
       line,
-      requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS,
+      true,
     );
     if (parsedDate === null) {
-      if (
-        missingDate
-        && requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS
-      ) {
-        requiredDateErrorCount++;
-      }
       continue;
     }
 
@@ -566,7 +555,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
       const delimiter = detectCSVDelimiter(content);
       const records = splitCSVRecords(content, delimiter);
       const lines = records.map((record) => record.content);
-      const errors: ParseError[] = [];
+      const errors = createParseErrorCollector();
       const transactions: RawTransaction[] = [];
 
       let headerIdx = -1;
@@ -607,8 +596,6 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
         };
       }
 
-      let requiredMerchantErrorCount = 0;
-      let requiredDateErrorCount = 0;
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i] ?? '';
         const physicalLine = records[i]?.line ?? i + 1;
@@ -631,14 +618,11 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
         const merchant = normalizeRequiredMerchant(merchantRaw);
         if (!merchant) {
-          if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
-            errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
-              code: REQUIRED_MERCHANT_ERROR_CODE,
-              line: physicalLine,
-              raw: line,
-            }));
-            requiredMerchantErrorCount++;
-          }
+          errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+            code: REQUIRED_MERCHANT_ERROR_CODE,
+            line: physicalLine,
+            raw: line,
+          }));
           continue;
         }
         if (amountResolution.kind === 'non-spending') {
@@ -677,26 +661,20 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
             errors.length > 0
             && errors[errors.length - 1]!.line === physicalLine
           ) {
-            errors[errors.length - 1]!.raw = line;
+            errors[errors.length - 1]!.raw =
+              truncateParseDiagnosticRaw(line);
           }
           continue;
         }
 
-        const missingDate = !dateRaw.trim();
         const parsedDate = parseRequiredDateToISO(
           dateRaw,
           errors,
           physicalLine - 1,
           line,
-          requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS,
+          true,
         );
         if (parsedDate === null) {
-          if (
-            missingDate
-            && requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS
-          ) {
-            requiredDateErrorCount++;
-          }
           continue;
         }
 

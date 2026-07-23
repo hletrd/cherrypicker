@@ -3,7 +3,7 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 import { detectBank } from './detect.js';
 import type { BankId, ParseResult } from './types.js';
-import { ParseError } from './types.js';
+import { createParseErrorCollector, ParseError } from './types.js';
 import {
   extractPDFTextFromLoadingTask,
   type PDFLoadingTaskLike,
@@ -62,9 +62,13 @@ export async function parsePDF(
     bank: resolvedBank,
     format: 'pdf',
     transactions: [],
-    errors: [
-      ...local.errors,
-      new ParseError('PDF에서 거래를 찾지 못했어요. CSV나 Excel 파일로 다시 시도해 보세요.'),
-    ],
+    errors: (() => {
+      const errors = createParseErrorCollector();
+      errors.push(
+        ...local.errors,
+        new ParseError('PDF에서 거래를 찾지 못했어요. CSV나 Excel 파일로 다시 시도해 보세요.'),
+      );
+      return errors;
+    })(),
   };
 }

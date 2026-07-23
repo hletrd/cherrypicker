@@ -1,22 +1,29 @@
 import * as XLSX from 'xlsx';
 import type { BankId, ParseResult, RawTransaction } from './types.js';
-import { ParseError } from './types.js';
+import { createParseErrorCollector, ParseError } from './types.js';
 import {
   AMBIGUOUS_AMOUNT_ERROR_CODE,
   AMBIGUOUS_AMOUNT_MESSAGE,
+  BANK_COLUMN_CONFIGS,
   compileAmountFieldPlan,
   decodeStatementTextBytes,
   isHTMLStatementBytes,
-  MAX_REQUIRED_FIELD_ROW_ERRORS,
   missingRequiredColumnLabels,
   normalizeRequiredMerchant,
   normalizeResolvedSpendingAmount,
   NON_SPENDING_AMOUNT_ERROR_CODE,
   nonSpendingAmountMessage,
+  preflightXLSXArchive,
   REQUIRED_MERCHANT_ERROR_CODE,
   REQUIRED_MERCHANT_ERROR_MESSAGE,
   resolveAmountField,
+  getBankColumnConfig,
+  type ColumnConfig,
   type StatementTextPrefixDecoder,
+  UnsupportedTextEncodingError,
+  XLSX_ARCHIVE_REJECTED_ERROR_CODE,
+  XLSX_ARCHIVE_REJECTED_MESSAGE,
+  XLSXArchiveValidationError,
 } from '@cherrypicker/parser/browser';
 import { detectBank } from './detect.js';
 import { normalizeHTML } from './html-normalize.js';
@@ -37,176 +44,11 @@ import {
   isValidHeaderRow,
 } from './column-matcher.js';
 
-// ---------------------------------------------------------------------------
-// Column config per bank (ported from packages/parser/src/xlsx/adapters)
-// ---------------------------------------------------------------------------
-
-interface ColumnConfig {
-  date: string;
-  merchant: string;
-  amount: string;
-  installments?: string;
-  category?: string;
-  memo?: string;
-}
-
-export const BANK_COLUMN_CONFIGS: Record<BankId, ColumnConfig> = {
-  hyundai: {
-    date: '이용일',
-    merchant: '이용처',
-    amount: '이용금액',
-    installments: '할부',
-    memo: '비고',
-  },
-  kb: {
-    date: '거래일시',
-    merchant: '가맹점명',
-    amount: '이용금액',
-    installments: '할부개월',
-    category: '업종',
-  },
-  ibk: {
-    date: '거래일',
-    merchant: '가맹점',
-    amount: '거래금액',
-    installments: '할부',
-    memo: '적요',
-  },
-  woori: {
-    date: '이용일자',
-    merchant: '이용가맹점',
-    amount: '이용금액',
-    installments: '할부기간',
-    memo: '비고',
-  },
-  samsung: {
-    date: '이용일',
-    merchant: '가맹점명',
-    amount: '이용금액',
-    installments: '할부',
-    category: '업종',
-  },
-  shinhan: {
-    date: '이용일',
-    merchant: '이용처',
-    amount: '이용금액',
-    installments: '할부개월수',
-    category: '업종분류',
-  },
-  lotte: {
-    date: '거래일',
-    merchant: '이용가맹점',
-    amount: '이용금액',
-    installments: '할부',
-    category: '업종',
-  },
-  hana: {
-    date: '이용일자',
-    merchant: '가맹점명',
-    amount: '이용금액',
-    installments: '할부개월',
-    memo: '적요',
-  },
-  nh: {
-    date: '거래일',
-    merchant: '이용처',
-    amount: '거래금액',
-    installments: '할부',
-    memo: '비고',
-  },
-  bc: {
-    date: '이용일',
-    merchant: '가맹점',
-    amount: '이용금액',
-    installments: '할부',
-    category: '업종',
-  },
-  kakao: {
-    date: '거래일시',
-    merchant: '이용처',
-    amount: '이용금액',
-  },
-  toss: {
-    date: '거래일',
-    merchant: '이용처',
-    amount: '이용금액',
-  },
-  kbank: {
-    date: '거래일',
-    merchant: '이용처',
-    amount: '거래금액',
-  },
-  bnk: {
-    date: '거래일',
-    merchant: '가맹점',
-    amount: '이용금액',
-    installments: '할부',
-  },
-  dgb: {
-    date: '거래일',
-    merchant: '가맹점',
-    amount: '거래금액',
-    installments: '할부',
-  },
-  suhyup: {
-    date: '거래일',
-    merchant: '가맹점',
-    amount: '거래금액',
-    installments: '할부',
-  },
-  jb: {
-    date: '거래일',
-    merchant: '가맹점',
-    amount: '거래금액',
-    installments: '할부',
-  },
-  kwangju: {
-    date: '거래일',
-    merchant: '가맹점',
-    amount: '거래금액',
-    installments: '할부',
-  },
-  jeju: {
-    date: '거래일',
-    merchant: '가맹점',
-    amount: '거래금액',
-    installments: '할부',
-  },
-  sc: {
-    date: '거래일',
-    merchant: '이용처',
-    amount: '이용금액',
-    installments: '할부',
-  },
-  mg: {
-    date: '거래일',
-    merchant: '가맹점',
-    amount: '거래금액',
-    installments: '할부',
-  },
-  cu: {
-    date: '거래일',
-    merchant: '가맹점',
-    amount: '거래금액',
-    installments: '할부',
-  },
-  kdb: {
-    date: '거래일',
-    merchant: '이용처',
-    amount: '거래금액',
-    installments: '할부',
-  },
-  epost: {
-    date: '거래일',
-    merchant: '이용처',
-    amount: '거래금액',
-    installments: '할부',
-  },
+export {
+  BANK_COLUMN_CONFIGS,
+  getBankColumnConfig,
+  type ColumnConfig,
 };
-
-function getBankColumnConfig(bankId: BankId): ColumnConfig {
-  return BANK_COLUMN_CONFIGS[bankId];
-}
 
 // Keyword categories for header detection — hoisted to module scope to avoid
 // recreating Sets on every parse call. Matches server-side XLSX parser.
@@ -251,10 +93,13 @@ function parseInstallments(raw: unknown): number | undefined {
  *  Uses the shared BOM/UTF-8/CP949 detector before checking HTML signatures,
  *  so legacy Korean exports and BOM-marked UTF-16 tables route correctly. */
 export function isHTMLContent(
-  buffer: ArrayBuffer,
+  buffer: ArrayBuffer | Uint8Array,
   decodePrefix?: StatementTextPrefixDecoder,
 ): boolean {
-  return isHTMLStatementBytes(new Uint8Array(buffer), decodePrefix);
+  return isHTMLStatementBytes(
+    buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer),
+    decodePrefix,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -266,16 +111,43 @@ export function parseXLSX(buffer: ArrayBuffer, bank?: BankId): ParseResult {
   let workbook: XLSX.WorkBook;
   let htmlBankHint: BankId | null = null;
 
-  if (isHTMLContent(buffer)) {
-    const html = normalizeHTML(
-      decodeStatementTextBytes(new Uint8Array(buffer), 'html'),
-    );
-    htmlBankHint = detectBank(html).bank;
-    // Pass HTML string directly to XLSX instead of re-encoding via TextEncoder.
-    // Avoids creating a second full copy of the file content in memory (C1-P01).
-    workbook = XLSX.read(html, { type: 'string', cellDates: false });
-  } else {
-    workbook = XLSX.read(new Uint8Array(buffer), { type: 'array', cellDates: false });
+  try {
+    if (isHTMLContent(buffer)) {
+      const html = normalizeHTML(
+        decodeStatementTextBytes(new Uint8Array(buffer), 'html'),
+      );
+      htmlBankHint = detectBank(html).bank;
+      // Pass HTML string directly to XLSX instead of re-encoding via TextEncoder.
+      // Avoids creating a second full copy of the file content in memory (C1-P01).
+      workbook = XLSX.read(html, { type: 'string', cellDates: false });
+    } else {
+      const bytes = new Uint8Array(buffer);
+      preflightXLSXArchive(bytes);
+      workbook = XLSX.read(bytes, { type: 'array', cellDates: false });
+    }
+  } catch (error) {
+    if (error instanceof UnsupportedTextEncodingError) throw error;
+    if (error instanceof XLSXArchiveValidationError) {
+      return {
+        bank: bank ?? null,
+        format: 'xlsx',
+        transactions: [],
+        errors: [new ParseError(XLSX_ARCHIVE_REJECTED_MESSAGE, {
+          code: XLSX_ARCHIVE_REJECTED_ERROR_CODE,
+          format: 'xlsx',
+        })],
+      };
+    }
+    return {
+      bank: bank ?? null,
+      format: 'xlsx',
+      transactions: [],
+      errors: [new ParseError(
+        `XLSX 파일을 읽을 수 없습니다: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      )],
+    };
   }
 
   if (workbook.SheetNames.length === 0) {
@@ -387,11 +259,10 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   }
 
   const transactions: RawTransaction[] = [];
-  const errors: ParseError[] = [];
+  const errors = createParseErrorCollector();
 
   const mergeIndex = createSheetMergeIndex(sheet['!merges']);
   const consumedAmountSources = new Set<string>();
-  let requiredMerchantErrorCount = 0;
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -451,14 +322,11 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
 
     const merchant = normalizeRequiredMerchant(merchantRaw);
     if (!merchant) {
-      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
-        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
-          code: REQUIRED_MERCHANT_ERROR_CODE,
-          line: i + 1,
-          raw: rowText,
-        }));
-        requiredMerchantErrorCount++;
-      }
+      errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+        code: REQUIRED_MERCHANT_ERROR_CODE,
+        line: i + 1,
+        raw: rowText,
+      }));
       continue;
     }
     if (amountResolution.kind === 'non-spending') {

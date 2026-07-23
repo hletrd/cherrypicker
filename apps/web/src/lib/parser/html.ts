@@ -4,7 +4,7 @@
  *  and column matching. Includes forward-fill for merged cells (C100-01). */
 
 import type { BankId, ParseResult, RawTransaction } from './types.js';
-import { ParseError } from './types.js';
+import { createParseErrorCollector, ParseError } from './types.js';
 import { detectBank } from './detect.js';
 import { parseAmount } from './amount.js';
 import { normalizeHTML } from './html-normalize.js';
@@ -13,7 +13,6 @@ import {
   AMBIGUOUS_AMOUNT_MESSAGE,
   compileAmountFieldPlan,
   createSheetMergeIndex,
-  MAX_REQUIRED_FIELD_ROW_ERRORS,
   missingRequiredColumnLabels,
   normalizeRequiredMerchant,
   normalizeResolvedSpendingAmount,
@@ -86,7 +85,7 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
  *  commonly merge cells across rows (C100-01, parity with server-side). */
 export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult {
   const rows: unknown[][] = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
-  const errors: ParseError[] = [];
+  const errors = createParseErrorCollector();
   const transactions: RawTransaction[] = [];
 
   if (rows.length === 0) {
@@ -144,7 +143,6 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
 
   const mergeIndex = createSheetMergeIndex(sheet['!merges']);
   const consumedAmountSources = new Set<string>();
-  let requiredMerchantErrorCount = 0;
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -203,14 +201,11 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
 
     const merchant = normalizeRequiredMerchant(merchantRaw);
     if (!merchant) {
-      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
-        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
-          code: REQUIRED_MERCHANT_ERROR_CODE,
-          line: i + 1,
-          raw: rowText,
-        }));
-      }
-      requiredMerchantErrorCount++;
+      errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+        code: REQUIRED_MERCHANT_ERROR_CODE,
+        line: i + 1,
+        raw: rowText,
+      }));
       continue;
     }
 

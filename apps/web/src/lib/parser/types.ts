@@ -1,10 +1,16 @@
 import type {
+  BankId,
+  FileFormat,
   ParsedTransactionFacts,
   SupportedTextEncoding,
 } from '@cherrypicker/parser/browser';
+import {
+  createBoundedDiagnosticArray,
+  PARSE_DIAGNOSTICS_OMITTED_ERROR_CODE,
+  PARSE_DIAGNOSTICS_OMITTED_MESSAGE,
+} from '@cherrypicker/parser/browser';
 
-export type FileFormat = 'csv' | 'xlsx' | 'pdf' | 'json' | 'ofx' | 'html';
-export type BankId = 'hyundai' | 'kb' | 'ibk' | 'woori' | 'samsung' | 'shinhan' | 'lotte' | 'hana' | 'nh' | 'bc' | 'kakao' | 'toss' | 'kbank' | 'bnk' | 'dgb' | 'suhyup' | 'jb' | 'kwangju' | 'jeju' | 'sc' | 'mg' | 'cu' | 'kdb' | 'epost';
+export type { BankId, FileFormat } from '@cherrypicker/parser/browser';
 
 export interface DetectionResult {
   format: FileFormat;
@@ -64,6 +70,15 @@ export class ParseError extends Error {
     this.format = options?.format;
     this.count = options?.count;
   }
+}
+
+export function createParseErrorCollector(): ParseError[] {
+  return createBoundedDiagnosticArray<ParseError>(
+    (count) => new ParseError(PARSE_DIAGNOSTICS_OMITTED_MESSAGE, {
+      code: PARSE_DIAGNOSTICS_OMITTED_ERROR_CODE,
+      count,
+    }),
+  );
 }
 
 export interface BankAdapter {

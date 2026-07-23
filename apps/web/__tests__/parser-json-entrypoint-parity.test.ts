@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { parseJSON as parseServerJSON } from '../src/json/index.js';
-import { MAX_JSON_PARSE_DIAGNOSTICS } from '../src/shared/json.js';
-import { parseJSON as parseWebJSON } from '../../../apps/web/src/lib/parser/json.js';
+import { parseJSON as parseServerJSON } from '../../../packages/parser/src/json/index.js';
+import { MAX_JSON_PARSE_DIAGNOSTICS } from '../../../packages/parser/src/shared/json.js';
+import { parseJSON as parseWebJSON } from '../src/lib/parser/json.js';
 
 function comparableResult(
   result: ReturnType<typeof parseServerJSON> | ReturnType<typeof parseWebJSON>,

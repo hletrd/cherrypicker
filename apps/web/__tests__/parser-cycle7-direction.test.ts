@@ -5,16 +5,19 @@ import {
   compileAmountFieldPlan,
   NON_SPENDING_AMOUNT_ERROR_CODE,
   resolveAmountField,
-} from '../../src/shared/amount-fields.js';
-import { parseCSV as parseServerCSV } from '../../src/csv/index.js';
-import { parseHTML as parseServerHTML } from '../../src/html/index.js';
-import { parseJSON as parseServerJSON } from '../../src/json/index.js';
-import { parseXLSXBuffer as parseServerXLSX } from '../../src/xlsx/index.js';
-import { parseCSV as parseWebCSV } from '../../../../apps/web/src/lib/parser/csv.js';
-import { parseHTML as parseWebHTML } from '../../../../apps/web/src/lib/parser/html.js';
-import { parseJSON as parseWebJSON } from '../../../../apps/web/src/lib/parser/json.js';
-import { parseXLSX as parseWebXLSX } from '../../../../apps/web/src/lib/parser/xlsx.js';
-import { asArrayBuffer, createWorkbookFixture } from './workbook.js';
+} from '../../../packages/parser/src/shared/amount-fields.js';
+import { parseCSV as parseServerCSV } from '../../../packages/parser/src/csv/index.js';
+import { parseHTML as parseServerHTML } from '../../../packages/parser/src/html/index.js';
+import { parseJSON as parseServerJSON } from '../../../packages/parser/src/json/index.js';
+import { parseXLSXBuffer as parseServerXLSX } from '../../../packages/parser/src/xlsx/index.js';
+import { parseCSV as parseWebCSV } from '../src/lib/parser/csv.js';
+import { parseHTML as parseWebHTML } from '../src/lib/parser/html.js';
+import { parseJSON as parseWebJSON } from '../src/lib/parser/json.js';
+import { parseXLSX as parseWebXLSX } from '../src/lib/parser/xlsx.js';
+import {
+  asArrayBuffer,
+  createWorkbookFixture,
+} from '../../../packages/parser/__tests__/conformance/workbook.js';
 
 function comparable(result: {
   transactions: Array<{ merchant: string; amount: number }>;

@@ -1,17 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 
-import { parseHTML as parseBrowserHTML } from '../../../../apps/web/src/lib/parser/html.js';
-import { parseJSON as parseBrowserJSON } from '../../../../apps/web/src/lib/parser/json.js';
-import { parseOFX as parseBrowserOFX } from '../../../../apps/web/src/lib/parser/ofx.js';
-import { parseHTML as parseServerHTML } from '../../src/html/index.js';
-import { parseJSON as parseServerJSON } from '../../src/json/index.js';
-import { parseOFX as parseServerOFX } from '../../src/ofx/index.js';
-import { parsePDFText } from '../../src/shared/pdf-text.js';
-import { MAX_JSON_PARSE_DIAGNOSTICS } from '../../src/shared/json.js';
+import { parseHTML as parseBrowserHTML } from '../src/lib/parser/html.js';
+import { parseJSON as parseBrowserJSON } from '../src/lib/parser/json.js';
+import { parseOFX as parseBrowserOFX } from '../src/lib/parser/ofx.js';
+import { parseHTML as parseServerHTML } from '../../../packages/parser/src/html/index.js';
+import { parseJSON as parseServerJSON } from '../../../packages/parser/src/json/index.js';
+import { parseOFX as parseServerOFX } from '../../../packages/parser/src/ofx/index.js';
+import { parsePDFText } from '../../../packages/parser/src/shared/pdf-text.js';
+import { MAX_JSON_PARSE_DIAGNOSTICS } from '../../../packages/parser/src/shared/json.js';
 import {
   MAX_REQUIRED_FIELD_ROW_ERRORS,
   REQUIRED_MERCHANT_ERROR_CODE,
-} from '../../src/shared/required-fields.js';
+} from '../../../packages/parser/src/shared/required-fields.js';
 
 function normalize(result: {
   transactions: unknown[];

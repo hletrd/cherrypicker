@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import type { BankId, ParseResult } from '../types.js';
-import { ParseError } from '../types.js';
+import { createParseErrorCollector, ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
 import { isValidISODate } from '../date-utils.js';
@@ -16,7 +16,6 @@ import {
   type StatementTextPrefixDecoder,
 } from '../shared/format-detection.js';
 import {
-  MAX_REQUIRED_FIELD_ROW_ERRORS,
   missingRequiredColumnLabels,
   normalizeRequiredMerchant,
   REQUIRED_MERCHANT_ERROR_CODE,
@@ -26,6 +25,12 @@ import {
   createSheetMergeIndex,
   resolveSheetCell,
 } from '../shared/sheet-cells.js';
+import {
+  preflightXLSXArchive,
+  XLSX_ARCHIVE_REJECTED_ERROR_CODE,
+  XLSX_ARCHIVE_REJECTED_MESSAGE,
+  XLSXArchiveValidationError,
+} from '../shared/xlsx-archive.js';
 import {
   AMBIGUOUS_AMOUNT_ERROR_CODE,
   AMBIGUOUS_AMOUNT_MESSAGE,
@@ -109,10 +114,22 @@ export function parseXLSXBuffer(buffer: Uint8Array, bank?: BankId): ParseResult 
       htmlBankHint = detectBank(html).bank;
       workbook = xlsx.read(html, { type: 'string', cellDates: false });
     } else {
+      preflightXLSXArchive(buffer);
       workbook = xlsx.read(Buffer.from(buffer), { type: 'buffer', cellDates: false });
     }
   } catch (err) {
     if (err instanceof UnsupportedTextEncodingError) throw err;
+    if (err instanceof XLSXArchiveValidationError) {
+      return {
+        bank: bank ?? null,
+        format: 'xlsx',
+        transactions: [],
+        errors: [new ParseError(XLSX_ARCHIVE_REJECTED_MESSAGE, {
+          code: XLSX_ARCHIVE_REJECTED_ERROR_CODE,
+          format: 'xlsx',
+        })],
+      };
+    }
     return {
       bank: bank ?? null,
       format: 'xlsx',
@@ -234,11 +251,10 @@ function parseXLSXSheet(
   }
 
   const transactions: import('../types.js').RawTransaction[] = [];
-  const errors: import('../types.js').ParseError[] = [];
+  const errors = createParseErrorCollector();
 
   const mergeIndex = createSheetMergeIndex(sheet['!merges']);
   const consumedAmountSources = new Set<string>();
-  let requiredMerchantErrorCount = 0;
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -298,14 +314,11 @@ function parseXLSXSheet(
 
     const merchant = normalizeRequiredMerchant(merchantRaw);
     if (!merchant) {
-      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
-        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
-          code: REQUIRED_MERCHANT_ERROR_CODE,
-          line: i + 1,
-          raw: rowText,
-        }));
-        requiredMerchantErrorCount++;
-      }
+      errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+        code: REQUIRED_MERCHANT_ERROR_CODE,
+        line: i + 1,
+        raw: rowText,
+      }));
       continue;
     }
     if (amountResolution.kind === 'non-spending') {

@@ -4,6 +4,11 @@ export { parseStatement } from './statement.js';
 export type { ParseOptions, StatementReadDependencies } from './statement.js';
 export { parseCSV } from './csv/index.js';
 export { parseXLSX, parseXLSXBuffer } from './xlsx/index.js';
+export {
+  BANK_COLUMN_CONFIGS,
+  getBankColumnConfig,
+  type ColumnConfig,
+} from './xlsx/adapters/index.js';
 export { parsePDF, parsePDFBuffer } from './pdf/index.js';
 export { parseJSON } from './json/index.js';
 export { parseOFX } from './ofx/index.js';

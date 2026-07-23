@@ -2,6 +2,11 @@ import type { BankId, ParseResult } from './types.js';
 import { ParseError } from './types.js';
 import {
   decodeStatementTextBytes,
+  MAX_PARSE_DIAGNOSTICS,
+  MAX_PARSE_DIAGNOSTIC_MESSAGE_LENGTH,
+  MAX_PARSE_DIAGNOSTIC_RAW_LENGTH,
+  PARSE_DIAGNOSTICS_OMITTED_ERROR_CODE,
+  PARSE_DIAGNOSTICS_OMITTED_MESSAGE,
   type StatementTextFormat,
 } from '@cherrypicker/parser/browser';
 
@@ -46,9 +51,11 @@ interface ParserWorkerScope {
   postMessage(message: ParserWorkerResponse): void;
 }
 
-export const MAX_SERIALIZED_PARSE_ERRORS = 100;
-export const MAX_SERIALIZED_PARSE_ERROR_MESSAGE_LENGTH = 1_024;
-export const MAX_SERIALIZED_PARSE_ERROR_RAW_LENGTH = 2_048;
+export const MAX_SERIALIZED_PARSE_ERRORS = MAX_PARSE_DIAGNOSTICS;
+export const MAX_SERIALIZED_PARSE_ERROR_MESSAGE_LENGTH =
+  MAX_PARSE_DIAGNOSTIC_MESSAGE_LENGTH;
+export const MAX_SERIALIZED_PARSE_ERROR_RAW_LENGTH =
+  MAX_PARSE_DIAGNOSTIC_RAW_LENGTH;
 
 function truncate(value: string | undefined, maxLength: number): string | undefined {
   if (value === undefined || value.length <= maxLength) return value;
@@ -105,8 +112,8 @@ export function serializeParserWorkerResult(
   }
   if (hasOmittedErrors) {
     errors.push({
-      message: '나머지 파싱 경고를 요약했어요.',
-      code: 'parse_diagnostics_omitted',
+      message: PARSE_DIAGNOSTICS_OMITTED_MESSAGE,
+      code: PARSE_DIAGNOSTICS_OMITTED_ERROR_CODE,
       count: omittedCount,
     });
   }

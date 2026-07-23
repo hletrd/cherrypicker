@@ -1,5 +1,5 @@
 import type { BankId, ParseResult } from '../types.js';
-import { ParseError } from '../types.js';
+import { createParseErrorCollector, ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { parsePDFText } from '../shared/pdf-text.js';
 import { extractText, extractTextFromBuffer } from './extractor.js';
@@ -72,7 +72,8 @@ async function parseExtractedPDFText(
     };
   }
 
-  const errors = [...local.errors];
+  const errors = createParseErrorCollector();
+  errors.push(...local.errors);
   if (!options.allowRemoteLLM) {
     errors.push(new ParseError(
       '구조화된 PDF 파싱에 실패했습니다. 원격 LLM 폴백은 기본적으로 비활성화되어 있습니다. 명시적으로 허용하려면 --allow-remote-llm 플래그를 사용하세요.',

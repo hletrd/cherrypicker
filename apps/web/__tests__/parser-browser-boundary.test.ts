@@ -2,12 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 
 const browserFiles = [
-  '../../src/browser.ts',
-  '../../src/shared/amount.ts',
-  '../../src/shared/date-cell.ts',
-  '../../src/shared/encoding.ts',
-  '../../src/shared/pdf-text.ts',
-  '../../src/shared/sheet-cells.ts',
+  '../../../packages/parser/src/browser.ts',
+  '../../../packages/parser/src/shared/amount.ts',
+  '../../../packages/parser/src/shared/date-cell.ts',
+  '../../../packages/parser/src/shared/encoding.ts',
+  '../../../packages/parser/src/shared/pdf-text.ts',
+  '../../../packages/parser/src/shared/sheet-cells.ts',
 ].map((path) => new URL(path, import.meta.url));
 
 describe('browser parser boundary', () => {
@@ -19,7 +19,7 @@ describe('browser parser boundary', () => {
   });
 
   test('web adapters do not redefine corrected parser algorithms', () => {
-    const directory = new URL('../../../../apps/web/src/lib/parser/', import.meta.url);
+    const directory = new URL('../src/lib/parser/', import.meta.url);
     const source = readdirSync(directory)
       .filter((name) => name.endsWith('.ts'))
       .map((name) => readFileSync(new URL(name, directory), 'utf8'))

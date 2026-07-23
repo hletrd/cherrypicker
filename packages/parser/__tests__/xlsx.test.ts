@@ -594,7 +594,10 @@ describe('XLSX invalid serial date error reporting', () => {
       const result = await parseXLSX(filePath);
       expect(result.transactions).toHaveLength(0);
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors[0]?.message).toContain('XLSX 파일을 읽을 수 없습니다');
+      expect(result.errors[0]).toMatchObject({
+        code: 'xlsx_archive_rejected',
+        message: 'XLSX 압축 파일이 손상되었거나 안전 제한을 초과했습니다.',
+      });
     } finally {
       cleanup(filePath);
     }

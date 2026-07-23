@@ -1,17 +1,26 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 
-import { parseHTML as parseServerHTML } from '../../src/html/index.js';
-import { parseOFX as parseServerOFX } from '../../src/ofx/index.js';
-import { parseXLSX as parseServerXLSX } from '../../src/xlsx/index.js';
-import { parseHTML as parseBrowserHTML } from '../../../../apps/web/src/lib/parser/html.js';
-import { parseOFX as parseBrowserOFX } from '../../../../apps/web/src/lib/parser/ofx.js';
-import { parseXLSX as parseBrowserXLSX } from '../../../../apps/web/src/lib/parser/xlsx.js';
+import { parseHTML as parseServerHTML } from '../../../packages/parser/src/html/index.js';
+import { parseOFX as parseServerOFX } from '../../../packages/parser/src/ofx/index.js';
+import { parseXLSX as parseServerXLSX } from '../../../packages/parser/src/xlsx/index.js';
+import { parseHTML as parseBrowserHTML } from '../src/lib/parser/html.js';
+import { parseOFX as parseBrowserOFX } from '../src/lib/parser/ofx.js';
+import { parseXLSX as parseBrowserXLSX } from '../src/lib/parser/xlsx.js';
 
-import { asArrayBuffer, createWorkbookFixture } from './workbook.js';
+import {
+  asArrayBuffer,
+  createWorkbookFixture,
+} from '../../../packages/parser/__tests__/conformance/workbook.js';
 
 function fixture(name: string): string {
-  return readFileSync(new URL(`../fixtures/html/${name}`, import.meta.url), 'utf8');
+  return readFileSync(
+    new URL(
+      `../../../packages/parser/__tests__/fixtures/html/${name}`,
+      import.meta.url,
+    ),
+    'utf8',
+  );
 }
 
 function normalize(result: {

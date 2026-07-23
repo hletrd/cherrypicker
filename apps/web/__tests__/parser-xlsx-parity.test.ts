@@ -1,17 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import { BANK_COLUMN_CONFIGS as backendConfigs } from '../src/xlsx/adapters/index.js';
+import { BANK_COLUMN_CONFIGS as backendConfigs } from '../../../packages/parser/src/xlsx/adapters/index.js';
 import {
   BANK_COLUMN_CONFIGS as webConfigs,
   isHTMLContent as webIsHTMLContent,
   parseDateToISO as webParseDateToISO,
-} from '../../../apps/web/src/lib/parser/xlsx.ts';
+} from '../src/lib/parser/xlsx.ts';
 import {
   isHTMLContent as serverIsHTMLContent,
   parseDateToISO as serverParseDateToISO,
-} from '../src/xlsx/index.js';
-import { parseAmountString as serverParseAmountString } from '../src/csv/shared.js';
-import { parseAmountString as webParseAmountString } from '../../../apps/web/src/lib/parser/csv.ts';
-import { HTML_XLS_SNIFF_BYTES } from '../src/shared/format-detection.js';
+} from '../../../packages/parser/src/xlsx/index.js';
+import { parseAmountString as serverParseAmountString } from '../../../packages/parser/src/csv/shared.js';
+import { parseAmountString as webParseAmountString } from '../src/lib/parser/csv.ts';
+import { HTML_XLS_SNIFF_BYTES } from '../../../packages/parser/src/shared/format-detection.js';
 import {
   SUMMARY_ROW_PATTERN as serverSummaryPattern,
   HEADER_KEYWORDS as serverHeaderKeywords,
@@ -25,7 +25,7 @@ import {
   MERCHANT_KEYWORDS as serverMerchantKeywords,
   AMOUNT_KEYWORDS as serverAmountKeywords,
   isValidHeaderRow as serverIsValidHeaderRow,
-} from '../src/csv/column-matcher.js';
+} from '../../../packages/parser/src/csv/column-matcher.js';
 import {
   SUMMARY_ROW_PATTERN as webSummaryPattern,
   HEADER_KEYWORDS as webHeaderKeywords,
@@ -39,7 +39,7 @@ import {
   MERCHANT_KEYWORDS as webMerchantKeywords,
   AMOUNT_KEYWORDS as webAmountKeywords,
   isValidHeaderRow as webIsValidHeaderRow,
-} from '../../../apps/web/src/lib/parser/column-matcher.ts';
+} from '../src/lib/parser/column-matcher.ts';
 
 describe('XLSX parser parity', () => {
   test('browser and package parser column configs stay aligned for supported banks', () => {

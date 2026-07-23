@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { parseFile } from '../../../apps/web/src/lib/parser/index.js';
-import { parseStatement } from '../src/statement.js';
+import { parseFile } from '../src/lib/parser/index.js';
+import { parseStatement } from '../../../packages/parser/src/statement.js';
 
 function bytes(content: string): Uint8Array {
   return new TextEncoder().encode(content);

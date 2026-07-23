@@ -4,13 +4,12 @@
  *  (CCSTMTRS) with proper SGML terminator patterns (C100-03). */
 
 import type { BankId, ParseResult, RawTransaction } from './types.js';
-import { ParseError } from './types.js';
+import { createParseErrorCollector, ParseError } from './types.js';
 import { detectBank } from './detect.js';
 import { parseAmountString } from './amount.js';
 import {
   extractOFXTag,
   extractOFXTransactionBlocks,
-  MAX_REQUIRED_FIELD_ROW_ERRORS,
   normalizeRequiredMerchant,
   parseOFXDateToISO,
   REQUIRED_MERCHANT_ERROR_CODE,
@@ -27,7 +26,7 @@ function parseOFXAmount(raw: string): number | null {
 
 /** Parse OFX content and extract transactions. */
 export function parseOFX(content: string, bank?: BankId): ParseResult {
-  const errors: ParseError[] = [];
+  const errors = createParseErrorCollector();
   const transactions: RawTransaction[] = [];
   // Detect bank from content if not provided. Also try extracting from
   // OFX <ORG> tag which identifies the financial institution (C100-03).
@@ -90,7 +89,6 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
     };
   }
 
-  let requiredMerchantErrorCount = 0;
   for (let i = 0; i < blocks.length; i++) {
     const { content: block, line } = blocks[i]!;
     const dtPosted = extractOFXTag(block, 'DTPOSTED');
@@ -115,13 +113,10 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
       missingRequiredField = true;
     }
     if (!merchant) {
-      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
-        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
-          code: REQUIRED_MERCHANT_ERROR_CODE,
-          line,
-        }));
-      }
-      requiredMerchantErrorCount++;
+      errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+        code: REQUIRED_MERCHANT_ERROR_CODE,
+        line,
+      }));
       missingRequiredField = true;
     }
     if (missingRequiredField) continue;
