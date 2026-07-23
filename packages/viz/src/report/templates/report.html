@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none';" />
-  <title>CardPick 분석 보고서</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'sha256-{{STYLE_SHA256}}'; base-uri 'none'; object-src 'none';" />
+  <title>CherryPicker 분석 보고서</title>
   <style>
     :root {
       --color-bg: #f8fafc;
@@ -179,7 +179,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>CardPick 분석 보고서</h1>
+      <h1>CherryPicker 분석 보고서</h1>
       <p class="subtitle">생성일: {{GENERATED_DATE}}</p>
     </header>
 
@@ -208,7 +208,7 @@
     </div>
 
     <footer>
-      <p>CardPick — 한국 신용카드 최적화 도구 &nbsp;|&nbsp; 본 보고서는 참고용으로만 활용하십시오.</p>
+      <p>CherryPicker — 한국 신용카드 최적화 도구 &nbsp;|&nbsp; 본 보고서는 참고용으로만 활용하십시오.</p>
     </footer>
   </div>
 </body>

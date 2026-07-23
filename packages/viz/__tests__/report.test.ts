@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { generateHTMLReport } from '../src/report/generator.js';
 import type { OptimizationResult, CategorizedTransaction } from '@cherrypicker/core';
 
@@ -82,5 +83,38 @@ describe('generateHTMLReport', () => {
     const html = generateHTMLReport(evilOptimization, transactions, categoryLabels);
     expect(html).toContain('O&#39;Brien');   // single quote escaped
     expect(html).not.toContain("O'Brien");   // raw single quote not present
+  });
+
+  test('authorizes exactly the fixed inline stylesheet and disables scripts', () => {
+    const html = generateHTMLReport(optimization, transactions, categoryLabels);
+    const styleMatches = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)];
+    const csp = html.match(
+      /<meta http-equiv="Content-Security-Policy" content="([^"]+)" \/>/,
+    )?.[1];
+
+    expect(styleMatches).toHaveLength(1);
+    const style = styleMatches[0]?.[1];
+    expect(style).toBeDefined();
+    const expectedHash = createHash('sha256')
+      .update(style!, 'utf8')
+      .digest('base64');
+
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).toContain("script-src 'none'");
+    expect(csp).toContain(`style-src 'sha256-${expectedHash}'`);
+    expect(csp).not.toContain("'unsafe-inline'");
+    expect(html).not.toContain('{{STYLE_SHA256}}');
+    expect(html).not.toMatch(/<script\b/i);
+  });
+
+  test('uses the CherryPicker identity throughout the generated report', () => {
+    const html = generateHTMLReport(optimization, transactions, categoryLabels);
+
+    expect(html).toContain('<title>CherryPicker 분석 보고서</title>');
+    expect(html).toContain('<h1>CherryPicker 분석 보고서</h1>');
+    expect(html).toContain(
+      '<p>CherryPicker — 한국 신용카드 최적화 도구',
+    );
+    expect(html).not.toContain('CardPick');
   });
 });

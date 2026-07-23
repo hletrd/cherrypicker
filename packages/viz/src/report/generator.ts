@@ -1,10 +1,25 @@
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import type { OptimizationResult, CategorizedTransaction } from '@cherrypicker/core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const STYLE_HASH_PLACEHOLDER = '{{STYLE_SHA256}}';
+
+function hashInlineStylesheet(template: string): string {
+  const styles = [...template.matchAll(/<style>([\s\S]*?)<\/style>/g)];
+  if (styles.length !== 1 || styles[0]?.[1] === undefined) {
+    throw new Error(
+      `Report template must contain exactly one inline stylesheet; found ${styles.length}`,
+    );
+  }
+  if (template.split(STYLE_HASH_PLACEHOLDER).length !== 2) {
+    throw new Error('Report template must contain exactly one stylesheet hash placeholder');
+  }
+  return createHash('sha256').update(styles[0][1], 'utf8').digest('base64');
+}
 
 function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
@@ -244,6 +259,7 @@ export function generateHTMLReport(
   const template = readFileSync(templatePath, 'utf-8');
 
   const html = template
+    .replace(STYLE_HASH_PLACEHOLDER, hashInlineStylesheet(template))
     .replaceAll('{{GENERATED_DATE}}', esc(formatDate(new Date())))
     .replaceAll('{{SUMMARY}}', buildSummary(result))
     .replaceAll('{{CATEGORY_TABLE}}', buildCategoryTable(transactions, categoryLabels))
