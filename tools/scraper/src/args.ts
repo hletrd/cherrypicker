@@ -3,6 +3,11 @@ import {
   parseScraperIssuer,
   SCRAPER_ISSUERS,
 } from './config.js';
+import {
+  ANTHROPIC_API_KEY_ENV,
+  ANTHROPIC_MODEL_ENV,
+  DEFAULT_ANTHROPIC_MODEL,
+} from './runtime-config.js';
 
 type ScrapeOptionKey =
   | 'issuer'
@@ -97,6 +102,13 @@ function optionLabel(spec: ScrapeOptionSpec): string {
     : names;
 }
 
+export function formatScraperEnvironmentHelp(): string {
+  return [
+    `${ANTHROPIC_API_KEY_ENV}: 필수 환경 변수. 셸의 비공개 환경 또는 비밀 관리자로 주입하며 명령 인수나 로그에 넣지 않습니다.`,
+    `${ANTHROPIC_MODEL_ENV}: 선택 환경 변수. 기본값은 ${DEFAULT_ANTHROPIC_MODEL}입니다.`,
+  ].join('\n');
+}
+
 export function formatScrapeHelp(invocation: string): string {
   const labels = SCRAPE_OPTION_SPECS.map(optionLabel);
   const labelWidth = Math.max(...labels.map((label) => label.length));
@@ -113,9 +125,15 @@ export function formatScrapeHelp(invocation: string): string {
 옵션:
 ${options}
 
+환경 및 운영 계약:
+${formatScraperEnvironmentHelp()}
+  기본 URL과 공식 허용 호스트는 카드사 설정에서 가져옵니다.
+  공식 호스트 외 대상은 --allow-host를 반복 지정해 명시적으로 추가합니다.
+  출력 기본값은 ${DEFAULT_SCRAPER_OUTPUT}이며, --force는 기존 일반 카드 파일을 덮어씁니다.
+
 예시:
   ${invocation} --issuer hyundai
-  ${invocation} --issuer kb --url https://card.kbcard.com/...
+  ${invocation} --issuer kb --url https://card.kbcard.com/
   ${invocation} --issuer samsung --output ./output`;
 }
 

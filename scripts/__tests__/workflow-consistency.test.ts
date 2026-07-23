@@ -7,6 +7,8 @@ import { declaredBunVersion } from '../check-toolchain.js';
 
 const repoRoot = resolve(import.meta.dir, '../..');
 interface WorkflowStep {
+  name?: string;
+  run?: string;
   uses?: string;
   with?: Record<string, unknown>;
 }
@@ -116,6 +118,37 @@ describe('deployment workflow consistency', () => {
       'bun run dependencies:check && bun run security:audit && bun run data:check',
     );
     expect(workflow).toContain('run: bun run verify');
+  });
+
+  test('keeps the contributor and workflow verification path Bun-only', () => {
+    const verifySegments = packageJson.scripts.verify
+      .split('&&')
+      .map((segment) => segment.trim());
+    expect(verifySegments).toEqual([
+      'bun run toolchain:check',
+      'bun run migrations:check',
+      'bun run dependencies:check',
+      'bun run security:audit',
+      'bun run data:check',
+      'bun run lint',
+      'bun run typecheck',
+      'bun run test',
+      'bun run web:build:check',
+    ]);
+    expect(packageJson.scripts.verify).not.toMatch(
+      /(?:^|&&)\s*(?:node|npm|npx)\b/,
+    );
+    expect(readme).toContain('bun run verify');
+
+    const verificationSteps = workflowDefinition.jobs.build?.steps?.filter(
+      ({ run }) => run?.includes('verify'),
+    );
+    expect(verificationSteps).toEqual([
+      expect.objectContaining({
+        name: 'Verify repository',
+        run: 'bun run verify',
+      }),
+    ]);
   });
 
   test('runs regression E2E before Pages upload and never substitutes screenshots', () => {

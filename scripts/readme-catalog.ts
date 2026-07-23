@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import {
   issuersFileSchema,
+  SCRAPER_ISSUERS,
   type CardType,
   type IssuerMeta,
 } from '../packages/rules/src/index.js';
@@ -124,6 +125,39 @@ export function validateRootReadmeClaims(
         `README.md: missing recommendation disclosure "${requiredDisclosure}"`,
       );
     }
+  }
+
+  const scraperSection = markdown.match(
+    /### 카드 규칙 스크래퍼\n(?<section>[\s\S]*?)\n---/,
+  )?.groups?.section;
+  if (!scraperSection) {
+    throw new Error('README.md: missing card-rule scraper operating section');
+  }
+  for (const requiredScraperClaim of [
+    'ANTHROPIC_API_KEY',
+    'ANTHROPIC_MODEL',
+    'bun run scrape -- --issuer hyundai',
+    SCRAPER_ISSUERS.join(', '),
+    'packages/rules/data/cards',
+    '--allow-host',
+    '--force',
+    '생성된 YAML',
+    'bun run data:build',
+    'bun run data:check',
+  ]) {
+    if (!scraperSection.includes(requiredScraperClaim)) {
+      throw new Error(
+        `README.md: missing scraper operating claim "${requiredScraperClaim}"`,
+      );
+    }
+  }
+  const reviewIndex = scraperSection.indexOf('생성된 YAML');
+  const buildIndex = scraperSection.indexOf('bun run data:build');
+  const checkIndex = scraperSection.indexOf('bun run data:check');
+  if (!(reviewIndex < buildIndex && buildIndex < checkIndex)) {
+    throw new Error(
+      'README.md: scraper sequence must review YAML before data:build and data:check',
+    );
   }
 }
 

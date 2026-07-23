@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchCardPage, cleanHTML } from './fetcher.js';
-import { extractCardRules } from './extractor.js';
+import {
+  createCardExtractionClient,
+  extractCardRules as extractCardRulesWithClaude,
+} from './extractor.js';
 import { writeCardRule } from './writer.js';
 import {
   formatScrapeHelp,
@@ -14,6 +17,10 @@ import {
   type ScraperIssuer,
 } from './config.js';
 import { buildIssuerNetworkPolicy } from './network-policy.js';
+import {
+  resolveScraperRuntimeConfig,
+  type ScraperRuntimeConfig,
+} from './runtime-config.js';
 import { sanitizeTerminalText } from '@cherrypicker/viz';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -56,20 +63,34 @@ export function loadIssuerTarget(issuer: ScraperIssuer): IssuerTarget {
 }
 
 export interface ScraperCliDependencies {
+  resolveRuntimeConfig: typeof resolveScraperRuntimeConfig;
   loadIssuerTarget: typeof loadIssuerTarget;
   buildIssuerNetworkPolicy: typeof buildIssuerNetworkPolicy;
   fetchCardPage: typeof fetchCardPage;
   cleanHTML: typeof cleanHTML;
-  extractCardRules: typeof extractCardRules;
+  extractCardRules(
+    pageContent: string,
+    issuer: ScraperIssuer,
+    runtimeConfig: ScraperRuntimeConfig,
+  ): ReturnType<typeof extractCardRulesWithClaude>;
   writeCardRule: typeof writeCardRule;
 }
 
 const DEFAULT_DEPENDENCIES: ScraperCliDependencies = {
+  resolveRuntimeConfig: resolveScraperRuntimeConfig,
   loadIssuerTarget,
   buildIssuerNetworkPolicy,
   fetchCardPage,
   cleanHTML,
-  extractCardRules,
+  extractCardRules(pageContent, issuer, runtimeConfig) {
+    return extractCardRulesWithClaude(
+      pageContent,
+      issuer,
+      createCardExtractionClient(runtimeConfig.apiKey),
+      undefined,
+      runtimeConfig.model,
+    );
+  },
   writeCardRule,
 };
 
@@ -101,6 +122,7 @@ export async function runScraperCli(
     allowHosts: requestedAllowedHosts,
   } = parsed;
   const outputDir = output ?? defaultOutput;
+  const runtimeConfig = dependencies.resolveRuntimeConfig();
 
   // Load issuer target config
   const target = dependencies.loadIssuerTarget(issuer);
@@ -116,6 +138,7 @@ export async function runScraperCli(
   console.log(`카드사: ${terminalText(issuer)}`);
   console.log(`대상 URL: ${terminalText(targetUrl)}`);
   console.log(`출력 디렉토리: ${terminalText(outputDir)}`);
+  console.log(`Claude 모델: ${terminalText(runtimeConfig.model)}`);
   if (requestedAllowedHosts.length > 0) {
     console.warn(
       `추가 허용 호스트: ${terminalText(requestedAllowedHosts.join(', '))}`,
@@ -139,7 +162,11 @@ export async function runScraperCli(
 
   // Step 3: Extract rules with LLM
   console.log('3/4 LLM으로 혜택 규칙 추출 중...');
-  const cardRules = await dependencies.extractCardRules(cleaned, issuer);
+  const cardRules = await dependencies.extractCardRules(
+    cleaned,
+    issuer,
+    runtimeConfig,
+  );
   console.log(
     `   카드명: ${terminalText(cardRules.card.nameKo)} ` +
       `(${terminalText(cardRules.card.name)})`,

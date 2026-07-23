@@ -101,6 +101,25 @@ describe('parseScraperArgs', () => {
     ).toThrow('널 바이트');
   });
 
+  test('never accepts a credential through argv or echoes it in an error', () => {
+    const secret = 'sk-ant-api03-do-not-print-this-secret';
+    let thrown: unknown;
+    try {
+      parseScraperArgs([
+        '--issuer',
+        'shinhan',
+        '--api-key',
+        secret,
+      ]);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toContain('알 수 없는 옵션');
+    expect((thrown as Error).message).not.toContain(secret);
+  });
+
   test('generates complete direct and root help from one specification', () => {
     const direct = formatScrapeHelp('bun run tools/scraper/src/cli.ts');
     const root = formatScrapeHelp('cherrypicker scrape');
@@ -111,5 +130,16 @@ describe('parseScraperArgs', () => {
     expect(direct).toContain('packages/rules/data/cards');
     expect(direct).toContain('반복 가능');
     expect(root).toContain('cherrypicker scrape --issuer');
+    for (const help of [direct, root]) {
+      expect(help).toContain('ANTHROPIC_API_KEY');
+      expect(help).toContain('ANTHROPIC_MODEL');
+      expect(help).toContain('공식 호스트');
+      expect(help).toContain('--allow-host');
+      expect(help).toContain('--force');
+      expect(help).not.toMatch(/sk-ant-[A-Za-z0-9_-]+/);
+    }
+    expect(
+      direct.replaceAll('bun run tools/scraper/src/cli.ts', '<scrape>'),
+    ).toBe(root.replaceAll('cherrypicker scrape', '<scrape>'));
   });
 });

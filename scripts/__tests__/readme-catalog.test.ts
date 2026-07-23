@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { ACCEPTED_STATEMENT_EXTENSIONS } from '../../apps/web/src/lib/supported-formats.js';
+import { SCRAPER_ISSUERS } from '../../tools/scraper/src/config.js';
 import {
   escapeMarkdownTableCell,
   ISSUER_INDEX_BEGIN,
@@ -301,6 +302,30 @@ describe('README catalog rendering', () => {
     expect(localDevelopment).toMatch(
       /ANTHROPIC_API_KEY[\s\S]*비밀 관리자[\s\S]*로그, 저장소에 넣지 말고/,
     );
+    expect(commands).toContain('bun run verify');
+  });
+
+  test('binds the scraper README sequence to canonical configuration and publication', async () => {
+    const readme = await readFile(`${repositoryRoot}/README.md`, 'utf8');
+    const section = readme.match(
+      /### 카드 규칙 스크래퍼\n(?<section>[\s\S]*?)\n---/,
+    )?.groups?.section;
+
+    expect(section).toBeDefined();
+    expect(section).toContain('ANTHROPIC_API_KEY');
+    expect(section).toContain('ANTHROPIC_MODEL');
+    expect(section).toContain('bun run scrape -- --issuer hyundai');
+    expect(section).toContain(SCRAPER_ISSUERS.join(', '));
+    expect(section).toContain('packages/rules/data/cards');
+    expect(section).toContain('--allow-host');
+    expect(section).toContain('--force');
+
+    const reviewIndex = section!.indexOf('생성된 YAML');
+    const buildIndex = section!.indexOf('bun run data:build');
+    const checkIndex = section!.indexOf('bun run data:check');
+    expect(reviewIndex).toBeGreaterThanOrEqual(0);
+    expect(buildIndex).toBeGreaterThan(reviewIndex);
+    expect(checkIndex).toBeGreaterThan(buildIndex);
   });
 
   test('keeps README and agent-guide YAML examples canonical', async () => {

@@ -117,7 +117,7 @@ cherrypicker/
 │   └── public/data/       # 생성된 카드·카테고리 JSON
 ├── packages/
 │   ├── core/              # 분류기, 계산기, 옵티마이저 (순수 TS)
-│   ├── parser/            # Node/Bun용 파서 (CLI에서 사용)
+│   ├── parser/            # Bun용 파서 (CLI에서 사용)
 │   ├── rules/data/cards/  # 카드사별 YAML
 │   └── viz/               # 터미널 테이블, HTML 리포트
 ├── tools/
@@ -151,6 +151,9 @@ bun run data:build
 # 생성 데이터가 소스와 일치하는지 확인
 bun run data:check
 
+# CI와 같은 전체 검증
+bun run verify
+
 # 웹 개발 서버
 bun run dev:web
 
@@ -168,6 +171,33 @@ PDF의 원격 LLM 폴백은 기본적으로 꺼져 있어요. 사용하려면
 비공개 환경 또는 비밀 관리자를 사용하세요. `--allow-remote-llm`을
 지정해도 실제 전송 전에 동의를 묻고, CI 같은 비대화형 환경에서는
 명시적인 `--yes`가 필요해요.
+
+---
+
+### 카드 규칙 스크래퍼
+
+스크래퍼는 Claude API를 사용하므로 `ANTHROPIC_API_KEY`를 현재 프로세스의
+환경 변수로 주입해야 해요. 키를 명령 인수, `.env`, 로그, 저장소에 넣지
+말고 셸의 비공개 환경이나 비밀 관리자를 사용하세요. 모델을 바꾸려면
+`ANTHROPIC_MODEL`을 설정합니다. 기본 모델은 `claude-sonnet-5`예요.
+
+지원 대상은 스크래퍼의 정규 목록과 같은
+`hyundai, kb, samsung, shinhan, lotte, hana, woori, ibk, nh, bc`입니다.
+기본 URL과 공식 허용 호스트는 카드사 설정에서 읽어요. 공식 호스트 밖의
+URL이 꼭 필요하면 `--allow-host`를 반복해서 명시적으로 추가하세요.
+
+```bash
+# ANTHROPIC_API_KEY를 셸의 비공개 환경이나 비밀 관리자에서 먼저 주입
+bun run scrape -- --issuer hyundai
+```
+
+기본 출력은 `packages/rules/data/cards`예요. 같은 이름의 일반 카드 파일은
+기본적으로 덮어쓰지 않으며, `--force`를 쓰면 기존 파일을 교체할 수 있으니
+대상을 먼저 확인하세요. 실행 후에는 다음 순서로 게시 데이터를 검증합니다.
+
+1. 생성된 YAML의 출처, 카드명, 전월실적, 혜택, 한도를 직접 검토합니다.
+2. `bun run data:build`로 공개 JSON과 카드사 인덱스를 다시 만듭니다.
+3. `bun run data:check`로 YAML, 생성 데이터, 문서가 일치하는지 확인합니다.
 
 ---
 

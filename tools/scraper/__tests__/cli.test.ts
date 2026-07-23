@@ -22,6 +22,11 @@ const BIDI = 'LEFT\u202eRIGHT\u2066END\u2069';
 const HOSTILE_TEXT = `${OSC_8}${OSC_52}${CSI}${LINE_CONTROLS}${BIDI}`;
 const INJECTED_CONTROLS =
   /[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
+const VALID_API_KEY = 'sk-ant-api03-test-key-1234567890';
+const TEST_RUNTIME_CONFIG = {
+  apiKey: VALID_API_KEY,
+  model: 'claude-test-model',
+} as const;
 
 interface CapturedConsole {
   logs: string[];
@@ -83,6 +88,7 @@ function successfulDependencies(
   overrides: Partial<ScraperCliDependencies> = {},
 ): Partial<ScraperCliDependencies> {
   return {
+    resolveRuntimeConfig: () => TEST_RUNTIME_CONFIG,
     loadIssuerTarget: (issuer) => ({
       issuer,
       baseUrl: 'https://issuer.example/card',
@@ -104,6 +110,55 @@ function successfulDependencies(
 }
 
 describe('direct scraper CLI boundary', () => {
+  test('fails configuration preflight before target, network, extraction, or write work', async () => {
+    const calls: string[] = [];
+    const unavailable = (name: string) => () => {
+      calls.push(name);
+      throw new Error(`${name} must not run`);
+    };
+
+    await expect(
+      runScraperCli(
+        ['--issuer', 'shinhan'],
+        {
+          resolveRuntimeConfig: () => {
+            calls.push('preflight');
+            throw new Error('ANTHROPIC_API_KEY 환경 변수가 필요합니다.');
+          },
+          loadIssuerTarget: unavailable('target'),
+          buildIssuerNetworkPolicy: unavailable('network'),
+          fetchCardPage: unavailable('fetch'),
+          cleanHTML: unavailable('clean'),
+          extractCardRules: unavailable('extract'),
+          writeCardRule: unavailable('write'),
+        },
+      ),
+    ).rejects.toThrow('ANTHROPIC_API_KEY');
+
+    expect(calls).toEqual(['preflight']);
+  });
+
+  test('passes the resolved model to the offline extraction seam', async () => {
+    let receivedModel: string | undefined;
+    const captured = await captureConsole(async () => {
+      await runScraperCli(
+        ['--issuer', 'shinhan'],
+        successfulDependencies({
+          extractCardRules: async (_page, _issuer, runtimeConfig) => {
+            receivedModel = runtimeConfig.model;
+            return makeCardRule();
+          },
+        }),
+      );
+    });
+
+    expect(receivedModel).toBe(TEST_RUNTIME_CONFIG.model);
+    expect(captured.logs.join('\n')).toContain(
+      `Claude 모델: ${TEST_RUNTIME_CONFIG.model}`,
+    );
+    expect(captured.logs.join('\n')).not.toContain(VALID_API_KEY);
+  });
+
   test('sanitizes successful extraction values at captured console sinks', async () => {
     const captured = await captureConsole(async () => {
       await runScraperCli(
@@ -214,7 +269,11 @@ describe('direct scraper CLI boundary', () => {
     `;
     const result = spawnBun(
       ['-e', probe],
-      { ...process.env, NO_COLOR: '1' },
+      {
+        ...process.env,
+        ANTHROPIC_API_KEY: VALID_API_KEY,
+        NO_COLOR: '1',
+      },
     );
 
     expect(result.exitCode).toBe(0);
@@ -256,7 +315,11 @@ describe('direct scraper CLI boundary', () => {
     `;
     const result = spawnBun(
       ['-e', probe],
-      { ...process.env, NO_COLOR: '1' },
+      {
+        ...process.env,
+        ANTHROPIC_API_KEY: VALID_API_KEY,
+        NO_COLOR: '1',
+      },
     );
 
     expect(result.exitCode).toBe(1);
@@ -274,6 +337,8 @@ describe('direct scraper CLI boundary', () => {
     expect(help.exitCode).toBe(0);
     expect(help.stderr.toString()).toBe('');
     expect(help.stdout.toString()).toContain('--allow-host');
+    expect(help.stdout.toString()).toContain('ANTHROPIC_API_KEY');
+    expect(help.stdout.toString()).toContain('ANTHROPIC_MODEL');
 
     const invalid = spawnBun([
       scraperEntry,

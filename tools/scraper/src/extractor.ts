@@ -5,6 +5,7 @@ import { CARD_RULE_EXTRACTION_TOOL } from './prompts/schemas.js';
 import { validateExtractedRules } from './validators.js';
 import type { ScraperIssuer } from './config.js';
 import { getCanonicalScraperRuleContract } from './rule-contract.js';
+import { DEFAULT_ANTHROPIC_MODEL } from './runtime-config.js';
 
 export const CARD_EXTRACTION_MAX_INPUT_CHARS = 40_000;
 export const CARD_EXTRACTION_MAX_OUTPUT_TOKENS = 8_192;
@@ -55,6 +56,12 @@ export interface CardExtractionClient {
 
 export type ScraperClock = () => Date;
 
+export function createCardExtractionClient(
+  apiKey: string,
+): CardExtractionClient {
+  return new Anthropic({ apiKey }) as CardExtractionClient;
+}
+
 function stampTrustedProvenance(raw: unknown, lastUpdated: string): unknown {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
     return raw;
@@ -80,8 +87,9 @@ export async function extractCardRules(
   issuer: ScraperIssuer,
   client: CardExtractionClient = new Anthropic() as CardExtractionClient,
   clock: ScraperClock = () => new Date(),
+  model = process.env['ANTHROPIC_MODEL'] ?? DEFAULT_ANTHROPIC_MODEL,
 ): Promise<CardRuleSet> {
-  const request = buildCardExtractionRequest(pageContent, issuer);
+  const request = buildCardExtractionRequest(pageContent, issuer, model);
   const response = await client.messages.create(request);
   return parseCardExtractionResponse(response, issuer, clock);
 }
@@ -89,7 +97,7 @@ export async function extractCardRules(
 export function buildCardExtractionRequest(
   pageContent: string,
   issuer: ScraperIssuer,
-  model = process.env['ANTHROPIC_MODEL'] ?? 'claude-sonnet-5',
+  model = process.env['ANTHROPIC_MODEL'] ?? DEFAULT_ANTHROPIC_MODEL,
 ): Anthropic.MessageCreateParamsNonStreaming {
   inspectCardExtractionInput(pageContent);
   const userMessage = `다음은 "${issuer}" 카드사의 카드 상품 페이지 내용입니다.

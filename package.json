@@ -26,7 +26,7 @@
     "web:build:check": "bun run --cwd apps/web build && bun scripts/check-web-bundles.ts",
     "lint": "bun run --filter '@cherrypicker/*' lint",
     "typecheck": "bun run --filter '@cherrypicker/*' typecheck",
-    "verify": "bun run toolchain:check && bun run migrations:check && bun run dependencies:check && bun run security:audit && bun run data:check && npm run lint && npm run typecheck && bun run test && bun run web:build:check",
+    "verify": "bun run toolchain:check && bun run migrations:check && bun run dependencies:check && bun run security:audit && bun run data:check && bun run lint && bun run typecheck && bun run test && bun run web:build:check",
     "parse": "bun run packages/parser/src/index.ts",
     "scrape": "bun run tools/scraper/src/cli.ts",
     "analyze": "bun run tools/cli/src/index.ts analyze",
