@@ -2,11 +2,12 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MerchantMatcher } from '@cherrypicker/core';
 import { loadCategories, buildCategoryLabelMap } from '@cherrypicker/rules';
-import type { BankId, RawTransaction } from '@cherrypicker/parser';
-import type { CategorizedTransaction } from '@cherrypicker/core';
+import type { BankId } from '@cherrypicker/parser/types';
 import { printSpendingSummary } from '@cherrypicker/viz';
 import { validateFilePath } from '../validation.js';
 import { parseStatementLocalFirst } from '../parse-statement.js';
+import { formatParseWarning, sanitizeTerminalText } from '../terminal.js';
+import { categorizeRawTransactions } from '../analysis.js';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
   fileURLToPath(new URL('../../../..', import.meta.url)),
@@ -52,7 +53,7 @@ export async function runAnalyze(args: string[]): Promise<void> {
 
   validateFilePath(file, { mustExist: true, label: '명세서 파일' });
 
-  console.log(`파일 분석 중: ${file}`);
+  console.log(`파일 분석 중: ${sanitizeTerminalText(file)}`);
 
   const parseResult = await parseStatementLocalFirst({
     filePath: file,
@@ -64,7 +65,7 @@ export async function runAnalyze(args: string[]): Promise<void> {
   if (parseResult.errors.length > 0) {
     console.warn('파싱 경고:');
     for (const e of parseResult.errors) {
-      console.warn(`  ${e.line ? `[${e.line}행] ` : ''}${e.message}`);
+      console.warn(formatParseWarning(e));
     }
   }
 
@@ -74,7 +75,7 @@ export async function runAnalyze(args: string[]): Promise<void> {
     console.log(`명세서 기간: ${parseResult.statementPeriod.start} ~ ${parseResult.statementPeriod.end}`);
   }
   if (parseResult.cardNumber) {
-    console.log(`카드 번호: ${parseResult.cardNumber}`);
+    console.log(`카드 번호: ${sanitizeTerminalText(parseResult.cardNumber)}`);
   }
 
   // Load categories and categorize
@@ -85,22 +86,10 @@ export async function runAnalyze(args: string[]): Promise<void> {
   // Build category labels map for Korean display in terminal output
   const categoryLabels = buildCategoryLabelMap(categories);
 
-  const categorized: CategorizedTransaction[] = parseResult.transactions.map((tx: RawTransaction, idx: number) => {
-    const match = matcher.match(tx.merchant, tx.category);
-    return {
-      id: `tx-${idx}`,
-      date: tx.date,
-      merchant: tx.merchant,
-      amount: tx.amount,
-      currency: 'KRW',
-      installments: tx.installments,
-      rawCategory: tx.category,
-      memo: tx.memo,
-      category: match.category,
-      subcategory: match.subcategory,
-      confidence: match.confidence,
-    };
-  });
+  const categorized = categorizeRawTransactions(
+    parseResult.transactions,
+    matcher,
+  );
 
   printSpendingSummary(categorized, categoryLabels);
 }

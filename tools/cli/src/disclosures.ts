@@ -1,17 +1,43 @@
-import type { OptimizationResult } from '@cherrypicker/core';
+import type {
+  OptimizationResult,
+  PreviousSpendingBasis,
+} from '@cherrypicker/core';
+
+type CliPreviousSpending =
+  | number
+  | PreviousSpendingBasis
+  | undefined;
+
+function previousSpendingMessage(
+  previousSpending: CliPreviousSpending,
+): string {
+  if (typeof previousSpending === 'number') {
+    return `전월실적 기준: 사용자 입력 ${previousSpending}원을 모든 카드에 동일하게 적용했습니다.`;
+  }
+  if (previousSpending?.kind === 'user-total') {
+    return `전월실적 기준: 사용자 입력 ${previousSpending.amount}원을 모든 카드에 동일하게 적용했습니다.`;
+  }
+  if (previousSpending?.kind === 'statement-month') {
+    return (
+      `전월실적 기준: ${previousSpending.month} 명세서에서 ` +
+      '카드별 실적 제외 항목을 반영했습니다.'
+    );
+  }
+  const missingMonth =
+    previousSpending?.kind === 'missing-calendar-month'
+      ? ` (${previousSpending.month})`
+      : '';
+  return (
+    `전월실적 기준: 이전 달 명세서${missingMonth}가 없어 모든 카드에 0원을 가정했습니다. ` +
+    '실제 전월실적은 --prev-spending으로 지정하세요.'
+  );
+}
 
 export function buildOptimizationDisclosures(
   result: OptimizationResult,
-  previousSpending: number | undefined,
+  previousSpending: CliPreviousSpending,
 ): string[] {
-  const messages = previousSpending === undefined
-    ? [
-        '전월실적 기준: 입력이 없어 모든 카드에 0원을 가정했습니다. ' +
-          '실제 전월실적은 --prev-spending으로 지정하세요.',
-      ]
-    : [
-        `전월실적 기준: 사용자 입력 ${previousSpending}원을 모든 카드에 동일하게 적용했습니다.`,
-      ];
+  const messages = [previousSpendingMessage(previousSpending)];
 
   const unsupported = result.unsupportedRules ?? [];
   if (unsupported.length > 0) {
@@ -21,7 +47,7 @@ export function buildOptimizationDisclosures(
     );
     for (const issue of unsupported.slice(0, 3)) {
       messages.push(
-        `  - ${issue.ruleId} (${issue.reason})` +
+        `  - ${issue.cardId}/${issue.ruleId} (${issue.reason})` +
           `${issue.detail ? `: ${issue.detail}` : ''}`,
       );
     }
@@ -35,7 +61,7 @@ export function buildOptimizationDisclosures(
 
 export function printOptimizationDisclosures(
   result: OptimizationResult,
-  previousSpending: number | undefined,
+  previousSpending: CliPreviousSpending,
   writeWarning: (message: string) => void = console.warn,
 ): void {
   for (const message of buildOptimizationDisclosures(

@@ -33,8 +33,20 @@ describe('optimization disclosures', () => {
     ]);
   });
 
+  test('discloses an exact previous statement month', () => {
+    expect(
+      buildOptimizationDisclosures(result(), {
+        kind: 'statement-month',
+        month: '2026-01',
+      }),
+    ).toEqual([
+      expect.stringContaining('2026-01 명세서'),
+    ]);
+  });
+
   test('summarizes unsupported reward assumptions with bounded detail', () => {
     const issues = Array.from({ length: 5 }, (_, index) => ({
+      cardId: `card-${index}`,
       transactionId: `tx-${index}`,
       ruleId: `rule-${index}`,
       category: 'transportation',
@@ -44,7 +56,7 @@ describe('optimization disclosures', () => {
     const messages = buildOptimizationDisclosures(result(issues), 0);
 
     expect(messages).toContainEqual(expect.stringContaining('5건'));
-    expect(messages).toContainEqual(expect.stringContaining('rule-0'));
+    expect(messages).toContainEqual(expect.stringContaining('card-0/rule-0'));
     expect(messages).toContainEqual(expect.stringContaining('그 외 2건'));
   });
 

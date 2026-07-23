@@ -156,6 +156,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
         // behavior in csv/generic.ts (C12-01/C12-06).
         if (!isValidISODate(parsedDate) && dateRaw.trim()) {
           errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw.trim()}`, { line: i + 1 }));
+          continue;
         }
 
         const tx: RawTransaction = {

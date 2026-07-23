@@ -180,6 +180,7 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
     const date = parseOFXDate(dateRaw);
     if (!isValidISODate(date) && dateRaw) {
       errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw}`, { line: i + 1 }));
+      continue;
     }
 
     // Parse amount — in OFX: negative = charges (money out), positive = credits.

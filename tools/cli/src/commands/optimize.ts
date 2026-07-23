@@ -2,8 +2,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MerchantMatcher, buildConstraints, optimize } from '@cherrypicker/core';
 import { loadCategories, loadAllCardRules, buildCategoryLabelMap } from '@cherrypicker/rules';
-import type { BankId, RawTransaction } from '@cherrypicker/parser';
-import type { CategorizedTransaction } from '@cherrypicker/core';
+import type { BankId } from '@cherrypicker/parser/types';
 import { printCardComparison, printOptimizationResult } from '@cherrypicker/viz';
 import {
   parsePreviousSpendingArgument,
@@ -11,6 +10,13 @@ import {
 } from '../validation.js';
 import { parseStatementLocalFirst } from '../parse-statement.js';
 import { printOptimizationDisclosures } from '../disclosures.js';
+import { formatParseWarning, sanitizeTerminalText } from '../terminal.js';
+import {
+  attachPerformanceIssues,
+  calendarScopeWarnings,
+  categorizeRawTransactions,
+  prepareCliAnalysis,
+} from '../analysis.js';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
   fileURLToPath(new URL('../../../..', import.meta.url)),
@@ -72,7 +78,7 @@ export async function runOptimize(args: string[]): Promise<void> {
 
   validateFilePath(file, { mustExist: true, label: '명세서 파일' });
 
-  console.log(`파일 분석 중: ${file}`);
+  console.log(`파일 분석 중: ${sanitizeTerminalText(file)}`);
 
   const parseResult = await parseStatementLocalFirst({
     filePath: file,
@@ -84,7 +90,7 @@ export async function runOptimize(args: string[]): Promise<void> {
   if (parseResult.errors.length > 0) {
     console.warn('파싱 경고:');
     for (const e of parseResult.errors) {
-      console.warn(`  ${e.line ? `[${e.line}행] ` : ''}${e.message}`);
+      console.warn(formatParseWarning(e));
     }
   }
 
@@ -96,22 +102,10 @@ export async function runOptimize(args: string[]): Promise<void> {
   // Build category labels map for the optimizer
   const categoryLabels = buildCategoryLabelMap(categories);
 
-  const categorized: CategorizedTransaction[] = parseResult.transactions.map((tx: RawTransaction, idx: number) => {
-    const match = matcher.match(tx.merchant, tx.category);
-    return {
-      id: `tx-${idx}`,
-      date: tx.date,
-      merchant: tx.merchant,
-      amount: tx.amount,
-      currency: 'KRW',
-      installments: tx.installments,
-      rawCategory: tx.category,
-      memo: tx.memo,
-      category: match.category,
-      subcategory: match.subcategory,
-      confidence: match.confidence,
-    };
-  });
+  const categorized = categorizeRawTransactions(
+    parseResult.transactions,
+    matcher,
+  );
 
   // Load card rules
   const resolvedCardsDir = cardsDir ?? DEFAULT_CARDS_DIR;
@@ -121,17 +115,22 @@ export async function runOptimize(args: string[]): Promise<void> {
   }
   console.log(`로드된 카드: ${cardRules.length}개`);
 
-  // Build constraints and optimize
-  const cardPreviousSpending = new Map<string, number>();
-  if (prevSpending !== undefined) {
-    for (const rule of cardRules) {
-      cardPreviousSpending.set(rule.card.id, prevSpending);
-    }
+  const prepared = prepareCliAnalysis(categorized, cardRules, prevSpending);
+  for (const warning of calendarScopeWarnings(prepared.context)) {
+    console.warn(sanitizeTerminalText(warning));
   }
-  const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
+  const constraints = buildConstraints(
+    prepared.context.latestTransactions,
+    prepared.cardPreviousSpending,
+    categoryLabels,
+  );
   const result = optimize(constraints, cardRules);
+  attachPerformanceIssues(result, prepared.performanceIssues);
 
-  printOptimizationDisclosures(result, prevSpending);
+  printOptimizationDisclosures(
+    result,
+    prepared.context.previousSpendingBasis,
+  );
   printCardComparison(result.cardResults);
   printOptimizationResult(result);
 }

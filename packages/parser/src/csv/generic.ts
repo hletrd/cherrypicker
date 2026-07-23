@@ -241,6 +241,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
     // behavior in apps/web/src/lib/parser/csv.ts (C71-04).
     if (!isValidISODate(parsedDate) && dateRaw.trim()) {
       errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw.trim()}`, { line: i + 1 }));
+      continue;
     }
 
     const tx: RawTransaction = {

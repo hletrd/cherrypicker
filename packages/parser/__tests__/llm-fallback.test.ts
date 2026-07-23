@@ -4,6 +4,7 @@ import {
   buildPDFLLMRequest,
   parsePDFLLMResponse,
   parsePDFWithLLM,
+  PDF_LLM_MAX_INPUT_CHARS,
   PDF_LLM_MAX_OUTPUT_TOKENS,
 } from '../src/pdf/llm-fallback.js';
 
@@ -80,28 +81,27 @@ describe('PDF Sonnet output contract', () => {
     ).toThrow('토큰 한도에서 잘렸습니다');
   });
 
-  test('keeps structural filtering for complete JSON responses', () => {
-    const parsed = parsePDFLLMResponse(
-      message(JSON.stringify([
-        { date: '2026-07-23', merchant: '유효', amount: 1200, installments: 3 },
-        { date: 'bad-date', merchant: '제외', amount: 500 },
-        { date: '2026-02-31', merchant: '불가능한 날짜', amount: 500 },
-        { date: '2026-07-24', merchant: '환불', amount: -100 },
-        { date: '2026-07-24', merchant: '소수 금액', amount: 100.5 },
-        {
-          date: '2026-07-24',
-          merchant: '안전하지 않은 정수',
-          amount: Number.MAX_SAFE_INTEGER + 1,
-        },
-      ])),
+  test('rejects a partial response instead of silently filtering malformed rows', () => {
+    expect(() =>
+      parsePDFLLMResponse(
+        message(JSON.stringify([
+          { date: '2026-07-23', merchant: '유효', amount: 1200 },
+          { date: 'bad-date', merchant: '제외', amount: 500 },
+        ])),
+      ),
+    ).toThrow('2개 행 중 1개');
+  });
+
+  test('rejects input beyond the complete single-request ceiling', () => {
+    expect(() =>
+      buildPDFLLMRequest('가'.repeat(PDF_LLM_MAX_INPUT_CHARS + 1)),
+    ).toThrow(`${PDF_LLM_MAX_INPUT_CHARS} 글자`);
+    const request = buildPDFLLMRequest(
+      '가'.repeat(PDF_LLM_MAX_INPUT_CHARS),
+      'claude-sonnet-5',
     );
-    expect(parsed).toEqual([
-      {
-        date: '2026-07-23',
-        merchant: '유효',
-        amount: 1200,
-        installments: 3,
-      },
-    ]);
+    const content = request.messages[0]!.content;
+    expect(typeof content).toBe('string');
+    expect(content).not.toContain('truncated');
   });
 });

@@ -560,7 +560,7 @@ describe('parenthesized negative amount inference', () => {
       '날짜아님,스타벅스,5500',
     ].join('\n');
     const result = parseGenericCSV(content, null);
-    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions).toHaveLength(0);
     expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
   });
 });
@@ -579,7 +579,7 @@ describe('adapter-factory date error reporting', () => {
       'INVALID_DATE,스타벅스,5500,0,카페',
     ].join('\n');
     const result = parseCSV(content, 'samsung');
-    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions).toHaveLength(0);
     expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
   });
 
@@ -591,7 +591,7 @@ describe('adapter-factory date error reporting', () => {
       '13/45,스타벅스,5500,0,카페',
     ].join('\n');
     const result = parseCSV(content, 'samsung');
-    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions).toHaveLength(0);
     expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
   });
 

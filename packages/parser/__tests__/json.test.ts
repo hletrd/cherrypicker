@@ -259,4 +259,59 @@ describe('parseJSON', () => {
     expect(result.transactions).toHaveLength(0);
     expect(result.errors.some((error) => error.message.includes('금액을 해석할 수 없습니다'))).toBe(true);
   });
+
+  it('validates typed transaction facts with statement provenance', () => {
+    const result = parseJSON(JSON.stringify([
+      {
+        date: '2026-02-10',
+        merchant: 'AliExpress',
+        amount: 10_000,
+        paymentType: 'overseas',
+        channel: 'online',
+        fuelVolumeLiters: '12.5',
+        performanceExclusionTags: ['annual_fee', 'tax_payment'],
+      },
+      {
+        date: '2026-02-11',
+        merchant: '일반 결제',
+        amount: 20_000,
+        performanceExclusionTags: [],
+      },
+    ]));
+
+    expect(result.errors).toEqual([]);
+    expect(result.transactions[0]).toMatchObject({
+      paymentType: 'overseas',
+      channel: 'online',
+      fuelVolumeLiters: 12.5,
+      performanceExclusionTags: ['annual_fee', 'tax_payment'],
+      factProvenance: {
+        paymentType: 'statement',
+        channel: 'statement',
+        fuelVolumeLiters: 'statement',
+        performanceExclusionTags: 'statement',
+      },
+    });
+    expect(result.transactions[0]?.category).toBeUndefined();
+    expect(result.transactions[1]).toMatchObject({
+      performanceExclusionTags: [],
+      factProvenance: {
+        performanceExclusionTags: 'statement',
+      },
+    });
+  });
+
+  it('quarantines calendar-invalid JSON rows', () => {
+    const result = parseJSON(JSON.stringify([
+      { date: '2026-99-99', merchant: '잘못된 날짜', amount: 10_000 },
+      { date: '2026-02-10', merchant: '정상 날짜', amount: 20_000 },
+    ]));
+
+    expect(result.transactions.map((transaction) => transaction.merchant)).toEqual([
+      '정상 날짜',
+    ]);
+    expect(result.errors.some((error) =>
+      error.message.includes('날짜를 해석할 수 없습니다')
+    )).toBe(true);
+  });
 });

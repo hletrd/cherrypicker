@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises';
+import { open, readFile } from 'fs/promises';
 import { extname } from 'path';
 import type { BankId, DetectionResult, FileFormat } from './types.js';
 import { ParseError } from './types.js';
@@ -193,93 +193,148 @@ export function detectCSVDelimiter(content: string): string {
   return ',';
 }
 
-export async function detectFormat(filePath: string): Promise<DetectionResult> {
+export const FILE_FORMAT_SNIFF_BYTES = 1024;
+
+export interface FileFormatHint {
+  format: FileFormat;
+  requiresCompleteJsonValidation: boolean;
+}
+
+export interface FinalizedFileFormat {
+  format: FileFormat;
+  errors: ParseError[];
+}
+
+export function detectFormatFromExtension(filePath: string): FileFormat | null {
   const ext = extname(filePath).toLowerCase();
-  const errors: ParseError[] = [];
+  if (ext === '.csv' || ext === '.tsv') return 'csv';
+  if (ext === '.xlsx' || ext === '.xls') return 'xlsx';
+  if (ext === '.pdf') return 'pdf';
+  if (ext === '.json') return 'json';
+  if (ext === '.ofx' || ext === '.qfx') return 'ofx';
+  if (ext === '.html' || ext === '.htm') return 'html';
+  return null;
+}
 
-  // Determine format from extension
-  let format: FileFormat;
-  let sniffBuffer: Buffer | null = null;
-
-  if (ext === '.csv' || ext === '.tsv') {
-    format = 'csv';
-  } else if (ext === '.xlsx' || ext === '.xls') {
-    format = 'xlsx';
-  } else if (ext === '.pdf') {
-    format = 'pdf';
-  } else if (ext === '.json') {
-    format = 'json';
-  } else if (ext === '.ofx' || ext === '.qfx') {
-    format = 'ofx';
-  } else if (ext === '.html' || ext === '.htm') {
-    format = 'html';
-  } else {
-    // Try to sniff from first bytes
-    sniffBuffer = await readFile(filePath);
-    const header = sniffBuffer.slice(0, 8);
-
-    // PDF magic bytes: %PDF
-    if (header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46) {
-      format = 'pdf';
-    }
-    // XLSX/ZIP magic bytes: PK (0x50 0x4B)
-    else if (header[0] === 0x50 && header[1] === 0x4b) {
-      format = 'xlsx';
-    }
-    // Legacy XLS: D0 CF 11 E0
-    else if (header[0] === 0xd0 && header[1] === 0xcf) {
-      format = 'xlsx';
-    }
-    else {
-      // Strip BOM before content sniffing — UTF-8 BOM (EF BB BF) would
-      // prevent startsWith checks from matching JSON/XML/HTML content (C98-05).
-      const head = sniffBuffer.slice(0, 1024).toString('utf-8')
-        .replace(/^﻿/, '')  // Strip UTF-8/UTF-16 BOM
-        .trimStart();
-
-      // Check for OFX content: <?OFX header (OFX 1.x SGML or 2.x XML)
-      if (/^<\?OFX/i.test(head)) {
-        format = 'ofx';
-      }
-      // Check for HTML content: <!DOCTYPE html, <html, or <table
-      else if (/^<!doctype\s+html/i.test(head) || /^<html/i.test(head) || /<table[\s>]/i.test(head)) {
-        format = 'html';
-      }
-      // Check for JSON content: first non-whitespace char is [ or {
-      else if (head.startsWith('[') || head.startsWith('{')) {
-        try {
-          JSON.parse(sniffBuffer.toString('utf-8').replace(/^﻿/, ''));
-          format = 'json';
-        } catch (err) {
-          // Not valid JSON despite starting with [ or { — fall back to CSV.
-          // Capture the parse error so callers know the file was malformed.
-          errors.push(
-            new ParseError(
-              `JSON 형식이 아닙니다: ${err instanceof Error ? err.message : String(err)}`,
-              { file: filePath, format: 'json' },
-            ),
-          );
-          format = 'csv';
-        }
-      }
-      // Check for XML with OFX content (OFX 2.x with XML declaration)
-      else if (/^<\?xml/i.test(head) && /<OFX|<BANKTRANLIST|<STMTTRN/i.test(head)) {
-        format = 'ofx';
-      } else {
-        // Default to CSV for text-like content
-        format = 'csv';
-      }
-    }
+/**
+ * Determine a format from an extension and a bounded prefix. JSON-looking
+ * unknown extensions require one later validation against the already-loaded
+ * complete bytes so malformed JSON keeps the existing CSV fallback contract.
+ */
+export function detectFileFormatHint(
+  filePath: string,
+  prefix: Uint8Array,
+): FileFormatHint {
+  const extensionFormat = detectFormatFromExtension(filePath);
+  if (extensionFormat) {
+    return {
+      format: extensionFormat,
+      requiresCompleteJsonValidation: false,
+    };
   }
 
-  // For CSV, detect bank from content. Reuse the already-read buffer when
-  // available (from the unknown-extension sniff path) to avoid reading the
-  // file a second time (C5-02). Detect encoding and decode accordingly
-  // before bank detection so that CP949/UTF-16 Korean text is correctly
-  // interpreted (C7-02/C7-03). Strip BOM before bank detection so that
-  // patterns anchored to content start match correctly (C6-02).
+  const header = prefix.subarray(0, 8);
+  if (
+    header[0] === 0x25
+    && header[1] === 0x50
+    && header[2] === 0x44
+    && header[3] === 0x46
+  ) {
+    return { format: 'pdf', requiresCompleteJsonValidation: false };
+  }
+  if (header[0] === 0x50 && header[1] === 0x4b) {
+    return { format: 'xlsx', requiresCompleteJsonValidation: false };
+  }
+  if (header[0] === 0xd0 && header[1] === 0xcf) {
+    return { format: 'xlsx', requiresCompleteJsonValidation: false };
+  }
+
+  const head = Buffer.from(prefix.subarray(0, FILE_FORMAT_SNIFF_BYTES))
+    .toString('utf-8')
+    .replace(/^﻿/, '')
+    .trimStart();
+  if (/^<\?OFX/i.test(head)) {
+    return { format: 'ofx', requiresCompleteJsonValidation: false };
+  }
+  if (
+    /^<!doctype\s+html/i.test(head)
+    || /^<html/i.test(head)
+    || /<table[\s>]/i.test(head)
+  ) {
+    return { format: 'html', requiresCompleteJsonValidation: false };
+  }
+  if (head.startsWith('[') || head.startsWith('{')) {
+    return { format: 'json', requiresCompleteJsonValidation: true };
+  }
+  if (/^<\?xml/i.test(head) && /<OFX|<BANKTRANLIST|<STMTTRN/i.test(head)) {
+    return { format: 'ofx', requiresCompleteJsonValidation: false };
+  }
+  return { format: 'csv', requiresCompleteJsonValidation: false };
+}
+
+export function finalizeFileFormatHint(
+  filePath: string,
+  hint: FileFormatHint,
+  completeBytes?: Uint8Array,
+): FinalizedFileFormat {
+  if (!hint.requiresCompleteJsonValidation) {
+    return { format: hint.format, errors: [] };
+  }
+  if (!completeBytes) {
+    throw new Error('Complete bytes are required to validate a JSON format hint');
+  }
+
+  try {
+    JSON.parse(Buffer.from(completeBytes).toString('utf-8').replace(/^﻿/, ''));
+    return { format: 'json', errors: [] };
+  } catch (error) {
+    return {
+      format: 'csv',
+      errors: [
+        new ParseError(
+          `JSON 형식이 아닙니다: ${error instanceof Error ? error.message : String(error)}`,
+          { file: filePath, format: 'json' },
+        ),
+      ],
+    };
+  }
+}
+
+export async function readFilePrefix(
+  filePath: string,
+  maxBytes = FILE_FORMAT_SNIFF_BYTES,
+): Promise<Buffer> {
+  const handle = await open(filePath, 'r');
+  try {
+    const prefix = Buffer.alloc(maxBytes);
+    const { bytesRead } = await handle.read(prefix, 0, maxBytes, 0);
+    return prefix.subarray(0, bytesRead);
+  } finally {
+    await handle.close();
+  }
+}
+
+export async function detectFormat(filePath: string): Promise<DetectionResult> {
+  const extensionFormat = detectFormatFromExtension(filePath);
+  const prefix = extensionFormat
+    ? Buffer.alloc(0)
+    : await readFilePrefix(filePath);
+  const hint = detectFileFormatHint(filePath, prefix);
+  let completeBuffer: Buffer | null = null;
+  if (hint.requiresCompleteJsonValidation) {
+    completeBuffer = await readFile(filePath);
+  }
+  const { format, errors } = finalizeFileFormatHint(
+    filePath,
+    hint,
+    completeBuffer ?? undefined,
+  );
+
+  // CSV bank and encoding detection necessarily use the complete contents.
+  // This function performs one complete read at most; the statement dispatcher
+  // uses the same bytes for parsing rather than invoking this I/O wrapper.
   if (format === 'csv') {
-    const csvBuffer = sniffBuffer ?? await readFile(filePath);
+    const csvBuffer = completeBuffer ?? await readFile(filePath);
     const encoding = detectEncoding(csvBuffer);
     const content = decodeBuffer(csvBuffer, encoding);
     const { bank, confidence } = detectBank(content);

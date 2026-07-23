@@ -231,7 +231,7 @@ VERSION:102
 </BANKTRANLIST>`;
 
       const result = parseOFX(content);
-      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions).toHaveLength(0);
       expect(result.errors.some((e) => e.message.includes('날짜를 해석할 수 없습니다'))).toBe(true);
     });
 

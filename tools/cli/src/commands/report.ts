@@ -3,8 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { writeFileSync } from 'node:fs';
 import { MerchantMatcher, buildConstraints, optimize } from '@cherrypicker/core';
 import { loadCategories, loadAllCardRules, buildCategoryLabelMap } from '@cherrypicker/rules';
-import type { BankId, RawTransaction } from '@cherrypicker/parser';
-import type { CategorizedTransaction } from '@cherrypicker/core';
+import type { BankId } from '@cherrypicker/parser/types';
 import { printOptimizationResult, printSpendingSummary, generateHTMLReport } from '@cherrypicker/viz';
 import {
   parsePreviousSpendingArgument,
@@ -12,6 +11,13 @@ import {
 } from '../validation.js';
 import { parseStatementLocalFirst } from '../parse-statement.js';
 import { printOptimizationDisclosures } from '../disclosures.js';
+import { formatParseWarning, sanitizeTerminalText } from '../terminal.js';
+import {
+  attachPerformanceIssues,
+  calendarScopeWarnings,
+  categorizeRawTransactions,
+  prepareCliAnalysis,
+} from '../analysis.js';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
   fileURLToPath(new URL('../../../..', import.meta.url)),
@@ -79,7 +85,7 @@ export async function runReport(args: string[]): Promise<void> {
   validateFilePath(file, { mustExist: true, label: '명세서 파일' });
   validateFilePath(output, { mustExist: false, label: '출력 파일' });
 
-  console.log(`파일 분석 중: ${file}`);
+  console.log(`파일 분석 중: ${sanitizeTerminalText(file)}`);
 
   const parseResult = await parseStatementLocalFirst({
     filePath: file,
@@ -91,7 +97,7 @@ export async function runReport(args: string[]): Promise<void> {
   if (parseResult.errors.length > 0) {
     console.warn('파싱 경고:');
     for (const e of parseResult.errors) {
-      console.warn(`  ${e.line ? `[${e.line}행] ` : ''}${e.message}`);
+      console.warn(formatParseWarning(e));
     }
   }
 
@@ -103,22 +109,10 @@ export async function runReport(args: string[]): Promise<void> {
   // Build category labels map for Korean display in reports
   const categoryLabels = buildCategoryLabelMap(categories);
 
-  const categorized: CategorizedTransaction[] = parseResult.transactions.map((tx: RawTransaction, idx: number) => {
-    const match = matcher.match(tx.merchant, tx.category);
-    return {
-      id: `tx-${idx}`,
-      date: tx.date,
-      merchant: tx.merchant,
-      amount: tx.amount,
-      currency: 'KRW',
-      installments: tx.installments,
-      rawCategory: tx.category,
-      memo: tx.memo,
-      category: match.category,
-      subcategory: match.subcategory,
-      confidence: match.confidence,
-    };
-  });
+  const categorized = categorizeRawTransactions(
+    parseResult.transactions,
+    matcher,
+  );
 
   // Load card rules and optimize
   const resolvedCardsDir = cardsDir ?? DEFAULT_CARDS_DIR;
@@ -127,23 +121,33 @@ export async function runReport(args: string[]): Promise<void> {
     throw new Error('카드 규칙 파일을 찾을 수 없습니다. --cards 옵션으로 규칙 디렉토리를 지정하세요.');
   }
 
-  const cardPreviousSpending = new Map<string, number>();
-  if (prevSpending !== undefined) {
-    for (const rule of cardRules) {
-      cardPreviousSpending.set(rule.card.id, prevSpending);
-    }
+  const prepared = prepareCliAnalysis(categorized, cardRules, prevSpending);
+  for (const warning of calendarScopeWarnings(prepared.context)) {
+    console.warn(sanitizeTerminalText(warning));
   }
-  const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
+  const constraints = buildConstraints(
+    prepared.context.latestTransactions,
+    prepared.cardPreviousSpending,
+    categoryLabels,
+  );
   const result = optimize(constraints, cardRules);
+  attachPerformanceIssues(result, prepared.performanceIssues);
 
   // Print terminal summary
-  printOptimizationDisclosures(result, prevSpending);
-  printSpendingSummary(categorized, categoryLabels);
+  printOptimizationDisclosures(
+    result,
+    prepared.context.previousSpendingBasis,
+  );
+  printSpendingSummary(prepared.context.latestTransactions, categoryLabels);
   printOptimizationResult(result);
 
   // Generate and write HTML report
   console.log(`\nHTML 보고서 생성 중...`);
-  const html = generateHTMLReport(result, categorized, categoryLabels);
+  const html = generateHTMLReport(
+    result,
+    prepared.context.latestTransactions,
+    categoryLabels,
+  );
   writeFileSync(output, html, 'utf-8');
-  console.log(`보고서 저장 완료: ${output}`);
+  console.log(`보고서 저장 완료: ${sanitizeTerminalText(output)}`);
 }

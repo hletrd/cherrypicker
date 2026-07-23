@@ -36,3 +36,14 @@ export {
   isValidYYYYMMDD,
   parseDateStringToISO,
 } from './date-utils.js';
+export {
+  extractTransactionFacts,
+  PERFORMANCE_EXCLUSION_TAGS,
+} from './shared/transaction-facts.js';
+export type {
+  ExtractedTransactionFacts,
+  ParsedFactKey,
+  ParsedFactSource,
+  ParsedPerformanceExclusionTag,
+  ParsedTransactionFacts,
+} from './shared/transaction-facts.js';

@@ -3,6 +3,7 @@ import { runAnalyze } from './commands/analyze.js';
 import { runOptimize } from './commands/optimize.js';
 import { runReport } from './commands/report.js';
 import { runScrape } from './commands/scrape.js';
+import { sanitizeTerminalText } from './terminal.js';
 
 function printHelp(): void {
   console.log(`
@@ -66,13 +67,13 @@ async function main(): Promise<void> {
         await runScrape(rest);
         break;
       default:
-        console.error(`알 수 없는 명령어: ${command}`);
+        console.error(`알 수 없는 명령어: ${sanitizeTerminalText(command)}`);
         console.error('사용 가능한 명령어 목록을 보려면 --help 를 사용하세요.');
         process.exit(1);
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error(`오류: ${message}`);
+    console.error(`오류: ${sanitizeTerminalText(message)}`);
     process.exit(1);
   }
 }

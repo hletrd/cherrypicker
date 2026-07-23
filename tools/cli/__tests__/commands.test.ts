@@ -20,7 +20,7 @@ import {
   REMOTE_LLM_REQUIRED,
   type StatementParser,
 } from '../src/parse-statement.js';
-import type { ParseResult, RawTransaction } from '@cherrypicker/parser';
+import type { ParseResult, RawTransaction } from '@cherrypicker/parser/types';
 
 let tempDir: string;
 let tempCsv: string;

@@ -1,5 +1,5 @@
-import { parseStatement } from '@cherrypicker/parser';
-import type { BankId, ParseResult } from '@cherrypicker/parser';
+import { parseStatement } from '@cherrypicker/parser/statement';
+import type { BankId, ParseResult } from '@cherrypicker/parser/types';
 import {
   authorizeRemoteLLMFallback,
   type RemoteLLMConsentOptions,

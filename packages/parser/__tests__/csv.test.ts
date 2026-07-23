@@ -549,8 +549,8 @@ describe('parseCSV - edge cases', () => {
 
   test('parseDateStringToISO reports error for impossible dates like "4/31" (F21-01)', () => {
     // With recognized headers, parseDateStringToISO validates dates.
-    // "4/31" is impossible (Apr has 30 days) — parseDateStringToISO returns
-    // the raw string and the parser reports a date parse error.
+    // "4/31" is impossible (Apr has 30 days), so the parser reports a date
+    // parse error and quarantines the row.
     // "4/30" and "2/28" are valid and parse to ISO format.
     const content = [
       '이용일,이용처,이용금액',
@@ -559,14 +559,10 @@ describe('parseCSV - edge cases', () => {
       '2/28,쿠팡,15000',
     ].join('\n');
     const result = parseCSV(content);
-    // All 3 transactions are added (amounts are valid), but "4/31" gets
-    // a date parse error and its date field remains as raw "4/31".
-    expect(result.transactions).toHaveLength(3);
+    expect(result.transactions).toHaveLength(2);
     // Valid dates parse to ISO format
     expect(result.transactions[0]?.date).toMatch(/^\d{4}-04-30$/);
-    expect(result.transactions[2]?.date).toMatch(/^\d{4}-02-28$/);
-    // "4/31" stays as raw string (unparseable)
-    expect(result.transactions[1]?.date).toBe('4/31');
+    expect(result.transactions[1]?.date).toMatch(/^\d{4}-02-28$/);
     // Error reported for the impossible date
     expect(result.errors.some((e) => e.message.includes('날짜'))).toBe(true);
   });

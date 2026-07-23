@@ -54,7 +54,9 @@ interface LLMTransaction {
   installments?: number;
 }
 
-export const PDF_LLM_MAX_INPUT_CHARS = 100_000;
+// The request is sent as one complete prompt. Do not advertise a larger
+// ceiling than we can transmit without truncation.
+export const PDF_LLM_MAX_INPUT_CHARS = 8_000;
 export const PDF_LLM_MAX_OUTPUT_TOKENS = 8_192;
 
 export function buildPDFLLMRequest(
@@ -67,9 +69,7 @@ export function buildPDFLLMRequest(
     );
   }
 
-  const truncated = sanitizeLLMInput(
-    text.length > 8000 ? text.slice(0, 8000) + '\n...(truncated)' : text
-  );
+  const sanitized = sanitizeLLMInput(text);
 
   return {
     model,
@@ -81,7 +81,7 @@ export function buildPDFLLMRequest(
     messages: [
       {
         role: 'user',
-        content: `다음은 신용카드 명세서에서 추출한 텍스트입니다. 거래 내역을 JSON 배열로 파싱해 주세요:\n\n${truncated}`,
+        content: `다음은 신용카드 명세서에서 추출한 텍스트입니다. 거래 내역을 JSON 배열로 파싱해 주세요:\n\n${sanitized}`,
       },
     ],
   };
@@ -147,26 +147,36 @@ export function parsePDFLLMResponse(message: Anthropic.Message): RawTransaction[
     throw new Error('LLM 응답이 객체 배열이 아닙니다.');
   }
 
-  return parsed
-    .filter((tx): tx is Required<Pick<LLMTransaction, 'date' | 'merchant' | 'amount'>> & LLMTransaction => {
-      // Basic type checks
-      if (typeof tx.date !== 'string' || typeof tx.merchant !== 'string' || typeof tx.amount !== 'number') {
-        return false;
-      }
-      // LLM output is untrusted. Require a real calendar date and an exactly
-      // representable positive integer instead of rounding model mistakes.
-      if (!isValidISODate(tx.date)) return false;
-      if (!Number.isSafeInteger(tx.amount) || tx.amount <= 0) return false;
-      return true;
-    })
-    .map((tx) => {
+  const invalidRows: number[] = [];
+  for (const [index, tx] of parsed.entries()) {
+    if (
+      typeof tx.date !== 'string' ||
+      typeof tx.merchant !== 'string' ||
+      typeof tx.amount !== 'number' ||
+      !isValidISODate(tx.date) ||
+      !Number.isSafeInteger(tx.amount) ||
+      tx.amount <= 0 ||
+      (tx.installments !== undefined &&
+        (typeof tx.installments !== 'number' ||
+          !Number.isInteger(tx.installments) ||
+          tx.installments <= 0))
+    ) {
+      invalidRows.push(index + 1);
+    }
+  }
+  if (invalidRows.length > 0) {
+    throw new Error(
+      `LLM 응답 ${parsed.length}개 행 중 ${invalidRows.length}개가 올바르지 않습니다: ${invalidRows.join(', ')}행`,
+    );
+  }
+
+  return parsed.map((tx) => {
       const result: RawTransaction = {
-        date: tx.date,
-        merchant: tx.merchant,
-        amount: tx.amount,
+        date: tx.date!,
+        merchant: tx.merchant!,
+        amount: tx.amount!,
       };
-      // Validate installments: must be a positive integer > 1 if present (C31-CR05)
-      if (typeof tx.installments === 'number' && Number.isFinite(tx.installments) && tx.installments > 1 && Number.isInteger(tx.installments)) {
+      if (typeof tx.installments === 'number' && tx.installments > 1) {
         result.installments = tx.installments;
       }
       return result;
