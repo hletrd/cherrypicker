@@ -3,6 +3,7 @@
 **Findings:** C7-012 (Medium/High), C7-014 (Medium/High)
 **Status:** completed
 **Deploy mode:** none
+**Archived after:** Cycle 8 review
 
 ## Evidence
 

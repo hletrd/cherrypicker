@@ -3,6 +3,7 @@
 **Findings:** C7-001 (Medium/High), C7-007 (Medium/High), C7-011 (Medium/High)
 **Status:** completed
 **Deploy mode:** none
+**Archived after:** Cycle 8 review
 
 ## Evidence
 

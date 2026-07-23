@@ -3,6 +3,7 @@
 **Findings:** C7-003 (High/High), C7-004 (High/High)
 **Status:** completed
 **Deploy mode:** none
+**Archived after:** Cycle 8 review
 
 ## Evidence
 
