@@ -7,7 +7,7 @@ import type { BankAdapter, BankId, ParseResult, RawTransaction } from '../types.
 import { ParseError } from '../types.js';
 import { detectCSVDelimiter, detectBank } from '../detect.js';
 import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
-import { splitCSVLine, splitCSVContent, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
+import { splitCSVLine, splitCSVRecords, parseCSVAmount, parseCSVInstallments, isValidCSVAmount } from './shared.js';
 import {
   findColumn,
   normalizeHeader,
@@ -23,6 +23,15 @@ import {
   AMOUNT_KEYWORDS,
   isValidHeaderRow,
 } from './column-matcher.js';
+import {
+  MAX_REQUIRED_FIELD_ROW_ERRORS,
+  missingRequiredColumnLabels,
+  normalizeRequiredMerchant,
+  REQUIRED_DATE_ERROR_CODE,
+  REQUIRED_DATE_ERROR_MESSAGE,
+  REQUIRED_MERCHANT_ERROR_CODE,
+  REQUIRED_MERCHANT_ERROR_MESSAGE,
+} from '../shared/required-fields.js';
 
 export interface BankCSVConfig {
   bankId: BankId;
@@ -77,7 +86,8 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
     parseCSV(content: string): ParseResult {
       const delimiter = detectCSVDelimiter(content);
-      const lines = splitCSVContent(content, delimiter);
+      const records = splitCSVRecords(content, delimiter);
+      const lines = records.map((record) => record.content);
       const errors: ParseError[] = [];
       const transactions: RawTransaction[] = [];
 
@@ -117,15 +127,27 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       // results when column detection fails. Parity with web-side
       // createBankAdapter() in apps/web/src/lib/parser/csv.ts and the
       // generic CSV parser in csv/generic.ts (C70-01).
-      if (dateCol === -1 || amountCol === -1) {
-        const missing: string[] = [];
-        if (dateCol === -1) missing.push('날짜');
-        if (amountCol === -1) missing.push('금액');
-        errors.push(new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`));
+      const missingColumns = missingRequiredColumnLabels({
+        date: dateCol,
+        merchant: merchantCol,
+        amount: amountCol,
+      });
+      if (missingColumns.length > 0) {
+        return {
+          bank: bankId,
+          format: 'csv',
+          transactions: [],
+          errors: [
+            new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missingColumns.join(', ')}`),
+          ],
+        };
       }
 
+      let requiredMerchantErrorCount = 0;
+      let requiredDateErrorCount = 0;
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i] ?? '';
+        const physicalLine = records[i]?.line ?? i + 1;
         if (!line.trim()) continue;
         if (isSummaryRow(line)) continue;
         const cells = splitCSVLine(line, delimiter);
@@ -137,31 +159,58 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
         if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
         const rowText = line;
+        const merchant = normalizeRequiredMerchant(merchantRaw);
+        if (!merchant) {
+          if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+            errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+              code: REQUIRED_MERCHANT_ERROR_CODE,
+              line: physicalLine,
+              raw: rowText,
+            }));
+            requiredMerchantErrorCount++;
+          }
+          continue;
+        }
         const amount = parseCSVAmount(amountRaw);
         // Use shared isValidCSVAmount for unified validation — handles null
         // (unparseable), zero (balance inquiries), and negative (refunds)
         // amounts in one call, matching the web-side isValidAmount pattern.
         // Include raw row text for easier debugging, matching XLSX parser error format.
-        if (!isValidCSVAmount(amount, amountRaw, i, errors)) {
+        if (!isValidCSVAmount(amount, amountRaw, physicalLine - 1, errors)) {
           // isValidCSVAmount already pushes the error; enrich the last error with raw text
-          if (errors.length > 0 && errors[errors.length - 1]!.line === i + 1) {
+          if (
+            errors.length > 0
+            && errors[errors.length - 1]!.line === physicalLine
+          ) {
             errors[errors.length - 1]!.raw = rowText;
           }
           continue;
         }
 
         const parsedDate = parseDateStringToISO(dateRaw);
-        // Report unparseable dates as parse errors so users can see which
-        // transactions have malformed dates, matching the generic CSV parser
-        // behavior in csv/generic.ts (C12-01/C12-06).
-        if (!isValidISODate(parsedDate) && dateRaw.trim()) {
-          errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw.trim()}`, { line: i + 1 }));
+        if (!isValidISODate(parsedDate)) {
+          const trimmedDate = dateRaw.trim();
+          if (!trimmedDate) {
+            if (requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+              errors.push(new ParseError(REQUIRED_DATE_ERROR_MESSAGE, {
+                code: REQUIRED_DATE_ERROR_CODE,
+                line: physicalLine,
+                raw: rowText,
+              }));
+              requiredDateErrorCount++;
+            }
+          } else {
+            errors.push(new ParseError(
+              `날짜를 해석할 수 없습니다: ${trimmedDate}`,
+              { line: physicalLine, raw: rowText },
+            ));
+          }
           continue;
         }
 
         const tx: RawTransaction = {
           date: parsedDate,
-          merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
+          merchant,
           amount,
         };
 

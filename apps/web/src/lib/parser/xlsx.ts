@@ -1,6 +1,16 @@
 import * as XLSX from 'xlsx';
 import type { BankId, ParseResult, RawTransaction } from './types.js';
 import { ParseError } from './types.js';
+import {
+  decodeStatementTextBytes,
+  isHTMLStatementBytes,
+  MAX_REQUIRED_FIELD_ROW_ERRORS,
+  missingRequiredColumnLabels,
+  normalizeRequiredMerchant,
+  REQUIRED_MERCHANT_ERROR_CODE,
+  REQUIRED_MERCHANT_ERROR_MESSAGE,
+  type StatementTextPrefixDecoder,
+} from '@cherrypicker/parser/browser';
 import { detectBank } from './detect.js';
 import { normalizeHTML } from './html-normalize.js';
 import { parseAmount } from './amount.js';
@@ -232,22 +242,13 @@ function parseInstallments(raw: unknown): number | undefined {
 // ---------------------------------------------------------------------------
 
 /** Check if the buffer contains HTML content (HTML-as-XLS).
- *  Decodes the first 512 bytes as UTF-8 and checks for HTML signatures.
- *  Korean card companies often export HTML tables with .xls extension.
- *
- *  Known limitation: the full buffer is decoded again in the caller when
- *  HTML is detected. TextDecoder doesn't support partial streaming in all
- *  browsers, so the 512-byte overlap is accepted as minor overhead bounded
- *  by the file size limit (C75-01/C74-03). */
-export function isHTMLContent(buffer: ArrayBuffer): boolean {
-  // Decode first 512 bytes as UTF-8. Strip UTF-8 BOM (0xEF 0xBB 0xBF) if
-  // present — some Korean card exports include a BOM, which would otherwise
-  // prevent the startsWith checks from matching.
-  // Known limitation: files encoded in EUC-KR (rare for .xls exports from
-  // Korean card companies, which typically use UTF-8) will not be detected.
-  const raw = new TextDecoder('utf-8').decode(buffer.slice(0, 512));
-  const head = raw.replace(/^\uFEFF/, '').trimStart().toLowerCase();
-  return head.startsWith('<!doctype') || head.startsWith('<html') || /<table[\s>]/.test(head);
+ *  Uses the shared BOM/UTF-8/CP949 detector before checking HTML signatures,
+ *  so legacy Korean exports and BOM-marked UTF-16 tables route correctly. */
+export function isHTMLContent(
+  buffer: ArrayBuffer,
+  decodePrefix?: StatementTextPrefixDecoder,
+): boolean {
+  return isHTMLStatementBytes(new Uint8Array(buffer), decodePrefix);
 }
 
 // ---------------------------------------------------------------------------
@@ -260,12 +261,9 @@ export function parseXLSX(buffer: ArrayBuffer, bank?: BankId): ParseResult {
   let htmlBankHint: BankId | null = null;
 
   if (isHTMLContent(buffer)) {
-    // Decode the full buffer. TextDecoder doesn't reliably support partial
-    // streaming across all browsers, so the 512 bytes already decoded by
-    // isHTMLContent are decoded again here — the overhead is bounded by
-    // the file size limit (C75-01).
-    const fullDecoded = new TextDecoder('utf-8').decode(buffer);
-    const html = normalizeHTML(fullDecoded.replace(/^\uFEFF/, ''));
+    const html = normalizeHTML(
+      decodeStatementTextBytes(new Uint8Array(buffer), 'html'),
+    );
     htmlBankHint = detectBank(html).bank;
     // Pass HTML string directly to XLSX instead of re-encoding via TextEncoder.
     // Avoids creating a second full copy of the file content in memory (C1-P01).
@@ -368,15 +366,17 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   const categoryCol = findColumn(headers, config?.category, CATEGORY_COLUMN_PATTERN);
   const memoCol = findColumn(headers, config?.memo, MEMO_COLUMN_PATTERN);
 
-  if (dateCol === -1 || amountCol === -1) {
-    const missing: string[] = [];
-    if (dateCol === -1) missing.push('날짜');
-    if (amountCol === -1) missing.push('금액');
+  const missingColumns = missingRequiredColumnLabels({
+    date: dateCol,
+    merchant: merchantCol,
+    amount: amountCol,
+  });
+  if (missingColumns.length > 0) {
     return {
       bank: resolvedBank,
       format: 'xlsx',
       transactions: [],
-      errors: [new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`)],
+      errors: [new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missingColumns.join(', ')}`)],
     };
   }
 
@@ -385,6 +385,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
 
   const mergeIndex = createSheetMergeIndex(sheet['!merges']);
   const consumedAmountSources = new Set<string>();
+  let requiredMerchantErrorCount = 0;
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -420,9 +421,21 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     const memoRaw = memoCell?.value ?? '';
     const amountRaw = amountCell.value;
 
-    if (!dateRaw && !merchantRaw) continue;
+    if (!dateRaw && !merchantRaw && !amountRaw) continue;
     if (amountCell.fromMerge && consumedAmountSources.has(amountCell.sourceKey)) continue;
 
+    const merchant = normalizeRequiredMerchant(merchantRaw);
+    if (!merchant) {
+      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+          code: REQUIRED_MERCHANT_ERROR_CODE,
+          line: i + 1,
+          raw: rowText,
+        }));
+        requiredMerchantErrorCount++;
+      }
+      continue;
+    }
     const amount = parseAmount(amountRaw);
     if (amount === null) {
       if (String(amountRaw ?? '').trim()) {
@@ -446,7 +459,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     // Matches server-side XLSX parser behavior (C8-01).
     if (amount <= 0) {
       errors.push(new ParseError(
-        `지출로 처리되지 않는 금액입니다: ${String(merchantRaw ?? '').trim() || '알 수 없는 거래'} ${amount}원`,
+        `지출로 처리되지 않는 금액입니다: ${merchant} ${amount}원`,
         { line: i + 1, raw: rowText },
       ));
       continue;
@@ -473,7 +486,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
 
     const tx: RawTransaction = {
       date: parsedDate,
-      merchant: String(merchantRaw ?? '').replace(/^"(.*)"$/, '$1').trim(),
+      merchant,
       amount,
       ...(installCol !== -1 && installRaw
         ? { installments: parseInstallments(String(installRaw)) }

@@ -434,17 +434,16 @@ describe('XLSX merged cell forward-fill', () => {
     ]);
     try {
       const result = await parseXLSX(filePath);
-      expect(result.transactions).toHaveLength(4);
+      expect(result.transactions).toHaveLength(2);
       // First group: forward-filled from row 1
       expect(result.transactions[0]?.merchant).toBe('이마트');
       expect(result.transactions[0]?.category).toBe('마트');
       expect(result.transactions[1]?.merchant).toBe('이마트');
       expect(result.transactions[1]?.category).toBe('마트');
-      // Second group: must NOT forward-fill merchant from first group
-      expect(result.transactions[2]?.merchant).toBe('');
-      expect(result.transactions[2]?.category).toBe('카페');
-      expect(result.transactions[3]?.merchant).toBe('');
-      expect(result.transactions[3]?.category).toBe('카페');
+      // Second group must not inherit the first merchant and is rejected.
+      expect(
+        result.errors.filter((error) => error.code === 'missing_required_merchant'),
+      ).toHaveLength(2);
     } finally {
       cleanup(filePath);
     }
@@ -1067,10 +1066,15 @@ describe('XLSX merge-aware cell resolution', () => {
     ]);
     try {
       const result = await parseXLSX(filePath);
-      expect(result.transactions).toHaveLength(3);
+      expect(result.transactions).toHaveLength(2);
       expect(result.transactions[0]?.merchant).toBe('이마트');
-      expect(result.transactions[1]?.merchant).toBe('');
-      expect(result.transactions[2]?.merchant).toBe('카페');
+      expect(result.transactions[1]?.merchant).toBe('카페');
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({
+          code: 'missing_required_merchant',
+          line: 3,
+        }),
+      );
     } finally {
       cleanup(filePath);
     }

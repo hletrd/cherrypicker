@@ -1,4 +1,38 @@
+import {
+  decodeStatementTextBytes,
+  decodeTextBytes,
+  detectTextEncoding,
+  UnsupportedTextEncodingError,
+} from './encoding.js';
+
 export const STATEMENT_FORMAT_SNIFF_BYTES = 1024;
+export const HTML_XLS_SNIFF_BYTES = STATEMENT_FORMAT_SNIFF_BYTES;
+
+export type StatementTextPrefixDecoder = (bytes: Uint8Array) => string;
+
+function decodeStatementPrefix(bytes: Uint8Array): string {
+  return decodeTextBytes(bytes, detectTextEncoding(bytes));
+}
+
+export function isHTMLStatementBytes(
+  bytes: Uint8Array,
+  decodePrefix: StatementTextPrefixDecoder = decodeStatementPrefix,
+): boolean {
+  try {
+    const prefix = bytes.subarray(0, HTML_XLS_SNIFF_BYTES);
+    const head = decodePrefix(prefix)
+      .slice(0, 512)
+      .trimStart()
+      .toLowerCase();
+    return (
+      head.startsWith('<!doctype')
+      || head.startsWith('<html')
+      || /<table[\s>]/.test(head)
+    );
+  } catch {
+    return false;
+  }
+}
 
 export type BrowserSafeStatementFormat =
   | 'csv'
@@ -58,9 +92,8 @@ export function detectStatementFormatHint(
     return resolvedHint('xlsx');
   }
 
-  const head = new TextDecoder('utf-8')
-    .decode(prefix.subarray(0, STATEMENT_FORMAT_SNIFF_BYTES))
-    .replace(/^\uFEFF/, '')
+  const sniffBytes = prefix.subarray(0, STATEMENT_FORMAT_SNIFF_BYTES);
+  const head = decodeTextBytes(sniffBytes, detectTextEncoding(sniffBytes))
     .trimStart();
   if (/^<\?OFX/i.test(head) || /<OFX/i.test(head)) {
     return resolvedHint('ofx');
@@ -98,13 +131,10 @@ export function finalizeStatementFormatHint(
   }
 
   try {
-    JSON.parse(
-      new TextDecoder('utf-8')
-        .decode(completeBytes)
-        .replace(/^\uFEFF/, ''),
-    );
+    JSON.parse(decodeStatementTextBytes(completeBytes, 'json'));
     return 'json';
-  } catch {
+  } catch (error) {
+    if (error instanceof UnsupportedTextEncodingError) throw error;
     return hint.invalidJsonFallback ?? hint.format;
   }
 }

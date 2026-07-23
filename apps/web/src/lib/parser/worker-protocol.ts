@@ -1,5 +1,9 @@
 import type { BankId, ParseResult } from './types.js';
 import { ParseError } from './types.js';
+import {
+  decodeStatementTextBytes,
+  type StatementTextFormat,
+} from '@cherrypicker/parser/browser';
 
 export type ParserWorkerFormat = 'csv' | 'xlsx' | 'json' | 'ofx' | 'html';
 
@@ -24,7 +28,14 @@ interface SerializedParseResult extends Omit<ParseResult, 'errors'> {
 
 export type ParserWorkerResponse =
   | { ok: true; result: SerializedParseResult }
-  | { ok: false; message: string };
+  | {
+      ok: false;
+      message: string;
+      name?: string;
+      code?: string;
+      format?: string;
+      encoding?: string;
+    };
 
 interface ParserWorkerScope {
   addEventListener(
@@ -66,6 +77,39 @@ export function deserializeParserWorkerResult(
   };
 }
 
+function stringProperty(
+  value: unknown,
+  property: 'name' | 'code' | 'format' | 'encoding',
+): string | undefined {
+  if (
+    (typeof value !== 'object' || value === null)
+    && typeof value !== 'function'
+  ) {
+    return undefined;
+  }
+  const candidate = (value as Record<string, unknown>)[property];
+  return typeof candidate === 'string' ? candidate : undefined;
+}
+
+export function deserializeParserWorkerError(
+  response: Extract<ParserWorkerResponse, { ok: false }>,
+): Error & {
+  code?: string;
+  format?: string;
+  encoding?: string;
+} {
+  const error = new Error(response.message) as Error & {
+    code?: string;
+    format?: string;
+    encoding?: string;
+  };
+  if (response.name) error.name = response.name;
+  if (response.code) error.code = response.code;
+  if (response.format) error.format = response.format;
+  if (response.encoding) error.encoding = response.encoding;
+  return error;
+}
+
 export function installParserWorker(
   parse: (
     payload: ArrayBuffer,
@@ -82,12 +126,19 @@ export function installParserWorker(
         scope.postMessage({
           ok: false,
           message: error instanceof Error ? error.message : String(error),
+          name: stringProperty(error, 'name'),
+          code: stringProperty(error, 'code'),
+          format: stringProperty(error, 'format'),
+          encoding: stringProperty(error, 'encoding'),
         });
       },
     );
   });
 }
 
-export function decodeParserTextPayload(payload: ArrayBuffer): string {
-  return new TextDecoder('utf-8').decode(new Uint8Array(payload));
+export function decodeParserTextPayload(
+  payload: ArrayBuffer,
+  format: StatementTextFormat,
+): string {
+  return decodeStatementTextBytes(new Uint8Array(payload), format);
 }

@@ -1,5 +1,6 @@
 import type { ParseResult } from './types.js';
 import {
+  deserializeParserWorkerError,
   deserializeParserWorkerResult,
   type ParserWorkerFormat,
   type ParserWorkerRequest,
@@ -96,7 +97,7 @@ export function parseWithWorker(
         if (event.data.ok) {
           succeed(deserializeParserWorkerResult(event.data.result));
         } else {
-          fail(new Error(event.data.message));
+          fail(deserializeParserWorkerError(event.data));
         }
       } catch (error) {
         fail(error instanceof Error ? error : new Error(String(error)));

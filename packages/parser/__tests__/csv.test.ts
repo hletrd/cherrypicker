@@ -401,13 +401,15 @@ describe('parseCSV - edge cases', () => {
   });
 
   test('generic parser prefers Korean-text column for merchant (C5-04)', () => {
-    // Columns: card_number(date-like), merchant(Korean), amount, id(number)
+    // Columns: date, unrecognized merchant header (Korean data), amount,
+    // id(number). The required date/merchant/amount contract still permits
+    // merchant inference when all three roles can be established.
     // The heuristic should pick the Korean-text column as merchant, not the
     // first non-date/non-amount column (which would be a numeric id).
     const content = [
-      '카드번호,이용처,이용금액,고객번호',
-      '1234,스타벅스,6500,999',
-      '5678,이마트,30000,888',
+      '이용일,열이름,이용금액,고객번호',
+      '2026-07-22,스타벅스,6500,999',
+      '2026-07-23,이마트,30000,888',
     ].join('\n');
     const result = parseCSV(content);
     expect(result.transactions).toHaveLength(2);

@@ -1,4 +1,21 @@
 export type SupportedTextEncoding = 'utf-8' | 'utf-16le' | 'utf-16be' | 'cp949';
+export type StatementTextFormat = 'json' | 'ofx' | 'html';
+
+export class UnsupportedTextEncodingError extends Error {
+  readonly code = 'UNSUPPORTED_TEXT_ENCODING';
+  readonly encoding: string;
+  readonly format: StatementTextFormat;
+
+  constructor(format: StatementTextFormat, encoding: string) {
+    super(
+      `${format.toUpperCase()} text encoding is unsupported: ${encoding}. `
+      + 'Use UTF-8, BOM-marked UTF-16, or CP949 where the format permits it.',
+    );
+    this.name = 'UnsupportedTextEncodingError';
+    this.encoding = encoding;
+    this.format = format;
+  }
+}
 
 function isValidUTF8(bytes: Uint8Array): boolean {
   try {
@@ -32,7 +49,7 @@ function isPlausibleCP949(bytes: Uint8Array): boolean {
   return pairs > 0;
 }
 
-export function detectTextEncoding(bytes: Uint8Array): SupportedTextEncoding {
+function detectBOMEncoding(bytes: Uint8Array): SupportedTextEncoding | null {
   if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) return 'utf-16le';
   if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) return 'utf-16be';
   if (
@@ -41,6 +58,195 @@ export function detectTextEncoding(bytes: Uint8Array): SupportedTextEncoding {
     && bytes[1] === 0xBB
     && bytes[2] === 0xBF
   ) return 'utf-8';
+  return null;
+}
+
+function detectUnsupportedBOM(bytes: Uint8Array): string | null {
+  if (
+    bytes.length >= 4
+    && bytes[0] === 0xFF
+    && bytes[1] === 0xFE
+    && bytes[2] === 0x00
+    && bytes[3] === 0x00
+  ) return 'utf-32le';
+  if (
+    bytes.length >= 4
+    && bytes[0] === 0x00
+    && bytes[1] === 0x00
+    && bytes[2] === 0xFE
+    && bytes[3] === 0xFF
+  ) return 'utf-32be';
+  return null;
+}
+
+function asciiByteView(bytes: Uint8Array, maxBytes = 8_192): string {
+  let result = '';
+  const limit = Math.min(bytes.length, maxBytes);
+  for (let index = 0; index < limit; index++) {
+    const byte = bytes[index]!;
+    result += byte < 0x80 ? String.fromCharCode(byte) : ' ';
+  }
+  return result;
+}
+
+function normalizeEncodingLabel(label: string): string {
+  return label.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function resolveEncodingLabel(label: string): SupportedTextEncoding | null {
+  switch (normalizeEncodingLabel(label)) {
+    case 'utf8':
+    case 'unicode11utf8':
+    case 'ascii':
+    case 'usascii':
+      return 'utf-8';
+    case 'utf16':
+    case 'utf16le':
+    case 'unicode':
+      return 'utf-16le';
+    case 'utf16be':
+      return 'utf-16be';
+    case 'cp949':
+    case '949':
+    case 'ms949':
+    case 'windows949':
+    case 'uhc':
+    case 'euckr':
+    case 'ksc5601':
+    case 'ksc56011987':
+      return 'cp949';
+    default:
+      return null;
+  }
+}
+
+function declaredOFXEncoding(bytes: Uint8Array): {
+  encoding: SupportedTextEncoding | null;
+  unsupportedLabel: string | null;
+} {
+  const header = asciiByteView(bytes);
+  const xmlLabel = header.match(/<\?xml[^>]*\bencoding\s*=\s*["']([^"']+)["']/i)?.[1];
+  const encodingLabel = header.match(/(?:^|[\r\n])\s*ENCODING\s*:\s*([^\r\n]+)/i)?.[1];
+  const charsetLabel = header.match(/(?:^|[\r\n])\s*CHARSET\s*:\s*([^\r\n]+)/i)?.[1];
+
+  if (xmlLabel) {
+    return {
+      encoding: resolveEncodingLabel(xmlLabel),
+      unsupportedLabel: resolveEncodingLabel(xmlLabel) ? null : xmlLabel.trim(),
+    };
+  }
+
+  // OFX 1.x commonly declares ENCODING:USASCII plus a more specific
+  // CHARSET. Prefer a supported CHARSET (notably 949) over the generic
+  // container label.
+  if (charsetLabel) {
+    const charsetEncoding = resolveEncodingLabel(charsetLabel);
+    if (charsetEncoding) {
+      return { encoding: charsetEncoding, unsupportedLabel: null };
+    }
+  }
+  if (encodingLabel) {
+    const encoding = resolveEncodingLabel(encodingLabel);
+    if (encoding) return { encoding, unsupportedLabel: null };
+  }
+
+  const unsupportedLabel = charsetLabel ?? encodingLabel;
+  return {
+    encoding: null,
+    unsupportedLabel: unsupportedLabel?.trim() || null,
+  };
+}
+
+function declaredHTMLEncoding(bytes: Uint8Array): {
+  encoding: SupportedTextEncoding | null;
+  unsupportedLabel: string | null;
+} {
+  const head = asciiByteView(bytes);
+  const charsetLabel =
+    head.match(/<meta\b[^>]*\bcharset\s*=\s*["']?\s*([^"'\s/>;]+)/i)?.[1]
+    ?? head.match(
+      /<meta\b[^>]*\bcontent\s*=\s*["'][^"']*\bcharset\s*=\s*([^"'\s;>]+)/i,
+    )?.[1];
+  if (!charsetLabel) return { encoding: null, unsupportedLabel: null };
+  const encoding = resolveEncodingLabel(charsetLabel);
+  return {
+    encoding,
+    unsupportedLabel: encoding ? null : charsetLabel.trim(),
+  };
+}
+
+function containsOnlyASCII(bytes: Uint8Array): boolean {
+  for (const byte of bytes) {
+    if (byte >= 0x80) return false;
+  }
+  return true;
+}
+
+function detectBOMlessUTF16(
+  bytes: Uint8Array,
+): 'utf-16le' | 'utf-16be' | null {
+  const pairCount = Math.floor(Math.min(bytes.length, 512) / 2);
+  if (pairCount < 4) return null;
+
+  let evenNuls = 0;
+  let oddNuls = 0;
+  for (let index = 0; index < pairCount * 2; index += 2) {
+    if (bytes[index] === 0) evenNuls++;
+    if (bytes[index + 1] === 0) oddNuls++;
+  }
+
+  const dominantThreshold = Math.ceil(pairCount * 0.6);
+  const sparseThreshold = Math.floor(pairCount * 0.1);
+  if (oddNuls >= dominantThreshold && evenNuls <= sparseThreshold) {
+    return 'utf-16le';
+  }
+  if (evenNuls >= dominantThreshold && oddNuls <= sparseThreshold) {
+    return 'utf-16be';
+  }
+  return null;
+}
+
+export function detectStatementTextEncoding(
+  bytes: Uint8Array,
+  format: StatementTextFormat,
+): SupportedTextEncoding {
+  const unsupportedBOM = detectUnsupportedBOM(bytes);
+  if (unsupportedBOM) {
+    throw new UnsupportedTextEncodingError(format, unsupportedBOM);
+  }
+  const bomEncoding = detectBOMEncoding(bytes);
+  if (bomEncoding) return bomEncoding;
+  const bomlessUTF16 = detectBOMlessUTF16(bytes);
+  if (bomlessUTF16) {
+    throw new UnsupportedTextEncodingError(format, bomlessUTF16);
+  }
+
+  if (format === 'json') {
+    if (isValidUTF8(bytes)) return 'utf-8';
+    const detected = isPlausibleCP949(bytes) ? 'cp949' : 'unknown';
+    throw new UnsupportedTextEncodingError(format, detected);
+  }
+
+  const declaration = format === 'ofx'
+    ? declaredOFXEncoding(bytes)
+    : declaredHTMLEncoding(bytes);
+  if (
+    declaration.encoding === 'utf-16le'
+    || declaration.encoding === 'utf-16be'
+  ) {
+    throw new UnsupportedTextEncodingError(format, declaration.encoding);
+  }
+  if (declaration.encoding) return declaration.encoding;
+  if (declaration.unsupportedLabel && !containsOnlyASCII(bytes)) {
+    throw new UnsupportedTextEncodingError(format, declaration.unsupportedLabel);
+  }
+
+  return detectTextEncoding(bytes);
+}
+
+export function detectTextEncoding(bytes: Uint8Array): SupportedTextEncoding {
+  const bomEncoding = detectBOMEncoding(bytes);
+  if (bomEncoding) return bomEncoding;
 
   if (isValidUTF8(bytes)) return 'utf-8';
   return isPlausibleCP949(bytes) ? 'cp949' : 'utf-8';
@@ -83,4 +289,15 @@ export function decodeTextBytes(
     const iconv = runtimeRequire('iconv-lite') as IconvLite;
     return iconv.decode(runtime.Buffer.from(bytes), 'cp949').replace(/^﻿/, '');
   }
+}
+
+export function decodeStatementTextBytes(
+  bytes: Uint8Array,
+  format: StatementTextFormat,
+): string {
+  const encoding = detectStatementTextEncoding(bytes, format);
+  if (encoding === 'utf-8' && !isValidUTF8(bytes)) {
+    throw new UnsupportedTextEncodingError(format, 'invalid UTF-8');
+  }
+  return decodeTextBytes(bytes, encoding);
 }

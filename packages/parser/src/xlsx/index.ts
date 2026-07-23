@@ -8,6 +8,21 @@ import { parseAmount } from '../amount.js';
 import { normalizeHTML } from '../csv/shared.js';
 import { parseDateCell } from '../shared/date-cell.js';
 import {
+  decodeStatementTextBytes,
+  UnsupportedTextEncodingError,
+} from '../shared/encoding.js';
+import {
+  isHTMLStatementBytes,
+  type StatementTextPrefixDecoder,
+} from '../shared/format-detection.js';
+import {
+  MAX_REQUIRED_FIELD_ROW_ERRORS,
+  missingRequiredColumnLabels,
+  normalizeRequiredMerchant,
+  REQUIRED_MERCHANT_ERROR_CODE,
+  REQUIRED_MERCHANT_ERROR_MESSAGE,
+} from '../shared/required-fields.js';
+import {
   createSheetMergeIndex,
   resolveSheetCell,
 } from '../shared/sheet-cells.js';
@@ -32,13 +47,11 @@ import xlsx from 'xlsx';
 // Korean card companies often export HTML tables with .xls extension.
 // ---------------------------------------------------------------------------
 
-export function isHTMLContent(buffer: Buffer): boolean {
-  // Strip UTF-8 BOM (0xEF 0xBB 0xBF) before checking HTML signatures.
-  // Some Korean card exports include a BOM, which would otherwise prevent
-  // the startsWith checks from matching. Parity with web-side isHTMLContent
-  // in apps/web/src/lib/parser/xlsx.ts (C75-01).
-  const head = buffer.slice(0, 512).toString('utf-8').replace(/^﻿/, '').trimStart().toLowerCase();
-  return head.startsWith('<!doctype') || head.startsWith('<html') || /<table[\s>]/.test(head);
+export function isHTMLContent(
+  buffer: Uint8Array,
+  decodePrefix?: StatementTextPrefixDecoder,
+): boolean {
+  return isHTMLStatementBytes(buffer, decodePrefix);
 }
 
 // ---------------------------------------------------------------------------
@@ -74,20 +87,24 @@ function parseInstallments(raw: unknown): number | undefined {
 
 export async function parseXLSX(filePath: string, bank?: BankId): Promise<ParseResult> {
   const buffer = await readFile(filePath);
+  return parseXLSXBuffer(buffer, bank);
+}
 
+export function parseXLSXBuffer(buffer: Uint8Array, bank?: BankId): ParseResult {
   // Detect HTML-as-XLS (Korean card companies export HTML with .xls extension)
   let workbook: xlsx.WorkBook;
   let htmlBankHint: BankId | null = null;
 
   try {
     if (isHTMLContent(buffer)) {
-      const html = normalizeHTML(buffer.toString('utf-8'));
+      const html = normalizeHTML(decodeStatementTextBytes(buffer, 'html'));
       htmlBankHint = detectBank(html).bank;
-      workbook = xlsx.read(Buffer.from(html, 'utf-8'), { type: 'buffer', cellDates: false });
+      workbook = xlsx.read(html, { type: 'string', cellDates: false });
     } else {
-      workbook = xlsx.read(buffer, { type: 'buffer', cellDates: false });
+      workbook = xlsx.read(Buffer.from(buffer), { type: 'buffer', cellDates: false });
     }
   } catch (err) {
+    if (err instanceof UnsupportedTextEncodingError) throw err;
     return {
       bank: bank ?? null,
       format: 'xlsx',
@@ -194,15 +211,17 @@ function parseXLSXSheet(
   const categoryCol = findColumn(headers, config?.category, CATEGORY_COLUMN_PATTERN);
   const memoCol = findColumn(headers, config?.memo, MEMO_COLUMN_PATTERN);
 
-  if (dateCol === -1 || amountCol === -1) {
-    const missing: string[] = [];
-    if (dateCol === -1) missing.push('날짜');
-    if (amountCol === -1) missing.push('금액');
+  const missingColumns = missingRequiredColumnLabels({
+    date: dateCol,
+    merchant: merchantCol,
+    amount: amountCol,
+  });
+  if (missingColumns.length > 0) {
     return {
       bank: resolvedBank,
       format: 'xlsx',
       transactions: [],
-      errors: [new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`)],
+      errors: [new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missingColumns.join(', ')}`)],
     };
   }
 
@@ -211,6 +230,7 @@ function parseXLSXSheet(
 
   const mergeIndex = createSheetMergeIndex(sheet['!merges']);
   const consumedAmountSources = new Set<string>();
+  let requiredMerchantErrorCount = 0;
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -246,9 +266,21 @@ function parseXLSXSheet(
     const memoRaw = memoCell?.value ?? '';
     const amountRaw = amountCell.value;
 
-    if (!dateRaw && !merchantRaw) continue;
+    if (!dateRaw && !merchantRaw && !amountRaw) continue;
     if (amountCell.fromMerge && consumedAmountSources.has(amountCell.sourceKey)) continue;
 
+    const merchant = normalizeRequiredMerchant(merchantRaw);
+    if (!merchant) {
+      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+          code: REQUIRED_MERCHANT_ERROR_CODE,
+          line: i + 1,
+          raw: rowText,
+        }));
+        requiredMerchantErrorCount++;
+      }
+      continue;
+    }
     const amount = parseAmount(amountRaw);
     if (amount === null) {
       if (String(amountRaw ?? '').trim()) {
@@ -269,7 +301,7 @@ function parseXLSXSheet(
     // parsers (CSV, web CSV/XLSX/PDF) apply the same filter.
     if (amount <= 0) {
       errors.push(new ParseError(
-        `지출로 처리되지 않는 금액입니다: ${String(merchantRaw ?? '').trim() || '알 수 없는 거래'} ${amount}원`,
+        `지출로 처리되지 않는 금액입니다: ${merchant} ${amount}원`,
         { line: i + 1, raw: rowText },
       ));
       continue;
@@ -295,7 +327,7 @@ function parseXLSXSheet(
 
     const tx = {
       date: parsedDate,
-      merchant: String(merchantRaw ?? '').replace(/^"(.*)"$/, '$1').trim(),
+      merchant,
       amount,
       ...(installCol !== -1 && installRaw
         ? { installments: parseInstallments(String(installRaw)) }

@@ -107,7 +107,7 @@ export async function parseFile(
       }
       const { parseJSON } = await import('./json.js');
       throwIfAborted(signal);
-      return parseJSON(decodeParserTextPayload(buffer), bank);
+      return parseJSON(decodeParserTextPayload(buffer, 'json'), bank);
     }
     case 'ofx': {
       const buffer = await file.arrayBuffer();
@@ -120,7 +120,7 @@ export async function parseFile(
       }
       const { parseOFX } = await import('./ofx.js');
       throwIfAborted(signal);
-      return parseOFX(decodeParserTextPayload(buffer), bank);
+      return parseOFX(decodeParserTextPayload(buffer, 'ofx'), bank);
     }
     case 'html': {
       const buffer = await file.arrayBuffer();
@@ -133,7 +133,7 @@ export async function parseFile(
       }
       const { parseHTML } = await import('./html.js');
       throwIfAborted(signal);
-      return parseHTML(decodeParserTextPayload(buffer), bank);
+      return parseHTML(decodeParserTextPayload(buffer, 'html'), bank);
     }
     default: {
       const _exhaustive: never = format;

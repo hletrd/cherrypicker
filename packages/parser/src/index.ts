@@ -3,7 +3,7 @@ export { detectFormat, detectBank, detectCSVDelimiter, detectEncoding, decodeBuf
 export { parseStatement } from './statement.js';
 export type { ParseOptions, StatementReadDependencies } from './statement.js';
 export { parseCSV } from './csv/index.js';
-export { parseXLSX } from './xlsx/index.js';
+export { parseXLSX, parseXLSXBuffer } from './xlsx/index.js';
 export { parsePDF } from './pdf/index.js';
 export { parseJSON } from './json/index.js';
 export { parseOFX } from './ofx/index.js';

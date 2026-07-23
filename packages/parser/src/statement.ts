@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises';
 import type { BankId, ParseResult } from './types.js';
 import { ParseError } from './types.js';
+import { decodeStatementTextBytes } from './shared/encoding.js';
 import {
   FILE_FORMAT_SNIFF_BYTES,
   decodeBuffer,
@@ -88,9 +89,9 @@ export async function parseStatement(
     }
 
     case 'xlsx': {
-      const { parseXLSX } = await import('./xlsx/index.js');
+      const { parseXLSXBuffer } = await import('./xlsx/index.js');
       return enrichErrors(
-        await parseXLSX(filePath, bank),
+        parseXLSXBuffer(await readComplete(), bank),
         filePath,
         detection.errors,
       );
@@ -108,7 +109,7 @@ export async function parseStatement(
     }
 
     case 'json': {
-      const content = (await readComplete()).toString('utf-8');
+      const content = decodeStatementTextBytes(await readComplete(), 'json');
       const { parseJSON } = await import('./json/index.js');
       return enrichErrors(
         parseJSON(content, bank),
@@ -118,7 +119,7 @@ export async function parseStatement(
     }
 
     case 'ofx': {
-      const content = (await readComplete()).toString('utf-8');
+      const content = decodeStatementTextBytes(await readComplete(), 'ofx');
       const { parseOFX } = await import('./ofx/index.js');
       return enrichErrors(
         parseOFX(content, bank),
@@ -128,7 +129,7 @@ export async function parseStatement(
     }
 
     case 'html': {
-      const content = (await readComplete()).toString('utf-8');
+      const content = decodeStatementTextBytes(await readComplete(), 'html');
       const { parseHTML } = await import('./html/index.js');
       return enrichErrors(
         parseHTML(content, bank),

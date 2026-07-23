@@ -11,6 +11,7 @@ import {
 } from '../src/xlsx/index.js';
 import { parseAmountString as serverParseAmountString } from '../src/csv/shared.js';
 import { parseAmountString as webParseAmountString } from '../../../apps/web/src/lib/parser/csv.ts';
+import { HTML_XLS_SNIFF_BYTES } from '../src/shared/format-detection.js';
 import {
   SUMMARY_ROW_PATTERN as serverSummaryPattern,
   HEADER_KEYWORDS as serverHeaderKeywords,
@@ -141,6 +142,28 @@ describe('XLSX parser parity', () => {
     const serverBuffer = Buffer.from([0x50, 0x4B, 0x03, 0x04]);
     expect(webIsHTMLContent(binary)).toBe(false);
     expect(serverIsHTMLContent(serverBuffer)).toBe(false);
+  });
+
+  test('isHTMLContent decodes only the bounded sniff prefix on both routes', () => {
+    const payload = new Uint8Array(HTML_XLS_SNIFF_BYTES * 2);
+    payload.fill(0x20);
+    payload.set(new TextEncoder().encode('<!DOCTYPE html><html>'));
+    const decodedLengths: number[] = [];
+    const instrumentedDecoder = (bytes: Uint8Array): string => {
+      decodedLengths.push(bytes.byteLength);
+      return new TextDecoder().decode(bytes);
+    };
+
+    expect(
+      webIsHTMLContent(payload.buffer as ArrayBuffer, instrumentedDecoder),
+    ).toBe(true);
+    expect(
+      serverIsHTMLContent(Buffer.from(payload), instrumentedDecoder),
+    ).toBe(true);
+    expect(decodedLengths).toEqual([
+      HTML_XLS_SNIFF_BYTES,
+      HTML_XLS_SNIFF_BYTES,
+    ]);
   });
 
   // C21-TEST02: parseDateToISO parity

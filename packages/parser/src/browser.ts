@@ -4,23 +4,51 @@
  */
 export { parseAmount, parseAmountString } from './shared/amount.js';
 export {
+  decodeStatementTextBytes,
   decodeTextBytes,
+  detectStatementTextEncoding,
   detectTextEncoding,
+  UnsupportedTextEncodingError,
+  type StatementTextFormat,
   type SupportedTextEncoding,
 } from './shared/encoding.js';
 export {
+  MAX_REQUIRED_FIELD_ROW_ERRORS,
+  missingRequiredColumnLabels,
+  normalizeRequiredMerchant,
+  REQUIRED_DATE_ERROR_CODE,
+  REQUIRED_DATE_ERROR_MESSAGE,
+  REQUIRED_MERCHANT_ERROR_CODE,
+  REQUIRED_MERCHANT_ERROR_MESSAGE,
+  REQUIRED_TRANSACTION_COLUMNS,
+} from './shared/required-fields.js';
+export {
+  extractOFXTag,
+  extractOFXTransactionBlocks,
+  parseOFXDateToISO,
+  type OFXTransactionBlock,
+} from './shared/ofx.js';
+export {
+  DELIMITER_SAMPLE_CHARACTER_LIMIT,
   DELIMITER_SAMPLE_LINE_LIMIT,
   detectDelimitedTextDelimiter,
   sampleNonEmptyDelimitedLines,
+  splitDelimitedRecord,
+  splitDelimitedRecords,
+  splitDelimitedRecordsWithLines,
+  type DelimitedLogicalRecord,
   type DelimiterLineSample,
 } from './shared/delimiter.js';
 export {
+  HTML_XLS_SNIFF_BYTES,
   STATEMENT_FORMAT_SNIFF_BYTES,
   detectStatementFormatFromExtension,
   detectStatementFormatHint,
   finalizeStatementFormatHint,
+  isHTMLStatementBytes,
   type BrowserSafeStatementFormat,
   type StatementFormatHint,
+  type StatementTextPrefixDecoder,
 } from './shared/format-detection.js';
 export { parseDateCell, type DateCellResult } from './shared/date-cell.js';
 export {

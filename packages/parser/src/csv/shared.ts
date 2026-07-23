@@ -1,5 +1,11 @@
 import { ParseError } from '../types.js';
 import { parseAmountString } from '../shared/amount.js';
+import {
+  splitDelimitedRecord,
+  splitDelimitedRecords,
+  splitDelimitedRecordsWithLines,
+  type DelimitedLogicalRecord,
+} from '../shared/delimiter.js';
 
 export { parseAmountString } from '../shared/amount.js';
 
@@ -14,23 +20,7 @@ export { parseAmountString } from '../shared/amount.js';
  *  fell back to naive split, which broke when fields contained the delimiter
  *  character inside quotes (C13-01). */
 export function splitCSVLine(line: string, delimiter: string): string[] {
-  const result: string[] = [];
-  let inQuotes = false;
-  let current = '';
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]!;
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (char === delimiter && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
+  return splitDelimitedRecord(line, delimiter);
 }
 
 /** Split CSV content into logical lines, handling multi-line quoted fields.
@@ -44,57 +34,14 @@ export function splitCSVLine(line: string, delimiter: string): string[] {
  *  behavior of the previous `content.split('\n').filter(l => l.trim())`
  *  pattern used throughout the CSV parsers (C66-01). */
 export function splitCSVContent(content: string, delimiter: string): string[] {
-  // Normalize CRLF to LF (Windows line endings) and strip trailing CR
-  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const rawLines = normalized.split('\n');
+  return splitDelimitedRecords(content, delimiter);
+}
 
-  const logicalLines: string[] = [];
-  let pending = '';
-  let inQuotes = false;
-
-  for (const rawLine of rawLines) {
-    if (inQuotes) {
-      // We're inside a multi-line quoted field — accumulate and check
-      // whether the quote is closed on this line.
-      pending += '\n' + rawLine;
-      // Count unescaped quotes (not followed by another quote) to determine
-      // if we're still inside a quoted field.
-      let quoteCount = 0;
-      for (let i = 0; i < rawLine.length; i++) {
-        if (rawLine[i] === '"') {
-          if (i + 1 < rawLine.length && rawLine[i + 1] === '"') { i++; } // escaped quote
-          else { quoteCount++; }
-        }
-      }
-      if (quoteCount % 2 === 1) {
-        // Odd number of unescaped quotes means we closed the quoted field
-        inQuotes = false;
-        if (pending.trim()) logicalLines.push(pending);
-        pending = '';
-      }
-    } else {
-      // Count unescaped quotes on this line to check if we enter a quoted field
-      let quoteCount = 0;
-      for (let i = 0; i < rawLine.length; i++) {
-        if (rawLine[i] === '"') {
-          if (i + 1 < rawLine.length && rawLine[i + 1] === '"') { i++; } // escaped quote
-          else { quoteCount++; }
-        }
-      }
-      if (quoteCount % 2 === 1) {
-        // Odd number of unescaped quotes — we've entered a multi-line quoted field
-        inQuotes = true;
-        pending = rawLine;
-      } else {
-        // Normal line — add if non-empty
-        if (rawLine.trim()) logicalLines.push(rawLine);
-      }
-    }
-  }
-  // If content ends while still in a quoted field, flush what we have
-  if (pending.trim()) logicalLines.push(pending);
-
-  return logicalLines;
+export function splitCSVRecords(
+  content: string,
+  delimiter: string,
+): DelimitedLogicalRecord[] {
+  return splitDelimitedRecordsWithLines(content, delimiter);
 }
 
 /** Parse an amount string from CSV data. Delegates to parseAmountString

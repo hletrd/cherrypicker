@@ -222,4 +222,33 @@ describe('browser parser worker ownership', () => {
     expect(worker.messageListeners.size).toBe(0);
     expect(worker.errorListeners.size).toBe(0);
   });
+
+  test('rehydrates structured text-encoding worker failures', async () => {
+    const worker = new FakeWorker();
+    const parsing = parseWithWorker(
+      { format: 'json', payload: new ArrayBuffer(8) },
+      undefined,
+      () => worker,
+    );
+    worker.respond({
+      ok: false,
+      message: 'JSON text encoding is unsupported: cp949.',
+      name: 'UnsupportedTextEncodingError',
+      code: 'UNSUPPORTED_TEXT_ENCODING',
+      format: 'json',
+      encoding: 'cp949',
+    });
+
+    const error = await parsing.then(
+      () => null,
+      (reason: unknown) => reason,
+    );
+    expect(error).toMatchObject({
+      name: 'UnsupportedTextEncodingError',
+      code: 'UNSUPPORTED_TEXT_ENCODING',
+      format: 'json',
+      encoding: 'cp949',
+    });
+    expect(worker.terminations).toBe(1);
+  });
 });

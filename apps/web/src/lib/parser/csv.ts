@@ -3,6 +3,16 @@ import { ParseError } from './types.js';
 import {
   decodeTextBytes,
   detectTextEncoding,
+  MAX_REQUIRED_FIELD_ROW_ERRORS,
+  missingRequiredColumnLabels,
+  normalizeRequiredMerchant,
+  REQUIRED_DATE_ERROR_CODE,
+  REQUIRED_DATE_ERROR_MESSAGE,
+  REQUIRED_MERCHANT_ERROR_CODE,
+  REQUIRED_MERCHANT_ERROR_MESSAGE,
+  splitDelimitedRecord,
+  splitDelimitedRecordsWithLines,
+  type DelimitedLogicalRecord,
 } from '@cherrypicker/parser/browser';
 import { detectBank, detectCSVDelimiter } from './detect.js';
 import {
@@ -29,19 +39,7 @@ import { parseAmount } from './amount.js';
  *  fell back to naive split, which broke when fields contained the delimiter
  *  character inside quotes. Parity with server-side splitCSVLine (C13-01). */
 function splitLine(line: string, delimiter: string): string[] {
-  const result: string[] = [];
-  let inQuotes = false;
-  let current = '';
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]!;
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (char === delimiter && !inQuotes) { result.push(current.trim()); current = ''; }
-    else { current += char; }
-  }
-  result.push(current.trim());
-  return result;
+  return splitDelimitedRecord(line, delimiter);
 }
 
 /** Split CSV content into logical lines, handling multi-line quoted fields.
@@ -54,49 +52,12 @@ function splitLine(line: string, delimiter: string): string[] {
  *  Empty/whitespace-only logical lines are filtered out to match the
  *  behavior of the previous `content.split('\n').filter(l => l.trim())`
  *  pattern used throughout the CSV parsers. Parity with server-side
- *  splitCSVContent in packages/parser/src/csv/shared.ts (C67-01). */
-function splitCSVContent(content: string, _delimiter: string): string[] {
-  const normalized = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const rawLines = normalized.split('\n');
-
-  const logicalLines: string[] = [];
-  let pending = '';
-  let inQuotes = false;
-
-  for (const rawLine of rawLines) {
-    if (inQuotes) {
-      pending += '\n' + rawLine;
-      let quoteCount = 0;
-      for (let i = 0; i < rawLine.length; i++) {
-        if (rawLine[i] === '"') {
-          if (i + 1 < rawLine.length && rawLine[i + 1] === '"') { i++; }
-          else { quoteCount++; }
-        }
-      }
-      if (quoteCount % 2 === 1) {
-        inQuotes = false;
-        if (pending.trim()) logicalLines.push(pending);
-        pending = '';
-      }
-    } else {
-      let quoteCount = 0;
-      for (let i = 0; i < rawLine.length; i++) {
-        if (rawLine[i] === '"') {
-          if (i + 1 < rawLine.length && rawLine[i + 1] === '"') { i++; }
-          else { quoteCount++; }
-        }
-      }
-      if (quoteCount % 2 === 1) {
-        inQuotes = true;
-        pending = rawLine;
-      } else {
-        if (rawLine.trim()) logicalLines.push(rawLine);
-      }
-    }
-  }
-  if (pending.trim()) logicalLines.push(pending);
-
-  return logicalLines;
+ *  shared logical-record splitter in packages/parser (C67-01). */
+function splitCSVRecords(
+  content: string,
+  delimiter: string,
+): DelimitedLogicalRecord[] {
+  return splitDelimitedRecordsWithLines(content, delimiter);
 }
 
 /** Shared date-parsing — delegates to the canonical implementation in
@@ -110,14 +71,32 @@ import { parseDateStringToISO, isValidISODate, isValidYYMMDD, isValidYYYYMMDD, d
 // imports from the shared module. The shared module has been updated to include
 // whitespace stripping in parseCSVAmount and the isValidCSVAmount type guard.
 
-function parseDateToISO(raw: string, errors?: ParseError[], lineIdx?: number): string {
+function parseRequiredDateToISO(
+  raw: string,
+  errors: ParseError[],
+  lineIdx: number,
+  rawRow: string,
+  reportMissing: boolean,
+): string | null {
   const result = parseDateStringToISO(raw);
-  // Report unparseable dates as parse errors so users can see which
-  // transactions have malformed dates (C71-04/C56-04).
-  if (!isValidISODate(result) && raw.trim() && errors && lineIdx !== undefined) {
-    errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw.trim()}`, { line: lineIdx + 1 }));
+  if (isValidISODate(result)) return result;
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    if (reportMissing) {
+      errors.push(new ParseError(REQUIRED_DATE_ERROR_MESSAGE, {
+        code: REQUIRED_DATE_ERROR_CODE,
+        line: lineIdx + 1,
+        raw: rawRow,
+      }));
+    }
+  } else {
+    errors.push(new ParseError(
+      `날짜를 해석할 수 없습니다: ${trimmed}`,
+      { line: lineIdx + 1, raw: rawRow },
+    ));
   }
-  return result;
+  return null;
 }
 
 /** Exported alias for parseAmount — used by the JSON parser (C97-01). */
@@ -278,7 +257,8 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   // always strips BOM before delegating to bank adapters or this function
   // (C73-04).
   const delimiter = detectCSVDelimiter(content);
-  const lines = splitCSVContent(content, delimiter);
+  const records = splitCSVRecords(content, delimiter);
+  const lines = records.map((record) => record.content);
   const errors: ParseError[] = [];
   const transactions: RawTransaction[] = [];
 
@@ -378,15 +358,27 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
 
   // Report when required columns were not found — prevents silent empty results
   // when both header matching and data-inference fail (C65-02).
-  if (dateCol === -1 || amountCol === -1) {
-    const missing: string[] = [];
-    if (dateCol === -1) missing.push('날짜');
-    if (amountCol === -1) missing.push('금액');
-    errors.push(new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`));
+  const missingColumns = missingRequiredColumnLabels({
+    date: dateCol,
+    merchant: merchantCol,
+    amount: amountCol,
+  });
+  if (missingColumns.length > 0) {
+    return {
+      bank,
+      format: 'csv',
+      transactions: [],
+      errors: [
+        new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missingColumns.join(', ')}`),
+      ],
+    };
   }
 
+  let requiredMerchantErrorCount = 0;
+  let requiredDateErrorCount = 0;
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const line = lines[i] ?? '';
+    const physicalLine = records[i]?.line ?? i + 1;
     if (!line.trim()) continue;
 
     // Skip summary/total rows
@@ -400,21 +392,54 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
 
     if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
+    const merchant = normalizeRequiredMerchant(merchantRaw);
+    if (!merchant) {
+      if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+        errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+          code: REQUIRED_MERCHANT_ERROR_CODE,
+          line: physicalLine,
+          raw: line,
+        }));
+        requiredMerchantErrorCount++;
+      }
+      continue;
+    }
     let amount = parseAmount(amountRaw);
     // Use the shared isValidAmount() helper which handles both NaN and
     // zero-amount filtering (C26-02), matching the bank-specific adapters.
     // Enrich amount errors with raw row text for easier debugging, matching
     // the server-side isValidCSVAmount pattern in packages/parser/src/csv/shared.ts (C59-04).
-    if (!isValidAmount(amount, amountRaw, i, errors)) {
-      if (errors.length > 0 && errors[errors.length - 1]!.line === i + 1) {
+    if (!isValidAmount(amount, amountRaw, physicalLine - 1, errors)) {
+      if (
+        errors.length > 0
+        && errors[errors.length - 1]!.line === physicalLine
+      ) {
         errors[errors.length - 1]!.raw = line;
       }
       continue;
     }
 
+    const missingDate = !dateRaw.trim();
+    const parsedDate = parseRequiredDateToISO(
+      dateRaw,
+      errors,
+      physicalLine - 1,
+      line,
+      requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS,
+    );
+    if (parsedDate === null) {
+      if (
+        missingDate
+        && requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS
+      ) {
+        requiredDateErrorCount++;
+      }
+      continue;
+    }
+
     const tx: RawTransaction = {
-      date: parseDateToISO(dateRaw, errors, i),
-      merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
+      date: parsedDate,
+      merchant,
       amount,
     };
 
@@ -477,7 +502,8 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
     parseCSV(content: string): ParseResult {
       const delimiter = detectCSVDelimiter(content);
-      const lines = splitCSVContent(content, delimiter);
+      const records = splitCSVRecords(content, delimiter);
+      const lines = records.map((record) => record.content);
       const errors: ParseError[] = [];
       const transactions: RawTransaction[] = [];
 
@@ -503,15 +529,27 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
       const memoCol = findColumn(headers, memoHeader, MEMO_COLUMN_PATTERN);
 
       // Report when required columns were not found (F4 — parity with generic parser)
-      if (dateCol === -1 || amountCol === -1) {
-        const missing: string[] = [];
-        if (dateCol === -1) missing.push('날짜');
-        if (amountCol === -1) missing.push('금액');
-        errors.push(new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`));
+      const missingColumns = missingRequiredColumnLabels({
+        date: dateCol,
+        merchant: merchantCol,
+        amount: amountCol,
+      });
+      if (missingColumns.length > 0) {
+        return {
+          bank: bankId,
+          format: 'csv',
+          transactions: [],
+          errors: [
+            new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missingColumns.join(', ')}`),
+          ],
+        };
       }
 
+      let requiredMerchantErrorCount = 0;
+      let requiredDateErrorCount = 0;
       for (let i = headerIdx + 1; i < lines.length; i++) {
         const line = lines[i] ?? '';
+        const physicalLine = records[i]?.line ?? i + 1;
         if (!line.trim()) continue;
         if (isSummaryRow(line)) continue;
         const cells = splitLine(line, delimiter);
@@ -522,18 +560,51 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
         if (!dateRaw && !merchantRaw && !amountRaw) continue;
 
+        const merchant = normalizeRequiredMerchant(merchantRaw);
+        if (!merchant) {
+          if (requiredMerchantErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS) {
+            errors.push(new ParseError(REQUIRED_MERCHANT_ERROR_MESSAGE, {
+              code: REQUIRED_MERCHANT_ERROR_CODE,
+              line: physicalLine,
+              raw: line,
+            }));
+            requiredMerchantErrorCount++;
+          }
+          continue;
+        }
         let amount = parseAmount(amountRaw);
-        if (!isValidAmount(amount, amountRaw, i, errors)) {
+        if (!isValidAmount(amount, amountRaw, physicalLine - 1, errors)) {
           // Enrich amount error with raw row text for easier debugging (F3)
-          if (errors.length > 0 && errors[errors.length - 1]!.line === i + 1) {
+          if (
+            errors.length > 0
+            && errors[errors.length - 1]!.line === physicalLine
+          ) {
             errors[errors.length - 1]!.raw = line;
           }
           continue;
         }
 
+        const missingDate = !dateRaw.trim();
+        const parsedDate = parseRequiredDateToISO(
+          dateRaw,
+          errors,
+          physicalLine - 1,
+          line,
+          requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS,
+        );
+        if (parsedDate === null) {
+          if (
+            missingDate
+            && requiredDateErrorCount < MAX_REQUIRED_FIELD_ROW_ERRORS
+          ) {
+            requiredDateErrorCount++;
+          }
+          continue;
+        }
+
         const tx: RawTransaction = {
-          date: parseDateToISO(dateRaw, errors, i),
-          merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
+          date: parsedDate,
+          merchant,
           amount,
         };
 
