@@ -6,8 +6,10 @@ import { ENGLISH_KEYWORDS } from './keywords-english.js';
 import { NICHE_KEYWORDS } from './keywords-niche.js';
 import { EXPLICIT_KEYWORD_OVERRIDES } from './keyword-overrides.js';
 import {
-  normalizedMerchantTermMatches,
+  compileNormalizedMerchantTerm,
+  compiledNormalizedMerchantTermMatches,
   normalizeMerchantText,
+  type CompiledNormalizedMerchantTerm,
 } from './normalize.js';
 
 interface KeywordSource {
@@ -55,7 +57,7 @@ export class MerchantMatcher {
   private readonly taxonomy: CategoryTaxonomy;
   private readonly exactKeywords = new Map<string, { category: string; subcategory?: string }>();
   private readonly substringEntries: Array<[
-    keyword: string,
+    term: CompiledNormalizedMerchantTerm,
     value: { category: string; subcategory?: string },
   ]> = [];
   /** LRU cache keyed by normalized merchant name + rawCategory. */
@@ -162,7 +164,7 @@ export class MerchantMatcher {
       });
       if (keyword.length >= 2) {
         this.substringEntries.push([
-          keyword,
+          compileNormalizedMerchantTerm(keyword),
           {
             category: selected.category,
             subcategory: selected.subcategory,
@@ -205,10 +207,12 @@ export class MerchantMatcher {
       return result;
     }
 
+    const compiledMerchant = compileNormalizedMerchantTerm(lower);
+
     // 1. An exact canonical keyword is authoritative when both sources define
     //    the same merchant.
     const canonicalMatch =
-      this.taxonomy.findExactOrSubstringKeyword(merchantName);
+      this.taxonomy.findExactOrSubstringCompiledMerchant(compiledMerchant);
     if (canonicalMatch?.matchType === 'exact') {
       const result: MatchResult = {
         category: canonicalMatch.category,
@@ -239,10 +243,13 @@ export class MerchantMatcher {
           kwLen: number;
         }
       | undefined;
-    for (const [kw, categoryValue] of this.substringEntries) {
-      const merchantContainsKeyword = normalizedMerchantTermMatches(lower, kw);
+    for (const [term, categoryValue] of this.substringEntries) {
+      const kw = term.text;
+      const merchantContainsKeyword =
+        compiledNormalizedMerchantTermMatches(lower, term);
       const keywordContainsMerchant =
-        lower.length >= 3 && normalizedMerchantTermMatches(kw, lower);
+        lower.length >= 3 &&
+        compiledNormalizedMerchantTermMatches(kw, compiledMerchant);
       if (merchantContainsKeyword || keywordContainsMerchant) {
         if (
           !bestStaticKw ||
@@ -280,7 +287,8 @@ export class MerchantMatcher {
     }
 
     // 4. Taxonomy reverse-fuzzy keyword fallback
-    const taxonomyMatch = this.taxonomy.findCategory(merchantName);
+    const taxonomyMatch =
+      this.taxonomy.findCompiledCategory(compiledMerchant);
     if (taxonomyMatch.confidence > 0) {
       this.setCache(cacheKey, taxonomyMatch);
       return taxonomyMatch;

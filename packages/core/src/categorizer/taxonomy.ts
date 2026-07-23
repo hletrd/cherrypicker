@@ -3,8 +3,10 @@ import {
   type CategoryNode,
 } from '@cherrypicker/rules/browser';
 import {
-  normalizedMerchantTermMatches,
+  compileNormalizedMerchantTerm,
+  compiledNormalizedMerchantTermMatches,
   normalizeMerchantText,
+  type CompiledNormalizedMerchantTerm,
 } from './normalize.js';
 
 interface CategoryMatch {
@@ -22,6 +24,12 @@ interface FlatEntry {
   category: string;
   subcategory?: string;
   keywords: string[];
+}
+
+interface CompiledTaxonomyKeyword {
+  term: CompiledNormalizedMerchantTerm;
+  category: string;
+  subcategory?: string;
 }
 
 export const TAXONOMY_KEYWORD_OVERRIDES: Readonly<Record<string, string>> = {
@@ -51,8 +59,8 @@ interface CategoryTaxonomyOptions {
 export class CategoryTaxonomy {
   private readonly nodes: CategoryNode[];
   private readonly registry: CategoryRegistry;
-  /** keyword (lowercase) → { category, subcategory } */
-  private readonly keywordMap: Map<string, { category: string; subcategory?: string }>;
+  /** normalized keyword text → compiled term and canonical category */
+  private readonly keywordMap: Map<string, CompiledTaxonomyKeyword>;
   private readonly resolvedKeywordConflicts: TaxonomyKeywordConflict[] = [];
 
   constructor(
@@ -70,7 +78,7 @@ export class CategoryTaxonomy {
   private buildKeywordMap(
     nodes: CategoryNode[],
     overrides: Readonly<Record<string, string>>,
-  ): Map<string, { category: string; subcategory?: string }> {
+  ): Map<string, CompiledTaxonomyKeyword> {
     const definitions = new Map<
       string,
       Map<string, { category: string; subcategory?: string }>
@@ -109,7 +117,7 @@ export class CategoryTaxonomy {
       }
     }
 
-    const map = new Map<string, { category: string; subcategory?: string }>();
+    const map = new Map<string, CompiledTaxonomyKeyword>();
     for (const [keyword, candidates] of definitions) {
       const candidateKeys = [...candidates.keys()].sort();
       let selectedKey = candidateKeys[0]!;
@@ -134,7 +142,10 @@ export class CategoryTaxonomy {
           selectedCategory: selectedKey,
         });
       }
-      map.set(keyword, candidates.get(selectedKey)!);
+      map.set(keyword, {
+        term: compileNormalizedMerchantTerm(keyword),
+        ...candidates.get(selectedKey)!,
+      });
     }
     return map;
   }
@@ -146,12 +157,21 @@ export class CategoryTaxonomy {
   findExactOrSubstringKeyword(
     merchantName: string,
   ): TaxonomyKeywordMatch | undefined {
-    const lower = normalizeMerchantText(merchantName);
+    return this.findExactOrSubstringCompiledMerchant(
+      compileNormalizedMerchantTerm(normalizeMerchantText(merchantName)),
+    );
+  }
+
+  findExactOrSubstringCompiledMerchant(
+    compiledMerchant: CompiledNormalizedMerchantTerm,
+  ): TaxonomyKeywordMatch | undefined {
+    const lower = compiledMerchant.text;
 
     const exact = this.keywordMap.get(lower);
     if (exact) {
       return {
-        ...exact,
+        category: exact.category,
+        subcategory: exact.subcategory,
         confidence: 1,
         keyword: lower,
         matchType: 'exact',
@@ -166,16 +186,17 @@ export class CategoryTaxonomy {
           kwLen: number;
         }
       | undefined;
-    for (const [kw, mapping] of this.keywordMap) {
+    for (const [kw, entry] of this.keywordMap) {
       if (kw.trim().length < 2) continue;
-      if (normalizedMerchantTermMatches(lower, kw)) {
+      if (compiledNormalizedMerchantTermMatches(lower, entry.term)) {
         if (
           !bestSubstring ||
           kw.length > bestSubstring.kwLen ||
           (kw.length === bestSubstring.kwLen && kw < bestSubstring.keyword)
         ) {
           bestSubstring = {
-            ...mapping,
+            category: entry.category,
+            subcategory: entry.subcategory,
             keyword: kw,
             kwLen: kw.length,
           };
@@ -193,8 +214,17 @@ export class CategoryTaxonomy {
   }
 
   findCategory(merchantName: string): CategoryMatch {
-    const lower = normalizeMerchantText(merchantName);
-    const canonicalKeyword = this.findExactOrSubstringKeyword(merchantName);
+    return this.findCompiledCategory(
+      compileNormalizedMerchantTerm(normalizeMerchantText(merchantName)),
+    );
+  }
+
+  findCompiledCategory(
+    compiledMerchant: CompiledNormalizedMerchantTerm,
+  ): CategoryMatch {
+    const lower = compiledMerchant.text;
+    const canonicalKeyword =
+      this.findExactOrSubstringCompiledMerchant(compiledMerchant);
     if (canonicalKeyword) {
       return {
         category: canonicalKeyword.category,
@@ -217,15 +247,21 @@ export class CategoryTaxonomy {
         }
       | undefined;
     if (lower.length >= 3) {
-      for (const [kw, mapping] of this.keywordMap) {
-        if (normalizedMerchantTermMatches(kw, lower)) {
+      for (const [kw, entry] of this.keywordMap) {
+        if (
+          compiledNormalizedMerchantTermMatches(
+            entry.term.text,
+            compiledMerchant,
+          )
+        ) {
           if (
             !bestFuzzy ||
             kw.length < bestFuzzy.kwLen ||
             (kw.length === bestFuzzy.kwLen && kw < bestFuzzy.keyword)
           ) {
             bestFuzzy = {
-              ...mapping,
+              category: entry.category,
+              subcategory: entry.subcategory,
               keyword: kw,
               kwLen: kw.length,
             };

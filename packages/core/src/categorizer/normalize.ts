@@ -13,7 +13,94 @@ export function normalizeMerchantText(value: string): string {
     .toLowerCase();
 }
 
-const ASCII_WORD_CHARACTER = /[a-z0-9]/;
+export interface CompiledNormalizedMerchantTerm {
+  readonly text: string;
+  readonly requiresLeadingAsciiBoundary: boolean;
+  readonly requiresTrailingAsciiBoundary: boolean;
+}
+
+function isAsciiWordCharacterCode(code: number): boolean {
+  return (
+    (code >= 48 && code <= 57) ||
+    (code >= 97 && code <= 122)
+  );
+}
+
+export function compileNormalizedMerchantTerm(
+  normalizedText: string,
+): CompiledNormalizedMerchantTerm {
+  if (normalizedText.length === 0) {
+    return Object.freeze({
+      text: normalizedText,
+      requiresLeadingAsciiBoundary: false,
+      requiresTrailingAsciiBoundary: false,
+    });
+  }
+  return Object.freeze({
+    text: normalizedText,
+    requiresLeadingAsciiBoundary: isAsciiWordCharacterCode(
+      normalizedText.charCodeAt(0),
+    ),
+    requiresTrailingAsciiBoundary: isAsciiWordCharacterCode(
+      normalizedText.charCodeAt(normalizedText.length - 1),
+    ),
+  });
+}
+
+function compiledTermMatchesFromIndex(
+  normalizedMerchant: string,
+  compiledTerm: CompiledNormalizedMerchantTerm,
+  initialMatchIndex: number,
+): boolean {
+  const { text } = compiledTerm;
+  let matchIndex = initialMatchIndex;
+  while (matchIndex !== -1) {
+    const precedingIsAsciiWord =
+      matchIndex > 0 &&
+      isAsciiWordCharacterCode(
+        normalizedMerchant.charCodeAt(matchIndex - 1),
+      );
+    const followingIndex = matchIndex + text.length;
+    const followingIsAsciiWord =
+      followingIndex < normalizedMerchant.length &&
+      isAsciiWordCharacterCode(
+        normalizedMerchant.charCodeAt(followingIndex),
+      );
+    if (
+      (
+        !compiledTerm.requiresLeadingAsciiBoundary ||
+        !precedingIsAsciiWord
+      ) &&
+      (
+        !compiledTerm.requiresTrailingAsciiBoundary ||
+        !followingIsAsciiWord
+      )
+    ) {
+      return true;
+    }
+    matchIndex = normalizedMerchant.indexOf(text, matchIndex + 1);
+  }
+  return false;
+}
+
+export function compiledNormalizedMerchantTermMatches(
+  normalizedMerchant: string,
+  compiledTerm: CompiledNormalizedMerchantTerm,
+): boolean {
+  if (
+    normalizedMerchant.length === 0 ||
+    compiledTerm.text.length === 0
+  ) {
+    return false;
+  }
+  const matchIndex = normalizedMerchant.indexOf(compiledTerm.text);
+  return matchIndex !== -1 &&
+    compiledTermMatchesFromIndex(
+      normalizedMerchant,
+      compiledTerm,
+      matchIndex,
+    );
+}
 
 /**
  * Match an already-normalized merchant string against an already-normalized
@@ -32,28 +119,11 @@ export function normalizedMerchantTermMatches(
     return false;
   }
 
-  const requiresLeadingBoundary = ASCII_WORD_CHARACTER.test(normalizedTerm[0]!);
-  const requiresTrailingBoundary = ASCII_WORD_CHARACTER.test(
-    normalizedTerm[normalizedTerm.length - 1]!,
+  const matchIndex = normalizedMerchant.indexOf(normalizedTerm);
+  if (matchIndex === -1) return false;
+  return compiledTermMatchesFromIndex(
+    normalizedMerchant,
+    compileNormalizedMerchantTerm(normalizedTerm),
+    matchIndex,
   );
-  let matchIndex = normalizedMerchant.indexOf(normalizedTerm);
-
-  while (matchIndex !== -1) {
-    const precedingCharacter = normalizedMerchant[matchIndex - 1];
-    const followingCharacter =
-      normalizedMerchant[matchIndex + normalizedTerm.length];
-    const hasLeadingBoundary =
-      !requiresLeadingBoundary ||
-      precedingCharacter === undefined ||
-      !ASCII_WORD_CHARACTER.test(precedingCharacter);
-    const hasTrailingBoundary =
-      !requiresTrailingBoundary ||
-      followingCharacter === undefined ||
-      !ASCII_WORD_CHARACTER.test(followingCharacter);
-
-    if (hasLeadingBoundary && hasTrailingBoundary) return true;
-    matchIndex = normalizedMerchant.indexOf(normalizedTerm, matchIndex + 1);
-  }
-
-  return false;
 }
