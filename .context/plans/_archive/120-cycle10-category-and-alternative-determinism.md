@@ -1,7 +1,7 @@
 # Plan 120 — Cycle 10 Category Matching and Alternative Determinism
 
 **Findings:** C10-001 (Medium/High), C10-002 (Medium/High)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence

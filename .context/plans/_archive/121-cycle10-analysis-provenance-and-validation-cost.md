@@ -1,7 +1,7 @@
 # Plan 121 — Cycle 10 Analysis Provenance and Validation Cost
 
 **Findings:** C10-003 (Medium/High), C10-004 (Medium/High)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence

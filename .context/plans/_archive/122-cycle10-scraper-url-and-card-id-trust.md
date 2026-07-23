@@ -1,7 +1,7 @@
 # Plan 122 — Cycle 10 Scraper URL and Card-ID Trust
 
 **Findings:** C10-006 (Medium/High), C10-009 (Medium/High)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence

@@ -1,7 +1,7 @@
 # Plan 123 — Cycle 10 Card Detail and Worker Contracts
 
 **Findings:** C10-007 (Medium/High), C10-008 (Low/High)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence

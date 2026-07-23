@@ -1,7 +1,7 @@
 # Plan 124 — Cycle 10 Mileage Valuation Fail-Closed
 
 **Finding:** C10-005 (Medium/High; reopened/strengthened C14-09)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence
