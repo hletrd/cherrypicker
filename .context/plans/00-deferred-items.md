@@ -1891,13 +1891,11 @@ Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings*
 - **Reason for deferral:** sessionStorage is same-origin and not accessible to other websites. A reviver for prototype pollution was added in prior cycles. Full encryption would require a key management strategy (derive from user password? browser crypto?). The benefit is marginal for the threat model.
 - **Exit criterion:** If the app ever stores data in localStorage (which persists across sessions and is vulnerable to XSS), encrypt with Web Crypto API.
 
-### C32-SEC-SSRF: fetchCardPage fetches arbitrary URLs
+### C32-SEC-SSRF: fetchCardPage fetches arbitrary URLs — RESOLVED by C1-038
 - **Original finding:** C32-security-reviewer-08
-- **Severity:** MEDIUM (deferred — runs in trusted CLI environment)
-- **Confidence:** High
-- **File+line:** `tools/scraper/src/fetcher.ts:13`
-- **Reason for deferral:** The scraper runs in a trusted developer/CI environment with explicit consent. URL validation already exists (hostname whitelist). The risk is limited to the operator's own network.
-- **Exit criterion:** If scraper is exposed to untrusted user input, add strict URL schema validation and DNS rebinding protection.
+- **Resolved:** 2026-07-23
+- **Resolution:** Every initial URL and redirect now requires an exact configured host, public-only DNS answers, a connection pinned to that answer set, and a verified public socket address. Redirect count, status, HTML media type, one operation deadline, and a 5 MiB streamed-body ceiling are enforced.
+- **Verification:** `tools/scraper/__tests__/network-policy.test.ts` and `tools/scraper/__tests__/fetcher.test.ts` cover private/mixed answers, DNS rebinding, redirect revalidation, response limits, one-fetch charset decoding, cancellation, and timer cleanup.
 
 ---
 
@@ -1928,3 +1926,17 @@ Cycle 15 (third consecutive convergence cycle) produced **zero net-new findings*
 - **Exit criterion:** Dedicated refactor cycle with design doc for shared parser package.
 
 ---
+
+## Deferred Data Audit (Cycle 1 — 2026-07-23)
+
+### D-112: Verify the merchant scope of 129 fail-closed reward rules
+
+- **Original finding:** C1-004 residual real-data audit
+- **Severity:** HIGH (catalog completeness; runtime correctness is protected)
+- **Owner:** Catalog data owner, with issuer-source verification
+- **Inventory:** `.context/plans/68-unverified-merchant-scope-inventory.json` lists the exact 129 `cardId:ruleId` coordinates. `packages/rules/__tests__/catalog-validation.test.ts` requires that inventory to match the authored catalog exactly.
+- **Current safety state:** Each rule is authored at wildcard scope with `support.status: unsupported` and `reason: unverified_merchant_scope`. It stays in optimizer/detail artifacts for disclosure, contributes zero reward, and is excluded from category, no-minimum-spend, top-reward, and summary indexes.
+- **Why deferred:** The original rows were positive `uncategorized` rewards without a merchant constraint, and many lack enough label/source detail to distinguish a genuine unmatched-only benefit from an all-merchant benefit. Bulk promotion to supported wildcard would over-reward; retaining supported `uncategorized` would under-reward categorized transactions while looking exact. Authoritative issuer terms are required.
+- **Risk while open:** Recommendations can understate rewards or omit otherwise competitive cards. They cannot fabricate these rewards because the runtime fails closed and discloses the unsupported candidate.
+- **Reopening criterion:** Begin a source-audit batch only when authoritative issuer terms or captured product guides are available for named inventory entries.
+- **Exit criterion:** For every entry, record the source, effective date, canonical merchant/category scope, payment/channel predicates, and exact positive reward value; then either restore `supported` with executable semantics or retain a source-specific unsupported reason. Remove resolved coordinates from the inventory. This item closes only when the inventory count and the `unverified_merchant_scope` catalog count are both zero.

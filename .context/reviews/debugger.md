@@ -1,147 +1,120 @@
-# Debugger Review — CherryPicker Cycle 37
+# Debugger Review — Cycle 1
 
 **Reviewer:** debugger
-**Scope:** Logic bugs, edge cases, failure modes, data-flow issues
-**Date:** 2026-05-06
+**Date:** 2026-07-23
+**Scope:** Parser edge cases, async failure paths, categorization state, month selection, and numeric integrity
+**Result:** 8 findings: 6 High, 2 Medium
 
----
+## Findings
 
-## Summary
+### DBG-01 — PDF fallback strips two common negative markers before parsing
 
-One critical bug (BUG-1) verified fixed in Cycle 37. Three bugs from Cycle 32 remain open. Four new edge-case issues identified in the recently added parsers. The dominant pattern is "silent data loss" — parsers dropping transactions without surfacing errors to the user.
+- **Severity:** High
+- **Confidence:** 0.99
+- **Status:** Confirmed by focused regex/amount execution in both duplicated implementations
+- **Locations:** `packages/parser/src/pdf/index.ts:307-315`; `packages/parser/src/pdf/index.ts:335-382`; `apps/web/src/lib/parser/pdf.ts:527-542`; `apps/web/src/lib/parser/pdf.ts:561-598`
 
-| Category | Count | Severity |
-|---|---|---|
-| Verified Fixed | 1 | Critical |
-| New Findings | 4 | 2 Medium, 2 Low |
-| Carryover (still open) | 6 | — |
+The fallback regex matches parenthesized and `마이너스` negative amounts, but the selected capture group contains only the digits. `parseAmount()` receives `1,234`, not `(1,234)` or `마이너스1,234`, so the refund becomes a positive purchase. Full-width prefix minus and trailing minus remain in their captures and work, making the bug format-specific.
 
----
+**Failure scenario:** A fallback-scanned line `2026-07-01 환불가맹점 (50,000)` is returned as a +50,000 won transaction and enters optimization instead of being skipped as a refund.
 
-## VERIFIED FIXED
+**Fix:** Parse the entire matched token after removing only currency wrappers/suffixes, or reattach the sign based on the matched alternative. Add end-to-end fallback tests for parentheses, `마이너스`, full-width minus, trailing minus, and ordinary positives in both server and web parsers.
 
-### BUG-1: Per-transaction cap applied to amount instead of reward
-**File:** `packages/core/src/calculator/reward.ts:265-277`
-**Status:** FIXED
+### DBG-02 — Structured PDF row fallback changes indices after caching stale cell values
 
-The code now correctly computes the uncapped reward first, then applies `perTxCap` to the reward value:
-```typescript
-const uncappedReward = calcFn(tx.amount, normalizedRate, null, 0).reward;
-rawReward = perTxCap !== null ? Math.min(uncappedReward, perTxCap) : uncappedReward;
-```
-This resolves the 20x undercalculation bug identified in Cycle 32.
+- **Severity:** High
+- **Confidence:** 0.99
+- **Status:** Confirmed by direct control-flow inspection
+- **Locations:** `packages/parser/src/pdf/index.ts:93-125`; `packages/parser/src/pdf/index.ts:193-206`; `apps/web/src/lib/parser/pdf.ts:294-321`; `apps/web/src/lib/parser/pdf.ts:386-405`
 
----
+Both implementations read `dateValue` and `amountValue` using header-derived indices, then detect that a particular row has shifted columns and update `dateIdx`/`amountIdx`. Date parsing later rereads the updated cell, but amount parsing uses the old cached `amountValue`; the early `dateValue` guard is stale too.
 
-## NEW FINDINGS (Cycle 37)
+**Failure scenario:** A PDF header says amount is column 4, while a split/merged row places it in column 3. The heuristic finds column 3, but the parser still parses column 4 and either drops the row or records the wrong amount.
 
-### BUG-37-01: JSON Parser Silently Drops Refunds and Credits
-**File:** `packages/parser/src/json/index.ts:138`, `apps/web/src/lib/parser/json.ts:130`
-**Severity:** Medium | **Confidence:** High
+**Fix:** Resolve and validate per-row indices before reading values, or retain and use the `dateCell.value`/`amountCell.value` returned by the heuristic. Add a shifted-row table fixture to both parser suites.
 
-`parseTransactionObject` returns `null` for `amount <= 0` without pushing an error. A JSON export containing refunds (negative amounts) or balance transfers (zero amounts) will have those transactions silently excluded. The user sees fewer transactions than expected with no explanation.
+### DBG-03 — Server-side CP949 detection misclassifies ordinary Korean CSV bytes as UTF-8
 
-**Concrete scenario:** User exports transactions from a banking API that includes a -50,000 Won refund. The JSON parser skips it silently. The user wonders why their statement has 45 transactions instead of 46.
+- **Severity:** High
+- **Confidence:** 0.99
+- **Status:** Confirmed by a realistic CP949-encoded Korean header execution
+- **Locations:** `packages/parser/src/detect.ts:22-55`; `packages/parser/src/detect.ts:58-73`; `packages/parser/src/index.ts:54-65`; `apps/web/src/lib/parser/index.ts:40-64`
 
-**Fix:** Push a `ParseError` when filtering out negative/zero amounts, similar to how unparseable amounts are reported.
+The detector counts a CP949 signal only when a `0x80-0xBF` byte follows ASCII. Ordinary Korean CP949 characters are high-byte pairs, so that condition usually contributes zero and the detector returns UTF-8. In a focused run, CP949 bytes for `이용일,가맹점,이용금액` were detected as UTF-8 and decoded as mojibake; `TextDecoder("euc-kr")` decoded them correctly. The web parser already uses a different replacement-character comparison.
 
----
+**Failure scenario:** A common Korean CP949 CSV loses recognizable headers and bank keywords, then fails parsing or silently falls into generic detection.
 
-### BUG-37-02: OFX `parseOFXDate` Timezone Math Is Confusing and Fragile
-**File:** `packages/parser/src/ofx/index.ts:88-115`, `apps/web/src/lib/parser/ofx.ts:57-84`
-**Severity:** Medium | **Confidence:** Medium
+**Fix:** Prefer strict/fatal UTF-8 validation; if the byte stream is not valid UTF-8, decode as CP949. If ambiguity remains, compare replacement-character counts. Add realistic CP949 files, including short and BOM-free inputs.
 
-The timezone conversion uses a non-obvious mathematical coincidence:
-```typescript
-const utcMs = Date.UTC(year, month, day, hour, minute, second) - tzOffset * 3600000;
-const kst = new Date(utcMs + 9 * 3600000);
-```
+### DBG-04 — XLSX files with a plausible partial header silently return no transactions and no errors
 
-`Date.UTC` treats the parameters as UTC time, but the OFX datetime is in the timezone indicated by the offset. The subtraction happens to produce the correct UTC timestamp by coincidence for common cases, but the intent is unclear. Future maintainers may "fix" this into a real bug.
+- **Severity:** Medium
+- **Confidence:** 0.99
+- **Status:** Confirmed by focused in-memory workbook execution
+- **Locations:** `packages/parser/src/xlsx/index.ts:240-284`; `packages/parser/src/xlsx/index.ts:445-459`; `apps/web/src/lib/parser/xlsx.ts:412-457`; `apps/web/src/lib/parser/xlsx.ts:620-636`
 
-**Concrete risk:** A maintainer refactors this to use local Date methods, breaking cross-midnight cases.
+Header detection accepts keywords from two categories, but neither implementation verifies that required date and amount columns were found. With headers `날짜, 가맹점` and one data row, the web parser returned exactly `{ transactions: 0, errors: [] }` in a focused execution. The server path has the same missing guard.
 
-**Fix:** Rewrite with explicit intent:
-```typescript
-// OFX datetime is LOCAL to the specified timezone offset
-// Convert to UTC, then to KST (UTC+9)
-const localMs = Date.UTC(year, month, day, hour, minute, second); // treat as epoch-relative
-const utcMs = localMs - tzOffset * 3600000;
-const kstDate = new Date(utcMs + 9 * 3600000);
-```
+**Failure scenario:** A changed bank export omits or renames the amount header. Analysis reports an empty parse without explaining that a required column was missing.
 
----
+**Fix:** Immediately require `dateCol !== -1` and `amountCol !== -1` after column matching and return a targeted `ParseError` naming missing columns. Add web/server tests for date-only, amount-only, and multi-sheet partial headers.
 
-### BUG-37-03: HTML Parser `normalizeHTML` Strips Valid Content Inside "Script-Like" Patterns
-**File:** `apps/web/src/lib/parser/html.ts:33-35`
-**Severity:** Low | **Confidence:** Low
+### DBG-05 — Card-data timeout or cross-caller cancellation can produce a successful zero-card optimization
 
-The while-loop stripping `<script...>...</script>` could remove legitimate content if a bank's HTML export contains the literal text `<script` in a data cell (e.g., a merchant named "FastScript Solutions"). This is a false-positive sanitization.
+- **Severity:** High
+- **Confidence:** 0.98
+- **Status:** Confirmed async data-flow defect
+- **Locations:** `apps/web/src/lib/cards.ts:135-184`; `apps/web/src/lib/cards.ts:225-234`; `apps/web/src/lib/analyzer.ts:191-218`; `apps/web/src/lib/analyzer.ts:276-280`
 
-**Fix:** The risk is low — merchant names rarely contain `<script`. Document the limitation rather than fixing.
+The internal ten-second timeout aborts the shared controller, but all `AbortError`s are swallowed into `undefined`. `getAllCardRules()` converts that into `[]`; analysis then permits empty `coreRules` and returns the greedy optimizer's zero-reward result. A later caller's signal is also chained to the same shared controller, so an unrelated component unmount can abort analysis's shared fetch.
 
----
+**Failure scenario:** The card grid starts loading, analysis joins the in-flight request, and grid unmount aborts it. Analysis completes with no recommendations and zero reward instead of reporting data unavailability.
 
-### BUG-37-04: OFX ExtractTag Double-Regex Evaluation Is Inefficient and Could Mismatch
-**File:** `packages/parser/src/ofx/index.ts:67-78`, `apps/web/src/lib/parser/ofx.ts:38-46`
-**Severity:** Low | **Confidence:** Medium
+**Fix:** Distinguish internal timeout from caller cancellation and propagate failures to analysis. Never accept zero card rules as a valid full-catalog optimization. Isolate each caller's cancellation from the shared underlying fetch, for example by racing only that caller's await.
 
-For every tag extraction, two regexes are compiled and evaluated:
-1. XML-style: `<TAG>value</TAG>`
-2. SGML-style: `<TAG>value`
+### DBG-06 — Raw bank category fallback flattens leaf IDs into impossible top-level categories
 
-If a block contains BOTH styles (malformed OFX), the XML match wins. But if the XML match captures content from a different tag due to greedy matching, the SGML match is never evaluated. Example:
-```
-<NAME>Starbucks</NAME><MEMO>Extra text
-```
-The XML regex for `NAME` correctly matches. But if the closing tag is missing:
-```
-<NAME>Starbucks<MEMO>Extra text
-```
-The SGML regex `/<NAME[^>]*>\s*([^<\n\r]+)/` captures "Starbucks" — correct. However, if the block is:
-```
-<NAME>Starbucks</MEMO>
-```
-The XML regex `/<NAME[^>]*>\s*([^<]+?)\s*</NAME>` fails (no `</NAME>`), then SGML captures "Starbucks" — also correct. The actual risk is low but the double-evaluation is wasteful.
+- **Severity:** High
+- **Confidence:** 0.99
+- **Status:** Confirmed by focused matcher execution; existing test locks the defect
+- **Locations:** `packages/core/src/categorizer/taxonomy.ts:113-126`; `packages/core/src/categorizer/matcher.ts:109-120`; `packages/core/__tests__/categorizer.test.ts:229-240`; `packages/core/src/calculator/reward.ts:69-71`
 
-**Fix:** Cache compiled regexes per tag name, or use a single linear scan.
+`getAllCategories()` flattens parent and child IDs into one set. The raw-category fallback therefore treats a known child such as `cafe` as `{ category: "cafe" }` rather than `{ category: "dining", subcategory: "cafe" }`. A focused run also showed that the fully qualified `dining.cafe` form is rejected as unknown. Exact reward matching cannot use the flattened result.
 
----
+**Failure scenario:** An unknown merchant with bank-supplied raw category `cafe` is assigned a category that no canonical cafe reward can match, even though the taxonomy contains the parent relation.
 
-## CARRYOVER (still open from prior cycles)
+**Fix:** Build a canonical lookup from each accepted token to `{ parent, subcategory? }`. Accept qualified IDs and unambiguous leaf IDs, reject ambiguous leaves, and update the test to assert the canonical pair.
 
-| ID | Severity | File | Description |
-|----|----------|------|-------------|
-| BUG-3 | Medium | `store.svelte.ts:567` | NaN propagation in previousMonthSpending |
-| BUG-4 | Medium | `xlsx.ts:99` | EUC-KR HTML detection failure |
-| BUG-5 | Low | `json.ts:71` | Prototype pollution in findField case-insensitive path |
-| BUG-6 | Low | `csv.ts:27` | CSV unclosed quotes not reported |
-| BUG-7 | Medium | `ofx.ts:146` | OFX credits silently skipped |
-| C32-V02 | High | `reward.ts:47` | `isOnline` never populated, excludeOnline rules unreachable |
+### DBG-07 — “Previous month” means previous uploaded month, not the previous calendar month
 
----
+- **Severity:** High
+- **Confidence:** 0.98
+- **Status:** Confirmed control-flow defect
+- **Locations:** `apps/web/src/lib/analyzer.ts:407-419`; `apps/web/src/lib/store.svelte.ts:585-610`
 
-## Cross-File Interaction Risks
+Both initial analysis and reoptimization sort the months present in the upload and choose the preceding entry. They do not calculate the calendar predecessor of the latest month.
 
-### R1: Silent Data Loss Pattern Across All New Parsers
+**Failure scenario:** A statement set contains January and March but no February. January spending is treated as March's “previous month” performance, potentially unlocking tiers that should use February's absent/zero/explicit value.
 
-All three new parsers (HTML, OFX, JSON) silently drop transactions in certain cases:
-- **HTML**: `amount <= 0` at line 249 (skips refunds)
-- **OFX**: `rawAmount >= 0` at line 191 (skips credits)
-- **JSON**: `amount <= 0` at line 130 (skips refunds)
+**Fix:** Compute the exact preceding `YYYY-MM` with year rollover and look up only that key. When it is missing, use the explicit user value or a clearly disclosed default; do not substitute an older uploaded month. Add January/March and January/December rollover tests.
 
-None of these produce user-visible errors. A user uploading a statement with refunds will see missing transactions across all formats. This is a systemic UX issue, not a parser-specific bug.
+### DBG-08 — Numeric JSON/XLSX amounts can exceed the safe-integer boundary
 
-**Recommendation:** Standardize on one of two approaches:
-1. Include refunds/credits as transactions with negative amounts (calculator already handles this via `skippedTransactions`)
-2. Report them as parse warnings so the user knows transactions were filtered
+- **Severity:** Medium
+- **Confidence:** 0.99
+- **Status:** Confirmed numeric-integrity defect
+- **Locations:** `packages/parser/src/json/index.ts:85-96`; `apps/web/src/lib/parser/json.ts:85-92`; `packages/parser/src/amount.ts:15-30`; `packages/parser/src/csv/shared.ts:180-191`
 
----
+String amount parsing rejects values beyond `Number.MAX_SAFE_INTEGER`, but raw numeric JSON and XLSX cells are accepted whenever finite, then rounded. JSON has already irreversibly rounded a literal such as `9007199254740993` to `9007199254740992` before this check.
 
-## Conclusion
+**Failure scenario:** A malformed or hostile numeric amount is silently changed and retained, corrupting totals and comparisons rather than producing a parse error.
 
-**Most critical remaining bugs:**
-1. **BUG-3** (NaN propagation) — Complete analysis corruption from malformed input
-2. **BUG-7** (OFX credits skipped) — Data loss without user notification
-3. **BUG-37-01** (JSON refunds silently dropped) — Same pattern, new format
-4. **C32-V02** (`isOnline` dead code) — Silent incorrect reward calculation
+**Fix:** Require `Number.isSafeInteger()` after rounding (and apply the same absolute bound as string parsing) for every numeric entry point. Add parity tests for numeric and string values at, below, and above the safe boundary.
+
+## Coverage and final sweep
+
+- Inventory traversed: `packages/core` 27 files, `packages/parser` 60, `packages/rules` 714, `packages/viz` 8, `tools/cli` 10, `tools/scraper` 20, `apps/web` 60, `scripts` 1, and `.github` 1, plus root workspace/configuration files.
+- Parser implementations and their web duplicates were compared across CSV, JSON, OFX, HTML, XLSX, PDF, amount/date normalization, detection, and analyzer/store handoff.
+- Focused executions reproduced the negative-capture behavior, CP949 misdetection, raw-category flattening, and silent XLSX partial-header result.
+- A final sweep checked test intent, async error propagation, date/month edge cases, and numeric boundaries. No additional actionable finding survived evidence verification.
+- No browser or E2E test was launched, so this reviewer created no Playwright/Chrome process requiring cleanup.

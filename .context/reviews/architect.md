@@ -1,72 +1,172 @@
-# Architecture Review — CherryPicker Cycle 37
+# Architecture Review — Cycle 1
 
 **Reviewer:** architect
-**Scope:** Package boundaries, coupling, layering, design decisions, technical debt
-**Date:** 2026-05-06
+**Date:** 2026-07-23
+**Scope:** Entire current repository at `e6fe49b`; boundaries, domain modeling, data flow, validation, and evolvability
+**Outcome:** 1 Critical, 4 High, 1 Medium findings
+
+## Architecture assessment
+
+The monorepo boundaries are understandable, but the product's central domain contract is duplicated across data, runtime, build, scraper, and UI layers. The compiler validates local TypeScript shapes while the important semantic relationships—category reachability, reward units, condition support, and spending provenance—remain implicit. Current catalog-scale failures are the direct result.
+
+## Findings
+
+### ARCH-01 — There is no authoritative category/reward language
+
+**Severity:** Critical
+**Confidence:** High
+**Status:** Confirmed by cross-layer and full-catalog audit
+
+**Evidence**
+
+- Taxonomy emission: `packages/core/src/categorizer/taxonomy.ts:30-55`.
+- Four independently authored keyword maps merged with silent last-writer-wins behavior: `packages/core/src/categorizer/matcher.ts:8-19`.
+- Open string fields in the rule schema: `packages/rules/src/schema.ts:26-39,65-70`.
+- A second, relaxed schema in the generator: `scripts/build-json.ts:18-81`.
+- A third contract in the scraper prompt/tool schema: `tools/scraper/src/prompts/system.ts:25-84` and `tools/scraper/src/prompts/schemas.ts:55-107`.
+- A fourth interpretation in the UI: `apps/web/src/components/cards/CardDetail.svelte:48-57`.
+
+The resulting semantic audit found 183 conflicting keyword definitions, 357/639 merchant-conditioned benefits unreachable for every merchant they name, 121 reward entries outside the taxonomy-emitted shape, and 1,818 unmatchable performance-exclusion tokens.
+
+**Failure scenario**
+
+Changing or adding a category in one location compiles successfully but can silently change matcher precedence, make catalog benefits unreachable, render a wrong label/rate, and allow the generator to publish it.
+
+**Recommendation**
+
+Create a versioned domain package that owns canonical category keys, reward discriminated unions, executable conditions, and normalization of legacy data. Generate keyword-map types, JSON schema/LLM schema, UI formatting metadata, and catalog lint rules from it. No consumer should accept arbitrary category/unit strings.
 
 ---
 
-## Summary
+### ARCH-02 — The transaction/rule model cannot represent benefits the catalog claims to calculate
 
-Cycle 37 did not introduce structural changes. The new parsers (HTML, OFX, JSON) follow the established pattern of dual implementation (server + web), compounding the parser duplication debt. No progress on the core architectural issues identified in cycles 32-35. The deferral culture for structural refactoring remains a concern.
+**Severity:** High
+**Confidence:** High
+**Status:** Confirmed by code and catalog audit
 
-| Category | Count | Severity |
-|---|---|---|
-| New Findings | 1 | Low |
-| Carryover (still open) | 5 | — |
-| Structural Debt Status | Worsened | — |
+**Evidence**
 
----
+- `packages/core/src/calculator/reward.ts:42-54` executes only minimum amount and merchant conditions.
+- `packages/core/src/calculator/reward.ts:168-182` approximates per-liter rewards as one fixed amount per transaction and returns zero for unknown units.
+- `packages/core/src/models/transaction.ts:1-16` has no online/offline flag, fuel volume, payment method, weekday/service metadata, or occurrence basis.
+- The catalog has 540 restrictions stored only as free-text notes, 34 `won_per_liter` tiers, and 90 cards with duplicate category keys.
+- `packages/rules/data/cards/cu/eobuba-check.yaml:22-86` needs day-of-week and occurrence limits; `packages/rules/data/cards/samsung/id-simple.yaml:22-38` needs a maximum transaction threshold. Neither can be represented.
+- Tests deliberately lock the per-liter placeholder to a 60원 per-transaction result at `packages/core/__tests__/calculator.test.ts:690-700`.
 
-## NEW FINDINGS (Cycle 37)
+**Failure scenario**
 
-### ARCH-37-01: New Parser Formats Exacerbate Duplication Debt
-**File:** `packages/parser/src/` vs `apps/web/src/lib/parser/`
-**Severity:** Low | **Confidence:** High
+The engine returns a precise-looking number even when required facts are absent. That is worse than an explicit unsupported result because the optimizer compares the fabricated number with accurately modeled cards.
 
-The addition of HTML, OFX, and JSON parsers in C98/C99 added ~600 lines of new server-side parser code and ~550 lines of new web-side parser code. Both implementations are manually maintained with parity comments (C98-02, C99-01, C100-01, C100-03) but no automated parity verification for the new formats. The total duplication footprint is now:
+**Recommendation**
 
-| Format | Server Lines | Web Lines | Duplication |
-|--------|-------------|-----------|-------------|
-| CSV | ~200 | ~180 | High |
-| XLSX | ~400 | ~570 | High |
-| PDF | ~431 | ~622 | High |
-| HTML | ~279 | ~284 | Very High (nearly identical) |
-| JSON | ~90 | ~85 | Very High (nearly identical) |
-| OFX | ~130 | ~125 | Very High (nearly identical) |
-| **Total** | **~1530** | **~1866** | **~3396 lines duplicated** |
-
-The HTML, JSON, and OFX parsers are particularly wasteful because they are pure string-processing functions with no Node-specific or browser-specific APIs. They could be unified into a single runtime-agnostic implementation.
-
-**Fix:** Extract HTML, JSON, and OFX parsers into `packages/parser/src/` as pure functions, then import them into the web app via a build step. These three formats require no platform-specific APIs (unlike PDF which needs pdfjs-dist vs unpdf).
+Model reward eligibility as typed predicates over explicit transaction/context capabilities. A calculation should return `exact`, `estimated`, or `unsupported` with reasons. The optimizer should exclude or visibly penalize unsupported comparisons rather than silently substituting a placeholder. Add new facts only through parser/user enrichment with provenance.
 
 ---
 
-## CARRYOVER (still open from prior cycles)
+### ARCH-03 — Previous-month spending loses provenance at the analyzer boundary
 
-| ID | Severity | File | Description |
-|----|----------|------|-------------|
-| ARCH-01 | Medium | `analyzer.ts` | Type leakage between web and core packages |
-| ARCH-02 | Low | `store.svelte.ts` | Duplicate optimization result types |
-| ARCH-03 | Medium | `packages/parser/src/` vs `apps/web/src/lib/parser/` | Parser web/server duplication |
-| ARCH-04 | Low | `store.svelte.ts` | God Object (666 lines) |
-| ARCH-05 | Low | `analyzer.ts` / `store.svelte.ts` | Circular dependency risk |
+**Severity:** High
+**Confidence:** High
+**Status:** Confirmed by data-flow inspection
+
+**Evidence**
+
+- `apps/web/src/lib/analyzer.ts:381-419` derives a scalar from uploaded transactions.
+- `apps/web/src/lib/analyzer.ts:424-428` passes that scalar through the same `previousMonthSpending` option used for a user-entered total.
+- `apps/web/src/lib/analyzer.ts:228-261` interprets any scalar as authoritative for every card; only an absent scalar triggers per-card exclusions.
+- `apps/web/src/lib/store.svelte.ts:585-619` independently reconstructs the same precedence during reoptimization.
+
+**Failure scenario**
+
+Once prior-month transactions become a number, the system cannot apply per-card exclusions or distinguish a partial/nonconsecutive statement from an explicit user assertion. Initial analysis and reoptimization already disagree on precedence.
+
+**Recommendation**
+
+Introduce a first-class spending-basis type, for example:
+
+```ts
+type PreviousSpendingBasis =
+  | { kind: 'user-total'; amount: number }
+  | { kind: 'statement'; month: YearMonth; transactions: CategorizedTransaction[] };
+```
+
+Resolve it once in a domain service that returns per-card qualifying totals. Both initial analysis and reoptimization must call that service.
 
 ---
 
-## Cross-Cycle Status: Structural Debt Accumulation
+### ARCH-04 — Browser and server maintain separate parser products
 
-| Issue | First Reported | Current Status | Lines Added Since |
-|-------|---------------|----------------|-------------------|
-| Server/web parser duplication | Cycle 2 | **Worsened** | +~1235 lines (HTML/JSON/OFX) |
-| CATEGORY_NAMES_KO hardcoding | Cycle 3 | **Still open** | — |
-| No parity tests for new parsers | Cycle 37 (new) | **New gap** | — |
-| Optimizer O(T^2 x C) | Cycle 12 | **Still open** | — |
-| Bank adapter configs hardcoded | Cycle 15 | **Still open** | — |
-| Type adapter tax | Cycle 35 | **Still open** | — |
+**Severity:** High
+**Confidence:** High
+**Status:** Confirmed by repository inventory
+
+**Evidence**
+
+- The browser parser tree contains 3,670 lines under `apps/web/src/lib/parser`.
+- The server parser tree contains 4,295 lines under `packages/parser/src`.
+- Date, amount, detection, CSV, XLSX, HTML, JSON, OFX, and PDF logic are copied rather than sharing pure parsing kernels.
+- The same stale-value PDF defect exists at `packages/parser/src/pdf/index.ts:106-127,193` and `apps/web/src/lib/parser/pdf.ts:307-323,386`.
+- The same fabricated-row HTML/XLSX behavior exists in four implementations.
+- Even sanitization has drifted: browser HTML normalization loops nested script removal at `apps/web/src/lib/parser/html.ts:26-53`, while the server imports a different implementation from `packages/parser/src/csv/shared.ts:206-228`.
+
+**Failure scenario**
+
+Every parser correction requires parallel edits and parity tests. A missed copy creates environment-specific transaction totals, while a faithfully copied bug doubles the remediation surface.
+
+**Recommendation**
+
+Move format-neutral detection, row extraction, normalization, date/amount coercion, and transaction validation into browser-safe modules in `@cherrypicker/parser`. Keep only I/O adapters (Node file/PDF extraction versus browser File/pdf.js) at the edges. Run one conformance suite against both adapters.
 
 ---
 
-## Recommendation
+### ARCH-05 — The optimizer is a synchronous batch recomputation service embedded in UI flow
 
-Schedule a dedicated refactoring sprint for parser unification. The HTML, JSON, and OFX parsers are low-risk candidates for extraction because they use no platform-specific APIs. Start with these three to prove the pattern, then tackle CSV and XLSX (which need SheetJS bundling for web). PDF unification may require adopting pdfjs-dist for both environments.
+**Severity:** High
+**Confidence:** High
+**Status:** Confirmed by implementation and benchmark
+
+**Evidence**
+
+- `packages/core/src/optimizer/greedy.ts:39-70,187-265` repeatedly calculates before/after results for all cards and replays assigned history.
+- `apps/web/src/lib/analyzer.ts:276-280` invokes it synchronously after parsing.
+- `apps/web/src/lib/store.svelte.ts:613-619` repeats the whole batch after edits.
+- Real-catalog benchmark: 500 transactions took 1.66 seconds and 1,000 took 3.89 seconds on the development host, optimizer only.
+
+**Failure scenario**
+
+The data flow has no cancellation, progress, scheduler boundary, or incremental update contract. Scaling the catalog or transaction count directly increases UI freezes.
+
+**Recommendation**
+
+Separate optimization into a worker-hosted service with a compiled immutable catalog and incremental card state. Define request IDs/cancellation and progress events. Category edits should update only affected transaction/card state when possible.
+
+---
+
+### ARCH-06 — Catalog publication is structurally permissive and semantically fail-open
+
+**Severity:** Medium
+**Confidence:** High
+**Status:** Confirmed; all 683 current YAML files pass the permissive structural loader
+
+**Evidence**
+
+- Runtime schema and generator schema are duplicated (`packages/rules/src/schema.ts:1-71`; `scripts/build-json.ts:18-81`) and enforce different constraints.
+- Generator category problems are warnings (`scripts/build-json.ts:241-265`) while only parse/schema errors fail (`scripts/build-json.ts:274-293`).
+- `packages/rules/src/loader.ts:32-45` logs and skips invalid rules, allowing callers to optimize against a partial catalog.
+- Structural success currently coexists with impossible rates, stripped fields, unreachable merchants, conflicting keyword overrides, and inert conditions.
+
+**Failure scenario**
+
+A build can publish semantically unusable benefits, or a CLI run can silently omit invalid cards and still present its result as a complete comparison.
+
+**Recommendation**
+
+Use one strict schema plus catalog-wide semantic validation as a required build/CI gate. Treat conflicts, unreachable rules, unsupported units/conditions, and partial loads as errors. If a degraded catalog is ever allowed, return a typed completeness report that every UI/CLI result must surface.
+
+## Coverage and final sweep
+
+- Inventoried all 920 tracked non-`.context` files: 152 code files, 43 test/E2E files, 686 YAML files including 683 card rules, 32 JSON/generated-data files, and all remaining configs/docs/fixtures/assets.
+- Read all architectural boundaries and data flows from file ingestion through parsing, categorization, rule loading, calculation, optimization, persistence, rendering, CLI, scraper, and generation.
+- Mechanically audited the entire card and keyword corpora; no sampling was used for the reported counts.
+- Final missed-issues sweep covered ownership of contracts, environment duplication, provenance loss, unsupported-domain behavior, publication gates, error/degraded-state semantics, and synchronous execution boundaries.
+- No source implementation, browser/E2E process, deployment, or pre-existing dirty user file was modified.

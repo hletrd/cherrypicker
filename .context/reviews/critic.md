@@ -1,119 +1,161 @@
-# Critic Review — CherryPicker (Cycle 37)
+# Critic — Current-State Review
 
 **Reviewer:** critic
-**Scope:** Design decisions, technical debt, conceptual inconsistencies, maintainability
-**Date:** 2026-05-06
-
----
+**Date:** 2026-07-23
+**Baseline:** working tree based on `e6fe49b` (including pre-existing local edits)
+**Scope:** product correctness, domain-model honesty, failure semantics, duplicated implementation/test strategy, and state contracts
 
 ## Summary
 
-Cycle 37 is a maintenance cycle with no structural changes. The recent commits (C95-C99) added three new parsers and fixed several bugs. However, the fundamental architectural debt — parser duplication, type leakage, optimizer complexity — remains untouched. The cycle-reference convention continues to grow, and the deferral culture for structural issues shows no signs of abating. One new concern: the proliferation of "parity" comments without automated verification creates a false sense of safety.
+| ID | Severity | Confidence | Status | Finding |
+|---|---|---|---|---|
+| CRIT-01 | High | High | Confirmed | “All merchants” rewards are modeled as `uncategorized`, suppressing base rewards on categorized purchases |
+| CRIT-02 | High | High | Confirmed | The rule model cannot express many authored conditions or stacking, so duplicate rules collapse to one |
+| CRIT-03 | High | High | Confirmed | PDF fallback turns two refund notations into positive spending while tests certify only regex fragments |
+| CRIT-04 | Medium | High | Confirmed | Structured PDF per-row fallback updates indices after caching the old amount/date cells |
+| CRIT-05 | Medium | High | Confirmed | `won_per_liter` is presented as a precise reward but is calculated once per transaction |
+| CRIT-06 | Medium | High | Confirmed | `reoptimize()` breaks the documented latest-month metadata contract |
 
----
+The central problem is not another edge-case parser: the catalog vocabulary, runtime evaluator, and tests disagree on what several core fields mean. Multiple earlier reviews marked behavior “fixed” after making it deterministic, but deterministic selection of the wrong semantic rule is still wrong.
 
-## Critical Finding
+## CRIT-01 — `uncategorized` is being used as “all merchants”
 
-### [C37-CRIT01-CRITICAL] "Parity" Comments Are a False Substitute for Shared Code
-
-**Files:** `apps/web/src/lib/parser/html.ts`, `apps/web/src/lib/parser/ofx.ts`, `apps/web/src/lib/parser/json.ts`
+**Severity:** High
 **Confidence:** High
+**Status:** Confirmed
+**Files/regions:**
 
-Every new parser file contains comments like "Parity with server-side packages/parser/src/html/index.ts (C98-02)". These comments create the illusion of verified cross-platform consistency, but:
+- `packages/rules/data/cards/sc/zero-edition3-discount.yaml:22-30`
+- `packages/rules/data/cards/shinhan/simple-plan.yaml` (general-spend fixture)
+- `packages/core/src/categorizer/matcher.ts:61-123`
+- `packages/core/src/calculator/reward.ts:67-82`
+- `packages/core/__tests__/calculator.test.ts:14,107-118`
+- `packages/core/__tests__/optimizer.test.ts:266-276`
 
-1. **No automated verification exists** for HTML, OFX, or JSON parsers. Only CSV, XLSX, and PDF have parity tests.
-2. **Comments rot.** When a bug is fixed in one file, the parity comment does not remind the fixer to update the other.
-3. **Comments do not prevent divergence.** The web PDF parser is 44% larger than the server PDF parser despite parity comments.
+**Evidence:** Across the 683 YAML files:
 
-The parity comment convention has become a psychological band-aid that justifies duplication rather than motivating unification.
+- 375 cards contain 401 `uncategorized` reward rules.
+- 202 files contain 208 such rules whose label/note explicitly says “전 가맹점,” “국내외 가맹점,” “국내 가맹점,” “해외 가맹점,” or “기본 적립/할인/캐시백.”
+- Zero production rules use the calculator's actual wildcard category, `*`.
 
-**Fix:** Replace parity comments with a concrete plan to unify parsers. For HTML/JSON/OFX (pure string processing), this is achievable immediately. Add parity tests for all new formats as a minimum viable safeguard.
+`MerchantMatcher` categorizes known merchants, while `findRule()` only accepts an exact category or `*`. A read-only reproduction with `sc-zero-edition3-discount` produced 800 Won for a 100,000-Won `uncategorized` transaction and 0 Won for the same transaction categorized as `dining.cafe`. The card's only rule is labeled “전 가맹점 0.8% 할인.”
 
----
+Tests reinforce the faulty model: they construct `uncategorized` transactions for a general-spend card and explicitly assert that a dining purchase receives zero.
 
-## High Findings
+**Failure scenario:** A Starbucks transaction becomes `dining.cafe`, so a card promising 0.8% at every merchant receives no base reward. The optimizer systematically undervalues that card and can recommend a worse portfolio.
 
-### [C37-CRIT02-HIGH] Silent Data Loss Is a Systemic Pattern, Not a Parser Bug
+**Fix:** Audit and migrate genuine general-spend rules to `category: '*'`. Introduce structured scope for domestic/overseas and other qualifiers that a wildcard alone cannot represent. Add a build-time lint rejecting `uncategorized` rules whose label/note claims general merchant coverage, and add integration tests that pass real merchant matching output into real catalog rules.
 
-**Files:** All parsers (CSV, XLSX, PDF, HTML, JSON, OFX)
+## CRIT-02 — Duplicate rules encode semantics the evaluator cannot represent
+
+**Severity:** High
 **Confidence:** High
+**Status:** Confirmed
+**Files/regions:**
 
-Every parser in the codebase silently drops certain transaction types:
-- CSV/XLSX/HTML: drops `amount <= 0` with no error (refunds, credits)
-- JSON: drops `amount <= 0` with no error
-- OFX: drops `rawAmount >= 0` with no error (credits, payments)
-- PDF: drops negative amounts in fallback scanner
+- `packages/rules/src/schema.ts:26-39`
+- `packages/core/src/calculator/reward.ts:42-95,226-300`
+- `packages/rules/data/cards/cu/eobuba-check.yaml:22-86`
+- `packages/rules/data/cards/shinhan/point-plan-plus.yaml:31-71`
+- `packages/rules/data/cards/hana/daltal-sweet.yaml` (`dining` rules)
+- `packages/rules/data/cards/samsung/id-simple.yaml:22-38`
 
-This is not documented in user-facing copy. A user uploading a statement with refunds will see fewer transactions and may not realize data was filtered. This undermines trust in a financial tool.
+**Evidence:** The catalog contains 91 duplicate `(category, subcategory)` groups across 90 files, encompassing 197 rules. Forty-three groups have identical predicates as understood by the runtime, and 40 of those produce different reward schedules. The runtime understands only `minTransaction` and `specificMerchants`; the schema `.passthrough()` accepts other authored concepts without implementing them. `findRule()` then sorts candidates and returns exactly one.
 
-**Fix:** Choose one strategy and apply it uniformly:
-- **Option A:** Include all transactions (including negatives) and let the calculator filter them with clear UI messaging
-- **Option B:** Report filtered transactions as parse warnings with counts (`"3개의 환불/입금 거래가 필터링되었습니다"`)
+Examples:
 
----
+- `cu/eobuba-check`: Tuesday 10% versus other weekdays 5%; day/count/minimum-spend semantics live only in notes.
+- `shinhan/point-plan-plus`: five amount bands from 0.7% to 3.0%, but none has a machine-readable maximum/minimum range; the first rule always wins.
+- `samsung/id-simple`: below/above 100,000 Won schedules share the same key; `perTransactionCap: 99999` caps reward, not transaction eligibility.
+- Several rules are additive (“base reward” plus “weekend bonus”), but returning one candidate makes stacking impossible.
 
-### [C37-CRIT03-HIGH] Cycle Reference Convention Has Become Technical Debt
+The earlier specificity fix only made the winner deterministic. It did not make time ranges, day-of-week, transaction ranges, count limits, channel, geography, user selection, or additive bonuses evaluable.
 
-**Files:** Pervasive (e.g., `C98-02`, `C99-03`, `C100-01`, `C31-CR02`, `C32-V01`)
+**Failure scenario:** A 1,200,000-Won purchase on Point Plan+ is evaluated with the first 0.7% rule rather than 3.0%. A weekday CU purchase receives the Tuesday rate because the weekday note is ignored.
+
+**Fix:** Define structured conditions for amount ranges, day/time, count, channel, geography, and selection; define exclusive groups versus additive rules and explicit priority; migrate the affected data; and make the build fail on indistinguishable duplicate rules rather than silently choosing one.
+
+## CRIT-03 — Parenthesized and Korean-prefixed PDF refunds become purchases
+
+**Severity:** High
 **Confidence:** High
+**Status:** Confirmed
+**Files/regions:**
 
-The codebase contains 200+ cycle-reference comments across 50+ files. Their purposes:
-- Link fixes to review cycles
-- Claim parity between implementations
-- Document edge cases
+- `packages/parser/src/pdf/index.ts:301-314,335-371`
+- `apps/web/src/lib/parser/pdf.ts:520-542,565-600`
+- `packages/parser/__tests__/table-parser.test.ts:456-490,685-739`
+- `apps/web/__tests__/parser-pdf.test.ts:10-74`
 
-**Problems:**
-1. **No index exists.** A new contributor cannot resolve what "C99-03" means.
-2. **Inconsistent prefixes:** `C##-##`, `C##UI-##`, `C##-COR##`, `C##-F#`, `D##-M#`, `F#-##`
-3. **Cycle 37 finds Cycle 32 references.** References to cycles 1-20 are already archaeological.
-4. **They justify duplication:** "(C98-02, parity with server-side)" is used to avoid actually achieving parity.
+**Evidence:** The fallback regex captures only the digits inside `(10,000)` and `마이너스10,000`. The extraction chain passes that unsigned capture to `parseAmount()`, producing positive 10,000, and the `amount > 0` branch appends it. Fullwidth and trailing-minus alternatives retain their sign and behave correctly.
 
-**Fix:** Create `docs/cycle-references.md` mapping all active IDs, or migrate to self-contained comments. Remove references to cycles older than 10.
+A direct probe of the production amount functions showed:
 
----
+| Input token | Extracted `amountRaw` | Parsed result |
+|---|---:|---:|
+| `(10,000)` | `10,000` | `+10000` |
+| `마이너스10,000원` | `10,000` | `+10000` |
+| `10,000-` | `10,000-` | `-10000` |
 
-## Medium Findings
+The targeted 167-test parser batch passes because tests reconstruct the regex and assert that the capture is unsigned. They do not invoke the production fallback scanner and assert the final transaction set. The web test even reimplements `parseAmount()` locally.
 
-### [C37-CRIT04-MEDIUM] New Parsers Add Complexity Without Adding Value Proposition
+**Failure scenario:** A statement contains a canceled 100,000-Won purchase in parentheses. The fallback scanner adds it as new spending, inflating totals, performance-tier inputs, and expected rewards.
 
-**Files:** `packages/parser/src/html/index.ts`, `packages/parser/src/ofx/index.ts`, `packages/parser/src/json/index.ts`
-**Confidence:** Medium
+**Fix:** Preserve the complete sign-bearing token (or reapply the marker based on the matched alternative) before parsing. Export a small production helper for fallback token extraction and test the actual helper/parser in both runtimes with positive, parenthesized, Korean-prefix, fullwidth-minus, and trailing-minus cases.
 
-The HTML, OFX, and JSON parsers support formats that represent < 5% of likely user uploads (Korean banks primarily export CSV, XLSX, or PDF). The implementation effort for these parsers (~1300 lines) is disproportionate to their usage. More critically, each new format doubles the maintenance burden due to the server/web duplication.
+## CRIT-04 — Structured PDF fallback uses stale cell values
 
-**Assessment:** This is not a call to remove the parsers, but to recognize the cost. If usage data shows these formats are rarely used, consider deprecating them or moving them to a server-only pipeline.
+**Severity:** Medium
+**Confidence:** High
+**Status:** Confirmed
+**Files/regions:**
 
----
+- `packages/parser/src/pdf/index.ts:106-127,193-206`
+- `apps/web/src/lib/parser/pdf.ts:307-323,386-403`
 
-### [C37-CRIT05-MEDIUM] `normalizeHTML` Is Both Sanitizer and Malformer Fixer
+**Evidence:** Both implementations cache `dateValue` and `amountValue` from header-derived indices, then detect that the row layout differs and update `dateIdx`/`amountIdx`. The date is later parsed from the corrected index, but the amount is parsed from the old `amountValue`; the non-empty date guard also checks the old `dateValue`.
 
-**File:** `apps/web/src/lib/parser/html.ts:29-54`, `packages/parser/src/csv/shared.ts:192-210`
-**Confidence:** Medium
+**Failure scenario:** The header is `[date, merchant, amount]`, while a transaction row has an extra leading cell. Per-row heuristics correctly relocate date and amount, but `parseAmount()` still receives the merchant cell. If other rows parsed, `parsePDF()` returns the partial structured result and never runs the line fallback for the dropped row.
 
-`normalizeHTML` has two unrelated responsibilities:
-1. **Security:** Strip script tags, event handlers, JS URLs (XSS defense)
-2. **Parsing:** Fix malformed closing tags (`</td >` → `</td>`)
+**Fix:** Validate/adjust indices first, then derive all cell values. Add a mixed-layout integration fixture with one normal row and one shifted row so partial success cannot hide loss.
 
-These should be separate functions. A security-critical sanitizer should not also be responsible for markup repair, because a future "fix" to tag repair could inadvertently weaken the sanitizer.
+## CRIT-05 — `won_per_liter` fabricates a per-transaction value
 
-**Fix:** Split into `sanitizeHTML` (security only) and `repairHTMLMarkup` (parsing only).
+**Severity:** Medium
+**Confidence:** High
+**Status:** Confirmed
+**Files/regions:**
 
----
+- `packages/core/src/calculator/reward.ts:148-182`
+- `packages/core/src/models/transaction.ts:1-16`
+- `packages/rules/data/cards/lotte/digiloca-auto.yaml:38-53`
+- `packages/rules/data/cards/hana/1q-special-auto.yaml:28-42`
+- `packages/core/__tests__/calculator.test.ts:690-700`
 
-## Cross-Cycle Status: Deferral Culture
+**Evidence:** There are 34 `won_per_liter` tiers in 17 card files. The transaction model has neither liters nor fuel unit price. Nevertheless, `calculateFixedReward()` returns the authored Won-per-liter value exactly once, regardless of transaction size, and the test canonizes 60 Won as the full reward.
 
-| Issue | First Reported | Status | Rationale Given |
-|-------|---------------|--------|-----------------|
-| Parser unification | Cycle 2 | Deferred | "Large refactoring with high regression risk" |
-| Optimizer O(T^2 x C) | Cycle 12 | Deferred | "Needs benchmarking" |
-| Type adapter tax | Cycle 35 | Deferred | "Large refactoring with high regression risk" |
-| sessionStorage encryption | Cycle 35 | Deferred | "Requires UX design" |
-| keywords.ts bundle size | Cycle 36 | Deferred | "Requires measurement" |
+**Failure scenario:** An 80-Won/L benefit returns 80 Won for both a small and full-tank purchase. For a 50-liter fill, the real discount would be 4,000 Won, so fuel cards are severely undervalued and recommendations can change.
 
-After 35+ cycles, none of these have exit criteria that have been met. The deferral mechanism is effectively a "won't fix" with extra steps.
+**Fix:** Do not label a per-transaction constant as a calculated benefit. Either collect fuel volume, derive an explicitly labeled estimate from a configurable/reference unit price, or mark the unit unsupported and surface a warning/range. Tests should assert the chosen uncertainty semantics, not the current fiction.
 
-**Recommendation:** For each deferred issue, either:
-1. Schedule it for the next cycle with a concrete task owner, or
-2. Close it as "won't fix" with explicit rationale
+## CRIT-06 — Reoptimization changes latest-month metadata into all-month metadata
 
-The current state — 40+ plan files, many stale, most issues deferred indefinitely — creates cognitive overhead for every new review cycle.
+**Severity:** Medium
+**Confidence:** High
+**Status:** Confirmed
+**Files/regions:**
+
+- `apps/web/src/lib/store.svelte.ts:68-81,547-554,620-650`
+- `apps/web/src/lib/analyzer.ts:421-479`
+- `apps/web/src/components/dashboard/SpendingSummary.svelte:89-101`
+- `apps/web/src/components/report/ReportContent.svelte:8-23`
+
+**Evidence:** `AnalysisResult` documents `statementPeriod` and `transactionCount` as optimized-month fields, with `fullStatementPeriod` and `totalTransactionCount` spanning all uploaded months. Initial analysis honors that split. `reoptimize()` correctly filters `latestTransactions` for optimization, then assigns both counts from `editedTransactions.length` and both periods from every edited date.
+
+**Failure scenario:** A user uploads three months and corrects one category. Before the edit, the dashboard's primary count and report period describe the latest optimized month. After the edit, the same fields silently describe all three months while reward totals still cover only the latest month.
+
+**Fix:** Derive primary count/period from `latestTransactions` and full count/period from `editedTransactions`. Add a real store-level regression test with two months and one reoptimization.
+
+## Final critique
+
+The final sweep covered the web app, core/parser/rules/viz packages, CLI/scraper, build scripts, deployment configuration, tests, and all card YAML. The most important corrective action is a domain-contract migration, not another tiebreaker: make catalog scope and eligibility executable, then test with real matcher output and real production parsing helpers.

@@ -1,294 +1,200 @@
-# Cycle 32 Tracer Review — cherrypicker
+# Tracer — Current-State Data-Flow Review
 
-**Reviewer:** tracer (sonnet)
-**Scope:** Data-flow tracing, execution-path analysis, cross-file interactions, state propagation
-**Date:** 2026-05-06
-**Files examined:** 27 source files across packages/core, packages/parser, apps/web/src/lib/parser, apps/web/src/lib
+**Reviewer:** tracer
+**Date:** 2026-07-23
+**Baseline:** working tree based on `e6fe49b` (including pre-existing local edits)
+**Scope:** cross-file data propagation from input/catalog generation through parsing, categorization, optimization, persistence, and rendering
 
----
+## Summary
 
-## Executive Summary
+| ID | Severity | Confidence | Status | Trace |
+|---|---|---|---|---|
+| TR-01 | High | High | Confirmed | General-spend YAML → categorized merchant → no rule match → zero base reward |
+| TR-02 | High | High | Confirmed | Rich benefit prose → permissive schema → single-rule selector → wrong schedule |
+| TR-03 | High | High | Confirmed | Signed PDF token → unsigned capture → positive transaction → inflated optimization |
+| TR-04 | Medium | High | Confirmed | Header mismatch correction → stale cached amount → partial structured result → missing row |
+| TR-05 | Medium | High | Confirmed | Multi-month analysis → reoptimization → latest/full metadata collapse |
+| TR-06 | High | High | Confirmed trust-boundary path | Remote page → LLM card ID → schema → filesystem traversal |
 
-Traced 8 critical data flows. Found 3 confirmed issues (1 High, 2 Medium), 3 likely issues requiring validation, and 2 latent risks. The most severe is a forward-fill state leak in the XLSX parser that can propagate incorrect data across sections. Several dead-code paths exist due to incomplete feature wiring (`isOnline`).
+## TR-01 — General-spend rewards disappear after merchant categorization
 
----
-
-## Confirmed Issues
-
-### Issue 1: XLSX Parser Forward-Fill State Leak Across Blank Rows [HIGH]
-
+**Severity:** High
 **Confidence:** High
-**Files:** `apps/web/src/lib/parser/xlsx.ts:480`, `apps/web/src/lib/parser/html.ts:163-173`
+**Status:** Confirmed
 
 **Trace:**
-```
-parseXLSXSheet → row loop → blank row check → continue (NO state reset)
-```
 
-**Evidence:**
-- `xlsx.ts:480`: `if (row.every((c) => !c)) continue;` — blank rows are skipped but `lastDate`, `lastMerchant`, `lastAmount`, etc. are NOT reset.
-- `html.ts:163-173`: The HTML parser correctly resets all forward-fill state on blank rows.
-- This inconsistency means if a Korean bank XLSX export has multiple data sections separated by blank rows (e.g., monthly grouping), values from the first section forward-fill into the second.
-
-**Concrete failure scenario:**
-1. Section A ends with date=2024-01-15, merchant="스타벅스", amount=5000
-2. Blank row(s) separate sections
-3. Section B begins with a merged cell where date is empty (intended to inherit from Section B's header)
-4. XLSX parser forward-fills date=2024-01-15, merchant="스타벅스" from Section A into Section B's first transaction
-5. User sees phantom transactions with wrong merchant/date assignments
-
-**Fix:** Add forward-fill state reset on blank rows in `parseXLSXSheet`, matching the HTML parser pattern:
-```typescript
-if (row.every((c) => !c)) {
-  lastDate = lastMerchant = lastCategory = lastInstallments = lastMemo = lastAmount = '';
-  continue;
-}
+```text
+card YAML (`category: uncategorized`, label says all merchants)
+  → build-json preserves category
+  → cards.json / cards.ts preserve category
+  → analyzer MerchantMatcher assigns a known category/subcategory
+  → reward.findRule requires exact category or `*`
+  → calculateRewards returns zero
+  → greedy optimizer undervalues the card
 ```
 
----
+**Regions:**
 
-### Issue 2: `isOnline` Field Never Populated — Dead Code Path [MEDIUM]
+1. `packages/rules/data/cards/sc/zero-edition3-discount.yaml:22-30` authors an all-merchant 0.8% reward as `uncategorized`.
+2. `scripts/build-json.ts:224-268,381-428` validates/copies that value.
+3. `apps/web/src/lib/cards.ts:135-157` casts public JSON; `apps/web/src/lib/analyzer.ts:60-80` preserves reward categories.
+4. `apps/web/src/lib/analyzer.ts:143-158` calls `MerchantMatcher`; `packages/core/src/categorizer/matcher.ts:61-105` maps Starbucks to `dining.cafe`.
+5. `packages/core/src/calculator/reward.ts:67-82` matches only `rule.category === tx.category` or `*`.
+6. `packages/core/src/optimizer/greedy.ts:39-70,216-244` converts the resulting zero into a card score/assignment.
 
+**Observed reproduction:** The real card rule returns 800 Won for a 100,000-Won `uncategorized` transaction and 0 Won for the same `dining.cafe` transaction. The catalog audit found 208 explicitly general-spend `uncategorized` rules across 202 files and no production wildcard rule.
+
+**Competing hypothesis:** `uncategorized` might intentionally mean fallback/base scope. The implementation disproves that hypothesis because it has a distinct wildcard syntax and never falls back from a known category to `uncategorized`.
+
+**Fix/validation:** Migrate audited base rules to `*`, add structured geographic/channel scope where necessary, and add an integration test that starts with merchant text, runs `MerchantMatcher`, and calculates a real all-merchant card's reward.
+
+## TR-02 — Benefit conditions are preserved as prose but discarded at evaluation
+
+**Severity:** High
 **Confidence:** High
-**Files:** All parsers (csv.ts, xlsx.ts, pdf.ts, html.ts, json.ts, ofx.ts), `packages/core/src/calculator/reward.ts:36-51`
+**Status:** Confirmed
 
 **Trace:**
+
+```text
+YAML label/note describes day, time, amount band, count, or bonus
+  → Zod `.passthrough()` accepts it
+  → build artifact preserves it
+  → ruleConditionsMatch evaluates only minTransaction/specificMerchants
+  → findRule returns one highest-specificity candidate
+  → later duplicate schedules are unreachable or never stacked
 ```
-Parser (any) → RawTransaction → CategorizedTx → CategorizedTransaction → ruleConditionsMatch
-```
 
-**Evidence:**
-- `RawTransaction` type in `apps/web/src/lib/parser/types.ts` does NOT include `isOnline`.
-- `CategorizedTx` in `analyzer.ts:91-103` has `isOnline?: boolean` but is never set during categorization.
-- `optimizeFromTransactions` maps CategorizedTx to CategorizedTransaction at line 179-191, passing through `isOnline` (always undefined).
-- `ruleConditionsMatch` in `reward.ts:36-51` checks `rule.conditions?.excludeOnline && tx.isOnline` — since `isOnline` is always undefined, this condition is always false.
-- Result: `excludeOnline` rules are NEVER excluded. Cards with online-exclusion conditions (e.g., "5% offline only") will incorrectly count online transactions.
+**Regions:**
 
-**Concrete failure scenario:**
-1. User has a card with rule: category="dining", excludeOnline=true, rate=5%
-2. User makes an online delivery order (e.g., 배달의민족) categorized as "dining"
-3. Optimizer assigns this transaction to the offline-only card
-4. User would not actually receive the 5% reward because the transaction was online
-5. Optimizer overestimates rewards
+- `packages/rules/src/schema.ts:26-39`
+- `packages/core/src/calculator/reward.ts:42-95,226-300`
+- `packages/rules/data/cards/cu/eobuba-check.yaml:22-86`
+- `packages/rules/data/cards/shinhan/point-plan-plus.yaml:31-71`
 
-**Fix:** Either (a) remove `excludeOnline` from the rule schema and calculator since it's unimplemented, or (b) add online merchant detection to the categorizer (e.g., match merchants containing "배달", "온라인", "쿠팡", etc.) and wire it through.
+**Observed corpus shape:** 91 duplicate category/subcategory groups occur in 90 card files. Forty-three groups have identical runtime predicates; 40 of those have different reward schedules. This is a lower bound on definitely ambiguous groups, not merely a count of stylistic duplicates.
 
----
+**Concrete trace:** Point Plan+ supplies five uncategorized amount bands. All have equal runtime specificity and no executable range, so stable index ordering selects the first 0.7% rule for every matching amount, including 1,000,000 Won and above.
 
-### Issue 3: Web-Side Encoding Detection Missing UTF-16 [MEDIUM]
+**Fix/validation:** Add executable min/max amount, day/time, transaction count, payment channel, geography, user-choice, exclusive-group, stacking, and priority fields. Fail generation on duplicate rules that are indistinguishable to the evaluator. Add a table-driven catalog contract test for every duplicate group.
 
+## TR-03 — Two negative PDF formats become positive optimizer inputs
+
+**Severity:** High
 **Confidence:** High
-**Files:** `apps/web/src/lib/parser/index.ts:26-62`, `packages/parser/src/detect.ts:9-47`
+**Status:** Confirmed
 
 **Trace:**
-```
-parseFile (web) → buffer.arrayBuffer() → TextDecoder with utf-8/cp949 only
-parseStatement (server) → detectEncoding → handles UTF-16 LE/BE BOM
-```
 
-**Evidence:**
-- Server-side `detectEncoding` (`packages/parser/src/detect.ts:9-47`) checks for UTF-16 LE BOM (`0xFF 0xFE`) and UTF-16 BE BOM (`0xFE 0xFF`) and returns `'utf-16le'` / `'utf-16be'`.
-- Web-side `parseFile` (`apps/web/src/lib/parser/index.ts:26-62`) only tries `['utf-8', 'cp949']` encodings. UTF-16 files produce replacement characters and fail silently.
-- Korean bank CSV exports occasionally use UTF-16 (especially older Windows systems with "Unicode" export option).
-
-**Concrete failure scenario:**
-1. User exports statement from an older Korean bank system using UTF-16 LE
-2. Web app detects format=csv, tries utf-8 → many replacement characters (�)
-3. If replacements > 50, a warning is shown: "파일 인코딩을 정확히 감지하지 못했어요"
-4. Merchant names are corrupted (e.g., "현대카드" → "������")
-5. Categorization fails, optimization produces garbage results
-
-**Fix:** Add UTF-16 BOM detection to the web-side `parseFile` before the utf-8/cp949 trial:
-```typescript
-const buffer = await file.arrayBuffer();
-const arr = new Uint8Array(buffer);
-if (arr.length >= 2 && arr[0] === 0xFF && arr[1] === 0xFE) {
-  // UTF-16 LE — decode directly
-  content = new TextDecoder('utf-16le').decode(buffer);
-} else if (arr.length >= 2 && arr[0] === 0xFE && arr[1] === 0xFF) {
-  content = new TextDecoder('utf-16be').decode(buffer);
-} else {
-  // existing utf-8/cp949 trial
-}
+```text
+PDF fallback line `(10,000)` or `마이너스10,000`
+  → regex matches the negative form
+  → capture chain selects digits only (`10,000`)
+  → parseAmount returns +10000
+  → `amount > 0` appends RawTransaction
+  → analyzer counts it as spending
+  → optimizer rewards it as a purchase
 ```
 
----
+**Regions:**
 
-## Likely Issues (Require Manual Validation)
+- Server: `packages/parser/src/pdf/index.ts:301-314,335-382`
+- Browser: `apps/web/src/lib/parser/pdf.ts:520-542,565-600`
+- Downstream accumulation: `apps/web/src/lib/analyzer.ts:381-428`
 
-### Issue 4: OFX Amount Sign Semantics Divergence from Server [LIKELY]
+Fullwidth-minus and trailing-minus captures retain the sign, making the defect notation-dependent. Both parser copies have the same defect.
 
-**Confidence:** Medium
-**Files:** `apps/web/src/lib/parser/ofx.ts:136-144`, `packages/parser/src/ofx/index.ts` (inferred)
+**Why tests did not stop it:** `packages/parser/__tests__/table-parser.test.ts:456-490,685-739` and `apps/web/__tests__/parser-pdf.test.ts:10-74` duplicate the regex and assert capture groups rather than invoking the production scanner. The targeted 167-test batch passes while a direct production-function probe parses the stripped capture as positive.
+
+**Fix/validation:** Extract a shared production helper that returns a signed token/amount. Exercise the helper or actual parser with every supported refund notation, and assert that no refund is present in the returned positive-spending transactions.
+
+## TR-04 — Corrected PDF indices do not correct cached values
+
+**Severity:** Medium
+**Confidence:** High
+**Status:** Confirmed
 
 **Trace:**
+
+```text
+header supplies dateIdx/amountIdx
+  → code reads dateValue/amountValue
+  → per-row heuristic discovers shifted indices
+  → code updates indices only
+  → amount parses from the pre-correction cell
+  → row is skipped or misparsed
+  → any other successful row causes early structured return
+  → line fallback never recovers the skipped row
 ```
-OFX block → extractTag('TRNAMT') → parseOFXAmount → sign check → RawTransaction
-```
 
-**Evidence:**
-- `ofx.ts:136-144`: `const rawAmount = parseOFXAmount(trnAmt); if (rawAmount >= 0) continue; const amount = Math.abs(rawAmount);`
-- This means ONLY negative OFX amounts become transactions (positive amounts are skipped as "credits").
-- The comment says: "In OFX: negative = charges, positive = credits".
-- However, some banks may use the opposite convention, or users may want to see credits/refunds in their analysis.
-- The server-side parser may have different behavior (not directly examined, but the tracer.md from cycle 20 noted a divergence).
-- More importantly: the web-side `parseOFXAmount` delegates to `parseAmountString` which handles full-width digits, but the server-side may use `parseFloat` directly.
+**Regions:**
 
-**Validation needed:** Test with actual OFX files from multiple Korean banks to confirm sign convention consistency.
+- `packages/parser/src/pdf/index.ts:106-127,193-206,286-295`
+- `apps/web/src/lib/parser/pdf.ts:307-323,386-403,509-518`
 
----
+**Failure scenario:** One row has an extra leading sequence column. The date and amount finders locate the real cells, but the amount parser still receives the old merchant/category cell. If at least one normal row parsed, the function returns a plausible but incomplete statement.
 
-### Issue 5: `previousMonthSpendingOption` Staleness on Cross-Month Edits [LIKELY]
+**Fix/validation:** Move cell reads after index reconciliation. Test a single extracted table containing both aligned and shifted rows, and assert exact row count, dates, merchants, and amounts.
 
-**Confidence:** Medium
-**Files:** `apps/web/src/lib/store.svelte.ts:560-586`, `apps/web/src/lib/analyzer.ts:364-369`
+## TR-05 — Reoptimization collapses two metadata scopes
+
+**Severity:** Medium
+**Confidence:** High
+**Status:** Confirmed
 
 **Trace:**
+
+```text
+analyzeMultipleFiles:
+  latestTransactions → statementPeriod/transactionCount
+  allTransactions    → fullStatementPeriod/totalTransactionCount
+
+user edits a category
+  → store.reoptimize filters latestTransactions for optimization
+  → metadata is recomputed only from all editedTransactions
+  → both latest and full fields receive all-month values
+  → dashboard/report show a period/count inconsistent with reward totals
 ```
-User loads old analysis → edits category for transaction in Month M-1 → reoptimize → uses stale previousMonthSpendingOption
-```
 
-**Evidence:**
-- `store.svelte.ts:560-586`: `previousMonthSpending` is computed. If `snapshot.previousMonthSpendingOption !== undefined`, it uses that cached value instead of recomputing from edited transactions.
-- This is intentional per C44-01: "Preserve the user's explicit input across reoptimize calls so that category edits don't silently change the performance tier baseline."
-- BUT: if the user originally analyzed in Month M (with M-1 spending = X), then comes back weeks later and edits a transaction in Month M-1, the reoptimize still uses the old X value even though Month M-1 spending may have changed due to edits.
-- The user's explicit choice from weeks ago may no longer be relevant.
+**Regions:**
 
-**Concrete failure scenario:**
-1. User analyzes January statement on Jan 15, manually inputs previousMonthSpending=500000
-2. User returns on Feb 20, notices a miscategorized December transaction, edits it
-3. Reoptimize runs with previousMonthSpendingOption=500000 (stale)
-4. But the December edit changed the actual previous month spending; the user's old manual input is now wrong
-5. Optimizer uses incorrect performance tier baseline
+- Contract: `apps/web/src/lib/store.svelte.ts:68-81`
+- Initial split: `apps/web/src/lib/analyzer.ts:421-479`
+- Reoptimization: `apps/web/src/lib/store.svelte.ts:547-554,620-650`
+- Consumers: `apps/web/src/components/dashboard/SpendingSummary.svelte:89-101`; `apps/web/src/components/report/ReportContent.svelte:8-23`
 
-**Fix:** Add a timestamp or "analysis generation" check. If the stored `previousMonthSpendingOption` is older than the most recent edit to transactions from the previous month, recompute instead of using the stale value.
+**Fix/validation:** Compute primary metadata from `latestTransactions` and full metadata from `editedTransactions`. Drive a two-month result through the actual store method and assert the scopes remain distinct before and after an edit.
 
----
+## TR-06 — Remote content controls the scraper's write destination
 
-### Issue 6: Greedy Optimizer Quadratic Complexity [LIKELY / RISK]
-
-**Confidence:** Medium
-**Files:** `packages/core/src/optimizer/greedy.ts:39-66`, `packages/core/src/optimizer/greedy.ts:198-233`
+**Severity:** High
+**Confidence:** High
+**Status:** Confirmed trust-boundary path
 
 **Trace:**
-```
-greedyOptimize → for each transaction → scoreCardsForTransaction → for each card → calculateCardOutput (2 calls) → calculateRewards (iterates all card transactions)
-```
 
-**Evidence:**
-- For T transactions and C cards, `scoreCardsForTransaction` is called T times.
-- Each call iterates over C cards.
-- For each card, it calls `calculateCardOutput` twice (before and after adding the transaction).
-- Each `calculateCardOutput` calls `calculateRewards`, which iterates over all currently assigned transactions for that card.
-- In the worst case, card 1 gets transactions 1, 2, 3... so the kth transaction for card 1 triggers an O(k) inner loop.
-- Total complexity: O(T * C * T) = O(T² * C).
-- For 1000 transactions and 100 cards: ~100M iterations inside `calculateRewards`.
-
-**Impact:** The web app is client-side; 1000 transactions × 100 cards could cause noticeable UI freezing (multiple seconds).
-
-**Fix:** Consider memoization or incremental reward calculation. The marginal reward for adding a transaction to a card could be computed incrementally without re-scanning all previous transactions.
-
----
-
-## Latent Risks
-
-### Risk 1: HTML Parser Normalization Double-Encoding
-
-**Confidence:** Low
-**Files:** `apps/web/src/lib/parser/html.ts:59-61`
-
-**Trace:**
-```
-parseHTML → normalizeHTML → TextEncoder.encode → xlsx.read(type='array')
+```text
+remote HTML
+  → cleanHTML
+  → page text inserted in LLM user message
+  → tool response supplies card.id/card.issuer
+  → runtime Zod accepts unrestricted strings
+  → writer joins them into an output path
+  → writeFile follows `..` outside the intended root
 ```
 
-**Evidence:**
-- `html.ts:59`: `const encoder = new TextEncoder(); workbook = xlsx.read(encoder.encode(normalized), { type: 'array' });`
-- `TextEncoder` always produces UTF-8. If the original HTML was EUC-KR or CP949, `normalizeHTML` processes it as a JavaScript string (already decoded), then re-encodes as UTF-8. This is correct behavior.
-- However, if `normalizeHTML` strips content that affects character boundaries (e.g., multi-byte sequences in comments), the re-encoded output could be corrupted.
-- No confirmed failure scenario; marked as latent risk.
+**Regions:**
 
----
+- `tools/scraper/src/cli.ts:88-114`
+- `tools/scraper/src/extractor.ts:23-31,52-61`
+- `packages/rules/src/schema.ts:41-57`
+- `tools/scraper/src/writer.ts:10-17,44`
 
-### Risk 2: JSON Parser Wrapper Key Case-Sensitivity Mismatch
+**Observed validation:** A traversal card ID passes the canonical schema, and resolving the writer's constructed path shows it outside `packages/rules/data/cards`.
 
-**Confidence:** Low
-**Files:** `apps/web/src/lib/parser/json.ts:177-194`
+**Fix/validation:** Treat filesystem coordinates as local policy, never model output: enforce an ID slug, require issuer equality to the CLI target, resolve and verify containment, and require an explicit overwrite flag. Test the full validator/writer boundary in a temporary root.
 
-**Trace:**
-```
-parseJSON → wrapper key search → case-insensitive match on lowercased keys
-```
+## Coverage closeout
 
-**Evidence:**
-- Wrapper keys include `'transactionList'` and `'transaction_list'`.
-- The search first checks exact case (`obj[key]`), then falls back to case-insensitive comparison.
-- If a JSON payload has BOTH `'transactionList'` (array) and `'transactionList'` (string), the first match wins.
-- If a payload has `'TransactionList'` (capital T), the case-insensitive fallback finds it.
-- No known bug, but the precedence is: exact match > case-insensitive match > next wrapper key. This could be surprising if `data` (exact) matches a non-array before `TransactionList` (case-insensitive) matches the actual array.
-
----
-
-## Cross-File Interaction Audit
-
-### Parser → Analyzer Data Contract
-
-| Field | Parser Sets | Analyzer Reads | Notes |
-|-------|------------|----------------|-------|
-| date | Yes (all) | Yes | Validated via isValidISODate |
-| merchant | Yes (all) | Yes | Used for categorization |
-| amount | Yes (all) | Yes | Filtered > 0 in optimizer |
-| installments | Yes (CSV/XLSX/PDF) | Yes | Optional |
-| category | Yes (some) | Yes (as rawCategory) | Used as weak signal |
-| memo | Yes (some) | Yes | Display only |
-| isOnline | **NO** | Yes (dead code) | **See Issue 2** |
-| currency | **NO** | Hardcoded to KRW | Safe for Korean market |
-
-### Store State Flow
-
-```
-FileUpload → parseFile → parseAndCategorize → analyzeMultipleFiles
-    ↓
-    result (AnalysisResult) → persistToStorage (sessionStorage)
-    ↓
-    User edits category → reoptimize → optimizeFromTransactions
-    ↓
-    result updated → persistToStorage
-```
-
-**Validation:** The `snapshot` pattern in `reoptimize` (line 520) correctly prevents reactive state mutation during async gaps. The `generation` counter correctly triggers Svelte reactivity. SessionStorage persistence handles truncation gracefully.
-
-### Cache Invalidation Audit
-
-| Cache | Location | Invalidation | Risk |
-|-------|----------|-------------|------|
-| cachedCoreRules | analyzer.ts:58 | invalidateAnalyzerCaches() | Correct — reset on store.reset() |
-| cachedCategoryLabels | store.svelte.ts:401 | Reset on store.reset() | Correct — doesn't cache empty |
-| MerchantMatcher.cache | matcher.ts:32 | LRU eviction at 500 | Correct — per-instance |
-| cardsPromise | cards.ts:94 | Reset on AbortError | Correct |
-| categoriesPromise | cards.ts:96 | Reset on AbortError | Correct |
-| cardIndex | cards.ts:101 | Cleared on error | Correct |
-
----
-
-## Final Sweep Checklist
-
-1. ✅ No circular data flows detected
-2. ✅ All async flows properly propagate errors (try/catch at every entry point)
-3. ✅ No unhandled promise rejections in traced paths
-4. ✅ State mutations centralized in store.svelte.ts
-5. ❌ XLSX forward-fill state leak (Issue 1)
-6. ❌ Dead code path for isOnline (Issue 2)
-7. ❌ Web encoding gap for UTF-16 (Issue 3)
-8. ✅ All parsers normalize amounts consistently (via parseAmount/parseAmountString)
-9. ✅ Date validation is consistent across all parsers (parseDateStringToISO + isValidISODate)
-10. ✅ Error objects enriched with line numbers and raw text where applicable
-
----
-
-## Verdict
-
-**FIX BEFORE SHIP:** Issue 1 (XLSX forward-fill leak) — data integrity risk.
-**FIX RECOMMENDED:** Issue 2 (isOnline dead code) — either implement or remove to prevent incorrect optimization.
-**FIX RECOMMENDED:** Issue 3 (UTF-16 encoding gap) — affects compatibility with older bank exports.
-**VALIDATE:** Issues 4-6 require testing with real data to confirm severity.
+The trace sweep followed uploaded statement data, catalog YAML/build output, browser card loading, categorization, reward calculation, greedy assignment, persistence, rendering, scraper networking, and scraper writes. It also inspected tests and deployment configuration for places where a broken path could be masked. No browser or E2E process was launched.
