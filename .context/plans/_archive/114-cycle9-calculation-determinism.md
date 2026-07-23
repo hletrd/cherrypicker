@@ -1,7 +1,7 @@
 # Plan 114 — Cycle 9 Calculation Matching and Determinism
 
 **Findings:** C9-001 (Medium/High), C9-005 (Medium/High)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence

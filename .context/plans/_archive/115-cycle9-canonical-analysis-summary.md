@@ -2,7 +2,7 @@
 
 **Findings:** C9-002 (Medium/High), C9-003 (Medium/High), C9-004
 (Medium/High)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence

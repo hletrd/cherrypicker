@@ -1,7 +1,7 @@
 # Plan 118 — Cycle 9 Verification and Catalog Documentation Truth
 
 **Findings:** C9-009 (Medium/High), C9-010 (Medium/High)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence

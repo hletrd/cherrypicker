@@ -1,7 +1,7 @@
 # Plan 117 — Cycle 9 Scraper Source Quarantine
 
 **Finding:** C9-008 (Medium/Medium, manual validation)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence

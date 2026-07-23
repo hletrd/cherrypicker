@@ -1,7 +1,7 @@
 # Plan 119 — Cycle 9 Decorative SVG Semantics
 
 **Finding:** C9-011 (Low/High)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence

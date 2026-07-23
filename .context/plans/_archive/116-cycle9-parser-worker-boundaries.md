@@ -1,7 +1,7 @@
 # Plan 116 — Cycle 9 Date Grammar and Worker Settlement
 
 **Findings:** C9-006 (Medium/High), C9-007 (Low/Medium)
-**Status:** completed
+**Status:** completed (archived)
 **Deploy mode:** none
 
 ## Evidence
