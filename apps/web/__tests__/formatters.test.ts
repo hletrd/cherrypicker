@@ -8,12 +8,10 @@
  */
 import { describe, test, expect } from 'bun:test';
 import {
-  buildCardSelectionHash,
   buildSkipLinkUrl,
   formatCatalogReward,
   formatSavingsValue,
   formatWon,
-  parseCardSelectionHash,
 } from '../src/lib/formatters.js';
 
 // ---------------------------------------------------------------------------
@@ -94,35 +92,17 @@ describe('formatSavingsValue', () => {
 });
 
 describe('buildSkipLinkUrl', () => {
-  test('keeps the fragment on the current nested route under a document base', () => {
-    const href = buildSkipLinkUrl('/cherrypicker/dashboard/');
-    expect(href).toBe('/cherrypicker/dashboard/#main-content');
+  test('keeps query state and the fragment on a nested route under a document base', () => {
+    const href = buildSkipLinkUrl(
+      '/cherrypicker/cards/',
+      '?issuer=shinhan&card=shinhan-test-card',
+    );
+    expect(href).toBe(
+      '/cherrypicker/cards/?issuer=shinhan&card=shinhan-test-card#main-content',
+    );
     expect(
       new URL(href, 'https://hletrd.github.io/cherrypicker/').pathname,
-    ).toBe('/cherrypicker/dashboard/');
-  });
-});
-
-describe('card selection hashes', () => {
-  test('round-trips only the namespaced card form', () => {
-    expect(buildCardSelectionHash('shinhan-test-card')).toBe(
-      '#card=shinhan-test-card',
-    );
-    expect(parseCardSelectionHash('#card=shinhan-test-card')).toBe(
-      'shinhan-test-card',
-    );
-  });
-
-  test.each([
-    '',
-    '#main-content',
-    '#shinhan-test-card',
-    '#card=',
-    '#card=%E0%A4%A',
-    '#card=../../escape',
-    '#card=UPPERCASE',
-  ])('keeps non-card or malformed hash %s in list state', (hash) => {
-    expect(parseCardSelectionHash(hash)).toBeNull();
+    ).toBe('/cherrypicker/cards/');
   });
 });
 

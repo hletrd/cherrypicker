@@ -54,6 +54,15 @@
     });
   }
 
+  function syncSkipLinkHref() {
+    var skipLink = document.getElementById('skip-link');
+    if (!skipLink) return;
+    skipLink.setAttribute(
+      'href',
+      window.location.pathname + window.location.search + '#main-content',
+    );
+  }
+
   function setupControls() {
     var skipLink = document.getElementById('skip-link');
     var desktopTheme = document.getElementById('theme-toggle');
@@ -64,12 +73,18 @@
     // The static route pathname can differ from the browser's current
     // trailing-slash form. Keep the absolute fragment link on the exact
     // current document so activating it never reloads an Astro island.
-    if (skipLink) {
-      skipLink.setAttribute(
-        'href',
-        window.location.pathname + window.location.search + '#main-content',
-      );
+    if (skipLink && skipLink.dataset.layoutBound !== 'true') {
+      skipLink.dataset.layoutBound = 'true';
+      skipLink.addEventListener('focus', syncSkipLinkHref);
+      skipLink.addEventListener('pointerdown', syncSkipLinkHref);
+      skipLink.addEventListener('click', function () {
+        syncSkipLinkHref();
+        requestAnimationFrame(function () {
+          document.getElementById('main-content')?.focus();
+        });
+      });
     }
+    syncSkipLinkHref();
 
     if (desktopTheme && desktopTheme.dataset.layoutBound !== 'true') {
       desktopTheme.dataset.layoutBound = 'true';
@@ -114,6 +129,7 @@
     window.addEventListener('resize', function () {
       if (window.matchMedia('(min-width: 768px)').matches) setMenuOpen(false, false);
     });
+    window.addEventListener('popstate', syncSkipLinkHref);
     document.addEventListener('astro:page-load', setupControls);
   }
 

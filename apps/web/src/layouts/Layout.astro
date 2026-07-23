@@ -10,7 +10,7 @@ interface Props {
 const { title, description = '내 소비에 맞는 카드 조합 찾기' } = Astro.props;
 const pathname = Astro.url.pathname;
 const base = import.meta.env.BASE_URL;
-const skipLinkUrl = buildSkipLinkUrl(pathname);
+const skipLinkUrl = buildSkipLinkUrl(pathname, Astro.url.search);
 
 // Navigation URLs using buildPageUrl for trailing-slash safety (C6-01)
 const homeUrl = buildPageUrl('');

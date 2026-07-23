@@ -976,7 +976,7 @@ test('card reward table exposes a labeled, keyboard-focusable scroll region with
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 900 });
-  await page.goto(appUrl('cards#card=shinhan-11st'));
+  await page.goto(appUrl('cards?card=shinhan-11st'));
 
   const region = page.getByTestId('card-rewards-scroll-region');
   await expect(region).toBeVisible();

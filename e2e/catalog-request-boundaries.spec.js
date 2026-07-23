@@ -89,11 +89,14 @@ test('card list and one detail stay on split catalog artifacts', async ({
   expect(requestsOfKind(requests, 'detail')).toHaveLength(0);
 
   await cardButtons.first().click();
-  await page.waitForFunction(() => window.location.hash.length > 1);
+  await page.waitForFunction(() =>
+    new URL(window.location.href).searchParams.has('card'),
+  );
 
-  const selectedHash = new URL(page.url()).hash;
-  expect(selectedHash).toMatch(/^#card=/);
-  const selectedCardId = decodeURIComponent(selectedHash.slice('#card='.length));
+  const selectedUrl = new URL(page.url());
+  const selectedCardId = selectedUrl.searchParams.get('card');
+  expect(selectedCardId).toBeTruthy();
+  expect(selectedUrl.hash).toBe('#main-content');
   const selectedCard = summaryArtifact.cards.find(
     (card) => card.id === selectedCardId,
   );
@@ -113,6 +116,32 @@ test('card list and one detail stay on split catalog artifacts', async ({
   expect(requestsOfKind(requests, 'summary')).toHaveLength(1);
   expect(requestsOfKind(requests, 'optimizer')).toHaveLength(0);
   expect(requestsOfKind(requests, 'legacy')).toHaveLength(0);
+
+  const detailRequestCount = requestsOfKind(requests, 'detail').length;
+  await skipLink.focus();
+  await expect(skipLink).toHaveAttribute(
+    'href',
+    `${selectedUrl.pathname}${selectedUrl.search}#main-content`,
+  );
+  await skipLink.press('Enter');
+  await expect(page.locator('main#main-content')).toBeFocused();
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: selectedCard.nameKo,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return {
+        card: url.searchParams.get('card'),
+        hash: url.hash,
+      };
+    })
+    .toEqual({ card: selectedCardId, hash: '#main-content' });
+  expect(requestsOfKind(requests, 'detail')).toHaveLength(detailRequestCount);
 });
 
 test('upload analysis fetches one optimizer artifact and never legacy data', async ({

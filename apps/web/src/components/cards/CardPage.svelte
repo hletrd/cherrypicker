@@ -5,10 +5,13 @@
   import Icon from '../ui/Icon.svelte';
   import { getCardSummaryById } from '../../lib/cards.js';
   import {
-    buildCardSelectionHash,
     buildPageUrl,
-    parseCardSelectionHash,
+    buildSkipLinkUrl,
   } from '../../lib/formatters.js';
+  import {
+    pushCardSelectionHistory,
+    resolveCardSelectionQuery,
+  } from '../../lib/card-navigation-state.js';
 
   const homeUrl = buildPageUrl('');
 
@@ -16,7 +19,8 @@
   let cardName = $state<string>('');
   let returnFocusCardId = $state<string | null>(null);
   let fetchGeneration = 0;
-  let hashGeneration = 0;
+  let navigationGeneration = 0;
+  let navigationController: AbortController | null = null;
   let listDocumentTitle = '카드 목록 | CherryPicker';
 
   $effect(() => {
@@ -37,22 +41,39 @@
     return () => { controller.abort(); };
   });
 
+  function cancelSelectionSync() {
+    navigationGeneration++;
+    navigationController?.abort();
+    navigationController = null;
+  }
+
+  function syncSkipLinkHref() {
+    const skipLink = document.getElementById('skip-link');
+    if (skipLink instanceof HTMLAnchorElement) {
+      skipLink.setAttribute(
+        'href',
+        buildSkipLinkUrl(window.location.pathname, window.location.search),
+      );
+    }
+  }
+
   function selectCard(id: string) {
+    cancelSelectionSync();
+    pushCardSelectionHistory(window.history, window.location, id);
+    syncSkipLinkHref();
     returnFocusCardId = id;
     selectedCardId = id;
-    window.location.hash = buildCardSelectionHash(id);
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }
 
   function goBack() {
+    cancelSelectionSync();
     returnFocusCardId = selectedCardId ?? returnFocusCardId;
+    pushCardSelectionHistory(window.history, window.location, null);
+    syncSkipLinkHref();
     selectedCardId = null;
     document.title = listDocumentTitle;
-    // Clear the hash to return to the card list view. Using hash assignment
-    // instead of replaceState so the navigation is added to browser history,
-    // enabling the back button to return to previously viewed cards (C19-03).
-    window.location.hash = '';
   }
 
   function handleDetailReady(name: string) {
@@ -66,46 +87,59 @@
 
   onMount(() => {
     listDocumentTitle = document.title;
-    const syncSelectionFromHash = async () => {
-      const generation = ++hashGeneration;
-      const hash = window.location.hash;
-      const candidate = parseCardSelectionHash(hash);
-      if (!candidate) {
-        if (selectedCardId) returnFocusCardId = selectedCardId;
-        selectedCardId = null;
-        document.title = listDocumentTitle;
-        return;
-      }
+    const syncSelectionFromLocation = async () => {
+      navigationController?.abort();
+      const controller = new AbortController();
+      navigationController = controller;
+      const generation = ++navigationGeneration;
+      const search = window.location.search;
+      syncSkipLinkHref();
 
       try {
-        const summary = await getCardSummaryById(candidate);
+        const candidate = await resolveCardSelectionQuery(
+          search,
+          (cardId) => getCardSummaryById(cardId, {
+            signal: controller.signal,
+          }),
+        );
         if (
-          generation === hashGeneration &&
-          window.location.hash === hash
+          !controller.signal.aborted &&
+          generation === navigationGeneration &&
+          window.location.search === search
         ) {
-          selectedCardId = summary ? candidate : null;
-          if (!summary) document.title = listDocumentTitle;
+          if (!candidate) {
+            if (selectedCardId) returnFocusCardId = selectedCardId;
+            selectedCardId = null;
+            document.title = listDocumentTitle;
+          } else {
+            selectedCardId = candidate;
+          }
         }
       } catch {
         if (
-          generation === hashGeneration &&
-          window.location.hash === hash
+          !controller.signal.aborted &&
+          generation === navigationGeneration &&
+          window.location.search === search
         ) {
+          if (selectedCardId) returnFocusCardId = selectedCardId;
           selectedCardId = null;
           document.title = listDocumentTitle;
+        }
+      } finally {
+        if (navigationController === controller) {
+          navigationController = null;
         }
       }
     };
 
-    // Listen for browser back/forward
-    const handleHashChange = () => {
-      void syncSelectionFromHash();
+    const handlePopState = () => {
+      void syncSelectionFromLocation();
     };
-    void syncSelectionFromHash();
-    window.addEventListener('hashchange', handleHashChange);
+    void syncSelectionFromLocation();
+    window.addEventListener('popstate', handlePopState);
     return () => {
-      hashGeneration++;
-      window.removeEventListener('hashchange', handleHashChange);
+      cancelSelectionSync();
+      window.removeEventListener('popstate', handlePopState);
     };
   });
 </script>

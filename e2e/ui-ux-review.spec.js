@@ -654,7 +654,9 @@ test.describe('Cards page', () => {
     await expect
       .poll(() => new URL(page.url()).searchParams.get('issuer'))
       .toBe('bc');
-    await expect(page).not.toHaveURL(/#card=bc-goat$/);
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('card'))
+      .toBeNull();
   });
 
   test('clicking a card opens detail view', async ({ page }) => {
@@ -669,7 +671,10 @@ test.describe('Cards page', () => {
     expect(cardId).toBeTruthy();
 
     await firstCard.click();
-    await expect(page).toHaveURL(`${BASE}cards#card=${cardId}`);
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('card'))
+      .toBe(cardId);
+    expect(new URL(page.url()).hash).toBe('');
     const heading = page.getByTestId('card-detail-heading');
     await expect(heading).toBeVisible();
     await expect(heading).toBeFocused();

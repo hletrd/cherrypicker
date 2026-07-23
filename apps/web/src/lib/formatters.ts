@@ -255,25 +255,10 @@ export function buildPageUrl(path: string): string {
   return `${base}${base.endsWith('/') ? '' : '/'}${cleanPath}`;
 }
 
-export function buildSkipLinkUrl(pathname: string): string {
+export function buildSkipLinkUrl(pathname: string, search = ''): string {
   const normalized = pathname.startsWith('/') ? pathname : `/${pathname}`;
-  return `${normalized}#main-content`;
-}
-
-const CARD_HASH_PREFIX = '#card=';
-
-export function buildCardSelectionHash(cardId: string): string {
-  return `${CARD_HASH_PREFIX}${encodeURIComponent(cardId)}`;
-}
-
-export function parseCardSelectionHash(hash: string): string | null {
-  if (!hash.startsWith(CARD_HASH_PREFIX)) return null;
-  const encoded = hash.slice(CARD_HASH_PREFIX.length);
-  if (!encoded) return null;
-  try {
-    const cardId = decodeURIComponent(encoded);
-    return /^[a-z0-9][a-z0-9-]*$/.test(cardId) ? cardId : null;
-  } catch {
-    return null;
-  }
+  const normalizedSearch = search
+    ? search.startsWith('?') ? search : `?${search}`
+    : '';
+  return `${normalized}${normalizedSearch}#main-content`;
 }

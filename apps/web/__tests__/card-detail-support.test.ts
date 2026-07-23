@@ -74,6 +74,13 @@ describe('catalog reward display boundary', () => {
     expect(pageSource).toContain('focusCardId={returnFocusCardId}');
     expect(pageSource).toContain('onFocusRestored={handleFocusRestored}');
     expect(pageSource).toContain('document.title = `${name} | CherryPicker`');
+    expect(pageSource).toContain('resolveCardSelectionQuery');
+    expect(pageSource).toContain('pushCardSelectionHistory');
+    expect(pageSource).toContain(
+      "window.addEventListener('popstate', handlePopState)",
+    );
+    expect(pageSource).not.toContain("window.addEventListener('hashchange'");
+    expect(pageSource).not.toContain('window.location.hash =');
     expect(pageSource).not.toContain(
       "document.querySelector<HTMLElement>('[data-testid=\"card-detail-heading\"]')?.focus()",
     );
