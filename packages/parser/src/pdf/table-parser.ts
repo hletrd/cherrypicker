@@ -20,7 +20,6 @@ import {
   findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
-  AMOUNT_COLUMN_PATTERN,
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
@@ -28,6 +27,10 @@ import {
   isValidHeaderRow,
 } from '../csv/column-matcher.js';
 import { isValidYYMMDD, isValidYYYYMMDD, isValidShortDate } from '../date-utils.js';
+import {
+  compileAmountFieldPlan,
+  type AmountFieldPlan,
+} from '../shared/amount-fields.js';
 
 interface Column {
   start: number;
@@ -208,6 +211,7 @@ export interface PDFColumnLayout {
   dateCol: number;
   merchantCol: number;
   amountCol: number;
+  amountPlan: AmountFieldPlan;
   installmentsCol: number;
   categoryCol: number;
   memoCol: number;
@@ -243,7 +247,8 @@ export function detectHeaderRow(rows: string[][], maxScan: number = 15): number 
 export function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
   const dateCol = findColumn(headerRow, undefined, DATE_COLUMN_PATTERN);
   const merchantCol = findColumn(headerRow, undefined, MERCHANT_COLUMN_PATTERN);
-  const amountCol = findColumn(headerRow, undefined, AMOUNT_COLUMN_PATTERN);
+  const amountPlan = compileAmountFieldPlan(headerRow);
+  const amountCol = amountPlan.candidates[0]?.index ?? -1;
   const installmentsCol = findColumn(headerRow, undefined, INSTALLMENTS_COLUMN_PATTERN);
   const categoryCol = findColumn(headerRow, undefined, CATEGORY_COLUMN_PATTERN);
   const memoCol = findColumn(headerRow, undefined, MEMO_COLUMN_PATTERN);
@@ -253,5 +258,14 @@ export function getHeaderColumns(headerRow: string[]): PDFColumnLayout | null {
 
   // If merchant column not found, leave it as -1 — the caller will
   // fall back to positional heuristics for merchant extraction.
-  return { headerRowIdx: -1, dateCol, merchantCol, amountCol, installmentsCol, categoryCol, memoCol };
+  return {
+    headerRowIdx: -1,
+    dateCol,
+    merchantCol,
+    amountCol,
+    amountPlan,
+    installmentsCol,
+    categoryCol,
+    memoCol,
+  };
 }

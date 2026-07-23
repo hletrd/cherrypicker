@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ParseResult } from '../src/lib/parser/types.js';
+import { ParseError } from '../src/lib/parser/types.js';
 import {
   parseWithWorker,
   type ParserWorkerFactory,
@@ -8,6 +9,12 @@ import {
 import type {
   ParserWorkerRequest,
   ParserWorkerResponse,
+} from '../src/lib/parser/worker-protocol.js';
+import {
+  MAX_SERIALIZED_PARSE_ERROR_MESSAGE_LENGTH,
+  MAX_SERIALIZED_PARSE_ERROR_RAW_LENGTH,
+  MAX_SERIALIZED_PARSE_ERRORS,
+  serializeParserWorkerResult,
 } from '../src/lib/parser/worker-protocol.js';
 import { MAX_UPLOAD_FILE_BYTES } from '../src/lib/upload-admission.js';
 
@@ -130,7 +137,7 @@ describe('browser parser worker ownership', () => {
         ok: true,
         result: {
           ...result,
-          errors: [{ message: '날짜 오류', line: 3 }],
+          errors: [{ message: '날짜 오류', line: 3, count: 4 }],
         },
       });
 
@@ -139,6 +146,7 @@ describe('browser parser worker ownership', () => {
         name: 'ParseError',
         message: '날짜 오류',
         line: 3,
+        count: 4,
       });
       expect(worker.transfers[0]).toEqual([buffer]);
       expect(worker.messages[0]?.payload).toBe(buffer);
@@ -250,5 +258,72 @@ describe('browser parser worker ownership', () => {
       encoding: 'cp949',
     });
     expect(worker.terminations).toBe(1);
+  });
+
+  test('bounds serialized parser diagnostics and preserves exact counts', () => {
+    const errors = Array.from({ length: 250 }, (_, index) =>
+      new ParseError(`경고-${index}-${'가'.repeat(2_000)}`, {
+        raw: '나'.repeat(3_000),
+        count: index === 249 ? 3 : undefined,
+      }));
+    const serialized = serializeParserWorkerResult({
+      bank: null,
+      format: 'json',
+      transactions: [],
+      errors,
+    });
+
+    expect(serialized.errors).toHaveLength(MAX_SERIALIZED_PARSE_ERRORS);
+    expect(serialized.errors.at(-1)).toMatchObject({
+      code: 'parse_diagnostics_omitted',
+      count: 153,
+    });
+    expect(
+      serialized.errors.reduce(
+        (total, error) => total + (error.count ?? 1),
+        0,
+      ),
+    ).toBe(252);
+    expect(serialized.errors[0]?.message.length).toBeLessThanOrEqual(
+      MAX_SERIALIZED_PARSE_ERROR_MESSAGE_LENGTH,
+    );
+    expect(serialized.errors[0]?.raw?.length).toBeLessThanOrEqual(
+      MAX_SERIALIZED_PARSE_ERROR_RAW_LENGTH,
+    );
+  });
+
+  test('summarizes the exact 101-error boundary before reading omitted payloads', () => {
+    const errors = Array.from(
+      { length: MAX_SERIALIZED_PARSE_ERRORS - 1 },
+      (_, index) => new ParseError(`경고-${index}`),
+    );
+    for (let index = 0; index < 2; index++) {
+      const omitted = { count: undefined } as unknown as ParseError;
+      Object.defineProperty(omitted, 'message', {
+        get(): never {
+          throw new Error('omitted diagnostic payload was serialized');
+        },
+      });
+      errors.push(omitted);
+    }
+
+    const serialized = serializeParserWorkerResult({
+      bank: null,
+      format: 'json',
+      transactions: [],
+      errors,
+    });
+
+    expect(serialized.errors).toHaveLength(MAX_SERIALIZED_PARSE_ERRORS);
+    expect(serialized.errors.at(-1)).toMatchObject({
+      code: 'parse_diagnostics_omitted',
+      count: 2,
+    });
+    expect(
+      serialized.errors.reduce(
+        (total, error) => total + (error.count ?? 1),
+        0,
+      ),
+    ).toBe(MAX_SERIALIZED_PARSE_ERRORS + 1);
   });
 });

@@ -2,13 +2,20 @@ import * as XLSX from 'xlsx';
 import type { BankId, ParseResult, RawTransaction } from './types.js';
 import { ParseError } from './types.js';
 import {
+  AMBIGUOUS_AMOUNT_ERROR_CODE,
+  AMBIGUOUS_AMOUNT_MESSAGE,
+  compileAmountFieldPlan,
   decodeStatementTextBytes,
   isHTMLStatementBytes,
   MAX_REQUIRED_FIELD_ROW_ERRORS,
   missingRequiredColumnLabels,
   normalizeRequiredMerchant,
+  normalizeResolvedSpendingAmount,
+  NON_SPENDING_AMOUNT_ERROR_CODE,
+  nonSpendingAmountMessage,
   REQUIRED_MERCHANT_ERROR_CODE,
   REQUIRED_MERCHANT_ERROR_MESSAGE,
+  resolveAmountField,
   type StatementTextPrefixDecoder,
 } from '@cherrypicker/parser/browser';
 import { detectBank } from './detect.js';
@@ -23,7 +30,6 @@ import {
   findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
-  AMOUNT_COLUMN_PATTERN,
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
@@ -361,7 +367,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   // then falls back to regex pattern (C12-02).
   const dateCol = findColumn(headers, config?.date, DATE_COLUMN_PATTERN);
   const merchantCol = findColumn(headers, config?.merchant, MERCHANT_COLUMN_PATTERN);
-  const amountCol = findColumn(headers, config?.amount, AMOUNT_COLUMN_PATTERN);
+  const amountPlan = compileAmountFieldPlan(headers, config?.amount);
   const installCol = findColumn(headers, config?.installments, INSTALLMENTS_COLUMN_PATTERN);
   const categoryCol = findColumn(headers, config?.category, CATEGORY_COLUMN_PATTERN);
   const memoCol = findColumn(headers, config?.memo, MEMO_COLUMN_PATTERN);
@@ -369,7 +375,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
   const missingColumns = missingRequiredColumnLabels({
     date: dateCol,
     merchant: merchantCol,
-    amount: amountCol,
+    amount: amountPlan.candidates[0]?.index ?? -1,
   });
   if (missingColumns.length > 0) {
     return {
@@ -412,17 +418,36 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     const memoCell = memoCol === -1
       ? null
       : resolveSheetCell(rows, i, memoCol, mergeIndex);
-    const amountCell = resolveSheetCell(rows, i, amountCol, mergeIndex);
+    const amountCells = new Map(
+      amountPlan.candidates.map(({ index }) => [
+        index,
+        resolveSheetCell(rows, i, index, mergeIndex),
+      ]),
+    );
+    const amountResolution = resolveAmountField(
+      amountPlan,
+      (index) => amountCells.get(index)?.value,
+    );
+    const amountCell = amountResolution.kind === 'spending'
+      || amountResolution.kind === 'non-spending'
+      ? amountCells.get(amountResolution.index) ?? null
+      : null;
 
     const dateRaw = dateCell.value;
     const merchantRaw = merchantCell?.value ?? '';
     const categoryRaw = categoryCell?.value ?? '';
     const installRaw = installCell?.value ?? '';
     const memoRaw = memoCell?.value ?? '';
-    const amountRaw = amountCell.value;
 
-    if (!dateRaw && !merchantRaw && !amountRaw) continue;
-    if (amountCell.fromMerge && consumedAmountSources.has(amountCell.sourceKey)) continue;
+    if (
+      !dateRaw
+      && !merchantRaw
+      && amountResolution.kind === 'missing'
+    ) continue;
+    if (
+      amountCell?.fromMerge
+      && consumedAmountSources.has(amountCell.sourceKey)
+    ) continue;
 
     const merchant = normalizeRequiredMerchant(merchantRaw);
     if (!merchant) {
@@ -436,8 +461,30 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       }
       continue;
     }
-    const amount = parseAmount(amountRaw);
-    if (amount === null) {
+    if (amountResolution.kind === 'non-spending') {
+      errors.push(new ParseError(
+        nonSpendingAmountMessage(merchant, amountResolution.raw),
+        {
+          code: NON_SPENDING_AMOUNT_ERROR_CODE,
+          line: i + 1,
+          raw: rowText,
+        },
+      ));
+      continue;
+    }
+    if (amountResolution.kind === 'ambiguous') {
+      errors.push(new ParseError(AMBIGUOUS_AMOUNT_MESSAGE, {
+        code: AMBIGUOUS_AMOUNT_ERROR_CODE,
+        line: i + 1,
+        raw: rowText,
+      }));
+      continue;
+    }
+    const amountRaw = amountResolution.kind === 'spending'
+      ? amountResolution.raw
+      : '';
+    const parsedAmount = parseAmount(amountRaw);
+    if (parsedAmount === null) {
       if (String(amountRaw ?? '').trim()) {
         // Detect Excel formula error strings for specific error messages (C73-04)
         if (typeof amountRaw === 'string' && EXCEL_ERROR_PATTERN.test(amountRaw.trim())) {
@@ -454,6 +501,12 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
       }
       continue;
     }
+    const amount = amountResolution.kind === 'spending'
+      ? normalizeResolvedSpendingAmount(
+          parsedAmount,
+          amountResolution.role,
+        )
+      : parsedAmount;
     // Skip zero- and negative-amount rows (balance inquiries, refunds,
     // credits). These don't contribute to spending optimization.
     // Matches server-side XLSX parser behavior (C8-01).
@@ -500,7 +553,7 @@ function parseXLSXSheet(sheet: XLSX.WorkSheet, bank?: BankId, htmlBankHint?: Ban
     };
 
     transactions.push(tx);
-    consumedAmountSources.add(amountCell.sourceKey);
+    if (amountCell) consumedAmountSources.add(amountCell.sourceKey);
   }
 
   return { bank: resolvedBank, format: 'xlsx', transactions, errors };

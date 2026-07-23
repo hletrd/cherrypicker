@@ -8,7 +8,6 @@ import {
   findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
-  AMOUNT_COLUMN_PATTERN,
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
@@ -25,6 +24,16 @@ import {
   REQUIRED_MERCHANT_ERROR_CODE,
   REQUIRED_MERCHANT_ERROR_MESSAGE,
 } from '../shared/required-fields.js';
+import {
+  AMBIGUOUS_AMOUNT_ERROR_CODE,
+  AMBIGUOUS_AMOUNT_MESSAGE,
+  compileAmountFieldPlan,
+  NON_SPENDING_AMOUNT_ERROR_CODE,
+  nonSpendingAmountMessage,
+  normalizeResolvedSpendingAmount,
+  resolveAmountField,
+  withInferredNeutralAmountField,
+} from '../shared/amount-fields.js';
 
 // Korean date patterns — must cover all formats that parseDateStringToISO
 // handles. Kept in sync with the web-side DATE_PATTERNS (C1-01).
@@ -134,7 +143,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   // Identify column roles
   let dateCol = -1;
   let merchantCol = -1;
-  let amountCol = -1;
+  let amountPlan = compileAmountFieldPlan(headers);
   let installmentsCol = -1;
   let categoryCol = -1;
   let memoCol = -1;
@@ -145,13 +154,16 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   // the exact-match pass and go straight to regex matching.
   dateCol = findColumn(headers, undefined, DATE_COLUMN_PATTERN);
   merchantCol = findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN);
-  amountCol = findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN);
   installmentsCol = findColumn(headers, undefined, INSTALLMENTS_COLUMN_PATTERN);
   categoryCol = findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN);
   memoCol = findColumn(headers, undefined, MEMO_COLUMN_PATTERN);
 
   // Second pass: infer from data if headers didn't match
-  if (dateCol === -1 || merchantCol === -1 || amountCol === -1) {
+  if (
+    dateCol === -1
+    || merchantCol === -1
+    || amountPlan.candidates.length === 0
+  ) {
     // Scan 8 rows for data-inference — provides better coverage for files
     // with sparse early data (blank rows, sub-headers, metadata lines)
     // without meaningful performance impact (C54-02).
@@ -161,15 +173,31 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
       for (let i = 0; i < cells.length; i++) {
         const cell = cells[i] ?? '';
         if (dateCol === -1 && isDateLike(cell)) dateCol = i;
-        else if (amountCol === -1 && isAmountLike(cell) && !isDateLike(cell)) amountCol = i;
+        else if (
+          amountPlan.candidates.length === 0
+          && isAmountLike(cell)
+          && !isDateLike(cell)
+        ) {
+          amountPlan = withInferredNeutralAmountField(amountPlan, i);
+        }
       }
     }
     // Merchant is likely a text-heavy column containing Korean characters.
     // Prefer the first column (not date/amount/installments/category/memo)
     // where sample data contains Korean text (C4-03). This avoids picking
     // numeric columns like installments or card number suffixes.
-    if (dateCol !== -1 && amountCol !== -1 && merchantCol === -1) {
-      const reservedCols = new Set([dateCol, amountCol, installmentsCol, categoryCol, memoCol].filter((c) => c !== -1));
+    if (
+      dateCol !== -1
+      && amountPlan.candidates.length > 0
+      && merchantCol === -1
+    ) {
+      const reservedCols = new Set([
+        dateCol,
+        ...amountPlan.candidates.map(({ index }) => index),
+        installmentsCol,
+        categoryCol,
+        memoCol,
+      ].filter((column) => column !== -1));
       // Rank candidate columns by Korean character count — the merchant column
       // in Korean bank exports has the highest Korean text density. This avoids
       // misidentifying memo/비고 columns that happen to precede the merchant
@@ -211,7 +239,7 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
   const missingColumns = missingRequiredColumnLabels({
     date: dateCol,
     merchant: merchantCol,
-    amount: amountCol,
+    amount: amountPlan.candidates[0]?.index ?? -1,
   });
   if (missingColumns.length > 0) {
     return {
@@ -239,9 +267,16 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
 
     const dateRaw = dateCol !== -1 ? (cells[dateCol] ?? '') : '';
     const merchantRaw = merchantCol !== -1 ? (cells[merchantCol] ?? '') : '';
-    const amountRaw = amountCol !== -1 ? (cells[amountCol] ?? '') : '';
+    const amountResolution = resolveAmountField(
+      amountPlan,
+      (index) => cells[index] ?? '',
+    );
 
-    if (!dateRaw && !merchantRaw && !amountRaw) continue;
+    if (
+      !dateRaw
+      && !merchantRaw
+      && amountResolution.kind === 'missing'
+    ) continue;
 
     const rowText = line;
     const merchant = normalizeRequiredMerchant(merchantRaw);
@@ -256,7 +291,36 @@ export function parseGenericCSV(content: string, bank: BankId | null): ParseResu
       }
       continue;
     }
-    const amount = parseCSVAmount(amountRaw);
+    if (amountResolution.kind === 'non-spending') {
+      errors.push(new ParseError(
+        nonSpendingAmountMessage(merchant, amountResolution.raw),
+        {
+          code: NON_SPENDING_AMOUNT_ERROR_CODE,
+          line: physicalLine,
+          raw: rowText,
+        },
+      ));
+      continue;
+    }
+    if (amountResolution.kind === 'ambiguous') {
+      errors.push(new ParseError(AMBIGUOUS_AMOUNT_MESSAGE, {
+        code: AMBIGUOUS_AMOUNT_ERROR_CODE,
+        line: physicalLine,
+        raw: rowText,
+      }));
+      continue;
+    }
+    const amountRaw = amountResolution.kind === 'spending'
+      ? String(amountResolution.raw ?? '')
+      : '';
+    const parsedAmount = parseCSVAmount(amountRaw);
+    const amount = parsedAmount !== null
+      && amountResolution.kind === 'spending'
+      ? normalizeResolvedSpendingAmount(
+          parsedAmount,
+          amountResolution.role,
+        )
+      : parsedAmount;
     // Use shared isValidCSVAmount for unified validation — handles null
     // (unparseable), zero (balance inquiries), and negative (refunds)
     // amounts in one call, matching the web-side isValidAmount pattern.

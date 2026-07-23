@@ -160,7 +160,7 @@ export async function parseAndCategorize(
   matcher?: MerchantMatcher,
   categoryNodes?: CategoryNode[],
   signal?: AbortSignal,
-): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string }[]; categoryNodes: CategoryNode[] }> {
+): Promise<{ transactions: CategorizedTx[]; bank: string | null; format: string; statementPeriod?: { start: string; end: string }; parseErrors: { line?: number; message: string; raw?: string; count?: number }[]; categoryNodes: CategoryNode[] }> {
   const resolvedBank: BankId | undefined =
     options?.bank && VALID_BANK_IDS.has(options.bank)
       ? (options.bank as BankId)

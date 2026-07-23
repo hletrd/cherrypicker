@@ -167,22 +167,61 @@ function parseStructuredPDFText(
   for (const [rowIndex, row] of transactionRows.entries()) {
     if (isSummaryRow(row.join(' '))) continue;
 
+    const amountResolution = header
+      ? resolveAmountField(header.amountPlan, (index) => row[index] ?? '')
+      : null;
+    if (amountResolution?.kind === 'non-spending') {
+      const merchant = normalizeRequiredMerchant(
+        header && header.merchantCol >= 0
+          ? row[header.merchantCol]
+          : undefined,
+      ) || 'PDF 거래';
+      errors.push(new ParseError(
+        nonSpendingAmountMessage(merchant, amountResolution.raw),
+        {
+          code: NON_SPENDING_AMOUNT_ERROR_CODE,
+          line: rowIndex + 1,
+          raw: row.join(' '),
+        },
+      ));
+      continue;
+    }
+    if (amountResolution?.kind === 'ambiguous') {
+      errors.push(new ParseError(AMBIGUOUS_AMOUNT_MESSAGE, {
+        code: AMBIGUOUS_AMOUNT_ERROR_CODE,
+        line: rowIndex + 1,
+        raw: row.join(' '),
+      }));
+      continue;
+    }
+    const directionalAmount = amountResolution?.kind === 'spending'
+      ? {
+          idx: amountResolution.index,
+          value: String(amountResolution.raw ?? ''),
+        }
+      : null;
     const resolved = resolvePDFRowValues(
       row,
       header ? { dateIdx: header.dateCol, amountIdx: header.amountCol } : null,
       findPDFDateCell,
-      findPDFAmountCell,
+      header ? () => directionalAmount : findPDFAmountCell,
     );
     if (!resolved || !resolved.dateValue) continue;
 
-    const amount = parseAmount(resolved.amountValue);
-    if (amount === null) {
+    const parsedAmount = parseAmount(resolved.amountValue);
+    if (parsedAmount === null) {
       const cleaned = resolved.amountValue.replace(/원$/, '').replace(/,/g, '').trim();
       if (cleaned && !/^0+$/.test(cleaned)) {
         errors.push(new ParseError(`금액을 해석할 수 없습니다: ${resolved.amountValue}`));
       }
       continue;
     }
+    const amount = amountResolution?.kind === 'spending'
+      ? normalizeResolvedSpendingAmount(
+          parsedAmount,
+          amountResolution.role,
+        )
+      : parsedAmount;
     if (amount <= 0) continue;
 
     const date = parseDateStringToISO(resolved.dateValue);
@@ -331,7 +370,10 @@ export function parsePDFText(
     if (structured.transactions.length > 0) return structured;
     if (
       structured.errors.some(
-        (error) => error.code === REQUIRED_MERCHANT_ERROR_CODE,
+        (error) =>
+          error.code === REQUIRED_MERCHANT_ERROR_CODE
+          || error.code === NON_SPENDING_AMOUNT_ERROR_CODE
+          || error.code === AMBIGUOUS_AMOUNT_ERROR_CODE,
       )
     ) {
       return structured;
@@ -355,6 +397,14 @@ import {
   parseDateStringToISO,
 } from '../date-utils.js';
 import { parseAmount } from './amount.js';
+import {
+  AMBIGUOUS_AMOUNT_ERROR_CODE,
+  AMBIGUOUS_AMOUNT_MESSAGE,
+  NON_SPENDING_AMOUNT_ERROR_CODE,
+  nonSpendingAmountMessage,
+  normalizeResolvedSpendingAmount,
+  resolveAmountField,
+} from './amount-fields.js';
 import {
   MAX_REQUIRED_FIELD_ROW_ERRORS,
   normalizeRequiredMerchant,

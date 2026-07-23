@@ -9,6 +9,7 @@ function toParseError(error: JSONParseDiagnostic): ParseError {
   return new ParseError(error.message, {
     code: error.code,
     line: error.line,
+    count: error.count,
   });
 }
 

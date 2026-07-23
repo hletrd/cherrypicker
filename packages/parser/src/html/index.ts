@@ -18,6 +18,15 @@ import {
   resolveSheetCell,
 } from '../shared/sheet-cells.js';
 import {
+  AMBIGUOUS_AMOUNT_ERROR_CODE,
+  AMBIGUOUS_AMOUNT_MESSAGE,
+  compileAmountFieldPlan,
+  NON_SPENDING_AMOUNT_ERROR_CODE,
+  nonSpendingAmountMessage,
+  normalizeResolvedSpendingAmount,
+  resolveAmountField,
+} from '../shared/amount-fields.js';
+import {
   MAX_REQUIRED_FIELD_ROW_ERRORS,
   missingRequiredColumnLabels,
   normalizeRequiredMerchant,
@@ -28,7 +37,6 @@ import {
   findColumn,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
-  AMOUNT_COLUMN_PATTERN,
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
@@ -126,7 +134,7 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
   // Use shared findColumn for column detection
   const dateCol = findColumn(headers, undefined, DATE_COLUMN_PATTERN);
   const merchantCol = findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN);
-  const amountCol = findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN);
+  const amountPlan = compileAmountFieldPlan(headers);
   const installCol = findColumn(headers, undefined, INSTALLMENTS_COLUMN_PATTERN);
   const categoryCol = findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN);
   const memoCol = findColumn(headers, undefined, MEMO_COLUMN_PATTERN);
@@ -134,7 +142,7 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
   const missing = missingRequiredColumnLabels({
     date: dateCol,
     merchant: merchantCol,
-    amount: amountCol,
+    amount: amountPlan.candidates[0]?.index ?? -1,
   });
   if (missing.length > 0) {
     return {
@@ -182,17 +190,36 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
     const memoCell = memoCol === -1
       ? null
       : resolveSheetCell(rows, i, memoCol, mergeIndex);
-    const amountCell = resolveSheetCell(rows, i, amountCol, mergeIndex);
+    const amountCells = new Map(
+      amountPlan.candidates.map(({ index }) => [
+        index,
+        resolveSheetCell(rows, i, index, mergeIndex),
+      ]),
+    );
+    const amountResolution = resolveAmountField(
+      amountPlan,
+      (index) => amountCells.get(index)?.value,
+    );
+    const amountCell = amountResolution.kind === 'spending'
+      || amountResolution.kind === 'non-spending'
+      ? amountCells.get(amountResolution.index) ?? null
+      : null;
 
     const dateRaw = dateCell.value;
     const merchantRaw = merchantCell?.value ?? '';
     const categoryRaw = String(categoryCell?.value ?? '').trim();
     const installRaw = String(installCell?.value ?? '').trim();
     const memoRaw = String(memoCell?.value ?? '').trim();
-    const amountRaw = amountCell.value;
 
-    if (!String(dateRaw ?? '').trim() && !String(merchantRaw).trim() && !String(amountRaw ?? '').trim()) continue;
-    if (amountCell.fromMerge && consumedAmountSources.has(amountCell.sourceKey)) continue;
+    if (
+      !String(dateRaw ?? '').trim()
+      && !String(merchantRaw).trim()
+      && amountResolution.kind === 'missing'
+    ) continue;
+    if (
+      amountCell?.fromMerge
+      && consumedAmountSources.has(amountCell.sourceKey)
+    ) continue;
 
     const merchant = normalizeRequiredMerchant(merchantRaw);
     if (!merchant) {
@@ -207,14 +234,43 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
       continue;
     }
 
+    if (amountResolution.kind === 'non-spending') {
+      errors.push(new ParseError(
+        nonSpendingAmountMessage(merchant, amountResolution.raw),
+        {
+          code: NON_SPENDING_AMOUNT_ERROR_CODE,
+          line: i + 1,
+          raw: rowText,
+        },
+      ));
+      continue;
+    }
+    if (amountResolution.kind === 'ambiguous') {
+      errors.push(new ParseError(AMBIGUOUS_AMOUNT_MESSAGE, {
+        code: AMBIGUOUS_AMOUNT_ERROR_CODE,
+        line: i + 1,
+        raw: rowText,
+      }));
+      continue;
+    }
+    const amountRaw = amountResolution.kind === 'spending'
+      ? amountResolution.raw
+      : '';
+
     // Parse amount
-    const amount = parseAmount(amountRaw);
-    if (amount === null) {
+    const parsedAmount = parseAmount(amountRaw);
+    if (parsedAmount === null) {
       if (amountRaw) {
         errors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountRaw}`, { line: i + 1, raw: rowText  }));
       }
       continue;
     }
+    const amount = amountResolution.kind === 'spending'
+      ? normalizeResolvedSpendingAmount(
+          parsedAmount,
+          amountResolution.role,
+        )
+      : parsedAmount;
     if (amount <= 0) {
       errors.push(new ParseError(
         `지출로 처리되지 않는 금액입니다: ${merchant} ${amount}원`,
@@ -253,7 +309,7 @@ export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): Pars
     }
 
     transactions.push(tx);
-    consumedAmountSources.add(amountCell.sourceKey);
+    if (amountCell) consumedAmountSources.add(amountCell.sourceKey);
   }
 
   return { bank, format: 'html', transactions, errors };

@@ -13,16 +13,17 @@ export interface ParserWorkerRequest {
   payload: ArrayBuffer;
 }
 
-interface SerializedParseError {
+export interface SerializedParseError {
   message: string;
   code?: string;
   line?: number;
   raw?: string;
   file?: string;
   format?: ParseResult['format'];
+  count?: number;
 }
 
-interface SerializedParseResult extends Omit<ParseResult, 'errors'> {
+export interface SerializedParseResult extends Omit<ParseResult, 'errors'> {
   errors: SerializedParseError[];
 }
 
@@ -45,17 +46,74 @@ interface ParserWorkerScope {
   postMessage(message: ParserWorkerResponse): void;
 }
 
-function serializeResult(result: ParseResult): SerializedParseResult {
+export const MAX_SERIALIZED_PARSE_ERRORS = 100;
+export const MAX_SERIALIZED_PARSE_ERROR_MESSAGE_LENGTH = 1_024;
+export const MAX_SERIALIZED_PARSE_ERROR_RAW_LENGTH = 2_048;
+
+function truncate(value: string | undefined, maxLength: number): string | undefined {
+  if (value === undefined || value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1)}…`;
+}
+
+function serializedErrorCount(error: { count?: number }): number {
+  return Number.isSafeInteger(error.count)
+    && error.count !== undefined
+    && error.count > 0
+    ? error.count
+    : 1;
+}
+
+function addSafeCounts(total: number, count: number): number {
+  return Math.min(Number.MAX_SAFE_INTEGER, total + count);
+}
+
+function serializeParseError(error: ParseError): SerializedParseError {
+  return {
+    message: truncate(
+      error.message,
+      MAX_SERIALIZED_PARSE_ERROR_MESSAGE_LENGTH,
+    ) ?? '',
+    code: error.code,
+    line: error.line,
+    raw: truncate(error.raw, MAX_SERIALIZED_PARSE_ERROR_RAW_LENGTH),
+    file: error.file,
+    format: error.format,
+    count: error.count,
+  };
+}
+
+export function serializeParserWorkerResult(
+  result: ParseResult,
+): SerializedParseResult {
+  const hasOmittedErrors =
+    result.errors.length > MAX_SERIALIZED_PARSE_ERRORS;
+  const exampleLimit = hasOmittedErrors
+    ? MAX_SERIALIZED_PARSE_ERRORS - 1
+    : MAX_SERIALIZED_PARSE_ERRORS;
+  const errors: SerializedParseError[] = [];
+  let omittedCount = 0;
+
+  for (const error of result.errors) {
+    if (errors.length < exampleLimit) {
+      errors.push(serializeParseError(error));
+    } else {
+      omittedCount = addSafeCounts(
+        omittedCount,
+        serializedErrorCount(error),
+      );
+    }
+  }
+  if (hasOmittedErrors) {
+    errors.push({
+      message: '나머지 파싱 경고를 요약했어요.',
+      code: 'parse_diagnostics_omitted',
+      count: omittedCount,
+    });
+  }
+
   return {
     ...result,
-    errors: result.errors.map((error) => ({
-      message: error.message,
-      code: error.code,
-      line: error.line,
-      raw: error.raw,
-      file: error.file,
-      format: error.format,
-    })),
+    errors,
   };
 }
 
@@ -72,6 +130,7 @@ export function deserializeParserWorkerResult(
           raw: error.raw,
           file: error.file,
           format: error.format,
+          count: error.count,
         }),
     ),
   };
@@ -120,7 +179,10 @@ export function installParserWorker(
   scope.addEventListener('message', (event) => {
     void Promise.resolve(parse(event.data.payload, event.data.bank)).then(
       (result) => {
-        scope.postMessage({ ok: true, result: serializeResult(result) });
+        scope.postMessage({
+          ok: true,
+          result: serializeParserWorkerResult(result),
+        });
       },
       (error: unknown) => {
         scope.postMessage({

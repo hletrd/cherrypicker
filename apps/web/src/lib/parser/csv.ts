@@ -3,6 +3,9 @@ import { ParseError } from './types.js';
 import {
   decodeTextBytes,
   detectTextEncoding,
+  AMBIGUOUS_AMOUNT_ERROR_CODE,
+  AMBIGUOUS_AMOUNT_MESSAGE,
+  compileAmountFieldPlan,
   MAX_REQUIRED_FIELD_ROW_ERRORS,
   missingRequiredColumnLabels,
   normalizeRequiredMerchant,
@@ -10,8 +13,13 @@ import {
   REQUIRED_DATE_ERROR_MESSAGE,
   REQUIRED_MERCHANT_ERROR_CODE,
   REQUIRED_MERCHANT_ERROR_MESSAGE,
+  NON_SPENDING_AMOUNT_ERROR_CODE,
+  nonSpendingAmountMessage,
+  normalizeResolvedSpendingAmount,
+  resolveAmountField,
   splitDelimitedRecord,
   splitDelimitedRecordsWithLines,
+  withInferredNeutralAmountField,
   type DelimitedLogicalRecord,
 } from '@cherrypicker/parser/browser';
 import { detectBank, detectCSVDelimiter } from './detect.js';
@@ -20,7 +28,6 @@ import {
   normalizeHeader,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
-  AMOUNT_COLUMN_PATTERN,
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
@@ -289,7 +296,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
 
   let dateCol = -1;
   let merchantCol = -1;
-  let amountCol = -1;
+  let amountPlan = compileAmountFieldPlan(headers);
   let installmentsCol = -1;
   let categoryCol = -1;
   let memoCol = -1;
@@ -299,12 +306,15 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   // undefined to skip the exact-match pass and go straight to regex matching.
   dateCol = findColumn(headers, undefined, DATE_COLUMN_PATTERN);
   merchantCol = findColumn(headers, undefined, MERCHANT_COLUMN_PATTERN);
-  amountCol = findColumn(headers, undefined, AMOUNT_COLUMN_PATTERN);
   installmentsCol = findColumn(headers, undefined, INSTALLMENTS_COLUMN_PATTERN);
   categoryCol = findColumn(headers, undefined, CATEGORY_COLUMN_PATTERN);
   memoCol = findColumn(headers, undefined, MEMO_COLUMN_PATTERN);
 
-  if (dateCol === -1 || merchantCol === -1 || amountCol === -1) {
+  if (
+    dateCol === -1
+    || merchantCol === -1
+    || amountPlan.candidates.length === 0
+  ) {
     // Scan 8 rows for data-inference — provides better coverage for files
     // with sparse early data (blank rows, sub-headers, metadata lines)
     // without meaningful performance impact (C54-02).
@@ -314,16 +324,32 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
       for (let i = 0; i < cells.length; i++) {
         const cell = cells[i] ?? '';
         if (dateCol === -1 && isDateLike(cell)) dateCol = i;
-        else if (amountCol === -1 && isAmountLike(cell) && !isDateLike(cell)) amountCol = i;
+        else if (
+          amountPlan.candidates.length === 0
+          && isAmountLike(cell)
+          && !isDateLike(cell)
+        ) {
+          amountPlan = withInferredNeutralAmountField(amountPlan, i);
+        }
       }
     }
-    if (dateCol !== -1 && amountCol !== -1 && merchantCol === -1) {
+    if (
+      dateCol !== -1
+      && amountPlan.candidates.length > 0
+      && merchantCol === -1
+    ) {
       // Rank candidate columns by Korean character count — the merchant column
       // in Korean bank exports has the highest Korean text density. This avoids
       // misidentifying memo/비고 columns that happen to precede the merchant
       // column when iterating left-to-right (C94-02). Parity with server-side
       // generic CSV parser in packages/parser/src/csv/generic.ts.
-      const reservedCols = new Set([dateCol, amountCol, installmentsCol, categoryCol, memoCol].filter((c) => c !== -1));
+      const reservedCols = new Set([
+        dateCol,
+        ...amountPlan.candidates.map(({ index }) => index),
+        installmentsCol,
+        categoryCol,
+        memoCol,
+      ].filter((column) => column !== -1));
       let bestCol = -1;
       let bestKoreanCount = 0;
       for (let i = 0; i < headers.length; i++) {
@@ -361,7 +387,7 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
   const missingColumns = missingRequiredColumnLabels({
     date: dateCol,
     merchant: merchantCol,
-    amount: amountCol,
+    amount: amountPlan.candidates[0]?.index ?? -1,
   });
   if (missingColumns.length > 0) {
     return {
@@ -388,9 +414,16 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
 
     const dateRaw = dateCol !== -1 ? (cells[dateCol] ?? '') : '';
     const merchantRaw = merchantCol !== -1 ? (cells[merchantCol] ?? '') : '';
-    const amountRaw = amountCol !== -1 ? (cells[amountCol] ?? '') : '';
+    const amountResolution = resolveAmountField(
+      amountPlan,
+      (index) => cells[index] ?? '',
+    );
 
-    if (!dateRaw && !merchantRaw && !amountRaw) continue;
+    if (
+      !dateRaw
+      && !merchantRaw
+      && amountResolution.kind === 'missing'
+    ) continue;
 
     const merchant = normalizeRequiredMerchant(merchantRaw);
     if (!merchant) {
@@ -404,7 +437,36 @@ function parseGenericCSV(content: string, bank: BankId | null): ParseResult {
       }
       continue;
     }
-    let amount = parseAmount(amountRaw);
+    if (amountResolution.kind === 'non-spending') {
+      errors.push(new ParseError(
+        nonSpendingAmountMessage(merchant, amountResolution.raw),
+        {
+          code: NON_SPENDING_AMOUNT_ERROR_CODE,
+          line: physicalLine,
+          raw: line,
+        },
+      ));
+      continue;
+    }
+    if (amountResolution.kind === 'ambiguous') {
+      errors.push(new ParseError(AMBIGUOUS_AMOUNT_MESSAGE, {
+        code: AMBIGUOUS_AMOUNT_ERROR_CODE,
+        line: physicalLine,
+        raw: line,
+      }));
+      continue;
+    }
+    const amountRaw = amountResolution.kind === 'spending'
+      ? String(amountResolution.raw ?? '')
+      : '';
+    const parsedAmount = parseAmount(amountRaw);
+    const amount = parsedAmount !== null
+      && amountResolution.kind === 'spending'
+      ? normalizeResolvedSpendingAmount(
+          parsedAmount,
+          amountResolution.role,
+        )
+      : parsedAmount;
     // Use the shared isValidAmount() helper which handles both NaN and
     // zero-amount filtering (C26-02), matching the bank-specific adapters.
     // Enrich amount errors with raw row text for easier debugging, matching
@@ -523,7 +585,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
       const headers = splitLine(lines[headerIdx] ?? '', delimiter);
       const dateCol = findColumn(headers, dateHeader, DATE_COLUMN_PATTERN);
       const merchantCol = findColumn(headers, merchantHeader, MERCHANT_COLUMN_PATTERN);
-      const amountCol = findColumn(headers, amountHeader, AMOUNT_COLUMN_PATTERN);
+      const amountPlan = compileAmountFieldPlan(headers, amountHeader);
       const installCol = findColumn(headers, installmentsHeader, INSTALLMENTS_COLUMN_PATTERN);
       const categoryCol = findColumn(headers, categoryHeader, CATEGORY_COLUMN_PATTERN);
       const memoCol = findColumn(headers, memoHeader, MEMO_COLUMN_PATTERN);
@@ -532,7 +594,7 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
       const missingColumns = missingRequiredColumnLabels({
         date: dateCol,
         merchant: merchantCol,
-        amount: amountCol,
+        amount: amountPlan.candidates[0]?.index ?? -1,
       });
       if (missingColumns.length > 0) {
         return {
@@ -556,9 +618,16 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
         const dateRaw = dateCol !== -1 ? (cells[dateCol] ?? '') : '';
         const merchantRaw = merchantCol !== -1 ? (cells[merchantCol] ?? '') : '';
-        const amountRaw = amountCol !== -1 ? (cells[amountCol] ?? '') : '';
+        const amountResolution = resolveAmountField(
+          amountPlan,
+          (index) => cells[index] ?? '',
+        );
 
-        if (!dateRaw && !merchantRaw && !amountRaw) continue;
+        if (
+          !dateRaw
+          && !merchantRaw
+          && amountResolution.kind === 'missing'
+        ) continue;
 
         const merchant = normalizeRequiredMerchant(merchantRaw);
         if (!merchant) {
@@ -572,7 +641,36 @@ function createBankAdapter(config: BankCSVConfig): BankAdapter {
           }
           continue;
         }
-        let amount = parseAmount(amountRaw);
+        if (amountResolution.kind === 'non-spending') {
+          errors.push(new ParseError(
+            nonSpendingAmountMessage(merchant, amountResolution.raw),
+            {
+              code: NON_SPENDING_AMOUNT_ERROR_CODE,
+              line: physicalLine,
+              raw: line,
+            },
+          ));
+          continue;
+        }
+        if (amountResolution.kind === 'ambiguous') {
+          errors.push(new ParseError(AMBIGUOUS_AMOUNT_MESSAGE, {
+            code: AMBIGUOUS_AMOUNT_ERROR_CODE,
+            line: physicalLine,
+            raw: line,
+          }));
+          continue;
+        }
+        const amountRaw = amountResolution.kind === 'spending'
+          ? String(amountResolution.raw ?? '')
+          : '';
+        const parsedAmount = parseAmount(amountRaw);
+        const amount = parsedAmount !== null
+          && amountResolution.kind === 'spending'
+          ? normalizeResolvedSpendingAmount(
+              parsedAmount,
+              amountResolution.role,
+            )
+          : parsedAmount;
         if (!isValidAmount(amount, amountRaw, physicalLine - 1, errors)) {
           // Enrich amount error with raw row text for easier debugging (F3)
           if (

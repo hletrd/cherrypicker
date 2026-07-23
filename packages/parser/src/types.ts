@@ -34,10 +34,18 @@ export class ParseError extends Error {
   raw?: string;
   file?: string;
   format?: FileFormat;
+  count?: number;
 
   constructor(
     message: string,
-    options?: { code?: string; line?: number; raw?: string; file?: string; format?: FileFormat },
+    options?: {
+      code?: string;
+      line?: number;
+      raw?: string;
+      file?: string;
+      format?: FileFormat;
+      count?: number;
+    },
   ) {
     super(message);
     this.name = 'ParseError';
@@ -46,6 +54,7 @@ export class ParseError extends Error {
     this.raw = options?.raw;
     this.file = options?.file;
     this.format = options?.format;
+    this.count = options?.count;
   }
 }
 

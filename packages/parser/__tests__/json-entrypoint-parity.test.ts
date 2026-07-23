@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { parseJSON as parseServerJSON } from '../src/json/index.js';
+import { MAX_JSON_PARSE_DIAGNOSTICS } from '../src/shared/json.js';
 import { parseJSON as parseWebJSON } from '../../../apps/web/src/lib/parser/json.js';
 
 function comparableResult(
@@ -7,10 +8,11 @@ function comparableResult(
 ) {
   return {
     transactions: result.transactions,
-    errors: result.errors.map(({ message, code, line }) => ({
+    errors: result.errors.map(({ message, code, line, count }) => ({
       message,
       code,
       line,
+      count,
     })),
   };
 }
@@ -52,5 +54,38 @@ describe('canonical JSON server/web entrypoint parity', () => {
     expect(comparableResult(parseWebJSON(content))).toEqual(
       comparableResult(parseServerJSON(content)),
     );
+  });
+
+  test('bounds large rejected-row diagnostics with an exact counted summary', () => {
+    const rejectedRowCount = 20_000;
+    const rows = [
+      ...Array.from({ length: rejectedRowCount }, () => null),
+      { date: '2026-07-01', merchant: '정상', amount: 10_000 },
+    ];
+    const content = JSON.stringify(rows);
+    const server = parseServerJSON(content);
+    const web = parseWebJSON(content);
+
+    expect(comparableResult(web)).toEqual(comparableResult(server));
+    expect(server.transactions).toHaveLength(1);
+    expect(server.errors).toHaveLength(MAX_JSON_PARSE_DIAGNOSTICS);
+    expect(
+      server.errors.reduce(
+        (total, error) => total + (error.count ?? 1),
+        0,
+      ),
+    ).toBe(rejectedRowCount);
+    expect(server.errors.at(-1)).toMatchObject({
+      code: 'json_diagnostics_omitted',
+      count: rejectedRowCount - (MAX_JSON_PARSE_DIAGNOSTICS - 1),
+    });
+    expect(new TextEncoder().encode(JSON.stringify(
+      server.errors.map(({ message, code, line, count }) => ({
+        message,
+        code,
+        line,
+        count,
+      })),
+    )).byteLength).toBeLessThan(32_000);
   });
 });

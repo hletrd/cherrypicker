@@ -2,6 +2,7 @@ import { describe, test, expect } from 'bun:test';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { parseCSV } from '../src/csv/index.js';
+import { NON_SPENDING_AMOUNT_ERROR_CODE } from '../src/shared/amount-fields.js';
 
 const fixturesDir = join(import.meta.dir, 'fixtures');
 
@@ -660,14 +661,14 @@ describe('Cycle 36: New column pattern terms integration', () => {
     expect(result.transactions[0]?.amount).toBe(30000);
   });
 
-  test('generic parser handles 승인취소금액 header', () => {
+  test('generic parser rejects 승인취소금액 as incoming', () => {
     const content = [
       '이용일,이용처,승인취소금액',
       '2026-02-01,환불건,5000',
     ].join('\n');
     const result = parseCSV(content);
-    expect(result.transactions).toHaveLength(1);
-    expect(result.transactions[0]?.amount).toBe(5000);
+    expect(result.transactions).toHaveLength(0);
+    expect(result.errors[0]?.code).toBe(NON_SPENDING_AMOUNT_ERROR_CODE);
   });
 
   test('generic parser handles header with 할부횟수 installment column', () => {
@@ -995,11 +996,12 @@ describe('Cycle 60: isAmountLike does not false-positive on bare small numbers',
     // The amounts 3500, 12000, 5000 are 4-5 digits and match the bare 5+
     // digit pattern or comma pattern. The key assertion is that the parser
     // does NOT produce transactions with amounts 1 or 2.
-    if (result.transactions.length > 0) {
-      for (const tx of result.transactions) {
-        expect(tx.amount).toBeGreaterThan(2);
-      }
-    }
+    expect(result.transactions).toHaveLength(3);
+    expect(result.transactions.map(({ amount }) => amount)).toEqual([
+      3500,
+      12000,
+      5000,
+    ]);
   });
 
   test('comma-separated amounts like "1,234" still match as amounts (C60-01)', () => {
@@ -1034,13 +1036,12 @@ describe('Cycle 61: bare integer amount threshold is 8 digits (C61-01)', () => {
     const result = parseCSV(content);
     // The "price" column with comma-separated amounts should be detected,
     // not the "ref" column with 5-digit bare integers.
-    if (result.transactions.length > 0) {
-      for (const tx of result.transactions) {
-        // Amounts should be in the thousands range, not the 5-digit ID range
-        expect(tx.amount).toBeLessThan(100000);
-        expect(tx.amount).toBeGreaterThan(0);
-      }
-    }
+    expect(result.transactions).toHaveLength(3);
+    expect(result.transactions.map(({ amount }) => amount)).toEqual([
+      3500,
+      12000,
+      5678,
+    ]);
   });
 
   test('8+ digit bare integers still match as amounts', () => {
@@ -1054,10 +1055,11 @@ describe('Cycle 61: bare integer amount threshold is 8 digits (C61-01)', () => {
     const result = parseCSV(content);
     // With no recognized headers, falls back to data inference.
     // 8+ digit bare integers should be detected as amounts.
-    if (result.transactions.length > 0) {
-      expect(result.transactions[0]?.amount).toBe(10000000);
-      expect(result.transactions[1]?.amount).toBe(25000000);
-    }
+    expect(result.transactions).toHaveLength(2);
+    expect(result.transactions.map(({ amount }) => amount)).toEqual([
+      10000000,
+      25000000,
+    ]);
   });
 
   test('comma-formatted amounts still work regardless of digit count', () => {

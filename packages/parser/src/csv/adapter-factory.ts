@@ -13,7 +13,6 @@ import {
   normalizeHeader,
   DATE_COLUMN_PATTERN,
   MERCHANT_COLUMN_PATTERN,
-  AMOUNT_COLUMN_PATTERN,
   INSTALLMENTS_COLUMN_PATTERN,
   CATEGORY_COLUMN_PATTERN,
   MEMO_COLUMN_PATTERN,
@@ -32,6 +31,15 @@ import {
   REQUIRED_MERCHANT_ERROR_CODE,
   REQUIRED_MERCHANT_ERROR_MESSAGE,
 } from '../shared/required-fields.js';
+import {
+  AMBIGUOUS_AMOUNT_ERROR_CODE,
+  AMBIGUOUS_AMOUNT_MESSAGE,
+  compileAmountFieldPlan,
+  NON_SPENDING_AMOUNT_ERROR_CODE,
+  nonSpendingAmountMessage,
+  normalizeResolvedSpendingAmount,
+  resolveAmountField,
+} from '../shared/amount-fields.js';
 
 export interface BankCSVConfig {
   bankId: BankId;
@@ -118,7 +126,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       // Use flexible column matching — tries exact name first, then regex
       const dateCol = findColumn(headers, dateHeader, DATE_COLUMN_PATTERN);
       const merchantCol = findColumn(headers, merchantHeader, MERCHANT_COLUMN_PATTERN);
-      const amountCol = findColumn(headers, amountHeader, AMOUNT_COLUMN_PATTERN);
+      const amountPlan = compileAmountFieldPlan(headers, amountHeader);
       const installCol = findColumn(headers, installmentsHeader, INSTALLMENTS_COLUMN_PATTERN);
       const categoryCol = findColumn(headers, categoryHeader, CATEGORY_COLUMN_PATTERN);
       const memoCol = findColumn(headers, memoHeader, MEMO_COLUMN_PATTERN);
@@ -130,7 +138,7 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
       const missingColumns = missingRequiredColumnLabels({
         date: dateCol,
         merchant: merchantCol,
-        amount: amountCol,
+        amount: amountPlan.candidates[0]?.index ?? -1,
       });
       if (missingColumns.length > 0) {
         return {
@@ -154,9 +162,16 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
 
         const dateRaw = dateCol !== -1 ? (cells[dateCol] ?? '') : '';
         const merchantRaw = merchantCol !== -1 ? (cells[merchantCol] ?? '') : '';
-        const amountRaw = amountCol !== -1 ? (cells[amountCol] ?? '') : '';
+        const amountResolution = resolveAmountField(
+          amountPlan,
+          (index) => cells[index] ?? '',
+        );
 
-        if (!dateRaw && !merchantRaw && !amountRaw) continue;
+        if (
+          !dateRaw
+          && !merchantRaw
+          && amountResolution.kind === 'missing'
+        ) continue;
 
         const rowText = line;
         const merchant = normalizeRequiredMerchant(merchantRaw);
@@ -171,7 +186,36 @@ export function createBankAdapter(config: BankCSVConfig): BankAdapter {
           }
           continue;
         }
-        const amount = parseCSVAmount(amountRaw);
+        if (amountResolution.kind === 'non-spending') {
+          errors.push(new ParseError(
+            nonSpendingAmountMessage(merchant, amountResolution.raw),
+            {
+              code: NON_SPENDING_AMOUNT_ERROR_CODE,
+              line: physicalLine,
+              raw: rowText,
+            },
+          ));
+          continue;
+        }
+        if (amountResolution.kind === 'ambiguous') {
+          errors.push(new ParseError(AMBIGUOUS_AMOUNT_MESSAGE, {
+            code: AMBIGUOUS_AMOUNT_ERROR_CODE,
+            line: physicalLine,
+            raw: rowText,
+          }));
+          continue;
+        }
+        const amountRaw = amountResolution.kind === 'spending'
+          ? String(amountResolution.raw ?? '')
+          : '';
+        const parsedAmount = parseCSVAmount(amountRaw);
+        const amount = parsedAmount !== null
+          && amountResolution.kind === 'spending'
+          ? normalizeResolvedSpendingAmount(
+              parsedAmount,
+              amountResolution.role,
+            )
+          : parsedAmount;
         // Use shared isValidCSVAmount for unified validation — handles null
         // (unparseable), zero (balance inquiries), and negative (refunds)
         // amounts in one call, matching the web-side isValidAmount pattern.

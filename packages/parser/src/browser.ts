@@ -4,6 +4,21 @@
  */
 export { parseAmount, parseAmountString } from './shared/amount.js';
 export {
+  AMBIGUOUS_AMOUNT_ERROR_CODE,
+  AMBIGUOUS_AMOUNT_MESSAGE,
+  classifyAmountFieldName,
+  compileAmountFieldPlan,
+  NON_SPENDING_AMOUNT_ERROR_CODE,
+  nonSpendingAmountMessage,
+  normalizeResolvedSpendingAmount,
+  resolveAmountField,
+  withInferredNeutralAmountField,
+  type AmountFieldCandidate,
+  type AmountFieldPlan,
+  type AmountFieldResolution,
+  type AmountFieldRole,
+} from './shared/amount-fields.js';
+export {
   detectAndDecodeStatementTextBytes,
   decodeStatementTextBytes,
   decodeTextBytes,
@@ -95,7 +110,10 @@ export type {
   ParsedPerformanceExclusionTag,
   ParsedTransactionFacts,
 } from './shared/transaction-facts.js';
-export { parseJSONTransactions } from './shared/json.js';
+export {
+  MAX_JSON_PARSE_DIAGNOSTICS,
+  parseJSONTransactions,
+} from './shared/json.js';
 export type {
   JSONParseDiagnostic,
   JSONParseKernelResult,

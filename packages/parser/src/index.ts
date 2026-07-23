@@ -13,6 +13,21 @@ export { findColumn, normalizeHeader, DATE_COLUMN_PATTERN, MERCHANT_COLUMN_PATTE
 export { createBankAdapter, kakaoAdapter, tossAdapter, kbankAdapter, bnkAdapter, dgbAdapter, suhyupAdapter, jbAdapter, kwangjuAdapter, jejuAdapter, scAdapter, mgAdapter, cuAdapter, kdbAdapter, epostAdapter } from './csv/adapter-factory.js';
 export { isValidISODate, isValidShortDate } from './date-utils.js';
 export { parseAmount, parseAmountString } from './amount.js';
+export {
+  AMBIGUOUS_AMOUNT_ERROR_CODE,
+  AMBIGUOUS_AMOUNT_MESSAGE,
+  classifyAmountFieldName,
+  compileAmountFieldPlan,
+  NON_SPENDING_AMOUNT_ERROR_CODE,
+  nonSpendingAmountMessage,
+  normalizeResolvedSpendingAmount,
+  resolveAmountField,
+  withInferredNeutralAmountField,
+  type AmountFieldCandidate,
+  type AmountFieldPlan,
+  type AmountFieldResolution,
+  type AmountFieldRole,
+} from './shared/amount-fields.js';
 export { normalizeHTML } from './csv/shared.js';
 export {
   extractTransactionFacts,

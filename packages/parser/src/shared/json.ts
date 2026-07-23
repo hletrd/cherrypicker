@@ -1,11 +1,19 @@
 import { isValidISODate, parseDateStringToISO } from '../date-utils.js';
 import { parseAmount } from './amount.js';
 import {
-  MAX_REQUIRED_FIELD_ROW_ERRORS,
   normalizeRequiredMerchant,
   REQUIRED_MERCHANT_ERROR_CODE,
   REQUIRED_MERCHANT_ERROR_MESSAGE,
 } from './required-fields.js';
+import {
+  AMBIGUOUS_AMOUNT_ERROR_CODE,
+  AMBIGUOUS_AMOUNT_MESSAGE,
+  compileAmountFieldPlan,
+  NON_SPENDING_AMOUNT_ERROR_CODE,
+  nonSpendingAmountMessage,
+  normalizeResolvedSpendingAmount,
+  resolveAmountField,
+} from './amount-fields.js';
 import {
   extractTransactionFacts,
   type ParsedTransactionFacts,
@@ -29,15 +37,6 @@ const MERCHANT_ALIASES = [
   '이용처', '가맹점', '가맹점명', '이용가맹점', '거래처', '매출처', '사용처',
   '결제처', '상호', '판매처', '구매처', '매장', '이용내용', '거래내용',
   '상호명', '업체명', '판매자', '거래내역', '상점',
-] as const;
-
-const AMOUNT_ALIASES = [
-  'amount', 'amt', 'total', 'price', 'won', 'charge', 'payment', 'paid',
-  'spent', 'cost', 'value', 'debit', 'credit', 'net', 'netAmount', 'net_amount',
-  'gross', 'transactionAmount', 'transaction_amount', 'paymentAmount', 'payment_amount',
-  'billedAmount', 'billed_amount', 'totalAmount', 'total_amount',
-  '이용금액', '거래금액', '금액', '결제금액', '승인금액', '매출금액', '이용액',
-  '청구금액', '출금액', '사용금액', '결제대금',
 ] as const;
 
 const INSTALLMENTS_ALIASES = [
@@ -79,8 +78,12 @@ export interface JSONParseDiagnostic {
     | 'json_shape'
     | 'json_row_rejected'
     | 'json_fact_invalid'
+    | 'json_diagnostics_omitted'
+    | typeof NON_SPENDING_AMOUNT_ERROR_CODE
+    | typeof AMBIGUOUS_AMOUNT_ERROR_CODE
     | typeof REQUIRED_MERCHANT_ERROR_CODE;
   line?: number;
+  count?: number;
 }
 
 export interface JSONParseKernelResult {
@@ -111,28 +114,89 @@ function rejectedRow(line: number, message: string): JSONParseDiagnostic {
   return { code: 'json_row_rejected', line, message };
 }
 
+export const MAX_JSON_PARSE_DIAGNOSTICS = 100;
+
+function diagnosticCount(diagnostic: JSONParseDiagnostic): number {
+  return Number.isSafeInteger(diagnostic.count)
+    && diagnostic.count !== undefined
+    && diagnostic.count > 0
+    ? diagnostic.count
+    : 1;
+}
+
+class JSONDiagnosticCollector {
+  readonly errors: JSONParseDiagnostic[] = [];
+
+  add(diagnostic: JSONParseDiagnostic): void {
+    if (this.errors.length < MAX_JSON_PARSE_DIAGNOSTICS) {
+      this.errors.push(diagnostic);
+      return;
+    }
+
+    const currentSummary = this.errors.at(-1);
+    if (currentSummary?.code === 'json_diagnostics_omitted') {
+      currentSummary.count = Math.min(
+        Number.MAX_SAFE_INTEGER,
+        diagnosticCount(currentSummary) + diagnosticCount(diagnostic),
+      );
+      return;
+    }
+
+    const displaced = this.errors.pop();
+    this.errors.push({
+      code: 'json_diagnostics_omitted',
+      message: '나머지 JSON 파싱 경고를 요약했어요.',
+      count: Math.min(
+        Number.MAX_SAFE_INTEGER,
+        diagnosticCount(displaced ?? diagnostic) + diagnosticCount(diagnostic),
+      ),
+    });
+  }
+}
+
 function parseTransactionObject(
   object: Readonly<Record<string, unknown>>,
   line: number,
-  errors: JSONParseDiagnostic[],
-  requiredMerchantErrors: { count: number },
+  diagnostics: JSONDiagnosticCollector,
 ): JSONTransaction | null {
   const dateValue = findField(object, DATE_ALIASES);
-  const amountValue = findField(object, AMOUNT_ALIASES);
   const merchantValue = findField(object, MERCHANT_ALIASES);
   const merchant = normalizeRequiredMerchant(merchantValue);
 
   if (!merchant) {
-    if (requiredMerchantErrors.count < MAX_REQUIRED_FIELD_ROW_ERRORS) {
-      errors.push({
-        code: REQUIRED_MERCHANT_ERROR_CODE,
-        line,
-        message: REQUIRED_MERCHANT_ERROR_MESSAGE,
-      });
-    }
-    requiredMerchantErrors.count++;
+    diagnostics.add({
+      code: REQUIRED_MERCHANT_ERROR_CODE,
+      line,
+      message: REQUIRED_MERCHANT_ERROR_MESSAGE,
+    });
     return null;
   }
+
+  const amountKeys = Object.keys(object);
+  const amountPlan = compileAmountFieldPlan(amountKeys);
+  const amountResolution = resolveAmountField(
+    amountPlan,
+    (index) => object[amountKeys[index]!],
+  );
+  if (amountResolution.kind === 'non-spending') {
+    diagnostics.add({
+      code: NON_SPENDING_AMOUNT_ERROR_CODE,
+      line,
+      message: nonSpendingAmountMessage(merchant, amountResolution.raw),
+    });
+    return null;
+  }
+  if (amountResolution.kind === 'ambiguous') {
+    diagnostics.add({
+      code: AMBIGUOUS_AMOUNT_ERROR_CODE,
+      line,
+      message: AMBIGUOUS_AMOUNT_MESSAGE,
+    });
+    return null;
+  }
+  const amountValue = amountResolution.kind === 'spending'
+    ? amountResolution.raw
+    : undefined;
 
   const missingFields: string[] = [];
   if (dateValue === undefined || dateValue === null || String(dateValue).trim() === '') {
@@ -142,27 +206,30 @@ function parseTransactionObject(
     missingFields.push('amount');
   }
   if (missingFields.length > 0) {
-    errors.push(rejectedRow(
+    diagnostics.add(rejectedRow(
       line,
       `필수 거래 필드가 없습니다: ${missingFields.join(', ')}`,
     ));
     return null;
   }
 
-  const amount = parseAmount(amountValue);
-  if (amount === null) {
+  const parsedAmount = parseAmount(amountValue);
+  if (parsedAmount === null) {
     const type =
       typeof amountValue === 'number' || typeof amountValue === 'string'
         ? ''
         : ` (${typeof amountValue})`;
-    errors.push(rejectedRow(
+    diagnostics.add(rejectedRow(
       line,
       `금액을 해석할 수 없습니다${type}: ${String(amountValue)}`,
     ));
     return null;
   }
+  const amount = amountResolution.kind === 'spending'
+    ? normalizeResolvedSpendingAmount(parsedAmount, amountResolution.role)
+    : parsedAmount;
   if (amount <= 0) {
-    errors.push(rejectedRow(
+    diagnostics.add(rejectedRow(
       line,
       `지출로 처리되지 않는 금액입니다: ${String(merchantValue ?? '').trim()} ${amount}원`,
     ));
@@ -172,13 +239,13 @@ function parseTransactionObject(
   const dateRaw = String(dateValue).trim();
   const date = parseDateStringToISO(dateRaw);
   if (!isValidISODate(date)) {
-    errors.push(rejectedRow(line, `날짜를 해석할 수 없습니다: ${dateRaw}`));
+    diagnostics.add(rejectedRow(line, `날짜를 해석할 수 없습니다: ${dateRaw}`));
     return null;
   }
 
   const extractedFacts = extractTransactionFacts(object);
   for (const message of extractedFacts.errors) {
-    errors.push({ code: 'json_fact_invalid', line, message });
+    diagnostics.add({ code: 'json_fact_invalid', line, message });
   }
 
   const transaction: JSONTransaction = {
@@ -264,24 +331,22 @@ export function parseJSONTransactions(content: string): JSONParseKernelResult {
     };
   }
 
-  const errors: JSONParseDiagnostic[] = [];
   const transactions: JSONTransaction[] = [];
-  const requiredMerchantErrors = { count: 0 };
+  const diagnostics = new JSONDiagnosticCollector();
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
     const line = index + 1;
     if (!row || typeof row !== 'object' || Array.isArray(row)) {
-      errors.push(rejectedRow(line, '거래 행이 객체 형식이 아닙니다.'));
+      diagnostics.add(rejectedRow(line, '거래 행이 객체 형식이 아닙니다.'));
       continue;
     }
     const transaction = parseTransactionObject(
       row as Record<string, unknown>,
       line,
-      errors,
-      requiredMerchantErrors,
+      diagnostics,
     );
     if (transaction) transactions.push(transaction);
   }
 
-  return { transactions, errors };
+  return { transactions, errors: diagnostics.errors };
 }

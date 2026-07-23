@@ -7,6 +7,7 @@ import { parseHTML as parseServerHTML } from '../../src/html/index.js';
 import { parseJSON as parseServerJSON } from '../../src/json/index.js';
 import { parseOFX as parseServerOFX } from '../../src/ofx/index.js';
 import { parsePDFText } from '../../src/shared/pdf-text.js';
+import { MAX_JSON_PARSE_DIAGNOSTICS } from '../../src/shared/json.js';
 import {
   MAX_REQUIRED_FIELD_ROW_ERRORS,
   REQUIRED_MERCHANT_ERROR_CODE,
@@ -14,14 +15,20 @@ import {
 
 function normalize(result: {
   transactions: unknown[];
-  errors: Array<{ code?: string; line?: number; message: string }>;
+  errors: Array<{
+    code?: string;
+    line?: number;
+    message: string;
+    count?: number;
+  }>;
 }) {
   return {
     transactions: result.transactions,
-    errors: result.errors.map(({ code, line, message }) => ({
+    errors: result.errors.map(({ code, line, message, count }) => ({
       code,
       line,
       message,
+      count,
     })),
   };
 }
@@ -52,7 +59,12 @@ describe('Cycle 6 required merchant contract', () => {
       server.errors.filter(
         ({ code }) => code === REQUIRED_MERCHANT_ERROR_CODE,
       ),
-    ).toHaveLength(MAX_REQUIRED_FIELD_ROW_ERRORS);
+    ).toHaveLength(MAX_JSON_PARSE_DIAGNOSTICS - 1);
+    expect(server.errors).toHaveLength(MAX_JSON_PARSE_DIAGNOSTICS);
+    expect(server.errors.at(-1)).toMatchObject({
+      code: 'json_diagnostics_omitted',
+      count: 6,
+    });
   });
 
   test('HTML requires a merchant column on server and browser', () => {
