@@ -1,3 +1,5 @@
+import { formatCatalogIssuerNameKo } from './issuer-presentation.js';
+
 export function getIssuerFromCardId(cardId: string): string {
   return cardId.split('-')[0] ?? 'unknown';
 }
@@ -84,34 +86,11 @@ export function formatCount(n: number): string {
 /**
  * Return Korean issuer name for an issuer ID.
  */
-export function formatIssuerNameKo(issuer: string): string {
-  const names: Record<string, string> = {
-    hyundai: '현대카드',
-    kb: 'KB국민카드',
-    samsung: '삼성카드',
-    shinhan: '신한카드',
-    lotte: '롯데카드',
-    hana: '하나카드',
-    woori: '우리카드',
-    ibk: 'IBK기업은행',
-    nh: 'NH농협카드',
-    bc: 'BC카드',
-    kakao: '카카오뱅크',
-    toss: '토스뱅크',
-    kbank: '케이뱅크',
-    bnk: 'BNK경남은행',
-    dgb: 'DGB대구은행',
-    suhyup: '수협은행',
-    jb: '전북은행',
-    kwangju: '광주은행',
-    jeju: '제주은행',
-    sc: 'SC제일은행',
-    mg: 'MG새마을금고',
-    cu: '신협',
-    kdb: 'KDB산업은행',
-    epost: '우체국',
-  };
-  return names[issuer] ?? issuer;
+export function formatIssuerNameKo(
+  issuer: string,
+  publishedName?: string,
+): string {
+  return formatCatalogIssuerNameKo(issuer, publishedName);
 }
 
 /**

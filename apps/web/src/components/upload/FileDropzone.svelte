@@ -5,6 +5,11 @@
   import { detectBankFromText } from '../../lib/parser/detect.js';
   import type { BankId } from '../../lib/parser/types.js';
   import {
+    UPLOAD_BANK_OPTIONS,
+    formatUploadBankName,
+  } from '../../lib/issuer-presentation.js';
+  import { LatestFirstItemHint } from '../../lib/quick-bank-hint.js';
+  import {
     STATEMENT_FILE_ACCEPT,
     SUPPORTED_STATEMENT_FORMAT_LABELS,
   } from '../../lib/supported-formats.js';
@@ -25,7 +30,9 @@
   import Icon from '../ui/Icon.svelte';
 
   const analysisRuns = new LatestFileParseRun();
+  const quickBankHints = new LatestFirstItemHint<File, BankId | null>();
   onDestroy(() => {
+    quickBankHints.invalidate();
     analysisRuns.cancel();
     analysisStore.cancelAnalysis();
   });
@@ -114,8 +121,7 @@
   let detectedBankId = $state<BankId | null>(null);
   let detectedBankLabel = $derived(() => {
     if (!detectedBankId) return '';
-    const entry = ALL_BANKS.find(b => b.value === detectedBankId);
-    return entry ? entry.label : '';
+    return formatUploadBankName(detectedBankId);
   });
 
   // Step 1=파일선택, 2=카드사선택, 3=분석중, 4=완료
@@ -145,32 +151,7 @@
 
   const STEPS = ['파일 선택', '카드사 선택', '분석 중', '완료'];
 
-  const ALL_BANKS: { value: string; label: string }[] = [
-    { value: 'hyundai', label: '현대카드' },
-    { value: 'kb', label: 'KB국민' },
-    { value: 'samsung', label: '삼성카드' },
-    { value: 'shinhan', label: '신한카드' },
-    { value: 'lotte', label: '롯데카드' },
-    { value: 'hana', label: '하나카드' },
-    { value: 'woori', label: '우리카드' },
-    { value: 'ibk', label: 'IBK기업' },
-    { value: 'nh', label: 'NH농협' },
-    { value: 'bc', label: 'BC카드' },
-    { value: 'kakao', label: '카카오뱅크' },
-    { value: 'toss', label: '토스뱅크' },
-    { value: 'kbank', label: '케이뱅크' },
-    { value: 'bnk', label: 'BNK경남' },
-    { value: 'dgb', label: 'DGB대구' },
-    { value: 'suhyup', label: '수협은행' },
-    { value: 'jb', label: '전북은행' },
-    { value: 'kwangju', label: '광주은행' },
-    { value: 'jeju', label: '제주은행' },
-    { value: 'sc', label: 'SC제일' },
-    { value: 'mg', label: '새마을금고' },
-    { value: 'cu', label: '신협' },
-    { value: 'kdb', label: 'KDB산업' },
-    { value: 'epost', label: '우체국' },
-  ];
+  const ALL_BANKS = UPLOAD_BANK_OPTIONS;
 
   // Top 8 banks shown by default; rest revealed via "더보기" button
   const TOP_BANKS = ALL_BANKS.slice(0, 8);
@@ -195,6 +176,8 @@
   }
 
   function beginAdmittedFileMutation(): void {
+    quickBankHints.invalidate();
+    detectedBankId = null;
     invalidateAnalysisOwnership();
   }
 
@@ -202,25 +185,30 @@
    *  Only reads enough for detection (first ~4KB) to avoid loading
    *  large files entirely into memory. */
   async function detectBankFromFile(): Promise<void> {
-    if (uploadedFiles.length === 0) {
+    const file = uploadedFiles[0];
+    if (!file) {
+      quickBankHints.invalidate();
       detectedBankId = null;
       return;
     }
-    try {
-      const file = uploadedFiles[0]!;
-      // For PDF files, text extraction requires the full parser — skip
-      // quick detection since the parser will detect the bank anyway.
-      if (file.name.toLowerCase().endsWith('.pdf')) {
-        detectedBankId = null;
-        return;
-      }
-      const blob = file.slice(0, 4096);
-      const text = await blob.text();
-      detectedBankId = detectBankFromText(text);
-    } catch {
-      // Detection failure is non-critical — just don't show a hint
+    // For PDF files, text extraction requires the full parser — skip quick
+    // detection since the parser will detect the bank anyway.
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      quickBankHints.invalidate();
       detectedBankId = null;
+      return;
     }
+    await quickBankHints.detect(
+      file,
+      async () => {
+        const text = await file.slice(0, 4096).text();
+        return detectBankFromText(text);
+      },
+      () => uploadedFiles[0],
+      (result) => {
+        detectedBankId = result;
+      },
+    );
   }
 
   function addFiles(newFiles: File[]): boolean {
@@ -438,6 +426,9 @@
   }
 
   async function handleRetry() {
+    quickBankHints.invalidate();
+    detectedBankId = null;
+    void detectBankFromFile();
     invalidateAnalysisOwnership();
     uploadStatus = 'idle';
     errorMessages = [];

@@ -160,4 +160,20 @@ describe('upload interaction wiring', () => {
     expect(source).toContain('dark:border-red-700');
     expect(source).toContain('dark:hover:text-red-200');
   });
+
+  test('invalidates quick bank-hint ownership on every lifecycle boundary', async () => {
+    const source = await readFile(
+      new URL('../src/components/upload/FileDropzone.svelte', import.meta.url),
+      'utf8',
+    );
+
+    expect(source).toContain(
+      'const quickBankHints = new LatestFirstItemHint<File, BankId | null>()',
+    );
+    expect(source).toContain('quickBankHints.invalidate()');
+    expect(source).toContain('await quickBankHints.detect(');
+    expect(source).toContain('() => uploadedFiles[0]');
+    expect(source).toContain('function beginAdmittedFileMutation(): void');
+    expect(source).toContain('async function handleRetry()');
+  });
 });

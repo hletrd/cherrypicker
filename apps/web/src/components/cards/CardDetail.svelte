@@ -215,7 +215,7 @@
       ></div>
       <div class="pl-2">
         <div class="flex flex-wrap items-center gap-2">
-          <IssuerBadge issuer={card.issuer} />
+          <IssuerBadge issuer={card.issuer} label={card.issuerNameKo} />
           <span
             class="rounded-full px-2.5 py-0.5 text-xs font-medium
               {card.type === 'credit'

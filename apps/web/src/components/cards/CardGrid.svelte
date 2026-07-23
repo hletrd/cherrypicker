@@ -95,7 +95,7 @@
         (c) =>
           c.nameKo.toLowerCase().includes(q) ||
           c.name.toLowerCase().includes(q) ||
-          formatIssuerNameKo(c.issuer).toLowerCase().includes(q),
+          formatIssuerNameKo(c.issuer, c.issuerNameKo).toLowerCase().includes(q),
       );
     }
 
@@ -168,6 +168,11 @@
 
   function setSortOrder(value: CardGridSortOrder) {
     sortOrder = value;
+  }
+
+  function issuerNameKo(issuer: string): string {
+    const publishedName = cards.find((card) => card.issuer === issuer)?.issuerNameKo;
+    return formatIssuerNameKo(issuer, publishedName);
   }
 
   async function setPage(value: number, position: 'top' | 'bottom') {
@@ -365,7 +370,7 @@
     >
       <span class="font-medium">카드사 필터</span>
       <span class="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-        {issuerFilter ? formatIssuerNameKo(issuerFilter) : `${availableIssuers.length}개`}
+        {issuerFilter ? issuerNameKo(issuerFilter) : `${availableIssuers.length}개`}
         <span
           aria-hidden="true"
           class="inline-block transition-transform {issuersExpanded ? 'rotate-180' : ''}"
@@ -391,7 +396,7 @@
           class="rounded-full border px-2.5 py-1 text-xs transition-colors {issuerFilter === iss ? 'border-[var(--color-primary-fill)] bg-[var(--color-primary-fill)] text-white' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-muted)]'}"
           onclick={() => setIssuerFilter(iss)}
           aria-pressed={issuerFilter === iss}
-        >{formatIssuerNameKo(iss)}</button>
+        >{issuerNameKo(iss)}</button>
       {/each}
     </div>
   {/if}
@@ -466,7 +471,7 @@
           style="border-left: 4px solid {issuerColor};"
         >
           <div class="flex flex-wrap items-start justify-between gap-2">
-            <IssuerBadge issuer={card.issuer} compact />
+            <IssuerBadge issuer={card.issuer} label={card.issuerNameKo} compact />
             <div class="flex flex-wrap justify-end gap-1.5">
               <span
                 class="rounded-full px-2 py-0.5 text-xs font-medium
