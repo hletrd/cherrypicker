@@ -83,7 +83,9 @@ describe('catalog publication boundary', () => {
         'future.yaml',
         () => new Date('2026-07-23T23:59:59.999Z'),
       ),
-    ).toThrow(/future date 2026-07-24 is after 2026-07-23/);
+    ).toThrow(
+      /lastUpdated "2026-07-24" is after validation date "2026-07-23"/,
+    );
   });
 
   test('accepts a leap-day lastUpdated value at the injected publication date', () => {
@@ -97,6 +99,24 @@ describe('catalog publication boundary', () => {
         () => new Date('2024-02-29T00:00:00.000Z'),
       ).card.lastUpdated,
     ).toBe('2024-02-29');
+  });
+
+  test('uses the shared invalid-clock diagnostic', () => {
+    expect(() =>
+      parsePublicationCard(
+        cardWithUrl('https://example.com/card'),
+        'invalid-clock.yaml',
+        () => new Date(Number.NaN),
+      ),
+    ).toThrow(/catalog validation clock must return a valid Date/);
+  });
+
+  test('rejects duplicate reward tier references before publication', () => {
+    const raw = cardWithUrl('https://example.com/card');
+    raw.rewards[0]!.tiers.push({ ...raw.rewards[0]!.tiers[0]! });
+    expect(() => parsePublicationCard(raw, 'duplicate.yaml')).toThrow(
+      /duplicate performance tier reference "tier0"/,
+    );
   });
 
   test('keeps explicitly unsupported benefits out of ranking indexes', () => {

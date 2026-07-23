@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
   cardRuleSetSchema,
+  collectCardFreshnessIssues,
   isRecommendationEligibleCard,
 } from '../packages/rules/src/index.js';
 import type { CardRuleSet } from '../packages/rules/src/index.js';
@@ -157,16 +158,13 @@ export function parsePublicationCard(
       .join('\n');
     throw new Error(`Invalid card rule at ${sourceName}:\n${issues}`);
   }
-  const now = clock();
-  if (!Number.isFinite(now.getTime())) {
-    throw new Error(`Invalid publication clock while reading ${sourceName}`);
-  }
-  const today = now.toISOString().slice(0, 10);
-  if (result.data.card.lastUpdated > today) {
+  const freshnessIssues = collectCardFreshnessIssues(result.data, clock);
+  if (freshnessIssues.length > 0) {
     throw new Error(
       `Invalid card rule at ${sourceName}:\n` +
-        `  card.lastUpdated: future date ${result.data.card.lastUpdated} ` +
-        `is after ${today}`,
+        freshnessIssues
+          .map((issue) => `  ${issue.path}: ${issue.message}`)
+          .join('\n'),
     );
   }
   return result.data;

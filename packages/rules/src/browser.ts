@@ -71,12 +71,14 @@ export type {
 
 export {
   CatalogValidationError,
+  collectCardFreshnessIssues,
   collectCardRuleIssues,
   validateCardRuleSet,
   validateCardCatalog,
 } from './catalog-validation.js';
 export type {
   CatalogIssueCode,
+  CatalogClock,
   CatalogValidationIssue,
   CatalogValidationOptions,
 } from './catalog-validation.js';

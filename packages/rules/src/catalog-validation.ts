@@ -18,8 +18,11 @@ export type CatalogIssueCode =
   | 'duplicate_card_id'
   | 'duplicate_rule_id'
   | 'duplicate_tier_id'
+  | 'duplicate_tier_reference'
   | 'invalid_tier_range'
   | 'unknown_tier_reference'
+  | 'future_last_updated'
+  | 'invalid_validation_clock'
   | 'invalid_category'
   | 'invalid_performance_exclusion'
   | 'general_spend_as_uncategorized'
@@ -42,6 +45,74 @@ export interface CatalogValidationIssue {
 
 export interface CatalogValidationOptions {
   resolveMerchant?: (merchant: string) => CanonicalCategory;
+  clock?: CatalogClock;
+}
+
+export type CatalogClock = () => Date;
+
+interface FreshnessContext {
+  todayUtc: string | null;
+  clockError: string | null;
+}
+
+const systemCatalogClock: CatalogClock = () => new Date();
+
+function resolveFreshnessContext(
+  clock: CatalogClock = systemCatalogClock,
+): FreshnessContext {
+  try {
+    const now = clock();
+    if (!Number.isFinite(now.getTime())) {
+      return {
+        todayUtc: null,
+        clockError: 'catalog validation clock must return a valid Date',
+      };
+    }
+    return {
+      todayUtc: now.toISOString().slice(0, 10),
+      clockError: null,
+    };
+  } catch {
+    return {
+      todayUtc: null,
+      clockError: 'catalog validation clock must return a valid Date',
+    };
+  }
+}
+
+function collectFreshnessIssues(
+  cardRule: CardRuleSet,
+  context: FreshnessContext,
+): CatalogValidationIssue[] {
+  if (context.clockError) {
+    return [{
+      code: 'invalid_validation_clock',
+      cardId: cardRule.card.id,
+      path: 'card.lastUpdated',
+      message: context.clockError,
+    }];
+  }
+  if (
+    context.todayUtc !== null &&
+    cardRule.card.lastUpdated > context.todayUtc
+  ) {
+    return [{
+      code: 'future_last_updated',
+      cardId: cardRule.card.id,
+      path: 'card.lastUpdated',
+      message:
+        `lastUpdated "${cardRule.card.lastUpdated}" is after validation date ` +
+        `"${context.todayUtc}"`,
+    }];
+  }
+  return [];
+}
+
+export function collectCardFreshnessIssues(
+  cardRule: CardRuleSet,
+  clock: CatalogClock = systemCatalogClock,
+): CatalogValidationIssue[] {
+  return collectFreshnessIssues(cardRule, resolveFreshnessContext(clock));
 }
 
 const GENERAL_SPEND_PATTERN =
@@ -71,12 +142,13 @@ function ruleContainsMerchant(
   return rule.subcategory === undefined || rule.subcategory === resolved.subcategory;
 }
 
-export function collectCardRuleIssues(
+function collectCardRuleIssuesWithContext(
   cardRule: CardRuleSet,
   registry: CategoryRegistry,
-  options: CatalogValidationOptions = {},
+  options: CatalogValidationOptions,
+  freshness: FreshnessContext,
 ): CatalogValidationIssue[] {
-  const issues: CatalogValidationIssue[] = [];
+  const issues = collectFreshnessIssues(cardRule, freshness);
   const cardId = cardRule.card.id;
   const tierIds = new Set<string>();
 
@@ -227,7 +299,21 @@ export function collectCardRuleIssues(
       });
     }
 
+    const firstTierReference = new Map<string, number>();
     rule.tiers.forEach((tier, tierIndex) => {
+      const firstIndex = firstTierReference.get(tier.performanceTier);
+      if (firstIndex !== undefined) {
+        issues.push({
+          code: 'duplicate_tier_reference',
+          cardId,
+          path: `${path}.tiers.${tierIndex}.performanceTier`,
+          message:
+            `duplicate performance tier reference "${tier.performanceTier}" ` +
+            `in reward rule "${rule.id}" (first referenced at tiers.${firstIndex})`,
+        });
+      } else {
+        firstTierReference.set(tier.performanceTier, tierIndex);
+      }
       if (!tierIds.has(tier.performanceTier)) {
         issues.push({
           code: 'unknown_tier_reference',
@@ -358,6 +444,19 @@ export function collectCardRuleIssues(
   return issues;
 }
 
+export function collectCardRuleIssues(
+  cardRule: CardRuleSet,
+  registry: CategoryRegistry,
+  options: CatalogValidationOptions = {},
+): CatalogValidationIssue[] {
+  return collectCardRuleIssuesWithContext(
+    cardRule,
+    registry,
+    options,
+    resolveFreshnessContext(options.clock),
+  );
+}
+
 export function validateCardRuleSet(
   cardRule: CardRuleSet,
   registry: CategoryRegistry,
@@ -374,6 +473,7 @@ export function validateCardCatalog(
 ): void {
   const issues: CatalogValidationIssue[] = [];
   const cardIds = new Set<string>();
+  const freshness = resolveFreshnessContext(options.clock);
 
   for (const cardRule of cardRules) {
     if (cardIds.has(cardRule.card.id)) {
@@ -385,7 +485,14 @@ export function validateCardCatalog(
       });
     }
     cardIds.add(cardRule.card.id);
-    issues.push(...collectCardRuleIssues(cardRule, registry, options));
+    issues.push(
+      ...collectCardRuleIssuesWithContext(
+        cardRule,
+        registry,
+        options,
+        freshness,
+      ),
+    );
   }
 
   if (issues.length > 0) throw new CatalogValidationError(issues);

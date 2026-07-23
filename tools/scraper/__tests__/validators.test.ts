@@ -35,7 +35,32 @@ describe('validateExtractedRules security boundary', () => {
       new Date('2026-07-23T23:59:59.999Z'),
     );
     expect(future.valid).toBe(false);
-    expect(future.errors.join('\n')).toContain('미래 날짜');
+    expect(future.errors.join('\n')).toContain(
+      'lastUpdated "2026-07-24" is after validation date "2026-07-23"',
+    );
+  });
+
+  test('uses the shared invalid-clock and duplicate-tier diagnostics', () => {
+    const invalidClock = validateExtractedRules(
+      makeCardRule(),
+      'shinhan',
+      undefined,
+      new Date(Number.NaN),
+    );
+    expect(invalidClock.valid).toBe(false);
+    expect(invalidClock.errors.join('\n')).toContain(
+      'catalog validation clock must return a valid Date',
+    );
+
+    const duplicate = makeCardRule();
+    duplicate.rewards[0]!.tiers.push({
+      ...duplicate.rewards[0]!.tiers[0]!,
+    });
+    const duplicateResult = validateExtractedRules(duplicate, 'shinhan');
+    expect(duplicateResult.valid).toBe(false);
+    expect(duplicateResult.errors.join('\n')).toContain(
+      'duplicate performance tier reference',
+    );
   });
 
   test('rejects traversal before returning a CardRuleSet', () => {

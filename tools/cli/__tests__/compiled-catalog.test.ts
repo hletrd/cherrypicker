@@ -118,6 +118,53 @@ describe('compiled CLI card catalog', () => {
     }
   });
 
+  test('rejects future freshness and duplicate tiers in custom catalogs', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'cli-catalog-truth-'));
+    try {
+      const dataDir = resolve(import.meta.dir, '../../../packages/rules/data');
+      const [base, categories] = await Promise.all([
+        loadCardRule(join(dataDir, 'cards/shinhan/simple-plan.yaml')),
+        loadCategories(join(dataDir, 'categories.yaml')),
+      ]);
+      base.card.id = 'fixture-catalog-truth';
+      base.card.lastUpdated = '2026-07-24';
+      const file = join(directory, 'card.yaml');
+      await writeFile(file, JSON.stringify(base));
+
+      await expect(
+        loadCliCardCatalog(
+          directory,
+          categories,
+          () => new Date('2026-07-23T23:59:59.999Z'),
+        ),
+      ).rejects.toThrow(
+        /lastUpdated "2026-07-24" is after validation date "2026-07-23"/,
+      );
+
+      base.card.lastUpdated = '2026-07-23';
+      base.rewards[0]!.tiers.push({
+        ...base.rewards[0]!.tiers[0]!,
+      });
+      await writeFile(file, JSON.stringify(base));
+      try {
+        await loadCliCardCatalog(
+          directory,
+          categories,
+          () => new Date('2026-07-23T23:59:59.999Z'),
+        );
+        throw new Error('expected duplicate tier rejection');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AggregateError);
+        const failures = (error as AggregateError).errors
+          .map((failure) => String(failure))
+          .join('\n');
+        expect(failures).toContain('duplicate performance tier reference');
+      }
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   test('authoring override disclosure remains terminal-safe', () => {
     const disclosure = authoringCatalogDisclosure({
       mode: 'authoring',

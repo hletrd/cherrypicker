@@ -1,8 +1,8 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * build-json.ts — Validate all YAML card rules and build organized JSON output.
  *
- * Usage: node --experimental-strip-types scripts/build-json.ts
+ * Usage: bun run data:build
  *
  * Reads all YAML files from packages/rules/data/,
  * validates against Zod schemas, reports errors,
@@ -109,6 +109,8 @@ const DATA_DIR = join(ROOT, 'packages/rules/data');
 const CARDS_DIR = join(DATA_DIR, 'cards');
 const OUTPUT_DIR = join(ROOT, 'packages/rules/data');
 const CHECK_MODE = process.argv.includes('--check');
+const validationNow = new Date();
+const validationClock = () => validationNow;
 
 console.log('🔍 Scanning YAML card files...\n');
 
@@ -152,7 +154,7 @@ for (const filePath of yamlFiles) {
   try {
     const content = await readFile(filePath, 'utf-8');
     const raw = parse(content) as unknown;
-    const card = parsePublicationCard(raw, relPath);
+    const card = parsePublicationCard(raw, relPath, validationClock);
 
     // Validate issuer matches directory
     if (card.card.issuer !== issuerDir) {
@@ -201,6 +203,7 @@ try {
         subcategory: resolved.subcategory,
       };
     },
+    clock: validationClock,
   });
 } catch (error) {
   if (error instanceof CatalogValidationError) {
@@ -455,7 +458,7 @@ for (const node of categoriesRaw.categories as Array<{ id: string; labelKo: stri
     }
   }
 }
-const fallbackModule = `/** Auto-generated from categories.yaml by scripts/build-json.ts\n *  Do not edit manually — run 'node --experimental-strip-types scripts/build-json.ts' to regenerate.\n */\nexport const FALLBACK_CATEGORY_LABELS: ReadonlyMap<string, string> = new Map([\n${fallbackEntries.join('\n')}\n  ]);\n`;
+const fallbackModule = `/** Auto-generated from categories.yaml by scripts/build-json.ts\n *  Do not edit manually — run 'bun run data:build' to regenerate.\n */\nexport const FALLBACK_CATEGORY_LABELS: ReadonlyMap<string, string> = new Map([\n${fallbackEntries.join('\n')}\n  ]);\n`;
 const fallbackPath = join(ROOT, 'apps/web/src/lib/category-labels-fallback.ts');
 await publish(fallbackPath, fallbackModule);
 console.log(`   ${fallbackPath} (auto-generated fallback labels)`);

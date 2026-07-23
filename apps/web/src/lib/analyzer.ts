@@ -223,7 +223,10 @@ export async function optimizeFromTransactions(
     const idSet = new Set(options.cardIds);
     coreRules = coreRules.filter(r => idSet.has(r.card.id));
   }
-  assertRequestedCardsResolved(options?.cardIds, coreRules.length);
+  assertRequestedCardsResolved(
+    options?.cardIds,
+    coreRules.map((rule) => rule.card.id),
+  );
 
   // 전월실적은 직접 입력한 값, 정확한 이전 달 명세서, 또는 명세서가
   // 없을 때의 0원 가정 중 하나이며 provenance를 함께 보존한다.

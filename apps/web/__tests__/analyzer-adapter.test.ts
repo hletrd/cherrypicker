@@ -172,12 +172,40 @@ describe('production month helpers', () => {
 });
 
 describe('analysis boundary helpers', () => {
-  test('fails closed when an explicit card selection resolves to no rules', () => {
+  test('fails closed with every unresolved explicit card ID', () => {
     expect(() =>
-      assertRequestedCardsResolved(['missing-card'], 0),
-    ).toThrow(/선택한 카드 정보를 찾을 수 없어요/);
-    expect(() => assertRequestedCardsResolved(undefined, 0)).not.toThrow();
-    expect(() => assertRequestedCardsResolved(['card-1'], 1)).not.toThrow();
+      assertRequestedCardsResolved(
+        ['card-1', 'missing-card', 'ineligible-card'],
+        ['card-1'],
+      ),
+    ).toThrow(
+      /누락되거나 추천할 수 없는 카드: missing-card, ineligible-card/,
+    );
+    expect(() => assertRequestedCardsResolved(undefined, [])).not.toThrow();
+    expect(() =>
+      assertRequestedCardsResolved(['card-1'], ['card-1']),
+    ).not.toThrow();
+  });
+
+  test('deduplicates explicit requests without hiding missing cards', () => {
+    expect(() =>
+      assertRequestedCardsResolved(
+        ['card-1', 'card-1', 'missing-card', 'missing-card'],
+        ['card-1'],
+      ),
+    ).toThrow(/missing-card$/);
+    expect(() =>
+      assertRequestedCardsResolved(
+        ['card-1', 'card-1'],
+        ['card-1'],
+      ),
+    ).not.toThrow();
+  });
+
+  test('fails closed when all explicit cards are missing', () => {
+    expect(() =>
+      assertRequestedCardsResolved(['missing-1', 'missing-2'], []),
+    ).toThrow(/missing-1, missing-2$/);
   });
 
   test('fails closed when the catalog transformation is empty', () => {

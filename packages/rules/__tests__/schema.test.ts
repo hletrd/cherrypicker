@@ -188,6 +188,25 @@ describe('cardRuleSetSchema - valid data', () => {
 });
 
 describe('cardRuleSetSchema - invalid data', () => {
+  test('rejects duplicate tier references within one reward rule', () => {
+    const bad = structuredClone(validCardRuleSet);
+    bad.rewards[0]!.tiers.push({
+      ...bad.rewards[0]!.tiers[0]!,
+    });
+
+    const result = cardRuleSetSchema.safeParse(bad);
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error('expected duplicate tier rejection');
+    expect(result.error.issues).toContainEqual(
+      expect.objectContaining({
+        path: ['rewards', 0, 'tiers', 1, 'performanceTier'],
+        message:
+          'duplicate performance tier reference "tier1" in reward rule ' +
+          '"reward-001" (first referenced at tiers.0)',
+      }),
+    );
+  });
+
   test('rejects missing card.id', () => {
     const bad = structuredClone(validCardRuleSet);
     // @ts-ignore
@@ -422,6 +441,23 @@ describe('loadCardRule', () => {
   test('loads prepaid cards when the dataset marks them explicitly', async () => {
     const rule = await loadCardRule(join(cardsDir, 'shinhan/pick-e.yaml'));
     expect(rule.card.type).toBe('prepaid');
+  });
+
+  test('rejects duplicate tier references at the YAML loader boundary', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'duplicate-tier-loader-'));
+    try {
+      const invalid = structuredClone(validCardRuleSet);
+      invalid.rewards[0]!.tiers.push({
+        ...invalid.rewards[0]!.tiers[0]!,
+      });
+      const path = join(directory, 'duplicate.yaml');
+      await writeFile(path, stringify(invalid));
+      await expect(loadCardRule(path)).rejects.toThrow(
+        /duplicate performance tier reference/,
+      );
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   test('throws on non-existent file', async () => {

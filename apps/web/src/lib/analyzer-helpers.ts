@@ -65,11 +65,19 @@ export function emptyParseResultMessage(
 
 export function assertRequestedCardsResolved(
   requestedCardIds: readonly string[] | undefined,
-  resolvedCount: number,
+  resolvedCardIds: readonly string[],
 ): void {
-  if (requestedCardIds && requestedCardIds.length > 0 && resolvedCount === 0) {
-    throw new Error('선택한 카드 정보를 찾을 수 없어요. 카드를 다시 선택해 주세요.');
-  }
+  if (!requestedCardIds || requestedCardIds.length === 0) return;
+
+  const resolved = new Set(resolvedCardIds);
+  const requested = [...new Set(requestedCardIds)];
+  const missing = requested.filter((cardId) => !resolved.has(cardId));
+  if (missing.length === 0) return;
+
+  throw new Error(
+    '선택한 카드 정보를 모두 찾을 수 없어요. ' +
+      `누락되거나 추천할 수 없는 카드: ${missing.join(', ')}`,
+  );
 }
 
 export function assertCatalogAvailable(resolvedCount: number): void {

@@ -6,6 +6,7 @@ import {
   CatalogValidationError,
   CategoryRegistry,
   buildCategoryKey,
+  collectCardFreshnessIssues,
   collectCardRuleIssues,
   collectUnmodeledRuleRestrictions,
   loadAllCardRules,
@@ -98,6 +99,92 @@ describe('catalog semantic validation', () => {
       /unknown performance tier/,
     );
   });
+
+  test('duplicate tier references fail with rule and duplicate-index identity', () => {
+    const invalid: CardRuleSet = structuredClone(cards[0]!);
+    invalid.rewards[0]!.tiers.push({
+      ...invalid.rewards[0]!.tiers[0]!,
+    });
+
+    const duplicate = collectCardRuleIssues(invalid, registry).find(
+      ({ code }) => code === 'duplicate_tier_reference',
+    );
+    expect(duplicate).toEqual({
+      code: 'duplicate_tier_reference',
+      cardId: invalid.card.id,
+      path: 'rewards.0.tiers.1.performanceTier',
+      message:
+        `duplicate performance tier reference ` +
+        `"${invalid.rewards[0]!.tiers[0]!.performanceTier}" in reward rule ` +
+        `"${invalid.rewards[0]!.id}" (first referenced at tiers.0)`,
+    });
+    expect(() => validateCardRuleSet(invalid, registry)).toThrow(
+      /duplicate performance tier reference/,
+    );
+  });
+
+  test('uses one injected UTC-day clock across a catalog operation', () => {
+    const first = structuredClone(cards[0]!);
+    const second = structuredClone(cards[1]!);
+    first.card.lastUpdated = '2024-02-29';
+    second.card.lastUpdated = '2024-02-28';
+    let reads = 0;
+
+    expect(() =>
+      validateCardCatalog([first, second], registry, {
+        clock: () => {
+          reads++;
+          return new Date('2024-02-29T23:59:59.999Z');
+        },
+      }),
+    ).not.toThrow();
+    expect(reads).toBe(1);
+  });
+
+  test('shares stable freshness diagnostics for future dates and invalid clocks', () => {
+    const future = structuredClone(cards[0]!);
+    future.card.lastUpdated = '2026-07-24';
+    expect(
+      collectCardFreshnessIssues(
+        future,
+        () => new Date('2026-07-23T23:59:59.999Z'),
+      ),
+    ).toEqual([{
+      code: 'future_last_updated',
+      cardId: future.card.id,
+      path: 'card.lastUpdated',
+      message:
+        'lastUpdated "2026-07-24" is after validation date "2026-07-23"',
+    }]);
+
+    expect(
+      collectCardFreshnessIssues(future, () => new Date(Number.NaN)),
+    ).toEqual([{
+      code: 'invalid_validation_clock',
+      cardId: future.card.id,
+      path: 'card.lastUpdated',
+      message: 'catalog validation clock must return a valid Date',
+    }]);
+  });
+
+  test.each([
+    ['past date', '2026-07-22', '2026-07-23', 0],
+    ['current UTC date', '2026-07-23', '2026-07-23', 0],
+    ['real leap day', '2024-02-29', '2024-02-29', 0],
+    ['future date', '2026-07-24', '2026-07-23', 1],
+  ])(
+    'applies the UTC freshness table for %s',
+    (_label, lastUpdated, today, issueCount) => {
+      const card = structuredClone(cards[0]!);
+      card.card.lastUpdated = lastUpdated;
+      expect(
+        collectCardFreshnessIssues(
+          card,
+          () => new Date(`${today}T23:59:59.999Z`),
+        ),
+      ).toHaveLength(issueCount);
+    },
+  );
 
   test('general-spend language cannot hide behind uncategorized', () => {
     const invalid: CardRuleSet = {

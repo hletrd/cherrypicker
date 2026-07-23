@@ -241,7 +241,23 @@ export const rewardRuleSchema = z.object({
   stackingGroup: ruleContractIdSchema,
   capGroup: ruleContractIdSchema,
   support: rewardSupportSchema,
-}).strict();
+}).strict().superRefine((rule, ctx) => {
+  const firstTierIndex = new Map<string, number>();
+  rule.tiers.forEach((tier, index) => {
+    const firstIndex = firstTierIndex.get(tier.performanceTier);
+    if (firstIndex !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['tiers', index, 'performanceTier'],
+        message:
+          `duplicate performance tier reference "${tier.performanceTier}" ` +
+          `in reward rule "${rule.id}" (first referenced at tiers.${firstIndex})`,
+      });
+      return;
+    }
+    firstTierIndex.set(tier.performanceTier, index);
+  });
+});
 
 export const cardMetaSchema = z.object({
   id: cardIdSchema,

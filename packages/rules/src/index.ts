@@ -78,6 +78,7 @@ export type {
 
 export {
   CatalogValidationError,
+  collectCardFreshnessIssues,
   collectCardRuleIssues,
   validateCardRuleSet,
   validateCardCatalog,
@@ -85,6 +86,7 @@ export {
 
 export type {
   CatalogIssueCode,
+  CatalogClock,
   CatalogValidationIssue,
   CatalogValidationOptions,
 } from './catalog-validation.js';

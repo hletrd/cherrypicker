@@ -8,6 +8,7 @@ import {
   validateCardCatalog,
 } from '@cherrypicker/rules';
 import type { CardRuleSet, CategoryNode } from '@cherrypicker/rules';
+import type { CatalogClock } from '@cherrypicker/rules';
 
 export const DEFAULT_OPTIMIZER_CATALOG_PATH = resolve(
   fileURLToPath(new URL('../../..', import.meta.url)),
@@ -30,6 +31,7 @@ export type LoadedCliCardCatalog =
 export async function loadCliCardCatalog(
   authoringCardsDirectory?: string,
   authoringCategories?: readonly CategoryNode[],
+  clock?: CatalogClock,
 ): Promise<LoadedCliCardCatalog> {
   if (authoringCardsDirectory !== undefined) {
     const cards = await loadAllCardRules(authoringCardsDirectory);
@@ -46,6 +48,7 @@ export async function loadCliCardCatalog(
     validateCardCatalog(
       cards,
       new CategoryRegistry([...authoringCategories]),
+      { clock },
     );
     const eligibleCards = cards.filter(isRecommendationEligibleCard);
     if (eligibleCards.length === 0) {

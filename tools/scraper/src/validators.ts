@@ -51,20 +51,8 @@ export function validateExtractedRules(
     );
   }
 
-  if (!Number.isFinite(now.getTime())) {
-    errors.push('[비즈니스] card.lastUpdated: 검증 시각이 올바르지 않습니다');
-  } else {
-    const today = now.toISOString().slice(0, 10);
-    if (parsed.card.lastUpdated > today) {
-      errors.push(
-        `[비즈니스] card.lastUpdated: 미래 날짜 "${parsed.card.lastUpdated}"는 사용할 수 없습니다 ` +
-          `(검증 기준일: ${today})`,
-      );
-    }
-  }
-
   try {
-    validateCardRuleSet(parsed, contract.registry);
+    validateCardRuleSet(parsed, contract.registry, { clock: () => now });
   } catch (error) {
     if (error instanceof CatalogValidationError) {
       for (const issue of error.issues) {
