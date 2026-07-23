@@ -325,7 +325,7 @@
         <option value="name">이름순</option>
         <option value="fee-asc">연회비 낮은순</option>
         <option value="fee-desc">연회비 높은순</option>
-        <option value="rewards">혜택 많은순</option>
+        <option value="rewards">혜택 분야 많은순</option>
       </select>
     </div>
   </div>
@@ -505,7 +505,7 @@
             </span>
             {#if card.rewardCategories.length > 0}
               <span class="semantic-badge-success rounded-full px-2 py-0.5 text-xs font-medium">
-                {card.rewardCategories.length}개 혜택
+                {card.rewardCategories.length}개 혜택 분야
               </span>
             {/if}
           </div>

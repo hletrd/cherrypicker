@@ -6,11 +6,11 @@ import type {
 } from '@cherrypicker/core';
 import type {
   OptimizerWorkerRequest,
-  OptimizerWorkerResponse,
 } from './worker-protocol.js';
+import { decodeOptimizerWorkerResponse } from './worker-protocol.js';
 
 type WorkerMessageListener = (
-  event: MessageEvent<OptimizerWorkerResponse>,
+  event: MessageEvent<unknown>,
 ) => void;
 type WorkerErrorListener = (event: ErrorEvent) => void;
 type WorkerMessageErrorListener = (event: MessageEvent<unknown>) => void;
@@ -86,10 +86,15 @@ export function optimizeWithWorker(
     };
     const onAbort = () => fail(abortError());
     const onMessage: WorkerMessageListener = (event) => {
-      if (event.data.ok) {
-        succeed(event.data.result);
-      } else {
-        fail(new Error(event.data.message));
+      try {
+        const response = decodeOptimizerWorkerResponse(event.data);
+        if (response.ok) {
+          succeed(response.result);
+        } else {
+          fail(new Error(response.message));
+        }
+      } catch {
+        fail(new Error('최적화 작업자 응답 형식이 올바르지 않아요.'));
       }
     };
     const onError: WorkerErrorListener = (event) => {

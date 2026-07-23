@@ -10,15 +10,12 @@ import {
 } from '../src/lib/optimizer/worker-runner.js';
 import type {
   OptimizerWorkerRequest,
-  OptimizerWorkerResponse,
 } from '../src/lib/optimizer/worker-protocol.js';
 
 class FakeOptimizerWorker implements OptimizerWorkerLike {
   messages: OptimizerWorkerRequest[] = [];
   terminations = 0;
-  messageListeners = new Set<
-    (event: MessageEvent<OptimizerWorkerResponse>) => void
-  >();
+  messageListeners = new Set<(event: MessageEvent<unknown>) => void>();
   errorListeners = new Set<(event: ErrorEvent) => void>();
   messageErrorListeners = new Set<(event: MessageEvent<unknown>) => void>();
 
@@ -29,13 +26,13 @@ class FakeOptimizerWorker implements OptimizerWorkerLike {
   addEventListener(
     type: 'message' | 'error' | 'messageerror',
     listener:
-      | ((event: MessageEvent<OptimizerWorkerResponse>) => void)
+      | ((event: MessageEvent<unknown>) => void)
       | ((event: ErrorEvent) => void)
       | ((event: MessageEvent<unknown>) => void),
   ): void {
     if (type === 'message') {
       this.messageListeners.add(
-        listener as (event: MessageEvent<OptimizerWorkerResponse>) => void,
+        listener as (event: MessageEvent<unknown>) => void,
       );
     } else if (type === 'error') {
       this.errorListeners.add(listener as (event: ErrorEvent) => void);
@@ -49,13 +46,13 @@ class FakeOptimizerWorker implements OptimizerWorkerLike {
   removeEventListener(
     type: 'message' | 'error' | 'messageerror',
     listener:
-      | ((event: MessageEvent<OptimizerWorkerResponse>) => void)
+      | ((event: MessageEvent<unknown>) => void)
       | ((event: ErrorEvent) => void)
       | ((event: MessageEvent<unknown>) => void),
   ): void {
     if (type === 'message') {
       this.messageListeners.delete(
-        listener as (event: MessageEvent<OptimizerWorkerResponse>) => void,
+        listener as (event: MessageEvent<unknown>) => void,
       );
     } else if (type === 'error') {
       this.errorListeners.delete(listener as (event: ErrorEvent) => void);
@@ -70,9 +67,9 @@ class FakeOptimizerWorker implements OptimizerWorkerLike {
     this.terminations++;
   }
 
-  respond(response: OptimizerWorkerResponse): void {
+  respond(response: unknown): void {
     for (const listener of this.messageListeners) {
-      listener({ data: response } as MessageEvent<OptimizerWorkerResponse>);
+      listener({ data: response } as MessageEvent<unknown>);
     }
   }
 
@@ -189,4 +186,108 @@ describe('browser optimizer worker ownership', () => {
     expect(worker.errorListeners.size).toBe(0);
     expect(worker.messageErrorListeners.size).toBe(0);
   });
+
+  test('decodes the ordinary error arm and tears down its worker', async () => {
+    const worker = new FakeOptimizerWorker();
+    const optimizing = optimizeWithWorker(
+      constraints,
+      [],
+      undefined,
+      () => worker,
+    );
+
+    worker.respond({ ok: false, message: '계산 실패' });
+
+    const failure = await optimizing.then(
+      () => null,
+      (reason: unknown) => reason,
+    );
+    expect(failure).toMatchObject({ message: '계산 실패' });
+    expect(worker.terminations).toBe(1);
+    expect(worker.messageListeners.size).toBe(0);
+    expect(worker.errorListeners.size).toBe(0);
+    expect(worker.messageErrorListeners.size).toBe(0);
+  });
+
+  test.each([
+    ['null payload', null],
+    ['undefined payload', undefined],
+    ['missing discriminant', {}],
+    ['invalid discriminant', { ok: 'true' }],
+    ['missing success result', { ok: true }],
+    ['null success result', { ok: true, result: null }],
+    [
+      'malformed success result',
+      {
+        ok: true,
+        result: {
+          ...optimizationResult,
+          assignments: {},
+        },
+      },
+    ],
+    [
+      'malformed nested card result',
+      {
+        ok: true,
+        result: {
+          ...optimizationResult,
+          cardResults: [{}],
+        },
+      },
+    ],
+    [
+      'non-finite success total',
+      {
+        ok: true,
+        result: {
+          ...optimizationResult,
+          totalReward: Number.NaN,
+        },
+      },
+    ],
+    ['missing error message', { ok: false }],
+    ['non-string error message', { ok: false, message: 7 }],
+  ])(
+    'rejects a malformed ordinary worker message exactly once: %s',
+    async (_name, payload) => {
+      const worker = new FakeOptimizerWorker();
+      const controller = new AbortController();
+      let resolutions = 0;
+      let rejections = 0;
+      const optimizing = optimizeWithWorker(
+        constraints,
+        [],
+        controller.signal,
+        () => worker,
+      ).then(
+        (value) => {
+          resolutions++;
+          return { kind: 'resolved' as const, value };
+        },
+        (reason: unknown) => {
+          rejections++;
+          return { kind: 'rejected' as const, reason };
+        },
+      );
+
+      worker.respond(payload);
+      worker.respond({ ok: true, result: optimizationResult });
+      controller.abort();
+
+      const outcome = await optimizing;
+      expect(outcome).toMatchObject({
+        kind: 'rejected',
+        reason: {
+          message: '최적화 작업자 응답 형식이 올바르지 않아요.',
+        },
+      });
+      expect(resolutions).toBe(0);
+      expect(rejections).toBe(1);
+      expect(worker.terminations).toBe(1);
+      expect(worker.messageListeners.size).toBe(0);
+      expect(worker.errorListeners.size).toBe(0);
+      expect(worker.messageErrorListeners.size).toBe(0);
+    },
+  );
 });

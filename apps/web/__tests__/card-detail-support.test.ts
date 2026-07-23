@@ -5,9 +5,12 @@ import {
   partitionCatalogRewards,
 } from '../src/lib/catalog-reward-display.js';
 import {
+  ADDITIONAL_CONDITIONS_DISCLOSURE,
   PERFORMANCE_EXCLUSION_LABELS,
+  buildSupportedRewardPresentation,
   buildIssuerCatalogUrl,
   formatPerformanceExclusion,
+  formatRewardConditionsKo,
 } from '../src/lib/card-detail-display.js';
 
 describe('catalog reward display boundary', () => {
@@ -46,6 +49,10 @@ describe('catalog reward display boundary', () => {
 
     expect(source).toContain('for (const reward of supportedRewards)');
     expect(source).toContain('data-testid="supported-reward-table"');
+    expect(source).toContain('data-testid="supported-reward-identity"');
+    expect(source).toContain('data-reward-id={row.rewardId}');
+    expect(source).toContain('{row.rewardLabel}');
+    expect(source).toContain('{#each row.conditionLabels as condition}');
     expect(source).toContain('data-testid="unsupported-reward-disclosure"');
     expect(source).toContain('data-testid="unsupported-reward-item"');
     expect(source).toContain('{#each unsupportedRewards as reward}');
@@ -55,6 +62,113 @@ describe('catalog reward display boundary', () => {
     expect(source).toContain('tabindex="-1"');
     expect(source).toContain('use:focusDetailHeading');
     expect(source).toContain('node.focus()');
+  });
+
+  test('formats every supported eligibility field and discloses unknown conditions', () => {
+    expect(formatRewardConditionsKo({
+      minTransaction: 10_000,
+      maxTransaction: 50_000,
+      specificMerchants: ['배달의민족', '쿠팡이츠'],
+      weekdays: [1, 5],
+      maxUses: 2,
+      usePeriod: 'month',
+      channel: 'online',
+      paymentType: 'domestic',
+      note: '간편결제 제외',
+    })).toEqual([
+      '대상 가맹점: 배달의민족, 쿠팡이츠',
+      '건당 최소 이용금액: 10,000원',
+      '건당 최대 이용금액: 50,000원',
+      '적용 요일: 월요일, 금요일',
+      '결제 채널: 온라인',
+      '결제 지역: 국내',
+      '이용 횟수: 월 2회까지',
+      '추가 안내: 간편결제 제외',
+    ]);
+
+    expect(formatRewardConditionsKo({
+      futureEligibility: { membership: 'premium' },
+    })).toEqual([ADDITIONAL_CONDITIONS_DISCLOSURE]);
+    expect(formatRewardConditionsKo({
+      weekdays: [0, 2, 6],
+      maxUses: 1,
+      usePeriod: 'day',
+      channel: 'offline',
+      paymentType: 'overseas',
+    })).toEqual([
+      '적용 요일: 일요일, 화요일, 토요일',
+      '결제 채널: 오프라인',
+      '결제 지역: 해외',
+      '이용 횟수: 일 1회까지',
+    ]);
+    expect(formatRewardConditionsKo({
+      maxUses: 2,
+    })).toEqual([ADDITIONAL_CONDITIONS_DISCLOSURE]);
+    expect(formatRewardConditionsKo(undefined)).toEqual([]);
+  });
+
+  test('keeps production LOCA LIKIT Eat benefits distinct with merchant scope', async () => {
+    const artifact = JSON.parse(
+      await readFile(
+        new URL('../public/data/card-details/lotte.json', import.meta.url),
+        'utf8',
+      ),
+    ) as {
+      cards: Array<{
+        card: { id: string };
+        rewards: Parameters<typeof buildSupportedRewardPresentation>[0][];
+      }>;
+    };
+    const card = artifact.cards.find(
+      ({ card: meta }) => meta.id === 'lotte-likit-eat',
+    );
+    expect(card).toBeDefined();
+
+    const presentations = card!.rewards.map(
+      buildSupportedRewardPresentation,
+    );
+    expect(presentations).toEqual([
+      {
+        rewardId: 'reward-001',
+        rewardLabel: '음식점 60% 결제일 할인',
+        category: 'dining',
+        conditionLabels: ['대상 가맹점: 음식점'],
+      },
+      {
+        rewardId: 'reward-002',
+        rewardLabel: '배달앱 60% 결제일 할인',
+        category: 'dining',
+        conditionLabels: [
+          '대상 가맹점: 배달의민족, 쿠팡이츠, 요기요',
+        ],
+      },
+      {
+        rewardId: 'reward-003',
+        rewardLabel: '카페 60% 결제일 할인',
+        category: 'dining',
+        conditionLabels: [
+          '대상 가맹점: 스타벅스, 투썸플레이스, 할리스커피, 폴바셋',
+        ],
+      },
+    ]);
+  });
+
+  test('names grid category counts and sorting as benefit areas', async () => {
+    const source = await readFile(
+      new URL('../src/components/cards/CardGrid.svelte', import.meta.url),
+      'utf8',
+    );
+
+    expect(source).toContain(
+      '<option value="rewards">혜택 분야 많은순</option>',
+    );
+    expect(source).toContain(
+      '{card.rewardCategories.length}개 혜택 분야',
+    );
+    expect(source).not.toContain('>혜택 많은순</option>');
+    expect(source).not.toContain(
+      '{card.rewardCategories.length}개 혜택\n',
+    );
   });
 
   test('moves focus into detail and restores the originating card with Korean navigation copy', async () => {

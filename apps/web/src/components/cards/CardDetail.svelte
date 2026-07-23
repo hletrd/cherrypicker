@@ -11,8 +11,10 @@
   } from '../../lib/catalog-reward-display.js';
   import { safeExternalHref } from '../../lib/external-url.js';
   import {
+    buildSupportedRewardPresentation,
     buildIssuerCatalogUrl,
     formatPerformanceExclusion,
+    type SupportedRewardPresentation,
   } from '../../lib/card-detail-display.js';
   import Icon from '../ui/Icon.svelte';
   import IssuerBadge from '../ui/IssuerBadge.svelte';
@@ -106,8 +108,7 @@
   type RewardEntry = CardDetail['rewards'][number];
   type TierRow = RewardEntry['tiers'][number];
 
-  interface FlatRow {
-    category: string;
+  interface FlatRow extends SupportedRewardPresentation {
     tier: TierRow;
   }
 
@@ -122,6 +123,7 @@
     const tierLabels = new Map(card.performanceTiers.map(tier => [tier.id, tier.label]));
     const map = new Map<string, FlatRow[]>();
     for (const reward of supportedRewards) {
+      const presentation = buildSupportedRewardPresentation(reward);
       for (const t of reward.tiers) {
         let key = '기본';
         if (t.performanceTier) {
@@ -129,7 +131,7 @@
         }
         if (!map.has(key)) map.set(key, []);
         map.get(key)!.push({
-          category: catalogRewardCategoryKey(reward),
+          ...presentation,
           tier: t,
         });
       }
@@ -324,7 +326,7 @@
           <table class="min-w-[640px] w-full text-sm">
             <thead>
               <tr class="border-b border-[var(--color-border)] bg-[var(--color-bg)] text-left text-xs text-[var(--color-text-muted)]">
-                <th scope="col" class="px-4 py-2.5 font-medium">카테고리</th>
+                <th scope="col" class="px-4 py-2.5 font-medium">혜택 항목</th>
                 <th scope="col" class="px-4 py-2.5 text-right font-medium">혜택</th>
                 <th scope="col" class="px-4 py-2.5 text-right font-medium">월 한도</th>
                 <th scope="col" class="px-4 py-2.5 font-medium">적용 실적</th>
@@ -340,10 +342,31 @@
                 </tr>
                 {#each group.rows as row}
                   <tr class="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)] transition-colors">
-                    <td class="px-4 py-2.5 font-medium">
-                      <span class="mr-1.5 inline-flex items-center text-[var(--color-text-muted)]">
-                        <Icon name={getCategoryIconName(row.category)} size={14} />
-                      </span>{categoryLabels.get(row.category) ?? row.category}
+                    <td class="px-4 py-2.5">
+                      <div
+                        class="font-medium"
+                        data-testid="supported-reward-identity"
+                        data-reward-id={row.rewardId}
+                      >
+                        {#if row.rewardLabel}
+                          {row.rewardLabel}
+                        {:else}
+                          {categoryLabels.get(row.category) ?? row.category}
+                        {/if}
+                      </div>
+                      {#if row.rewardLabel}
+                        <div class="mt-0.5 flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+                          <Icon name={getCategoryIconName(row.category)} size={12} />
+                          {categoryLabels.get(row.category) ?? row.category}
+                        </div>
+                      {/if}
+                      {#if row.conditionLabels.length > 0}
+                        <ul class="mt-1 space-y-0.5 text-xs text-[var(--color-text-muted)]">
+                          {#each row.conditionLabels as condition}
+                            <li>{condition}</li>
+                          {/each}
+                        </ul>
+                      {/if}
                     </td>
                     <td class="px-4 py-2.5 text-right font-mono {rateColorClass(row.tier.rate)}">
                       {formatRewardRate(row.tier)}
