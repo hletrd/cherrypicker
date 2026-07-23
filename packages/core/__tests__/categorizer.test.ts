@@ -375,18 +375,15 @@ describe('Cross-file keyword duplicate detection (C3-02)', () => {
     ).toBe(true);
   });
 
-  test('ENGLISH_KEYWORDS should not grow duplicate keys with MERCHANT_KEYWORDS', async () => {
+  test('cross-source overlap stays bounded and explicitly resolved', async () => {
     const { MERCHANT_KEYWORDS } = await import('../src/categorizer/keywords.js');
     const { ENGLISH_KEYWORDS } = await import('../src/categorizer/keywords-english.js');
 
     // ENGLISH_KEYWORDS contains uppercase/English variants of merchant names.
-    // If the same key appears in both MERCHANT_KEYWORDS and ENGLISH_KEYWORDS,
-    // the ENGLISH entry silently shadows the MERCHANT entry during spread
-    // merge — which is a maintenance trap (C3-02).
-    //
-    // There are existing duplicates that predate this test. The snapshot
-    // count ensures no NEW duplicates are added. If the count decreases
-    // (because duplicates were cleaned up), update the expected number.
+    // The matcher collects and normalizes every source instead of relying on
+    // spread order. Different canonical mappings require an explicit audited
+    // entry in keyword-overrides.ts. This snapshot only guards the amount of
+    // source overlap; the test above verifies conflict resolution.
     const duplicates: string[] = [];
     for (const key of Object.keys(ENGLISH_KEYWORDS)) {
       if (key in MERCHANT_KEYWORDS) {

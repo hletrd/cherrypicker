@@ -5,42 +5,26 @@ import { fileURLToPath } from 'node:url';
 import { fetchCardPage, cleanHTML } from './fetcher.js';
 import { extractCardRules } from './extractor.js';
 import { writeCardRule } from './writer.js';
-import { parseScraperArgs } from './args.js';
-import type { ScraperIssuer } from './config.js';
-import { SCRAPER_ISSUERS } from './config.js';
+import {
+  formatScrapeHelp,
+  parseScraperArgs,
+} from './args.js';
+import {
+  SCRAPER_ISSUERS,
+  type ScraperIssuer,
+} from './config.js';
 import { buildIssuerNetworkPolicy } from './network-policy.js';
+import { sanitizeTerminalText } from '@cherrypicker/viz';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-interface IssuerTarget {
+export interface IssuerTarget {
   issuer: ScraperIssuer;
   baseUrl: string;
   cardListUrl?: string;
   allowedHosts?: string[];
   notes?: string;
-}
-
-function printHelp(): void {
-  console.log(`
-CherryPicker 카드 규칙 스크래퍼
-
-사용법:
-  bun run tools/scraper/src/cli.ts --issuer <issuerId> [--url <url>] [--output <dir>] [--force]
-
-옵션:
-  --issuer <id>    카드사 ID (필수): ${SCRAPER_ISSUERS.join(', ')}
-  --url <url>      스크래핑할 특정 카드 URL (생략 시 카드사 기본 URL 사용)
-  --allow-host <host> 공식 호스트 외 대상을 명시적으로 추가 (반복 가능)
-  --output <dir>   출력 디렉토리 (기본: packages/rules/data/cards/)
-  --force          같은 카드 파일이 있으면 일반 파일만 덮어쓰기
-  --help           도움말
-
-예시:
-  bun run tools/scraper/src/cli.ts --issuer hyundai
-  bun run tools/scraper/src/cli.ts --issuer kb --url https://card.kbcard.com/...
-  bun run tools/scraper/src/cli.ts --issuer samsung --output ./output/
-`);
 }
 
 export function loadIssuerTarget(issuer: ScraperIssuer): IssuerTarget {
@@ -71,24 +55,56 @@ export function loadIssuerTarget(issuer: ScraperIssuer): IssuerTarget {
   return target;
 }
 
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  if (args.includes('--help') || args.includes('-h')) {
-    printHelp();
+export interface ScraperCliDependencies {
+  loadIssuerTarget: typeof loadIssuerTarget;
+  buildIssuerNetworkPolicy: typeof buildIssuerNetworkPolicy;
+  fetchCardPage: typeof fetchCardPage;
+  cleanHTML: typeof cleanHTML;
+  extractCardRules: typeof extractCardRules;
+  writeCardRule: typeof writeCardRule;
+}
+
+const DEFAULT_DEPENDENCIES: ScraperCliDependencies = {
+  loadIssuerTarget,
+  buildIssuerNetworkPolicy,
+  fetchCardPage,
+  cleanHTML,
+  extractCardRules,
+  writeCardRule,
+};
+
+function terminalText(value: unknown): string {
+  return sanitizeTerminalText(value);
+}
+
+export async function runScraperCli(
+  args: readonly string[],
+  dependencyOverrides: Partial<ScraperCliDependencies> = {},
+): Promise<void> {
+  const defaultOutput = join(__dirname, '../../../packages/rules/data/cards');
+  const parsed = parseScraperArgs(args, defaultOutput);
+  if (parsed.help) {
+    console.log(
+      formatScrapeHelp('bun run tools/scraper/src/cli.ts'),
+    );
     return;
   }
-  const defaultOutput = join(__dirname, '../../../packages/rules/data/cards');
+  const dependencies = {
+    ...DEFAULT_DEPENDENCIES,
+    ...dependencyOverrides,
+  };
   const {
     issuer,
     url: urlOverride,
     output,
     force,
     allowHosts: requestedAllowedHosts,
-  } = parseScraperArgs(args, defaultOutput);
+  } = parsed;
+  const outputDir = output ?? defaultOutput;
 
   // Load issuer target config
-  const target = loadIssuerTarget(issuer);
-  const networkPolicy = buildIssuerNetworkPolicy(
+  const target = dependencies.loadIssuerTarget(issuer);
+  const networkPolicy = dependencies.buildIssuerNetworkPolicy(
     target,
     urlOverride,
     requestedAllowedHosts,
@@ -97,41 +113,71 @@ async function main(): Promise<void> {
   const allowedHosts = networkPolicy.allowedHosts;
 
   console.log(`\n[CherryPicker 스크래퍼]`);
-  console.log(`카드사: ${issuer}`);
-  console.log(`대상 URL: ${targetUrl}`);
-  console.log(`출력 디렉토리: ${output}`);
+  console.log(`카드사: ${terminalText(issuer)}`);
+  console.log(`대상 URL: ${terminalText(targetUrl)}`);
+  console.log(`출력 디렉토리: ${terminalText(outputDir)}`);
   if (requestedAllowedHosts.length > 0) {
-    console.warn(`추가 허용 호스트: ${requestedAllowedHosts.join(', ')}`);
+    console.warn(
+      `추가 허용 호스트: ${terminalText(requestedAllowedHosts.join(', '))}`,
+    );
   }
   console.log('');
 
   // Step 1: Fetch page
   console.log('1/4 페이지 가져오는 중...');
-  const html = await fetchCardPage(targetUrl, { allowedHosts });
-  console.log(`   HTML 크기: ${Math.round(html.length / 1024)}KB`);
+  const html = await dependencies.fetchCardPage(targetUrl, { allowedHosts });
+  console.log(
+    `   HTML 크기: ${terminalText(Math.round(html.length / 1024))}KB`,
+  );
 
   // Step 2: Clean HTML
   console.log('2/4 HTML 정리 중...');
-  const cleaned = cleanHTML(html);
-  console.log(`   텍스트 크기: ${Math.round(cleaned.length / 1024)}KB`);
+  const cleaned = dependencies.cleanHTML(html);
+  console.log(
+    `   텍스트 크기: ${terminalText(Math.round(cleaned.length / 1024))}KB`,
+  );
 
   // Step 3: Extract rules with LLM
   console.log('3/4 LLM으로 혜택 규칙 추출 중...');
-  const cardRules = await extractCardRules(cleaned, issuer);
-  console.log(`   카드명: ${cardRules.card.nameKo} (${cardRules.card.name})`);
-  console.log(`   혜택 규칙: ${cardRules.rewards.length}개 카테고리`);
-  console.log(`   전월실적 구간: ${cardRules.performanceTiers.length}개`);
+  const cardRules = await dependencies.extractCardRules(cleaned, issuer);
+  console.log(
+    `   카드명: ${terminalText(cardRules.card.nameKo)} ` +
+      `(${terminalText(cardRules.card.name)})`,
+  );
+  console.log(
+    `   혜택 규칙: ${terminalText(cardRules.rewards.length)}개 카테고리`,
+  );
+  console.log(
+    `   전월실적 구간: ${terminalText(cardRules.performanceTiers.length)}개`,
+  );
 
   // Step 4: Write YAML
   console.log('4/4 YAML 파일 저장 중...');
-  const filePath = await writeCardRule(cardRules, {
-    outputDir: output,
+  const filePath = await dependencies.writeCardRule(cardRules, {
+    outputDir,
     expectedIssuer: issuer,
     overwrite: force,
   });
-  console.log(`   저장 완료: ${filePath}`);
+  console.log(`   저장 완료: ${terminalText(filePath)}`);
 
   console.log('\n완료!\n');
 }
 
-await main();
+/** Own the process error sink so Bun never prints untrusted stack text. */
+export async function runScraperMain(
+  args: readonly string[],
+  dependencyOverrides: Partial<ScraperCliDependencies> = {},
+): Promise<number> {
+  try {
+    await runScraperCli(args, dependencyOverrides);
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`오류: ${terminalText(message)}`);
+    return 1;
+  }
+}
+
+if (import.meta.main) {
+  process.exitCode = await runScraperMain(process.argv.slice(2));
+}

@@ -155,6 +155,77 @@ describe('CLI command argument guards', () => {
     const parsed = parseScrapeCommandArgs(['--issuer', 'shinhan']);
     expect(buildScraperArgs(parsed)).toEqual(['--issuer', 'shinhan']);
   });
+
+  test('scrape rejects duplicate singleton options, positionals, and incomplete values', () => {
+    const duplicateCases = [
+      ['--issuer', 'kb', '--issuer', 'shinhan'],
+      [
+        '--issuer',
+        'kb',
+        '--url',
+        'https://one.example',
+        '--url',
+        'https://two.example',
+      ],
+      ['--issuer', 'kb', '--output', 'one', '--output', 'two'],
+      ['--issuer', 'kb', '--force', '--force'],
+      ['--help', '-h'],
+    ];
+    for (const args of duplicateCases) {
+      expect(() => parseScrapeCommandArgs(args)).toThrow(
+        '옵션을 중복 지정할 수 없습니다',
+      );
+    }
+    expect(() =>
+      parseScrapeCommandArgs(['--issuer', 'kb', 'unexpected']),
+    ).toThrow('위치 인수');
+    expect(() =>
+      parseScrapeCommandArgs(['--issuer', 'kb', '--url']),
+    ).toThrow('값이 필요');
+  });
+
+  test('scrape help and invalid arguments never spawn the direct scraper', async () => {
+    let spawnCalls = 0;
+    const logs: string[] = [];
+    const dependencies = {
+      spawn: () => {
+        spawnCalls++;
+        return { status: 0 };
+      },
+      log: (message: string) => {
+        logs.push(message);
+      },
+    };
+
+    await runScrape(['--help'], dependencies);
+    expect(logs.join('\n')).toContain('cherrypicker scrape --issuer');
+    expect(logs.join('\n')).toContain('--allow-host');
+    expect(spawnCalls).toBe(0);
+
+    await expect(
+      runScrape(
+        ['--issuer', 'shinhan', '--output', 'one', '--output', 'two'],
+        dependencies,
+      ),
+    ).rejects.toThrow('옵션을 중복 지정할 수 없습니다');
+    expect(spawnCalls).toBe(0);
+  });
+
+  test('scrape rejects a null-byte output before spawning', async () => {
+    let spawnCalls = 0;
+    await expect(
+      runScrape(
+        ['--issuer', 'shinhan', '--output', 'bad\0path'],
+        {
+          spawn: () => {
+            spawnCalls++;
+            return { status: 0 };
+          },
+        },
+      ),
+    ).rejects.toThrow('널 바이트');
+    expect(spawnCalls).toBe(0);
+  });
 });
 
 describe('local-first LLM fallback (C1-024)', () => {
@@ -399,10 +470,12 @@ describe('validateFilePath', () => {
     expect(() => validateFilePath('foo..bar.csv', { mustExist: false })).not.toThrow();
   });
 
-  test('strips null bytes from path before validation', () => {
-    // Null bytes should be stripped; the cleaned path should not contain them.
-    // After stripping \x00, /tmp/file\x00.txt has no traversal and passes.
-    expect(() => validateFilePath('/tmp/file\x00.txt', { mustExist: false })).not.toThrow();
+  test('rejects null bytes without validating a surrogate path', () => {
+    for (const mustExist of [false, true]) {
+      expect(() =>
+        validateFilePath('/tmp/file\x00.txt', { mustExist }),
+      ).toThrow('널 바이트');
+    }
   });
 
   test('rejects symbolic link when mustExist is true', () => {

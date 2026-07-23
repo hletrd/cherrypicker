@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./args": "./src/args.ts"
+  },
   "scripts": {
     "build": "tsc",
     "test": "bun test",
@@ -11,6 +14,7 @@
   },
   "dependencies": {
     "@cherrypicker/rules": "workspace:*",
+    "@cherrypicker/viz": "workspace:*",
     "@anthropic-ai/sdk": "^0.39.0",
     "cheerio": "^1.0.0",
     "iconv-lite": "^0.6.3",

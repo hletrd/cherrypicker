@@ -27,20 +27,22 @@ export function validateFilePath(path: string, options: { mustExist?: boolean; l
     throw new Error(`${label} 경로가 비어 있습니다.`);
   }
 
-  // Strip null bytes to prevent injection attacks (e.g., /etc/passwd\x00.txt)
-  const cleaned = path.replace(/\x00/g, '');
-  const normalized = cleaned.replace(/\\/g, '/');
+  if (path.includes('\0')) {
+    throw new Error(`${label} 경로에 널 바이트를 포함할 수 없습니다.`);
+  }
+
+  const normalized = path.replace(/\\/g, '/');
   const segments = normalized.split('/');
   if (segments.includes('..')) {
     throw new Error(
-      `${label} 경로에 '..' (상위 디렉토리 참조)가 포함되어 있습니다: ${cleaned}\n` +
+      `${label} 경로에 '..' (상위 디렉토리 참조)가 포함되어 있습니다: ${path}\n` +
       '상대 경로 traversal은 보안상 허용되지 않습니다. 절대 경로나 현재 디렉토리 내의 경로를 사용하세요.',
     );
   }
 
-  if (options.mustExist && !existsSync(cleaned)) {
+  if (options.mustExist && !existsSync(path)) {
     throw new Error(
-      `${label}을 찾을 수 없습니다: ${cleaned}\n` +
+      `${label}을 찾을 수 없습니다: ${path}\n` +
       '경로가 올바른지 확인하고 파일이 존재하는지 확인하세요.',
     );
   }
@@ -48,9 +50,9 @@ export function validateFilePath(path: string, options: { mustExist?: boolean; l
   // Reject symbolic links to prevent indirect path traversal.
   // Check separately from throwing so lstat errors don't mask symlink detection.
   let isSymlink = false;
-  if (options.mustExist && existsSync(cleaned)) {
+  if (options.mustExist && existsSync(path)) {
     try {
-      isSymlink = lstatSync(cleaned).isSymbolicLink();
+      isSymlink = lstatSync(path).isSymbolicLink();
     } catch {
       // lstatSync may throw on unusual paths; treat as non-symlink and let
       // downstream operations surface their own errors.
@@ -58,7 +60,7 @@ export function validateFilePath(path: string, options: { mustExist?: boolean; l
   }
   if (isSymlink) {
     throw new Error(
-      `${label}은 심볼릭 링크를 지원하지 않습니다: ${cleaned}\n` +
+      `${label}은 심볼릭 링크를 지원하지 않습니다: ${path}\n` +
       '심볼릭 링크를 통한 간접 경로 접근은 보안상 허용되지 않습니다.',
     );
   }

@@ -16,6 +16,7 @@
     "@cherrypicker/core": "workspace:*",
     "@cherrypicker/parser": "workspace:*",
     "@cherrypicker/rules": "workspace:*",
+    "@cherrypicker/scraper": "workspace:*",
     "@cherrypicker/viz": "workspace:*"
   },
   "devDependencies": {

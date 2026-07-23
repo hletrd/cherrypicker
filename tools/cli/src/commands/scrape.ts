@@ -1,78 +1,44 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
-import { SCRAPER_ISSUERS } from '@cherrypicker/rules';
-import type { ScraperIssuer } from '@cherrypicker/rules';
+import {
+  formatScrapeHelp,
+  parseScraperArgs,
+  type ScraperArgs,
+} from '@cherrypicker/scraper/args';
 import { validateFilePath } from '../validation.js';
+import { sanitizeTerminalText } from '../terminal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export interface ScrapeCommandArgs {
-  issuer: ScraperIssuer;
-  url?: string;
-  output?: string;
-  force: boolean;
-  allowHosts: string[];
+export type ScrapeCommandArgs = ScraperArgs;
+
+export interface ScrapeCommandDependencies {
+  spawn(command: string, args: readonly string[]): { status: number | null };
+  log(message: string): void;
 }
 
-function requireValue(args: string[], index: number, option: string): string {
-  const value = args[index + 1];
-  if (!value || value.startsWith('--')) {
-    throw new Error(`${option} 옵션에 값이 필요합니다.`);
-  }
-  return value;
-}
+const DEFAULT_DEPENDENCIES: ScrapeCommandDependencies = {
+  spawn(command, args) {
+    return spawnSync(command, [...args], {
+      stdio: 'inherit',
+      encoding: 'utf-8',
+    });
+  },
+  log(message) {
+    console.log(message);
+  },
+};
 
-export function parseScrapeCommandArgs(args: string[]): ScrapeCommandArgs {
-  let issuer: string | undefined;
-  let url: string | undefined;
-  let output: string | undefined;
-  let force = false;
-  const allowHosts: string[] = [];
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i]!;
-    if (arg === '--issuer') {
-      issuer = requireValue(args, i, arg);
-      i++;
-    } else if (arg === '--url') {
-      url = requireValue(args, i, arg);
-      i++;
-    } else if (arg === '--output') {
-      output = requireValue(args, i, arg);
-      i++;
-    } else if (arg === '--allow-host') {
-      allowHosts.push(requireValue(args, i, arg));
-      i++;
-    } else if (arg === '--force') {
-      force = true;
-    } else {
-      throw new Error(`알 수 없는 옵션입니다: ${arg}`);
-    }
-  }
-
-  if (!issuer) {
-    throw new Error(
-      '--issuer 옵션이 필요합니다.\n  사용법: cherrypicker scrape --issuer <issuerId> [--url <url>] [--allow-host <host>] [--output <dir>] [--force]',
-    );
-  }
-  if (!(SCRAPER_ISSUERS as readonly string[]).includes(issuer)) {
-    throw new Error(
-      `지원하지 않는 카드사입니다: "${issuer}". 지원 카드사: ${SCRAPER_ISSUERS.join(', ')}`,
-    );
-  }
-
-  return {
-    issuer: issuer as ScraperIssuer,
-    url,
-    output,
-    force,
-    allowHosts,
-  };
+export function parseScrapeCommandArgs(
+  args: readonly string[],
+): ScrapeCommandArgs {
+  return parseScraperArgs(args);
 }
 
 export function buildScraperArgs(parsed: ScrapeCommandArgs): string[] {
+  if (parsed.help || !parsed.issuer) return [];
   const scraperArgs: string[] = ['--issuer', parsed.issuer];
   if (parsed.url) scraperArgs.push('--url', parsed.url);
   for (const host of parsed.allowHosts) {
@@ -83,26 +49,36 @@ export function buildScraperArgs(parsed: ScrapeCommandArgs): string[] {
   return scraperArgs;
 }
 
-export async function runScrape(args: string[]): Promise<void> {
+export async function runScrape(
+  args: readonly string[],
+  dependencyOverrides: Partial<ScrapeCommandDependencies> = {},
+): Promise<void> {
   const parsed = parseScrapeCommandArgs(args);
+  const dependencies = {
+    ...DEFAULT_DEPENDENCIES,
+    ...dependencyOverrides,
+  };
+  if (parsed.help) {
+    dependencies.log(formatScrapeHelp('cherrypicker scrape'));
+    return;
+  }
   const { issuer, output } = parsed;
 
   if (output) {
     validateFilePath(output, { mustExist: false, label: '출력 디렉토리' });
   }
 
-  // Build args for the scraper CLI
   const scraperArgs = buildScraperArgs(parsed);
-
-  // Resolve scraper CLI path relative to monorepo root
   const scraperCli = join(__dirname, '../../../../tools/scraper/src/cli.ts');
 
-  console.log(`카드사 스크래핑 시작: ${issuer}`);
+  dependencies.log(
+    `카드사 스크래핑 시작: ${sanitizeTerminalText(issuer)}`,
+  );
 
-  const result = spawnSync('bun', ['run', scraperCli, ...scraperArgs], {
-    stdio: 'inherit',
-    encoding: 'utf-8',
-  });
+  const result = dependencies.spawn(
+    'bun',
+    ['run', scraperCli, ...scraperArgs],
+  );
 
   if (result.status !== 0) {
     throw new Error(`스크래퍼 종료 코드: ${result.status ?? 'unknown'}`);

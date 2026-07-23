@@ -85,14 +85,19 @@ hyundai, kb, samsung, shinhan, lotte, hana, woori, ibk, nh, bc, kakao, toss, kba
 ## 파서 관리
 
 ### 키워드 파일 구조
-- `packages/core/src/categorizer/keywords.ts` (기본 ~10,000개)
+- `packages/core/src/categorizer/keywords.ts` (기본 키워드 묶음)
 - `packages/core/src/categorizer/keywords-locations.ts` (체인+지역 조합)
 - `packages/core/src/categorizer/keywords-english.ts` (영문/글로벌)
 - `packages/core/src/categorizer/keywords-niche.ts` (니치 한국어)
-- `matcher.ts`에서 `ALL_KEYWORDS`로 합쳐서 사용
+- 전체 소스는 수천 개 규모다.
+- `matcher.ts`가 네 파일을 모아 정규화한 뒤 사용한다.
 
 ### 키워드 추가 시 주의
-- 중복 키가 있으면 나중 파일이 덮어씀
+- 같은 키워드가 서로 다른 정규 카테고리를 가리키면
+  `packages/core/src/categorizer/keyword-overrides.ts`에 검토한 선택을
+  기록한다.
+- 선택이 없는 충돌은 매처 생성에 실패한다. 엄격 모드에서는 더 이상
+  충돌이 아닌 오래된 선택도 실패한다.
 - 소문자로 통일 (matcher가 toLowerCase 처리)
 - 카테고리 ID는 위 목록에서만 사용
 

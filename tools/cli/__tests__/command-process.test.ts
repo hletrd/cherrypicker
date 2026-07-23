@@ -119,6 +119,35 @@ afterEach(async () => {
 });
 
 describe('CLI process contract', () => {
+  test('scrape help exits successfully without starting the scraper', () => {
+    for (const flag of ['--help', '-h']) {
+      const result = runCli(['scrape', flag]);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toContain('CherryPicker 카드 규칙 스크래퍼');
+      expect(result.stdout).toContain('cherrypicker scrape --issuer');
+      expect(result.stdout).toContain('--allow-host');
+      expect(result.stdout).toContain('packages/rules/data/cards');
+      expect(result.stdout).not.toContain('카드사 스크래핑 시작');
+    }
+  });
+
+  test('malformed scrape options fail before starting the scraper', () => {
+    const result = runCli([
+      'scrape',
+      '--issuer',
+      'shinhan',
+      '--force',
+      '--force',
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).not.toContain('카드사 스크래핑 시작');
+    expect(result.stdout).not.toContain('[CherryPicker 스크래퍼]');
+    expect(result.stderr).toContain('옵션을 중복 지정할 수 없습니다');
+  });
+
   test('report help exits successfully before validating a supplied path', () => {
     const result = runCli([
       'report',
