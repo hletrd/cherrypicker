@@ -15,9 +15,10 @@
 
   interface Props {
     cardId: string | undefined;
+    onReady?: (cardName: string) => void;
   }
 
-  let { cardId }: Props = $props();
+  let { cardId, onReady }: Props = $props();
   let loading = $state(true);
   let error = $state<string | null>(null);
   let card = $state<CardDetail | null>(null);
@@ -62,6 +63,10 @@
 
   function formatRewardRate(tier: RewardTier): string {
     return formatCatalogReward(tier);
+  }
+
+  function focusDetailHeading(node: HTMLElement) {
+    node.focus();
   }
 
   function logOrphanPerformanceTiers(detail: CardDetail) {
@@ -139,6 +144,7 @@
           if (!result) throw new Error('카드를 찾을 수 없어요');
           logOrphanPerformanceTiers(result);
           card = result;
+          onReady?.(result.nameKo);
         }
       })
       .catch((e) => {
@@ -202,7 +208,12 @@
             {card.type === 'credit' ? '신용카드' : card.type === 'check' ? '체크카드' : '선불카드'}
           </span>
         </div>
-        <h1 class="mt-1.5 text-2xl font-bold tracking-tight">{card.nameKo}</h1>
+        <h1
+          class="mt-1.5 text-2xl font-bold tracking-tight"
+          data-testid="card-detail-heading"
+          tabindex="-1"
+          use:focusDetailHeading
+        >{card.nameKo}</h1>
         <p class="mt-0.5 text-sm text-[var(--color-text-muted)]">{card.name}</p>
         <div class="mt-3 flex flex-wrap items-center gap-4 text-sm">
           <span>

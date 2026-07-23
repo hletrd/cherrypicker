@@ -17,9 +17,15 @@
 
   interface Props {
     onSelectCard?: (cardId: string) => void;
+    focusCardId?: string | null;
+    onFocusRestored?: () => void;
   }
 
-  let { onSelectCard }: Props = $props();
+  let {
+    onSelectCard,
+    focusCardId = null,
+    onFocusRestored,
+  }: Props = $props();
 
   let cards = $state<CardSummary[]>([]);
   let loading = $state(true);
@@ -153,6 +159,13 @@
 
   function setPage(value: number) {
     currentPage = clampCardGridPage(value, filteredCards.length);
+  }
+
+  function restoreCardFocus(node: HTMLElement, cardId: string) {
+    if (cardId === focusCardId) {
+      node.focus();
+      onFocusRestored?.();
+    }
   }
 
   async function loadCards() {
@@ -334,6 +347,8 @@
           type="button"
           onclick={() => onSelectCard?.(card.id)}
           data-testid="card-grid-card"
+          data-card-id={card.id}
+          use:restoreCardFocus={card.id}
           class="group relative overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg w-full cursor-pointer"
           style="border-left: 4px solid {issuerColor};"
         >

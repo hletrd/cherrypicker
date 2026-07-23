@@ -7,9 +7,18 @@ export default defineConfig({
   testDir: './e2e',
   testIgnore: '**/ui-ux-screenshots.spec.js',
   outputDir: './test-results/playwright-regression',
+  snapshotPathTemplate: '{testDir}/__screenshots__/{testFileName}/{arg}{ext}',
+  updateSnapshots: process.env.CI ? 'none' : 'missing',
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
   reporter: 'line',
+  expect: {
+    toHaveScreenshot: {
+      animations: 'disabled',
+      caret: 'hide',
+      maxDiffPixelRatio: 0.04,
+    },
+  },
   use: {
     baseURL,
     trace: 'on-first-retry',

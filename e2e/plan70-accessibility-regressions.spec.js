@@ -47,6 +47,14 @@ async function analyze(page, fixture = normalFixture) {
   await expect(page.locator('#dashboard-data-content')).toBeVisible();
 }
 
+async function expectNoRootOverflow(page) {
+  const geometry = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }));
+  expect(geometry.documentWidth).toBeLessThanOrEqual(geometry.viewport);
+}
+
 async function resolveCssColors(page, values) {
   return page.evaluate((colors) => {
     const canvas = document.createElement('canvas');
@@ -389,6 +397,13 @@ test('desktop recommendations retain native table semantics and keyboard disclos
 });
 
 for (const width of [320, 375, 400]) {
+  test(`home page stays within the ${width}px viewport`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(appUrl());
+    await waitForIsland(page);
+    await expectNoRootOverflow(page);
+  });
+
   test(`mobile recommendation geometry stays usable at ${width}px`, async ({
     page,
   }) => {
@@ -446,6 +461,23 @@ for (const width of [320, 375, 400]) {
     }
     await expect(page.getByTestId('optimal-card-mobile-list')).toBeVisible();
     await expect(page.getByTestId('optimal-card-table')).toBeHidden();
+
+    await page.goto(appUrl('results'));
+    await expect(page.locator('#results-data-content')).toBeVisible();
+    await expectNoRootOverflow(page);
+
+    await page.goto(appUrl('report'));
+    await expect(page.locator('#report-data-content')).toBeVisible();
+    await expectNoRootOverflow(page);
+
+    await page.goto(appUrl('cards'));
+    await expect(page.getByTestId('card-grid-page')).toBeVisible();
+    await expectNoRootOverflow(page);
+
+    const firstCard = page.getByTestId('card-grid-card').first();
+    await firstCard.press('Enter');
+    await expect(page.getByTestId('card-detail-heading')).toBeFocused();
+    await expectNoRootOverflow(page);
   });
 }
 
@@ -491,8 +523,25 @@ test('mobile menu keyboard flow returns focus and reduced motion disables smooth
   await firstCard.focus();
   await firstCard.press('Enter');
   await expect(page.getByText('목록으로').first()).toBeVisible();
+  const detailHeading = page.getByTestId('card-detail-heading');
+  await expect(detailHeading).toBeFocused();
+  await expect(page.getByRole('navigation', { name: '이동 경로' })).toBeVisible();
+  await expect(page).toHaveTitle(/.+ \| CherryPicker$/);
+  const detailTitle = await page.title();
   const scrollCalls = await page.evaluate(() => window.__plan70ScrollCalls);
   expect(scrollCalls.at(-1)).toMatchObject({ top: 0, behavior: 'auto' });
+
+  await page.goBack();
+  await expect(firstCard).toBeFocused();
+  await expect(page).toHaveTitle('카드 목록 | CherryPicker');
+
+  await page.goForward();
+  await expect(detailHeading).toBeFocused();
+  await expect(page).toHaveTitle(detailTitle);
+
+  await page.getByRole('button', { name: '목록으로', exact: true }).click();
+  await expect(firstCard).toBeFocused();
+  await expect(page).toHaveTitle('카드 목록 | CherryPicker');
 });
 
 test('computed hero, theme, status, and issuer pairs meet WCAG AA', async ({

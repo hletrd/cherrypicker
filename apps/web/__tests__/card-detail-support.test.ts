@@ -46,5 +46,35 @@ describe('catalog reward display boundary', () => {
     expect(source).toContain('{#each unsupportedRewards as reward}');
     expect(source).toContain('{formatWon(tier.maxSpending)} 이하');
     expect(source).not.toContain('{formatWon(tier.maxSpending)} 미만');
+    expect(source).toContain('data-testid="card-detail-heading"');
+    expect(source).toContain('tabindex="-1"');
+    expect(source).toContain('use:focusDetailHeading');
+    expect(source).toContain('node.focus()');
+  });
+
+  test('moves focus into detail and restores the originating card with Korean navigation copy', async () => {
+    const [pageSource, gridSource] = await Promise.all([
+      readFile(
+        new URL('../src/components/cards/CardPage.svelte', import.meta.url),
+        'utf8',
+      ),
+      readFile(
+        new URL('../src/components/cards/CardGrid.svelte', import.meta.url),
+        'utf8',
+      ),
+    ]);
+
+    expect(pageSource).toContain('aria-label="이동 경로"');
+    expect(pageSource).toContain('onReady={handleDetailReady}');
+    expect(pageSource).toContain('focusCardId={returnFocusCardId}');
+    expect(pageSource).toContain('onFocusRestored={handleFocusRestored}');
+    expect(pageSource).toContain('document.title = `${name} | CherryPicker`');
+    expect(pageSource).not.toContain(
+      "document.querySelector<HTMLElement>('[data-testid=\"card-detail-heading\"]')?.focus()",
+    );
+    expect(gridSource).toContain('data-card-id={card.id}');
+    expect(gridSource).toContain('use:restoreCardFocus={card.id}');
+    expect(gridSource).toContain('node.focus()');
+    expect(gridSource).toContain('onFocusRestored?.()');
   });
 });

@@ -9,7 +9,7 @@ const { totalCards, totalIssuers, totalCategories } = await readCardStats();
 
 <Layout title="홈">
   <!-- Hero Section -->
-  <div class="relative -mx-6 -mt-8 overflow-hidden px-6 py-20 text-center" style="background: var(--gradient-hero);">
+  <div data-testid="home-hero" class="relative -mx-4 -mt-8 overflow-hidden px-4 py-20 text-center sm:-mx-6 sm:px-6" style="background: var(--gradient-hero);">
     <div class="absolute inset-0 opacity-20" style="background: radial-gradient(ellipse at 30% 50%, #ffffff33 0%, transparent 60%), radial-gradient(ellipse at 70% 50%, #ffffff22 0%, transparent 60%);"></div>
     <div class="relative z-10 animate-[slideUp_0.6s_ease_both]">
       <div class="mb-4 flex justify-center">

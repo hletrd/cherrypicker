@@ -10,7 +10,9 @@
 
   let selectedCardId = $state<string | null>(null);
   let cardName = $state<string>('');
+  let returnFocusCardId = $state<string | null>(null);
   let fetchGeneration = 0;
+  let listDocumentTitle = '카드 목록 | CherryPicker';
 
   $effect(() => {
     if (!selectedCardId) { cardName = ''; return; }
@@ -31,6 +33,7 @@
   });
 
   function selectCard(id: string) {
+    returnFocusCardId = id;
     selectedCardId = id;
     window.location.hash = id;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -38,14 +41,26 @@
   }
 
   function goBack() {
+    returnFocusCardId = selectedCardId ?? returnFocusCardId;
     selectedCardId = null;
+    document.title = listDocumentTitle;
     // Clear the hash to return to the card list view. Using hash assignment
     // instead of replaceState so the navigation is added to browser history,
     // enabling the back button to return to previously viewed cards (C19-03).
     window.location.hash = '';
   }
 
+  function handleDetailReady(name: string) {
+    cardName = name;
+    document.title = `${name} | CherryPicker`;
+  }
+
+  function handleFocusRestored() {
+    returnFocusCardId = null;
+  }
+
   onMount(() => {
+    listDocumentTitle = document.title;
     // Read card ID from URL hash on load
     const hash = window.location.hash.slice(1);
     if (hash) selectedCardId = hash;
@@ -53,7 +68,9 @@
     // Listen for browser back/forward
     const handleHashChange = () => {
       const h = window.location.hash.slice(1);
+      if (!h && selectedCardId) returnFocusCardId = selectedCardId;
       selectedCardId = h || null;
+      if (!h) document.title = listDocumentTitle;
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -62,7 +79,7 @@
 
 {#if selectedCardId}
   <!-- Card detail view -->
-  <nav aria-label="breadcrumb" class="mb-6">
+  <nav aria-label="이동 경로" class="mb-6">
     <ol class="flex flex-wrap items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
       <li>
         <a href={homeUrl} class="transition-colors hover:text-[var(--color-primary-fg)]">홈</a>
@@ -93,7 +110,7 @@
   </div>
 
   <div class="animate-[slideUp_0.3s_ease_both]">
-    <CardDetail cardId={selectedCardId} />
+    <CardDetail cardId={selectedCardId} onReady={handleDetailReady} />
   </div>
 {:else}
   <!-- Card grid view -->
@@ -101,5 +118,9 @@
     <h1 class="text-3xl font-extrabold tracking-tight">카드 목록</h1>
     <p class="mt-2 text-[var(--color-text-muted)]">어떤 카드가 있는지 살펴보세요</p>
   </div>
-  <CardGrid onSelectCard={selectCard} />
+  <CardGrid
+    onSelectCard={selectCard}
+    focusCardId={returnFocusCardId}
+    onFocusRestored={handleFocusRestored}
+  />
 {/if}

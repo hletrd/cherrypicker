@@ -1,0 +1,12 @@
+*, *::before, *::after {
+  animation: none !important;
+  caret-color: transparent !important;
+  transition: none !important;
+}
+
+[data-testid="home-hero"] h1,
+[data-testid="home-hero"] p,
+[data-testid="card-grid-card"] * {
+  color: transparent !important;
+  text-shadow: none !important;
+}

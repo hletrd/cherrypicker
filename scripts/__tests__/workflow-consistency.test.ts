@@ -46,6 +46,7 @@ const browserSpecs = [
   'e2e/web-regressions.spec.js',
   'e2e/security-regressions.spec.js',
   'e2e/ui-ux-review.spec.js',
+  'e2e/visual-regressions.spec.js',
   'e2e/ui-ux-screenshots.spec.js',
 ].map((path) => readFileSync(resolve(repoRoot, path), 'utf8'));
 
@@ -113,6 +114,13 @@ describe('deployment workflow consistency', () => {
     expect(workflow).not.toContain('test:e2e:screenshots');
     expect(workflow.indexOf('run: bun run test:e2e')).toBeLessThan(
       workflow.indexOf('actions/upload-pages-artifact'),
+    );
+    expect(playwrightConfigs[0]).toContain('snapshotPathTemplate');
+    expect(playwrightConfigs[0]).toContain(
+      "updateSnapshots: process.env.CI ? 'none' : 'missing'",
+    );
+    expect(playwrightConfigs[0]).not.toContain(
+      "testIgnore: '**/visual-regressions.spec.js'",
     );
   });
 
