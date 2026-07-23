@@ -16,6 +16,45 @@ export interface ParseWarning {
   message: string;
   raw?: string;
   count?: number;
+  kind?: 'summary';
+  affectedFileCount?: number;
+}
+
+export function affectedParseWarningFileCount(
+  warnings: readonly Pick<
+    ParseWarning,
+    'fileName' | 'kind' | 'affectedFileCount'
+  >[],
+): number {
+  const summary = warnings.find(
+    (warning) =>
+      warning.kind === 'summary' &&
+      Number.isSafeInteger(warning.affectedFileCount) &&
+      (warning.affectedFileCount ?? 0) >= 0,
+  );
+  if (summary?.affectedFileCount !== undefined) {
+    return summary.affectedFileCount;
+  }
+  return new Set(
+    warnings
+      .filter((warning) => warning.kind !== 'summary')
+      .map((warning) => warning.fileName)
+      .filter(Boolean),
+  ).size;
+}
+
+export function affectedParseWarningItemCount(
+  warnings: readonly Pick<ParseWarning, 'count'>[],
+): number {
+  return warnings.reduce((total, warning) => {
+    const count =
+      Number.isSafeInteger(warning.count) &&
+      warning.count !== undefined &&
+      warning.count > 0
+        ? warning.count
+        : 1;
+    return Math.min(Number.MAX_SAFE_INTEGER, total + count);
+  }, 0);
 }
 
 export function getLatestMonth(

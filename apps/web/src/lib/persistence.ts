@@ -359,6 +359,18 @@ function validPersistedParseWarning(value: unknown): boolean {
         Number.isSafeInteger(value.count) &&
         value.count > 0
       )
+    ) &&
+    (
+      (
+        value.kind === undefined &&
+        value.affectedFileCount === undefined
+      ) ||
+      (
+        value.kind === 'summary' &&
+        typeof value.affectedFileCount === 'number' &&
+        Number.isSafeInteger(value.affectedFileCount) &&
+        value.affectedFileCount >= 0
+      )
     )
   );
 }
@@ -407,9 +419,16 @@ function warningCount(value: number | undefined): number | undefined {
     : undefined;
 }
 
+function affectedFileCount(value: number | undefined): number | undefined {
+  return Number.isSafeInteger(value) && value !== undefined && value >= 0
+    ? value
+    : undefined;
+}
+
 function sanitizeParseWarning(
   warning: AnalysisResult['parseErrors'][number],
 ): AnalysisResult['parseErrors'][number] {
+  const summary = warning.kind === 'summary';
   return {
     fileName: truncateMiddle(
       warning.fileName || 'unknown',
@@ -430,6 +449,10 @@ function sanitizeParseWarning(
       MAX_WARNING_MESSAGE_LENGTH,
     ),
     count: warningCount(warning.count),
+    kind: summary ? 'summary' : undefined,
+    affectedFileCount: summary
+      ? affectedFileCount(warning.affectedFileCount)
+      : undefined,
   };
 }
 
@@ -452,6 +475,12 @@ export function boundedParseWarnings(
 
   const retainedCount = MAX_PERSISTED_WARNINGS - 1;
   const retained = warnings.slice(0, retainedCount).map(sanitizeParseWarning);
+  const exactAffectedFileCount = new Set(
+    warnings
+      .filter((warning) => warning.kind !== 'summary')
+      .map((warning) => warning.fileName)
+      .filter(Boolean),
+  ).size;
   const omittedCount = warnings
     .slice(retainedCount)
     .reduce(
@@ -461,10 +490,12 @@ export function boundedParseWarnings(
     );
 
   retained.push({
-    fileName: '기타 업로드 파일',
+    fileName: '나머지 파싱 경고',
     format: '요약',
     message: '저장 공간 보호를 위해 나머지 파싱 경고를 요약했어요.',
     count: omittedCount,
+    kind: 'summary',
+    affectedFileCount: exactAffectedFileCount,
   });
   return retained;
 }
@@ -486,6 +517,12 @@ function parseWarning(
     count:
       typeof value.count === 'number' && Number.isSafeInteger(value.count)
         ? value.count
+        : undefined,
+    kind: value.kind === 'summary' ? 'summary' : undefined,
+    affectedFileCount:
+      typeof value.affectedFileCount === 'number' &&
+      Number.isSafeInteger(value.affectedFileCount)
+        ? value.affectedFileCount
         : undefined,
   });
 }
@@ -607,15 +644,14 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
   let truncatedTxCount: number | null = null;
   let transactions: CategorizedTx[] | undefined;
   if (Array.isArray(migrated.transactions)) {
-    const validTransactions = migrated.transactions.filter(isOptimizableTx);
-    transactions = validTransactions.length > 0 ? validTransactions : undefined;
-    if (validTransactions.length !== migrated.transactions.length) {
-      warningKind = 'corrupted';
+    if (!migrated.transactions.every(isOptimizableTx)) {
+      return invalidResult();
     }
+    transactions = migrated.transactions.length > 0
+      ? migrated.transactions as CategorizedTx[]
+      : undefined;
   } else if (migrated.transactions !== undefined) {
-    // An omitted field is valid for legacy/truncated payloads, but an explicit
-    // non-array container cannot be treated as an intentionally empty result.
-    warningKind = 'corrupted';
+    return invalidResult();
   } else if (
     safeNonnegativeInteger(migrated._truncatedTxCount)
   ) {

@@ -1,26 +1,43 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
+  import {
+    affectedParseWarningFileCount,
+    affectedParseWarningItemCount,
+    type ParseWarning,
+  } from '../../lib/analyzer-helpers.js';
 
-  interface AnalysisWarning {
+  interface AnalysisWarning extends Partial<ParseWarning> {
     fileName?: string;
     file?: string;
-    format?: string;
-    line?: number;
     message: string;
-    count?: number;
   }
 
   let expanded = $state(false);
   let warnings = $derived((analysisStore.result?.parseErrors ?? []) as AnalysisWarning[]);
-  const warningFileName = (warning: AnalysisWarning) => warning.fileName ?? warning.file;
+  const warningFileName = (warning: AnalysisWarning) =>
+    warning.kind === 'summary'
+      ? undefined
+      : warning.fileName ?? warning.file;
+  const warningLabel = (warning: AnalysisWarning) =>
+    warning.kind === 'summary'
+      ? '나머지 파싱 경고'
+      : warningFileName(warning) ?? '업로드 파일';
   const warningCount = (warning: AnalysisWarning) => {
     const count = warning.count;
     return typeof count === 'number' && Number.isFinite(count) && count > 0
       ? Math.floor(count)
       : 1;
   };
-  let affectedFileCount = $derived(new Set(warnings.map(warningFileName).filter(Boolean)).size);
-  let affectedRowCount = $derived(warnings.reduce((total, warning) => total + warningCount(warning), 0));
+  let affectedFileCount = $derived(
+    affectedParseWarningFileCount(
+      warnings.map((warning) => ({
+        fileName: warningFileName(warning) ?? '',
+        kind: warning.kind,
+        affectedFileCount: warning.affectedFileCount,
+      })),
+    ),
+  );
+  let affectedRowCount = $derived(affectedParseWarningItemCount(warnings));
 </script>
 
 {#if warnings.length > 0}
@@ -54,7 +71,7 @@
       <ul class="list-disc space-y-1 pl-5">
         {#each warnings as warning}
           <li>
-            <span class="font-medium">{warningFileName(warning) ?? '업로드 파일'}</span>
+            <span class="font-medium">{warningLabel(warning)}</span>
             {#if warning.format}<span> ({warning.format})</span>{/if}
             {#if warning.line !== undefined}<span> · {warning.line}행</span>{/if}
             <span>: {warning.message}</span>

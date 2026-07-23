@@ -67,6 +67,8 @@ export interface AnalysisResult {
     message: string;
     raw?: string;
     count?: number;
+    kind?: 'summary';
+    affectedFileCount?: number;
   }[];
   transactions?: CategorizedTx[];
   optimization: OptimizationResult;

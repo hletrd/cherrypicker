@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  affectedParseWarningFileCount,
+  affectedParseWarningItemCount,
   assertCatalogAvailable,
   assertRequestedCardsResolved,
   attachParseWarningIdentity,
@@ -218,7 +220,12 @@ describe('analysis boundary helpers', () => {
   test('attaches file and format identity to every parser warning', () => {
     expect(
       attachParseWarningIdentity(
-        [{ line: 3, message: '금액을 읽을 수 없음', raw: 'bad,row' }],
+        [{
+          line: 3,
+          message: '금액을 읽을 수 없음',
+          raw: 'bad,row',
+          count: 7,
+        }],
         'march.csv',
         'csv',
       ),
@@ -229,8 +236,55 @@ describe('analysis boundary helpers', () => {
         line: 3,
         message: '금액을 읽을 수 없음',
         raw: 'bad,row',
+        count: 7,
       },
     ]);
+  });
+
+  test('uses exact summary provenance instead of counting its label as a file', () => {
+    expect(
+      affectedParseWarningFileCount([
+        {
+          fileName: 'one.json',
+          kind: undefined,
+          affectedFileCount: undefined,
+        },
+        {
+          fileName: '',
+          kind: 'summary',
+          affectedFileCount: 1,
+        },
+      ]),
+    ).toBe(1);
+    expect(
+      affectedParseWarningFileCount([
+        {
+          fileName: 'one.json',
+          kind: undefined,
+          affectedFileCount: undefined,
+        },
+        {
+          fileName: 'two.csv',
+          kind: undefined,
+          affectedFileCount: undefined,
+        },
+      ]),
+    ).toBe(2);
+  });
+
+  test('saturates the displayed warning item total at a safe integer', () => {
+    expect(
+      affectedParseWarningItemCount([
+        { count: Number.MAX_SAFE_INTEGER },
+        { count: Number.MAX_SAFE_INTEGER },
+      ]),
+    ).toBe(Number.MAX_SAFE_INTEGER);
+    expect(
+      affectedParseWarningItemCount([
+        { count: 3 },
+        { count: undefined },
+      ]),
+    ).toBe(4);
   });
 
   test('preserves actionable zero-row parser errors', () => {

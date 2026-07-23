@@ -195,18 +195,33 @@ describe('production persistence parser', () => {
     },
   );
 
-  test('filters corrupted transactions while preserving valid optimization', () => {
-    const result = deserializeAnalysis(
-      persistedFixture({
-        transactions: [{ id: '', date: 1 }],
-      }),
-    );
+  test.each([
+    ['only', 0, 1],
+    ['first', 0, 2],
+    ['middle', 1, 3],
+  ])(
+    'rejects an invalid %s transaction with stale derivations atomically',
+    (_position, invalidIndex, length) => {
+      const transactions = Array.from({ length }, (_, index) => ({
+        ...analysisFixture().transactions![0]!,
+        id: `tx-${index + 1}`,
+      }));
+      transactions[invalidIndex] = {
+        ...transactions[invalidIndex]!,
+        id: '',
+      };
+      const result = deserializeAnalysis(
+        persistedFixture({ transactions }),
+      );
 
-    expect(result.data?.optimization.assignments).toHaveLength(1);
-    expect(result.data?.optimization.cardResults).toHaveLength(0);
-    expect(result.data?.transactions).toBeUndefined();
-    expect(result.warningKind).toBe('corrupted');
-  });
+      expect(result).toEqual({
+        data: null,
+        warningKind: 'corrupted',
+        truncatedTxCount: null,
+        shouldRemove: true,
+      });
+    },
+  );
 
   test.each([
     ['object', { id: 'tx-1' }],
@@ -219,10 +234,12 @@ describe('production persistence parser', () => {
         persistedFixture({ transactions }),
       );
 
-      expect(result.data?.optimization.assignments).toHaveLength(1);
-      expect(result.data?.transactions).toBeUndefined();
-      expect(result.warningKind).toBe('corrupted');
-      expect(result.shouldRemove).toBe(false);
+      expect(result).toEqual({
+        data: null,
+        warningKind: 'corrupted',
+        truncatedTxCount: null,
+        shouldRemove: true,
+      });
     },
   );
 
@@ -254,7 +271,7 @@ describe('production persistence parser', () => {
     ['impossible transaction date', { date: '2026-02-30' }],
     ['blank merchant', { merchant: '' }],
     ['whitespace-only merchant', { merchant: '   ' }],
-  ])('quarantines malformed persisted transaction facts: %s', (_name, override) => {
+  ])('rejects malformed persisted transaction facts atomically: %s', (_name, override) => {
     const transaction = {
       ...analysisFixture().transactions![0]!,
       ...override,
@@ -263,9 +280,12 @@ describe('production persistence parser', () => {
       persistedFixture({ transactions: [transaction] }),
     );
 
-    expect(result.data?.transactions).toBeUndefined();
-    expect(result.warningKind).toBe('corrupted');
-    expect(result.shouldRemove).toBe(false);
+    expect(result).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
   });
 
   test('accepts every supported optional transaction fact after reload', () => {
@@ -695,7 +715,7 @@ describe('production persistence serializer', () => {
     });
   });
 
-  test('keeps the maximum fuel volume and quarantines larger persisted facts', () => {
+  test('keeps the maximum fuel volume and rejects larger persisted facts atomically', () => {
     const accepted = analysisFixture();
     Object.assign(accepted.transactions![0]!, {
       fuelVolumeLiters: 200,
@@ -715,8 +735,12 @@ describe('production persistence serializer', () => {
         factProvenance: { fuelVolumeLiters: 'user' },
       });
       const restored = deserializeAnalysis(serializeAnalysis(analysis).serialized);
-      expect(restored.warningKind).toBe('corrupted');
-      expect(restored.data?.transactions?.map(({ id }) => id)).toEqual(['tx-1']);
+      expect(restored).toEqual({
+        data: null,
+        warningKind: 'corrupted',
+        truncatedTxCount: null,
+        shouldRemove: true,
+      });
     }
   });
 
@@ -728,7 +752,12 @@ describe('production persistence serializer', () => {
     expect(result).toEqual({ kind: 'truncated', truncatedTxCount: 1 });
     expect(parsed.transactions).toBeUndefined();
     expect(parsed._truncatedTxCount).toBe(1);
-    expect(deserializeAnalysis(serialized).warningKind).toBe('truncated');
+    const restored = deserializeAnalysis(serialized);
+    expect(restored.warningKind).toBe('truncated');
+    expect(restored.truncatedTxCount).toBe(1);
+    expect(restored.shouldRemove).toBe(false);
+    expect(restored.data?.transactions).toBeUndefined();
+    expect(restored.data?.optimization).toEqual(oversized.optimization);
   });
 
   test('persists a bounded warning summary without raw statement content', () => {
@@ -771,9 +800,11 @@ describe('production persistence serializer', () => {
     );
     expect(persisted.parseErrors[0]).not.toHaveProperty('raw');
     expect(persisted.parseErrors.at(-1)).toMatchObject({
-      fileName: '기타 업로드 파일',
+      fileName: '나머지 파싱 경고',
       format: '요약',
       count: (MAX_PERSISTED_WARNINGS * 20 - 99) * 2,
+      kind: 'summary',
+      affectedFileCount: MAX_PERSISTED_WARNINGS * 20,
     });
     expect(serialized).not.toContain('private-statement-row');
 
@@ -782,5 +813,39 @@ describe('production persistence serializer', () => {
     expect(restored?.parseErrors.every((warning) => !('raw' in warning))).toBe(
       true,
     );
+  });
+
+  test('preserves one real affected file across a 101-warning round trip', () => {
+    const warnings = Array.from(
+      { length: MAX_PERSISTED_WARNINGS + 1 },
+      (_, index) => ({
+        fileName: 'one.json',
+        format: 'json',
+        line: index + 1,
+        message: `경고 ${index + 1}`,
+      }),
+    );
+
+    const analysis = analysisFixture();
+    analysis.parseErrors = warnings;
+    const restored = deserializeAnalysis(
+      serializeAnalysis(analysis).serialized,
+    );
+    const bounded = restored.data?.parseErrors ?? [];
+
+    expect(restored.shouldRemove).toBe(false);
+    expect(bounded).toHaveLength(MAX_PERSISTED_WARNINGS);
+    expect(bounded.at(-1)).toMatchObject({
+      kind: 'summary',
+      affectedFileCount: 1,
+      count: 2,
+    });
+    expect(
+      new Set(
+        bounded
+          .filter((warning) => warning.kind !== 'summary')
+          .map((warning) => warning.fileName),
+      ),
+    ).toEqual(new Set(['one.json']));
   });
 });
