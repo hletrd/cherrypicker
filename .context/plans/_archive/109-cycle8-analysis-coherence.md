@@ -1,7 +1,7 @@
 # Plan 109 — Cycle 8 Analysis DTO and Persistence Coherence
 
 **Findings:** C8-001 (Medium/High), C8-008 (Medium/High)
-**Status:** completed
+**Status:** archived (completed)
 **Deploy mode:** none
 
 ## Evidence

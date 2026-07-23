@@ -1,7 +1,7 @@
 # Plan 110 — Cycle 8 Executable Benefits and Exact Rule Caps
 
 **Findings:** C8-005 (Medium/High), C8-006 (Medium/High)
-**Status:** completed
+**Status:** archived (completed)
 **Deploy mode:** none
 
 ## Evidence

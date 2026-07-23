@@ -2,7 +2,7 @@
 
 **Findings:** C8-002 (Medium/High), C8-003 (Medium/High), C8-004
 (Medium/High), C8-007 (Medium/High)
-**Status:** completed
+**Status:** archived (completed)
 **Deploy mode:** none
 
 ## Evidence

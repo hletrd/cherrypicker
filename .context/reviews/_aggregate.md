@@ -1,204 +1,180 @@
-# Aggregate Review — CherryPicker Review/Plan/Fix Cycle 8
+# Aggregate Review — CherryPicker Review/Plan/Fix Cycle 9
 
 **Date:** 2026-07-24
-**Cycle:** 8 / 100
-**Baseline:** `3fd993d471a8676170031f20715f6a53c99e8a9f`
+**Cycle:** 9 / 100
+**Baseline:** `c5c6eab9b421e547d66716e989e08c747cc36aa1`
 **Branch:** `codex/review-plan-fix-no-deploy-20260723`
 **Deploy mode:** none
 
 ## Executive summary
 
-Cycle 8 completed all eleven required lenses: code reviewer, critic,
-architect, performance reviewer, security reviewer, tracer, debugger,
-verifier, test engineer, document specialist, and designer. The repository
-has a UI, so the designer combined a complete presentation-source review with
-one bounded live browser run. There are no custom reviewer definitions under
-`.claude/agents`; generic role agents were used.
+Cycle 9 completed all eleven required review lenses: code reviewer,
+performance reviewer, security reviewer, critic, verifier, test engineer,
+tracer, architect, debugger, document specialist, and designer. The
+repository contains an Astro/Svelte UI, so the designer performed one bounded
+live browser interaction after reading the complete agent-browser skill set.
+No custom reviewer definitions exist under `.claude/agents`.
 
-The lens reports contain **22 raw findings**. Cross-role agreement collapses
-seven duplicate groups:
-
-- `C8-CR-01` and `C8-CT-03` are the same persisted-analysis coherence defect.
-- `C8-CR-02` and `C8-CT-04` are the same impossible root-help example.
-- `C8-CT-01` and `C8-AR-03` are the same URL-fragment ownership collision.
-- `C8-CT-02` and `C8-AR-04` are the same optimizer-executability mismatch.
-- `RPF8-TRACE-001`, `RPF8-VER-001`, `RPF8-VER-002`, and `RPF8-TE-001`
-  describe the same amount-field resolution boundary: compound Korean headers
-  are misclassified and conflicting same-role fields depend on source order.
-- `RPF8-PERF-001` and `RPF8-TE-002` are the same parser-source diagnostic
-  amplification root cause.
-- `RPF8-DBG-001`, `RPF8-VER-003`, and `RPF8-TE-003` are the same exact
-  rule-level monthly-cap telemetry defect.
-
-After deduplication, Cycle 8 has **12 unique findings**: 11 Medium and 1 Low.
-The principal risks are semantically impossible persisted analysis, zero-value
-or unsupported recommendation winners, hostile compressed workbooks,
-order-dependent amount parsing, and unbounded tabular diagnostics. Other
-findings cover ownership boundaries, cap disclosure, CLI truth, toolchain
-reproducibility, scraper prerequisites, and composable navigation state.
-
-The six pre-existing untracked Cycle 42 artifacts were treated as protected
-user work and remained outside the review.
+The role reports contain **16 raw findings**. Five duplicate groups collapse
+to **11 unique findings**: 9 Medium and 2 Low. The highest-signal defects are
+false merchant allowlist matches, persisted analysis that remains internally
+balanced while contradicting canonical transaction facts, category-spending
+UI derived from reward assignments, file-order-dependent greedy rewards, and
+malformed dates accepted through permissive prefix matching.
 
 | Severity | Unique findings |
 |---|---:|
-| Medium | 11 |
-| Low | 1 |
-| **Total** | **12** |
+| Medium | 9 |
+| Low | 2 |
+| **Total** | **11** |
 
 ## Unique findings
 
-### Parser and input integrity
+### Calculation and analysis truth
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C8-001 | Medium | High | Persisted analysis validates field shapes but accepts mutually contradictory transaction counts, spending totals, rewards, rates, assignments, and monthly summaries. | `C8-CR-01`, `C8-CT-03` |
-| C8-002 | Medium | High | Compressed XLSX inputs have no central-directory, expanded-size, entry-count, or compression-ratio budget before SheetJS inflates them. | `RPF8-SEC-001` |
-| C8-003 | Medium | High | Amount-field resolution treats Korean incoming/outgoing compound headers as withdrawals and selects conflicting populated same-role fields by source order. | `RPF8-TRACE-001`, `RPF8-VER-001`, `RPF8-VER-002`, `RPF8-TE-001` |
-| C8-004 | Medium | High | CSV, XLSX, HTML, OFX, and PDF parsers allocate one diagnostic object per bad row before the worker-level cap can run. | `RPF8-PERF-001`, `RPF8-TE-002` |
+| C9-001 | Medium | High | Short Latin `specificMerchants` aliases use unrestricted substring matching and bypass category checks, so the current `CU` rule rewards unrelated merchants such as `SECURITY SERVICE`, `CULTURE CENTER`, and `CUBAN RESTAURANT`. | `C9-CR-01`, `C9-TE-01` |
+| C9-002 | Medium | High | Persisted analysis reconciles derived optimizer objects with one another but not with canonical category/count facts. Coordinated category relabels, mixed unassigned-row undercounts, and contradictory truncated monthly/optimizer totals restore successfully. | `C9-AR-01`, `VER-01`, `C9-TE-02` |
+| C9-003 | Medium | High | Persisted cap disclosures receive only primitive shape checks; impossible applied rewards, unknown categories, and `capReached` contradictions are accepted. | `C9-AR-01`, `VER-02`, `C9-TE-02` |
+| C9-004 | Medium | High | The web “category spending” and top-category views use reward assignments, so unassigned spending disappears, remaining categories are renormalized, and all-unassigned analyses show a false empty state. The E2E oracle observes another component and cannot detect this. | `C9-CT-01`, `C9-TE-03` |
+| C9-005 | Medium | High | The greedy optimizer comparator is not total over reward-relevant facts. Tied amount/merchant/date rows preserve upload order and can change reward, card assignment, and unassigned spending; a probe produced 900 versus 500 won. | `RPF9-TRACE-001` |
 
-### Analysis, optimization, and ownership
-
-| ID | Severity | Confidence | Finding | Raw sources |
-|---|---|---|---|---|
-| C8-005 | Medium | High | Catalog availability is reused as optimizer executability, so unsupported-only cards and alphabetically first zero-value cards can become recommendation winners. | `C8-CT-02`, `C8-AR-04` |
-| C8-006 | Medium | High | Exact positive exhaustion of a rule-level monthly cap sets internal state but is omitted from `capsHit` and downstream terminal/report disclosure. | `RPF8-DBG-001`, `RPF8-VER-003`, `RPF8-TE-003` |
-| C8-007 | Medium | High | Parser file/bank contracts and complete bank XLSX column maps are duplicated across package and web layers, while package tests import upward from the application. | `C8-AR-01` |
-| C8-008 | Medium | High | The framework-free analysis DTO is owned by the Svelte store, inverting dependencies from analyzer and persistence code back into UI state. | `C8-AR-02` |
-
-### Navigation, commands, and documentation truth
+### Input and worker boundaries
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C8-009 | Medium | High | Card-detail application state and document landmark navigation share the URL fragment; activating the global skip link can clear an open detail selection. | `C8-CT-01`, `C8-AR-03` |
-| C8-010 | Low | High | Root CLI help advertises `optimize ... --cards` alone although optimize/report require `--categories` and `--cards` as a pair. | `C8-CR-02`, `C8-CT-04` |
-| C8-011 | Medium | High | The documented Bun-only workstation cannot reproduce `bun run verify`, which shells out to undeclared `npm` despite existing Bun lint/typecheck scripts. | `C8-DOC-001` |
-| C8-012 | Medium | High | Scraper help omits its required API key and model override, and missing credentials are discovered only after remote fetch work begins. | `C8-DOC-002` |
+| C9-006 | Medium | High | Shared date parsing accepts arbitrary suffix or surrounding text such as `2024-01-15oops` and `x2024년 1월 15일z`, silently converting damaged rows into valid dates. | `RPF9-DBG-001` |
+| C9-007 | Low | Medium | Parser and optimizer worker wrappers do not settle or clean up on the standard `messageerror` event, leaving a likely indefinite loading/worker-lifetime hole under deserialization failure. | `RPF9-DBG-002` |
 
-## Cross-role agreement and deduplication
+### Security, documentation, and accessibility
+
+| ID | Severity | Confidence | Finding | Raw sources |
+|---|---|---|---|---|
+| C9-008 | Medium | Medium | The scraper places untrusted page text and extraction instructions in one LLM message, and structurally valid model output can mark attacker-influenced reward facts as optimizer-supported before manual source review. | `SEC-01` |
+| C9-009 | Medium | High | README calls `bun run verify` CI-equivalent although CI additionally requires the Playwright browser suite. | `DOC-01` |
+| C9-010 | Medium | High | Root and issuer documentation presents catalog counts and representative benefits without distinguishing browseable cards from optimizer-executable cards; highlighted unsupported-only cards cannot be recommended. | `DOC-02` |
+| C9-011 | Low | High | Decorative inline SVGs in upload and card-detail flows remain exposed as unnamed accessibility-tree images. | `C9-D-01` |
+
+## Cross-agent agreement and deduplication
 
 | Aggregate ID | Raw finding IDs | Resolution |
 |---|---|---|
-| C8-001 | `C8-CR-01`, `C8-CT-03` | Merged at Medium/High; both directly mutate a valid serialized result and restore contradictory derived fields. |
-| C8-002 | `RPF8-SEC-001` | Preserved at Medium/High. The archive-safety mechanism and missing limits are confirmed; a malicious workbook run was intentionally not performed. |
-| C8-003 | `RPF8-TRACE-001`, `RPF8-VER-001`, `RPF8-VER-002`, `RPF8-TE-001` | Merged as one shared amount-field planning defect covering compound-role classification and same-role conflict resolution. |
-| C8-004 | `RPF8-PERF-001`, `RPF8-TE-002` | Merged; the tests and performance probe identify the same unbounded parser-source allocation before serialization. |
-| C8-005 | `C8-CT-02`, `C8-AR-04` | Merged; both reproduce the same catalog-visibility versus executable-benefit boundary. |
-| C8-006 | `RPF8-DBG-001`, `RPF8-VER-003`, `RPF8-TE-003` | Merged; all three trace strict clipping logic that drops exact rule-level cap events. |
-| C8-007 | `C8-AR-01` | Preserved at Medium/High. |
-| C8-008 | `C8-AR-02` | Preserved at Medium/High. |
-| C8-009 | `C8-CT-01`, `C8-AR-03` | Merged; both trace a single fragment channel used for unrelated document and application state. |
-| C8-010 | `C8-CR-02`, `C8-CT-04` | Merged at Low/High; the copyable example deterministically fails the paired-option parser. |
-| C8-011 | `C8-DOC-001` | Preserved at Medium/High and kept distinct from Cycle 7's fixed `dev:web` wrapper. |
-| C8-012 | `C8-DOC-002` | Preserved at Medium/High and kept distinct from the documented PDF fallback credential. |
+| C9-001 | `C9-CR-01`, `C9-TE-01` | Merged at Medium/High. The code reviewer reproduced the false reward; the test engineer proved the existing catalog test observes only diagnostics, not reward output. |
+| C9-002 | `C9-AR-01`, `VER-01`, `C9-TE-02` | Merged at Medium/High. All three reports reproduce the same missing canonical transaction/category/count witness, including truncated-state residue. |
+| C9-003 | `C9-AR-01`, `VER-02`, `C9-TE-02` | Kept distinct from C9-002 because cap telemetry has its own persisted contract and downstream disclosure semantics, while preserving the architect's shared root-cause context. |
+| C9-004 | `C9-CT-01`, `C9-TE-03` | Merged at Medium/High. The product defect and the cross-component false-positive E2E oracle describe the same category-truth boundary. |
+| C9-005 | `RPF9-TRACE-001` | Preserved at Medium/High with deterministic 900-versus-500 evidence. |
+| C9-006 | `RPF9-DBG-001` | Preserved at Medium/High with direct parser probes and cross-format consumers. |
+| C9-007 | `RPF9-DBG-002` | Preserved at Low/Medium and classified likely because browser fault injection is still needed. |
+| C9-008 | `SEC-01` | Preserved at Medium/Medium/manual-validation. Shape validation does not establish source truth, and supported output reaches optimizer publication. |
+| C9-009 | `DOC-01` | Preserved at Medium/High. |
+| C9-010 | `DOC-02` | Preserved at Medium/High. |
+| C9-011 | `C9-D-01` | Preserved at Low/High with live accessibility-tree evidence. |
 
-Every raw finding maps to exactly one aggregate finding. No severity was
-downgraded because another reviewer did not independently report it.
+Every raw finding maps to at least one aggregate item. The architect and test
+engineer each covered both C9-002 and C9-003, so the aggregate preserves their
+evidence without double-counting either unique issue. No severity or
+confidence was downgraded to justify planning.
+
+## Rejected competing hypothesis
+
+A leading-NUL XLSX was initially suspected of skipping ZIP admission budgets
+because direct `XLSX.read()` returned a workbook named `Sheet1`. Independent
+tracer and security retries inspected SheetJS dispatch and reran the product
+parser. Non-`PK` input takes the PRN/plaintext path, produces ZIP-gibberish
+cells, and returns zero transactions with a header error; it does not enter
+ZIP inflation. This is not a finding.
 
 ## Validation and live evidence
 
-Baseline review checks were green: `git diff --check`,
-`bun run toolchain:check`, `bun run dependencies:check`,
-`bun run migrations:check`, focused parser/core/web tests, lint, typecheck,
-`data:check`, documentation checks, and a production web build. These results
-establish reproducibility; they do not close the findings above.
+Reviewers ran repository lint, typecheck, unit tests, focused parser/core/web
+tests, scraper security tests, dependency checks, data/document checks, and
+executable probes. The green baseline establishes reproducibility but does not
+close the findings above.
 
-The designer's isolated production-preview pass exercised home, invalid and
-successful upload, dashboard, card catalog/detail, desktop/mobile,
-light/dark, keyboard, synthetic RTL, request, and performance states. It found
-no distinct current defect. At 375 CSS pixels the catalog had no horizontal
-overflow; keyboard menu Escape restored focus; the skip link focused
-`main#main-content`; form errors exposed `aria-invalid` and described help;
-and measured foreground/background combinations met AA contrast. A cache hit
-prevented the scoped catalog abort from reaching the UI, so that boundary was
-verified from source and existing E2E coverage rather than claimed as live
-evidence.
+The designer's single isolated preview run exercised home/upload validation,
+successful analysis, keyboard skip navigation, desktop overflow, dark mode,
+reduced-motion source behavior, status/focus transitions, accessibility-tree
+semantics, and bounded loopback timing. It confirmed one unnamed decorative
+image defect and found no distinct responsive, contrast, form-association, or
+focus regression.
 
-The live run used preview PID/PGID 78381 on port 42889 and named browser
-`c8-designer-3fd993d-cPAFIo`, daemon PID/PGID 80759, Chrome root 80808, and
-unique profile `/tmp/cherrypicker-c8-designer-3fd993d.cPAFIo/profile`. The
-exact browser and preview were closed and reaped. The named PIDs/profile were
-absent afterward, ports 42889 and 4173 had no listener, and
-`bun scripts/run-e2e.ts status --assert-clean` passed independently. No
-unrelated process was signaled.
+The attributable preview was PID/PGID `92306` on `127.0.0.1:4173`; the
+browser used `/tmp/cherrypicker-c9-designer-profile`. The browser was closed,
+the exact preview was interrupted, and independent final checks reported an
+empty E2E ownership registry, no port 4173 listener, and no attributable
+Playwright, preview, agent-browser, Chrome, or profile process. No unrelated
+interactive Chrome tree was signaled.
 
 ## Agent execution notes
 
-All eleven role reports completed. The designer completed browser cleanup
-before report writing; the first finalization turn then stalled, so it was
-interrupted and retried once with an explicit no-browser, report-only scope.
-Both role reports were durably written on that bounded retry. No lens failed,
-and no browser or preview was restarted.
-
-There are no custom reviewer definitions. The requested `ralph` skill is not
-installed in either available skill root; Prompt 3 will use the recorded
-disciplined manual fallback.
+All eleven role reports completed. Concurrency limits required three initial
+workers covering nine lenses, followed by a bounded test/designer rotation.
+The security bundle was retried once to remove the disproved prefixed-XLSX
+claim. The first test/designer finalization turn was interrupted after cleanup
+when it did not return promptly; one report-only retry wrote both provenance
+files without another browser run. There are no unrecovered agent failures.
 
 ## Plan coverage
 
-Prompt 2 archived the six completed Cycle 7 plans (102–107) and created six
-Cycle 8 plans. Every unique finding is assigned exactly once:
+Prompt 2 archived completed Cycle 8 plans 108–113 and created six Cycle 9
+plans. Every unique finding is scheduled exactly once:
 
 | Plan | Findings | Scope |
 |---|---|---|
-| 108 | C8-002, C8-003, C8-004, C8-007 | XLSX archive admission, amount-field resolution, bounded diagnostics, parser-owned contracts |
-| 109 | C8-001, C8-008 | Framework-free analysis DTO and persisted semantic coherence |
-| 110 | C8-005, C8-006 | Executable positive benefits, explicit unassigned spending, exact rule-cap telemetry |
-| 111 | C8-009 | Independent card-selection query state and document fragments |
-| 112 | C8-010, C8-011 | Executable root help and Bun-only verification truth |
-| 113 | C8-012 | Scraper credential preflight and complete operating documentation |
+| 114 | C9-001, C9-005 | Merchant token boundaries and transaction-order determinism |
+| 115 | C9-002, C9-003, C9-004 | Canonical category facts, persistence/cap coherence, and dashboard truth |
+| 116 | C9-006, C9-007 | Anchored date grammars and worker `messageerror` settlement |
+| 117 | C9-008 | Untrusted scraper source quarantine and reviewed promotion |
+| 118 | C9-009, C9-010 | CI gate wording and catalog-versus-executable documentation |
+| 119 | C9-011 | Decorative inline SVG accessibility semantics |
 
-No finding is deferred. Every plan records that the requested `ralph` skill is
-not installed and defines a disciplined manual test-first fallback.
+No finding is deferred. The requested `ralph` skill is not registered in
+either available skill root; every plan records the disciplined manual
+test-first fallback and preserves signed, fine-grained, no-deploy branch
+policy.
 
 ## Prompt 3 implementation closure
 
-Plans 108–113 are implemented with every acceptance item complete. The
-implementation closes all 12 unique findings without deferral:
+Plans 114–119 are complete, and all eleven aggregate findings are closed.
+Merchant aliases now honor ASCII token boundaries, the optimizer uses a
+canonical reward-fact order, and assignment counts are exact. Analysis schema
+version 4 persists a canonical latest-month category summary and rejects
+transaction, allocation, monthly, optimizer, and cap contradictions. The
+dashboard consumes this summary even when every transaction is unassigned.
 
-- Parser boundaries now preflight both central and local ZIP metadata before
-  SheetJS, resolve amount-field ambiguity deterministically, bound diagnostics
-  at source in a plain array, and own browser-safe parser contracts.
-- Analysis persistence now uses a framework-free DTO and rejects incoherent
-  periods, counts, monthly summaries, per-card/category allocations, rates,
-  selected-card state, undisclosed truncation, and ambiguous legacy results.
-- Optimizer output excludes unsupported/zero-benefit winners, records
-  unassigned spending honestly, and discloses exact rule-cap exhaustion across
-  web, terminal, report, and persistence sinks.
-- Card selection moved to composable query state; CLI examples and Bun-only
-  verification are executable; scraper credentials/model/host/overwrite and
-  publication steps are preflighted and documented.
+Date parsing now uses anchored supported grammars, worker wrappers settle and
+clean up on `messageerror`, and scraper output remains quarantined until a
+source reviewer explicitly promotes it. Contributor and generated catalog
+documentation distinguishes the 683 browseable cards from the 566
+optimizer-executable cards. All eight reviewed decorative SVGs are absent
+from the accessibility tree.
 
-The exact final gate matrix passed on the final source tree:
+The first owned E2E run found one duplicate category-panel test identifier
+introduced while establishing the new test boundary. The redundant inner
+identifier was removed, its component contract was tightened, and the exact
+E2E command then passed 96 of 96 tests. This is the cycle's single gate-driven
+fix.
 
-- `bun run lint`
-- `bun run typecheck`
-- `bun run build`
-- `bun run test` (including 741 web tests and 69 script tests)
-- `bun run test:bun` (1,601 tests)
-- `bunx vitest run` (113 files, 2,811 tests)
-- `bun run test:e2e` (96 tests)
+| Required gate | Final result |
+|---|---|
+| `bun run lint` | Passed, 0 diagnostics |
+| `bun run typecheck` | Passed, 0 diagnostics |
+| `bun run build` | Passed, 7 of 7 packages |
+| `bun run test` | Passed, 12 of 12 tasks and 70 script tests |
+| `bun run test:bun` | Passed, 1,624 tests |
+| `bunx vitest run` | Passed, 116 files and 2,870 tests |
+| `bun run test:e2e` | Passed, 96 tests |
 
-Two bounded gate fixes were required. Vitest exposed that the initial bounded
-diagnostic `Array` subclass was prototype-unequal to ordinary arrays, so the
-collector now preserves a genuine plain-array contract with bounded owned
-mutators. E2E then exposed one direct-core fixture that omitted the new
-explicit supported-rule marker; the fixture was brought to the production
-contract. Both complete gate matrices passed afterward.
-
-The successful E2E run used ownership ID
-`1784830551134-da785935-bca9-47c9-84f7-52d511d73135` on loopback port 4173.
-Independent preflight and postflight checks found an empty ownership registry,
-no attributable Playwright/preview process, and no listener on port 4173.
-The prior failed fixture run was independently reaped and verified clean
-before the successful rerun.
+After E2E, the ownership registry was clean, port 4173 was available with no
+listener, and independent process inspection found no attributable residual
+preview or Playwright process. No deployment was performed.
 
 ## Final missed-issue sweep
 
-Each role performed a bounded final sweep after its primary trace. The
-aggregate additionally reconciled every raw ID, severity, duplicate, baseline
-claim, implementation acceptance item, gate result, and browser cleanup
-artifact. The integration audit mapped its local-header and semantic-coherence
-gaps back to C8-002/C8-001 rather than opening duplicate findings. No raw
-finding is omitted, no additional cross-role duplicate remains, and no
-deployment occurred.
+Each role recorded its inventory and final sweep. The aggregate rechecked all
+raw IDs, exact current-file evidence, duplicate groups, confidence, rejected
+hypotheses, protected-file scope, and browser ownership. Historical deferred
+performance work was not re-reported as new. No current raw finding is
+silently omitted.

@@ -1,7 +1,7 @@
 # Plan 112 — Cycle 8 CLI Help and Bun Verification Truth
 
 **Findings:** C8-010 (Low/High), C8-011 (Medium/High)
-**Status:** completed
+**Status:** archived (completed)
 **Deploy mode:** none
 
 ## Evidence

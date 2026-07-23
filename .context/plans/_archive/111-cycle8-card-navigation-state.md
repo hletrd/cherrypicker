@@ -1,7 +1,7 @@
 # Plan 111 — Cycle 8 Composable Card Navigation State
 
 **Findings:** C8-009 (Medium/High)
-**Status:** completed
+**Status:** archived (completed)
 **Deploy mode:** none
 
 ## Evidence

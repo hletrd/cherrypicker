@@ -1,7 +1,7 @@
 # Plan 113 — Cycle 8 Scraper Operating Contract
 
 **Findings:** C8-012 (Medium/High)
-**Status:** completed
+**Status:** archived (completed)
 **Deploy mode:** none
 
 ## Evidence
