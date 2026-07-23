@@ -12,6 +12,8 @@ import {
   replaceGeneratedSection,
   repositoryRoot,
   validateDocumentedCardExample,
+  validateIssuerFreshnessMetadata,
+  validateRootReadmeClaims,
   type ReadmeCatalog,
   type ReadmeCatalogIssuer,
 } from '../readme-catalog.js';
@@ -103,6 +105,41 @@ describe('README catalog rendering', () => {
         generated,
       ),
     ).toBe(before + generated + after);
+  });
+
+  test('rejects hand-written issuer freshness outside the generated index', () => {
+    const generated =
+      `${ISSUER_INDEX_BEGIN}\n` +
+      '> YAML 기준 **2개** · 최신 업데이트: `2026-07-23`\n' +
+      ISSUER_INDEX_END;
+
+    expect(() =>
+      validateIssuerFreshnessMetadata(
+        `# Fixture\n\n> 마지막 업데이트: 2026-07-22\n\n${generated}\n`,
+        'fixture/README.md',
+      ),
+    ).toThrow(/single authoritative freshness value/);
+    expect(() =>
+      validateIssuerFreshnessMetadata(
+        `# Fixture\n\n${generated}\n`,
+        'fixture/README.md',
+      ),
+    ).not.toThrow();
+  });
+
+  test('locks the root README to truthful recommendation and Astro claims', async () => {
+    const readme = await readFile(`${repositoryRoot}/README.md`, 'utf8');
+
+    expect(() => validateRootReadmeClaims(readme, '^7.1.3')).not.toThrow();
+    expect(() =>
+      validateRootReadmeClaims(
+        readme.replace('연회비 차감 전 월간 총혜택', '예상 절약액'),
+        '^7.1.3',
+      ),
+    ).toThrow(/missing recommendation disclosure/);
+    expect(() => validateRootReadmeClaims(readme, '^8.0.0')).toThrow(
+      /must document Astro 8/,
+    );
   });
 
   test('renders every root issuer once with a count sum matching the total', () => {

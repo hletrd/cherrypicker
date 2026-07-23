@@ -160,6 +160,23 @@ describe('card extraction Sonnet contract', () => {
     expect(result.rewards[0]?.tiers[0]?.rate).toBe(5);
   });
 
+  test('replaces model-authored freshness with one injected trusted date', () => {
+    const result = parseCardExtractionResponse(
+      message([
+        {
+          type: 'tool_use',
+          id: 'tool_test',
+          name: 'extract_card_rules',
+          input: makeCardRule({ lastUpdated: '2999-99-99' }),
+        },
+      ]),
+      'shinhan',
+      () => new Date('2024-02-29T23:59:59.999Z'),
+    );
+
+    expect(result.card.lastUpdated).toBe('2024-02-29');
+  });
+
   test('rejects a tool response that changes the expected issuer', () => {
     expect(() =>
       parseCardExtractionResponse(

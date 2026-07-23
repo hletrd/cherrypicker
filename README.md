@@ -18,11 +18,11 @@
 
 ## 뭐하는 건가요
 
-카드마다 할인 항목도 다르고, 전월실적 조건도 다르고, 한도도 달라서 매번 어떤 카드를 써야 할지 헷갈려요. CherryPicker는 카드 명세서를 넣으면 항목별로 어떤 카드가 가장 이득인지 계산해 줘요.
+카드마다 할인 항목도 다르고, 전월실적 조건도 다르고, 한도도 달라서 매번 어떤 카드를 써야 할지 헷갈려요. CherryPicker는 카드 명세서를 넣으면 항목별 월간 혜택이 큰 카드 조합을 계산해 줘요.
 
-한 장짜리로 밀어 쓸 때보다 얼마나 더 아낄 수 있는지도 비교할 수 있어요.
+한 장만 쓸 때와 비교한 월간 혜택 차이도 볼 수 있어요. 결과는 추천에 포함된 모든 카드를 사용할 수 있다고 가정한 연회비 차감 전 월간 총혜택이며, 실제 순절약액이나 카드 보유 비용을 뜻하지 않아요.
 
-> CherryPicker analyzes your credit card statement and finds the best card for each spending category, factoring in performance tiers, monthly caps, and reward types from Korean issuers.
+> CherryPicker compares gross monthly rewards before annual fees, assuming access to every included card; it does not report net savings or card ownership costs.
 
 ---
 
@@ -30,8 +30,8 @@
 
 - **명세서 분석**: CSV/TSV, XLS/XLSX, PDF, JSON, OFX/QFX, HTML/HTM 파일을 올리면 알아서 읽고 항목별로 분류
 - **거래 분류**: 수천 개 키워드 매칭 기반 분류 + 수동 수정 지원
-- **카드 추천**: 전월실적, 할인한도까지 따져서 항목별로 가장 이득인 카드 조합 계산
-- **절약 비교**: 카드 한 장으로 쓸 때와 체리피킹했을 때 차이를 한눈에
+- **카드 추천**: 전월실적과 할인한도를 반영해 항목별 월간 혜택이 큰 카드 조합 계산
+- **혜택 비교**: 카드 한 장으로 쓸 때와 조합해 쓸 때의 연회비 차감 전 월간 혜택 차이를 한눈에
 - **카드 혜택 데이터**: 국내 카드사 혜택을 YAML로 정리
 - **웹 대시보드**: GitHub Pages에서 바로 사용 가능. 기본 분석은 브라우저에서 처리돼요
 - **CLI**: 터미널에서 명세서 분석
@@ -95,7 +95,7 @@
 
 | | |
 |---|---|
-| 웹 | Astro 6, Svelte 5, Tailwind CSS 4 |
+| 웹 | Astro 7, Svelte 5, Tailwind CSS 4 |
 | 파싱 | 직접 만든 TypeScript 파서, SheetJS, pdfjs-dist, pdf-parse |
 | 차트 | Svelte 5 컴포넌트, SVG |
 | AI 분류 | 미구현 (로드맵에 없음) |
@@ -138,7 +138,7 @@ cherrypicker/
 
 ### 로컬 개발
 
-필수 도구는 Bun 1.2.6이에요. 설치된 버전은 `bun run toolchain:check`로 확인할 수 있습니다.
+필수 도구는 Bun 1.3.12예요. 설치된 버전은 `bun run toolchain:check`로 확인할 수 있습니다.
 
 ```bash
 git clone https://github.com/hletrd/cherrypicker.git

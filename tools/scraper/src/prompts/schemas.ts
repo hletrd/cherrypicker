@@ -33,7 +33,6 @@ export function buildCardRuleExtractionTool(
             'nameKo',
             'type',
             'annualFee',
-            'lastUpdated',
             'source',
           ],
           properties: {
@@ -74,11 +73,6 @@ export function buildCardRuleExtractionTool(
               },
             },
             url: { type: 'string', description: '카드 상품 페이지 URL' },
-            lastUpdated: {
-              type: 'string',
-              pattern: '^\\d{4}-\\d{2}-\\d{2}$',
-              description: '마지막 업데이트 날짜 (YYYY-MM-DD)',
-            },
             source: {
               type: 'string',
               const: 'llm-scrape',

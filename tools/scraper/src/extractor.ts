@@ -4,6 +4,7 @@ import { SYSTEM_PROMPT } from './prompts/system.js';
 import { CARD_RULE_EXTRACTION_TOOL } from './prompts/schemas.js';
 import { validateExtractedRules } from './validators.js';
 import type { ScraperIssuer } from './config.js';
+import { getCanonicalScraperRuleContract } from './rule-contract.js';
 
 export const CARD_EXTRACTION_MAX_INPUT_CHARS = 40_000;
 export const CARD_EXTRACTION_MAX_OUTPUT_TOKENS = 8_192;
@@ -52,6 +53,25 @@ export interface CardExtractionClient {
   };
 }
 
+export type ScraperClock = () => Date;
+
+function stampTrustedProvenance(raw: unknown, lastUpdated: string): unknown {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return raw;
+  }
+  const card = (raw as { card?: unknown }).card;
+  if (card === null || typeof card !== 'object' || Array.isArray(card)) {
+    return raw;
+  }
+  return {
+    ...raw,
+    card: {
+      ...card,
+      lastUpdated,
+    },
+  };
+}
+
 /**
  * Use Claude to extract structured card rules from page content.
  */
@@ -59,10 +79,11 @@ export async function extractCardRules(
   pageContent: string,
   issuer: ScraperIssuer,
   client: CardExtractionClient = new Anthropic() as CardExtractionClient,
+  clock: ScraperClock = () => new Date(),
 ): Promise<CardRuleSet> {
   const request = buildCardExtractionRequest(pageContent, issuer);
   const response = await client.messages.create(request);
-  return parseCardExtractionResponse(response, issuer);
+  return parseCardExtractionResponse(response, issuer, clock);
 }
 
 export function buildCardExtractionRequest(
@@ -97,6 +118,7 @@ issuer 필드는 "${issuer}"로 설정하세요.`;
 export function parseCardExtractionResponse(
   response: Anthropic.Message,
   issuer: ScraperIssuer,
+  clock: ScraperClock = () => new Date(),
 ): CardRuleSet {
   if (response.stop_reason === 'max_tokens') {
     throw new Error(
@@ -113,8 +135,18 @@ export function parseCardExtractionResponse(
     throw new Error(`예상치 못한 도구 호출: ${toolUse.name}`);
   }
 
-  const raw = toolUse.input;
-  const validation = validateExtractedRules(raw, issuer);
+  const extractedAt = clock();
+  if (!Number.isFinite(extractedAt.getTime())) {
+    throw new Error('스크래퍼 추출 시각이 올바르지 않습니다.');
+  }
+  const lastUpdated = extractedAt.toISOString().slice(0, 10);
+  const raw = stampTrustedProvenance(toolUse.input, lastUpdated);
+  const validation = validateExtractedRules(
+    raw,
+    issuer,
+    getCanonicalScraperRuleContract(),
+    extractedAt,
+  );
 
   if (!validation.valid || !validation.result) {
     throw new Error(

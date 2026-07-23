@@ -28,6 +28,10 @@ describe('scraper schema derives from canonical rules', () => {
   const contract = getCanonicalScraperRuleContract();
   const root = CARD_RULE_EXTRACTION_TOOL.input_schema as SchemaNode;
   const rewards = requiredProperties(root, 'tool')['rewards']?.items;
+  const card = requiredProperties(
+    requiredProperties(root, 'tool')['card'],
+    'card',
+  );
   const rewardProperties = requiredProperties(rewards, 'reward');
   const conditions = rewardProperties['conditions'];
   const conditionProperties = requiredProperties(conditions, 'conditions');
@@ -87,5 +91,13 @@ describe('scraper schema derives from canonical rules', () => {
     }
     expect(rewards?.additionalProperties).toBe(false);
     expect(SYSTEM_PROMPT).toContain('status": "unsupported');
+  });
+
+  test('keeps freshness provenance outside the model-authored contract', () => {
+    expect(card).not.toHaveProperty('lastUpdated');
+    expect(
+      requiredProperties(root, 'tool')['card']?.required,
+    ).not.toContain('lastUpdated');
+    expect(SYSTEM_PROMPT).toContain('스크래퍼가 신뢰 시각으로 기록');
   });
 });

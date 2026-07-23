@@ -20,7 +20,7 @@ export function buildSystemPrompt(
 - type: credit / check / prepaid
 - annualFee.domestic / international: 원 단위의 0 이상 정수
 - url: 절대 HTTP(S) 상품 페이지 URL. 알 수 없으면 생략
-- lastUpdated: 오늘 날짜 (YYYY-MM-DD)
+- lastUpdated는 스크래퍼가 신뢰 시각으로 기록하므로 작성하지 않음
 - source: 항상 llm-scrape
 
 ## 전월실적

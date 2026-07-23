@@ -3,6 +3,7 @@ import {
   access,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   realpath,
   rm,
@@ -12,7 +13,10 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { CardRuleSet } from '@cherrypicker/rules';
-import { writeCardRule } from '../src/writer.js';
+import {
+  writeCardRule,
+  type WriteCardRuleOperations,
+} from '../src/writer.js';
 import { makeCardRule } from './fixtures.js';
 
 const temporaryRoots: string[] = [];
@@ -41,6 +45,21 @@ describe('writeCardRule', () => {
       join(await realpath(root), 'shinhan', 'shinhan-security-test.yaml'),
     );
     expect(await readFile(path, 'utf-8')).toContain('id: shinhan-security-test');
+  });
+
+  test('uses the trusted rule date for both the header and YAML provenance', async () => {
+    const root = await temporaryRoot();
+    const path = await writeCardRule(
+      makeCardRule({ lastUpdated: '2024-02-29' }),
+      {
+        outputDir: root,
+        expectedIssuer: 'shinhan',
+      },
+    );
+    const content = await readFile(path, 'utf-8');
+
+    expect(content).toContain('# 추출일: 2024-02-29');
+    expect(content).toContain('lastUpdated: 2024-02-29');
   });
 
   test('rejects traversal even if a caller bypasses the type boundary', async () => {
@@ -131,6 +150,66 @@ describe('writeCardRule', () => {
       overwrite: true,
     });
     expect(await readFile(destination, 'utf-8')).toContain('id: shinhan-security-test');
+  });
+
+  async function expectFailureAtomicOverwrite(
+    operationOverrides: Partial<WriteCardRuleOperations>,
+  ): Promise<void> {
+    const root = await temporaryRoot();
+    const issuerDir = join(root, 'shinhan');
+    const destination = join(issuerDir, 'shinhan-security-test.yaml');
+    await mkdir(issuerDir);
+    await writeFile(destination, 'original');
+
+    await expect(
+      writeCardRule(
+        makeCardRule(),
+        {
+          outputDir: root,
+          expectedIssuer: 'shinhan',
+          overwrite: true,
+        },
+        operationOverrides,
+      ),
+    ).rejects.toThrow();
+
+    expect(await readFile(destination, 'utf-8')).toBe('original');
+    expect(
+      (await readdir(issuerDir)).filter((name) => name.includes('.tmp-')),
+    ).toEqual([]);
+  }
+
+  test('preserves the old rule when a write fails before producing bytes', async () => {
+    await expectFailureAtomicOverwrite({
+      writeFile: async () => {
+        throw new Error('injected pre-write failure');
+      },
+    });
+  });
+
+  test('preserves the old rule and removes a partially written temporary file', async () => {
+    await expectFailureAtomicOverwrite({
+      writeFile: async (handle) => {
+        await handle.writeFile('partial', { encoding: 'utf-8' });
+        throw new Error('injected partial-write failure');
+      },
+    });
+  });
+
+  test('preserves the old rule when temporary-file sync fails', async () => {
+    await expectFailureAtomicOverwrite({
+      syncFile: async () => {
+        throw new Error('injected sync failure');
+      },
+    });
+  });
+
+  test('preserves the old rule when the atomic rename fails', async () => {
+    await expectFailureAtomicOverwrite({
+      rename: async () => {
+        throw new Error('injected pre-rename failure');
+      },
+    });
   });
 
   test('allows exactly one of two concurrent default writes', async () => {

@@ -18,6 +18,26 @@ describe('validateExtractedRules security boundary', () => {
     expect(result.errors.join('\n')).toContain('요청한 카드사');
   });
 
+  test('rejects impossible and future provenance dates at validation', () => {
+    const impossible = validateExtractedRules(
+      makeCardRule({ lastUpdated: '2026-02-29' }),
+      'shinhan',
+      undefined,
+      new Date('2026-07-23T12:00:00.000Z'),
+    );
+    expect(impossible.valid).toBe(false);
+    expect(impossible.errors.join('\n')).toContain('real ISO 8601 calendar date');
+
+    const future = validateExtractedRules(
+      makeCardRule({ lastUpdated: '2026-07-24' }),
+      'shinhan',
+      undefined,
+      new Date('2026-07-23T23:59:59.999Z'),
+    );
+    expect(future.valid).toBe(false);
+    expect(future.errors.join('\n')).toContain('미래 날짜');
+  });
+
   test('rejects traversal before returning a CardRuleSet', () => {
     const result = validateExtractedRules(
       makeCardRule({ id: '../../../../.github/workflows/pwn' }),
@@ -99,6 +119,22 @@ describe('validateExtractedRules security boundary', () => {
       status: 'unsupported',
       reason: '거래별 리터 수가 필요함',
     });
+  });
+
+  test('rejects supported annual caps through the shared semantic validator', () => {
+    const rule = makeCardRule();
+    rule.rewards[0]!.tiers[0]!.annualCap = 100_000;
+
+    const unsupported = structuredClone(rule);
+    unsupported.rewards[0]!.support = {
+      status: 'unsupported',
+      reason: '연간 누적 사용액이 필요함',
+    };
+
+    const result = validateExtractedRules(rule, 'shinhan');
+    expect(result.valid).toBe(false);
+    expect(result.errors.join('\n')).toContain('trusted year-to-date usage facts');
+    expect(validateExtractedRules(unsupported, 'shinhan').valid).toBe(true);
   });
 
   test('rejects model output that omits required rule metadata', () => {

@@ -82,6 +82,61 @@ export function validateDocumentedCardExample(
   parsePublicationCard(parsed, `${sourceName} validated card example`);
 }
 
+export function validateIssuerFreshnessMetadata(
+  markdown: string,
+  sourceName: string,
+): void {
+  const begin = markdown.indexOf(ISSUER_INDEX_BEGIN);
+  const end = markdown.indexOf(
+    ISSUER_INDEX_END,
+    begin + ISSUER_INDEX_BEGIN.length,
+  );
+  const handWritten =
+    begin >= 0 && end >= begin
+      ? markdown.slice(0, begin) +
+        markdown.slice(end + ISSUER_INDEX_END.length)
+      : markdown;
+  const manualClaims = [
+    ...handWritten.matchAll(
+      /^>\s*(?:마지막|최신)\s*업데이트:\s*`?\d{4}-\d{2}-\d{2}`?\s*$/gm,
+    ),
+  ];
+  if (manualClaims.length > 0) {
+    throw new Error(
+      `${sourceName}: remove hand-written update metadata; ` +
+        'the generated issuer index is the single authoritative freshness value',
+    );
+  }
+}
+
+export function validateRootReadmeClaims(
+  markdown: string,
+  astroVersion: string,
+): void {
+  const astroMajor = astroVersion.match(/\d+/)?.[0];
+  if (!astroMajor) {
+    throw new Error(
+      `apps/web/package.json: cannot determine Astro major from "${astroVersion}"`,
+    );
+  }
+  if (!markdown.includes(`Astro ${astroMajor}`)) {
+    throw new Error(
+      `README.md: technology stack must document Astro ${astroMajor}`,
+    );
+  }
+  for (const requiredDisclosure of [
+    '추천에 포함된 모든 카드를 사용할 수 있다고 가정',
+    '연회비 차감 전 월간 총혜택',
+    '실제 순절약액이나 카드 보유 비용을 뜻하지 않아요',
+  ]) {
+    if (!markdown.includes(requiredDisclosure)) {
+      throw new Error(
+        `README.md: missing recommendation disclosure "${requiredDisclosure}"`,
+      );
+    }
+  }
+}
+
 function compareText(left: string, right: string): number {
   if (left === right) return 0;
   return left < right ? -1 : 1;
@@ -410,6 +465,10 @@ export async function planReadmeUpdates(
     );
     const current = await readIfPresent(readmePath);
     const base = current ?? minimalIssuerReadme(issuer.meta);
+    validateIssuerFreshnessMetadata(
+      base,
+      relative(root, readmePath),
+    );
     updates.push({
       path: readmePath,
       current,
@@ -433,10 +492,19 @@ export async function synchronizeReadmeCatalog(options: {
   driftedPaths: string[];
 }> {
   const root = options.root ?? repositoryRoot;
-  const [rootReadme, agentGuide] = await Promise.all([
+  const [rootReadme, agentGuide, webPackageJson] = await Promise.all([
     readFile(join(root, 'README.md'), 'utf8'),
     readFile(join(root, '.claude/AGENTS.md'), 'utf8'),
+    readFile(join(root, 'apps/web/package.json'), 'utf8'),
   ]);
+  const webPackage = JSON.parse(webPackageJson) as {
+    dependencies?: Record<string, string>;
+  };
+  const astroVersion = webPackage.dependencies?.astro;
+  if (!astroVersion) {
+    throw new Error('apps/web/package.json: missing Astro dependency');
+  }
+  validateRootReadmeClaims(rootReadme, astroVersion);
   validateDocumentedCardExample(rootReadme, 'README.md');
   validateDocumentedCardExample(agentGuide, '.claude/AGENTS.md');
   const catalog = await loadReadmeCatalog(root);
