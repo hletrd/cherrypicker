@@ -120,6 +120,38 @@ function assertCoherentCapGroupMonthlyCaps(rules: RewardRule[]): void {
   });
 }
 
+const preparedCardRuleToken = Symbol('prepared-card-rule');
+
+/**
+ * Invocation-scoped proof that a card's immutable reward structure passed the
+ * calculator's cross-rule validations.
+ *
+ * This type and its constructors are internal module exports for the optimizer;
+ * they are deliberately absent from the public package barrel.
+ */
+export interface PreparedCardRule {
+  readonly cardRule: CalculationInput['cardRule'];
+  readonly [preparedCardRuleToken]: true;
+}
+
+function assertValidCardRuleStructure(
+  cardRule: CalculationInput['cardRule'],
+): void {
+  assertUniqueRewardTierReferences(cardRule.rewards);
+  assertCoherentCapGroupMonthlyCaps(cardRule.rewards);
+}
+
+/** @internal */
+export function prepareCardRuleForCalculation(
+  cardRule: CalculationInput['cardRule'],
+): PreparedCardRule {
+  assertValidCardRuleStructure(cardRule);
+  return Object.freeze({
+    cardRule,
+    [preparedCardRuleToken]: true as const,
+  });
+}
+
 export function buildCategoryKey(category: string, subcategory?: string): string {
   return subcategory ? `${category}.${subcategory}` : category;
 }
@@ -740,16 +772,38 @@ function calculateFixedReward(
 }
 
 export function calculateRewards(input: CalculationInput): CalculationOutput {
-  const { transactions, previousMonthSpending, cardRule } = input;
-
   assertSafeNonnegativeInteger(
-    previousMonthSpending,
+    input.previousMonthSpending,
     'previousMonthSpending',
   );
+  assertValidCardRuleStructure(input.cardRule);
+  return calculateRewardsKernel(input);
+}
+
+/** @internal */
+export function calculateRewardsWithPreparedCard(input: {
+  transactions: CategorizedTransaction[];
+  previousMonthSpending: number;
+  preparedCardRule: PreparedCardRule;
+}): CalculationOutput {
+  assertSafeNonnegativeInteger(
+    input.previousMonthSpending,
+    'previousMonthSpending',
+  );
+  if (input.preparedCardRule[preparedCardRuleToken] !== true) {
+    throw new Error('prepared card rule proof is invalid');
+  }
+  return calculateRewardsKernel({
+    transactions: input.transactions,
+    previousMonthSpending: input.previousMonthSpending,
+    cardRule: input.preparedCardRule.cardRule,
+  });
+}
+
+function calculateRewardsKernel(input: CalculationInput): CalculationOutput {
+  const { transactions, previousMonthSpending, cardRule } = input;
 
   const { card, performanceTiers, rewards: rewardRules, globalConstraints } = cardRule;
-  assertUniqueRewardTierReferences(rewardRules);
-  assertCoherentCapGroupMonthlyCaps(rewardRules);
 
   // 1. Determine performance tier
   const tier = selectTier(performanceTiers, previousMonthSpending);

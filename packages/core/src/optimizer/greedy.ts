@@ -15,8 +15,10 @@ import type {
 import type { OptimizationConstraints } from './constraints.js';
 import {
   buildCategoryKey,
-  calculateRewards,
+  calculateRewardsWithPreparedCard,
   isRewardEligibleTransaction,
+  prepareCardRuleForCalculation,
+  type PreparedCardRule,
 } from '../calculator/reward.js';
 import { normalizeMerchantText } from '../categorizer/normalize.js';
 import {
@@ -195,18 +197,18 @@ function getCardName(rule: CardRuleSet): string {
 function calculateCardOutput(
   transactions: CategorizedTransaction[],
   previousMonthSpending: number,
-  cardRule: CardRuleSet,
+  preparedCardRule: PreparedCardRule,
 ) {
-  return calculateRewards({
+  return calculateRewardsWithPreparedCard({
     transactions,
     previousMonthSpending,
-    cardRule,
+    preparedCardRule,
   });
 }
 
 function scoreCardsForTransaction(
   transaction: CategorizedTransaction,
-  cardRules: CardRuleSet[],
+  preparedCardRules: PreparedCardRule[],
   cardPreviousSpending: Map<string, number>,
   assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
 ): CardScoringResult {
@@ -221,12 +223,21 @@ function scoreCardsForTransaction(
   const scores: CardScore[] = [];
   const unsupportedRules: CalculationIssue[] = [];
 
-  for (const rule of cardRules) {
+  for (const preparedCardRule of preparedCardRules) {
+    const { cardRule: rule } = preparedCardRule;
     const currentTransactions = assignedTransactionsByCard.get(rule.card.id) ?? [];
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
 
-    const before = calculateCardOutput(currentTransactions, previousMonthSpending, rule).totalReward;
-    const after = calculateCardOutput([...currentTransactions, transaction], previousMonthSpending, rule);
+    const before = calculateCardOutput(
+      currentTransactions,
+      previousMonthSpending,
+      preparedCardRule,
+    ).totalReward;
+    const after = calculateCardOutput(
+      [...currentTransactions, transaction],
+      previousMonthSpending,
+      preparedCardRule,
+    );
     const reward = Math.max(0, after.totalReward - before);
     assertSafeNonnegativeInteger(reward, 'marginal reward');
     // transaction.amount is guaranteed positive here (pre-filtered at line 198).
@@ -286,14 +297,15 @@ function deduplicateCalculationIssues(
 function buildAssignments(
   txAssignments: TxAssignment[],
   categoryLabels: Map<string, string>,
-  cardRules: CardRuleSet[],
+  preparedCardRules: PreparedCardRule[],
   cardPreviousSpending: Map<string, number>,
   assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
 ): CardAssignment[] {
   const assignmentMap = new Map<string, CardAssignment>();
   const transactionsByAssignment = new Map<string, CategorizedTransaction[]>();
   const finalRewardByCard = new Map(
-    cardRules.map((rule) => {
+    preparedCardRules.map((preparedCardRule) => {
+      const { cardRule: rule } = preparedCardRule;
       const previousMonthSpending =
         cardPreviousSpending.get(rule.card.id) ?? 0;
       const actualTransactions =
@@ -303,7 +315,7 @@ function buildAssignments(
         calculateCardOutput(
           actualTransactions,
           previousMonthSpending,
-          rule,
+          preparedCardRule,
         ).totalReward,
       ] as const;
     }),
@@ -358,9 +370,13 @@ function buildAssignments(
 
   for (const [key, assignment] of assignmentMap) {
     const groupTransactions = transactionsByAssignment.get(key) ?? [];
-    const alternatives = cardRules
-      .filter((rule) => rule.card.id !== assignment.assignedCardId)
-      .flatMap((rule) => {
+    const alternatives = preparedCardRules
+      .filter(
+        ({ cardRule }) =>
+          cardRule.card.id !== assignment.assignedCardId,
+      )
+      .flatMap((preparedCardRule) => {
+        const { cardRule: rule } = preparedCardRule;
         const previousMonthSpending =
           cardPreviousSpending.get(rule.card.id) ?? 0;
         const actualTransactions =
@@ -369,7 +385,7 @@ function buildAssignments(
         const after = calculateCardOutput(
           buildCanonicalRewardInput(actualTransactions, groupTransactions),
           previousMonthSpending,
-          rule,
+          preparedCardRule,
         ).totalReward;
         const reward = subtractSafeRewardTotals(
           after,
@@ -403,19 +419,24 @@ function buildAssignments(
 }
 
 function buildCardResults(
-  cardRules: CardRuleSet[],
+  preparedCardRules: PreparedCardRule[],
   cardPreviousSpending: Map<string, number>,
   assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
   categoryLabels: Map<string, string>,
 ): CardRewardResult[] {
   const cardResults: CardRewardResult[] = [];
 
-  for (const rule of cardRules) {
+  for (const preparedCardRule of preparedCardRules) {
+    const { cardRule: rule } = preparedCardRule;
     const assignedTransactions = assignedTransactionsByCard.get(rule.card.id) ?? [];
     if (assignedTransactions.length === 0) continue;
 
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
-    const output = calculateCardOutput(assignedTransactions, previousMonthSpending, rule);
+    const output = calculateCardOutput(
+      assignedTransactions,
+      previousMonthSpending,
+      preparedCardRule,
+    );
     // Optimizer only assigns positive-amount transactions (filtered at line 271),
     // so Math.abs() is unnecessary — use tx.amount directly (C33-06).
     // IMPORTANT: buildCardResults requires pre-filtered positive-amount
@@ -469,6 +490,9 @@ export function greedyOptimize(
   const executableCardRules = eligibleCardRules.filter(
     isOptimizationExecutableCard,
   );
+  const preparedCardRules = executableCardRules.map(
+    prepareCardRuleForCalculation,
+  );
   const eligibleCardIds = new Set(
     executableCardRules.map((rule) => rule.card.id),
   );
@@ -494,7 +518,7 @@ export function greedyOptimize(
     constraints.cards.map((c) => [c.cardId, c.previousMonthSpending]),
   );
   const assignedTransactionsByCard = new Map<string, CategorizedTransaction[]>();
-  for (const rule of executableCardRules) {
+  for (const { cardRule: rule } of preparedCardRules) {
     assignedTransactionsByCard.set(rule.card.id, []);
   }
 
@@ -514,7 +538,7 @@ export function greedyOptimize(
   for (const transaction of sortedTransactions) {
     const scoring = scoreCardsForTransaction(
       transaction,
-      executableCardRules,
+      preparedCardRules,
       cardPreviousSpending,
       assignedTransactionsByCard,
     );
@@ -566,12 +590,12 @@ export function greedyOptimize(
   const assignments = buildAssignments(
     txAssignments,
     constraints.categoryLabels,
-    executableCardRules,
+    preparedCardRules,
     cardPreviousSpending,
     canonicalAssignedTransactionsByCard,
   );
   const cardResults = buildCardResults(
-    executableCardRules,
+    preparedCardRules,
     cardPreviousSpending,
     canonicalAssignedTransactionsByCard,
     constraints.categoryLabels,
@@ -603,9 +627,14 @@ export function greedyOptimize(
   let bestSingleCard:
     | { cardId: string; cardName: string; totalReward: number }
     | null = null;
-  for (const rule of executableCardRules) {
+  for (const preparedCardRule of preparedCardRules) {
+    const { cardRule: rule } = preparedCardRule;
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
-    const output = calculateCardOutput(sortedTransactions, previousMonthSpending, rule);
+    const output = calculateCardOutput(
+      sortedTransactions,
+      previousMonthSpending,
+      preparedCardRule,
+    );
     if (output.totalReward === 0) continue;
 
     if (
