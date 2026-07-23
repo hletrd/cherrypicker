@@ -85,7 +85,84 @@ describe('generateHTMLReport', () => {
     expect(html).toContain('2026-02-01 ~ 2026-02-28');
     expect(html).toContain('2026-01-01 ~ 2026-02-28');
     expect(html).toContain('명세서의 직전 달(2026-01) 거래 합계');
+    expect(html).toContain('연회비 차감 전 월간 총혜택');
+    expect(html).toContain('포함된 모든 카드를 사용할 수 있다고 가정');
+    expect(html).not.toContain('추가 절약');
     expect(html).not.toContain('<이마트>');
+  });
+
+  test.each([
+    [
+      'same category',
+      [
+        {
+          ...transactions[0]!,
+          id: 'max',
+          amount: Number.MAX_SAFE_INTEGER,
+        },
+        {
+          ...transactions[0]!,
+          id: 'two',
+          amount: 2,
+        },
+      ],
+    ],
+    [
+      'different categories',
+      [
+        {
+          ...transactions[0]!,
+          id: 'max',
+          amount: Number.MAX_SAFE_INTEGER,
+        },
+        {
+          ...transactions[0]!,
+          id: 'two',
+          amount: 2,
+          category: 'dining',
+        },
+      ],
+    ],
+  ] as const)('rejects an unsafe %s spending aggregate', (_name, unsafe) => {
+    expect(() =>
+      generateHTMLReport(
+        optimization,
+        [...unsafe] as CategorizedTransaction[],
+        categoryLabels,
+        reportContext,
+      ),
+    ).toThrow('안전한 정수 범위');
+  });
+
+  test('renders the exact-safe boundary and filters refunds from the report total', () => {
+    const exactSafe: CategorizedTransaction[] = [
+      {
+        ...transactions[0]!,
+        id: 'near-max',
+        amount: Number.MAX_SAFE_INTEGER - 1,
+      },
+      {
+        ...transactions[0]!,
+        id: 'one',
+        amount: 1,
+      },
+      {
+        ...transactions[0]!,
+        id: 'refund',
+        amount: -100,
+      },
+    ];
+    const html = generateHTMLReport(
+      optimization,
+      exactSafe,
+      categoryLabels,
+      reportContext,
+    );
+
+    expect(html).toContain(
+      `${Number.MAX_SAFE_INTEGER.toLocaleString('ko-KR')}원`,
+    );
+    expect(html).toContain('<td class="right">2건</td>');
   });
 
   test('escapes HTML entities including quotes, slashes, and null bytes', () => {
@@ -333,7 +410,7 @@ describe('generateHTMLReport', () => {
     expect(html).toContain(
       `<div class="sub">단일 최적: ${collision}</div>`,
     );
-    expect(html.match(/카테고리별 최적 카드 배분/g)).toHaveLength(1);
+    expect(html.match(/카테고리별 추천 카드 배분/g)).toHaveLength(1);
   });
 });
 

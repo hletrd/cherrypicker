@@ -8,6 +8,11 @@ import type {
   OptimizationResult,
   PreviousSpendingBasis,
 } from '@cherrypicker/core';
+import { aggregatePositiveSpending } from '../spending-aggregation.js';
+import {
+  GROSS_MONTHLY_REWARD_DISCLOSURE_KO,
+  GROSS_MONTHLY_REWARD_LABEL_KO,
+} from '../reward-disclosure.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -230,6 +235,10 @@ function buildAnalysisLimitations(context: StandaloneReportContext): string {
       <strong>정확히 계산하지 못한 혜택 (${formatCount(context.unsupportedIssues.length)}건)</strong>
       <ul>${unsupportedItems}</ul>
     </div>
+    <div class="limitation-list">
+      <strong>혜택 금액 기준</strong>
+      <p>${GROSS_MONTHLY_REWARD_DISCLOSURE_KO}</p>
+    </div>
   `;
 }
 
@@ -241,6 +250,9 @@ function formatCount(count: number): string {
 
 function buildSummary(result: OptimizationResult): string {
   const savingsSign = result.savingsVsSingleCard >= 0 ? '+' : '';
+  const differenceLabel = result.savingsVsSingleCard >= 0
+    ? '단일 최적 카드 대비 월간 추가 혜택'
+    : '추천 조합의 월간 혜택 부족분';
   return `
     <div class="metrics-grid">
       <div class="metric-card">
@@ -248,16 +260,16 @@ function buildSummary(result: OptimizationResult): string {
         <div class="value">${formatWon(result.totalSpending)}</div>
       </div>
       <div class="metric-card">
-        <div class="label">총 예상 혜택</div>
+        <div class="label">${GROSS_MONTHLY_REWARD_LABEL_KO}</div>
         <div class="value">${formatWon(result.totalReward)}</div>
       </div>
       <div class="metric-card">
-        <div class="label">유효 혜택률</div>
+        <div class="label">연회비 차감 전 월간 혜택률</div>
         <div class="value">${formatRate(result.effectiveRate)}</div>
       </div>
       <div class="metric-card">
-        <div class="label">단일 최적 카드 대비 추가 혜택</div>
-        <div class="value">${savingsSign}${formatWon(result.savingsVsSingleCard)}</div>
+        <div class="label">${differenceLabel} (연회비 차감 전)</div>
+        <div class="value">${savingsSign}${formatWon(Math.abs(result.savingsVsSingleCard))}</div>
         <div class="sub">단일 최적: ${esc(result.bestSingleCard.cardName)}</div>
       </div>
     </div>
@@ -265,40 +277,23 @@ function buildSummary(result: OptimizationResult): string {
 }
 
 function buildCategoryTable(transactions: CategorizedTransaction[], categoryLabels: Map<string, string>): string {
-  const byCategory = new Map<string, { labelKo: string; total: number; count: number }>();
-  let grandTotal = 0;
-  let includedCount = 0;
-
-  for (const tx of transactions) {
-    // Skip negative/zero amounts (refunds, balance inquiries) so category totals
-    // reflect actual spending, matching the optimizer's positive-only filter (C2-01).
-    if (tx.amount <= 0) continue;
-    includedCount++;
-    const categoryKey = tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category;
-    const existing = byCategory.get(categoryKey);
-    if (existing) {
-      existing.total += tx.amount;
-      existing.count += 1;
-    } else {
-      byCategory.set(categoryKey, {
-        labelKo: categoryLabels.get(categoryKey) ?? categoryLabels.get(tx.category) ?? categoryKey,
-        total: tx.amount,
-        count: 1,
-      });
-    }
-    grandTotal += tx.amount;
-  }
-
-  const rows = [...byCategory.entries()].sort((a, b) => b[1].total - a[1].total);
+  const {
+    categories,
+    grandTotal,
+    includedCount,
+  } = aggregatePositiveSpending(transactions, categoryLabels);
+  const rows = categories.sort((a, b) => b.total - a.total);
 
   const rowsHtml = rows
-    .map(([, v]) => {
-      const pct = grandTotal > 0 ? ((v.total / grandTotal) * 100).toFixed(1) : '0.0';
+    .map((row) => {
+      const pct = grandTotal > 0
+        ? ((row.total / grandTotal) * 100).toFixed(1)
+        : '0.0';
       return `
         <tr>
-          <td>${esc(v.labelKo)}</td>
-          <td class="right">${formatWon(v.total)}</td>
-          <td class="right">${v.count}건</td>
+          <td>${esc(row.labelKo)}</td>
+          <td class="right">${formatWon(row.total)}</td>
+          <td class="right">${row.count}건</td>
           <td class="right">${pct}%</td>
         </tr>
       `;
@@ -353,12 +348,12 @@ function buildCardComparison(result: OptimizationResult): string {
 
   return `
     <table>
-      <caption>카드별 혜택 비교</caption>
+      <caption>카드별 월간 총혜택 비교 (연회비 차감 전)</caption>
       <thead>
         <tr>
           <th scope="col">카드명</th>
-          <th scope="col" class="right">총 혜택액</th>
-          <th scope="col" class="right">유효 혜택률</th>
+          <th scope="col" class="right">월간 총혜택 (연회비 차감 전)</th>
+          <th scope="col" class="right">연회비 차감 전 혜택률</th>
           <th scope="col">전월실적 구간</th>
           <th scope="col" class="center">한도</th>
         </tr>
@@ -410,13 +405,13 @@ function buildAssignments(result: OptimizationResult): string {
 
   return `
     <table>
-      <caption>카테고리별 최적 카드 배분</caption>
+      <caption>카테고리별 추천 카드 배분 (연회비 차감 전 월간 총혜택)</caption>
       <thead>
         <tr>
           <th scope="col">카테고리</th>
           <th scope="col">추천 카드</th>
-          <th scope="col" class="right">혜택률</th>
-          <th scope="col" class="right">예상 혜택</th>
+          <th scope="col" class="right">월간 혜택률 (연회비 차감 전)</th>
+          <th scope="col" class="right">월간 혜택 (연회비 차감 전)</th>
           <th scope="col" class="right">지출액</th>
           <th scope="col">대안 카드</th>
         </tr>

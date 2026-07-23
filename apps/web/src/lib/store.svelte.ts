@@ -19,7 +19,6 @@ import {
   buildAnalysisContext,
   type PreviousSpendingBasis,
 } from './analysis-context.js';
-import { loadCategories } from './cards.js';
 import { buildCategoryLabelMap } from './category-labels.js';
 import {
   deserializeAnalysis,
@@ -39,6 +38,7 @@ import {
   AnalysisReplacementRuntime,
   type AnalysisReplacementState,
 } from './analysis-replacement-runtime.js';
+import { resetAnalysisState } from './analysis-reset-runtime.js';
 
 type AnalyzerModule = typeof import('./analyzer.js');
 let analyzerModulePromise: Promise<AnalyzerModule> | null = null;
@@ -141,15 +141,25 @@ function clearPersistedAnalysis(): PersistResult {
 
 /** Track the persist warning kind detected during loadFromStorage.
  *  - 'truncated': transactions key was absent (omitted during save due to size)
- *  - 'corrupted': transactions key existed but all entries failed validation
+ *  - 'corrupted': one or more persisted transactions failed validation
  */
 let _loadPersistWarningKind: PersistWarningKind = null;
 
 /** Track how many transactions were lost during truncation, read from
  *  the _truncatedTxCount field in the persisted data (C22-03). */
 let _loadTruncatedTxCount: number | null = null;
+/** Initial route-shell error when a persisted payload cannot be restored. */
+let _loadRestoreError: string | null = null;
+
+const CORRUPTED_RESTORE_ERROR =
+  '저장된 분석 결과가 손상되어 불러오지 못했어요. 명세서를 다시 분석해 주세요.';
+const STORAGE_ACCESS_ERROR =
+  '저장된 분석 결과에 접근하지 못했어요. 페이지를 새로고침하고 다시 시도해 주세요.';
 
 function loadFromStorage(): AnalysisResult | null {
+  _loadPersistWarningKind = null;
+  _loadTruncatedTxCount = null;
+  _loadRestoreError = null;
   try {
     if (typeof sessionStorage !== 'undefined') {
       const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -157,34 +167,36 @@ function loadFromStorage(): AnalysisResult | null {
       const deserialized = deserializeAnalysis(raw);
       _loadPersistWarningKind = deserialized.warningKind;
       _loadTruncatedTxCount = deserialized.truncatedTxCount;
+      if (deserialized.data === null) {
+        _loadRestoreError = CORRUPTED_RESTORE_ERROR;
+      }
       if (deserialized.shouldRemove) {
         sessionStorage.removeItem(STORAGE_KEY);
       }
       return deserialized.data;
     }
-  } catch (err) {
+  } catch {
     // Load failure handles JSON.parse errors, validation failures, and
-    // unexpected exceptions from sessionStorage.getItem. The UI surfaces
-    // persistence issues via persistWarningKind; no console logging needed.
-    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch (err2) {
+    // unexpected exceptions from sessionStorage access. The route readiness
+    // shell consumes _loadRestoreError instead of announcing a false empty state.
+    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(STORAGE_KEY); } catch {
       // Best-effort cleanup: corrupted data removal.
       // SecurityError in sandboxed iframes is expected and safe to ignore.
     }
+    _loadPersistWarningKind = 'error';
+    _loadTruncatedTxCount = null;
+    _loadRestoreError = STORAGE_ACCESS_ERROR;
   }
   return null;
 }
 
-function clearStorage(): void {
+function clearDismissedWarning(): void {
   try {
     if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem(STORAGE_KEY);
-      // Also clear the dismissed-warning flag so the data-loss warning
-      // re-appears after a reset+re-upload (C78-01).
       sessionStorage.removeItem('cherrypicker:dismissed-warning');
     }
-  } catch (err) {
-    // SSR environments don't have sessionStorage — that's expected.
-    // SecurityError in sandboxed iframes is also safe to ignore.
+  } catch {
+    // This preference cannot restore analysis data and is best effort.
   }
 }
 
@@ -193,7 +205,7 @@ function clearStorage(): void {
 function createAnalysisStore() {
   let result = $state<AnalysisResult | null>(loadFromStorage());
   let loading = $state(false);
-  let error = $state<string | null>(null);
+  let error = $state<string | null>(_loadRestoreError);
   // Initialize generation to 1 when data is restored from sessionStorage so
   // that TransactionReview's sync effect triggers on mount (1 !== 0). Without
   // this, both generation and lastSyncedGeneration start at 0 after a page
@@ -209,7 +221,7 @@ function createAnalysisStore() {
   // (i.e. _loadPersistWarningKind was set by loadFromStorage). If the data
   // was just computed (not loaded), there's no persistence warning to show.
   let persistWarningKind = $state<PersistWarningKind>(
-    result !== null && result.transactions === undefined && _loadPersistWarningKind !== null
+    result !== null && _loadPersistWarningKind !== null
       ? _loadPersistWarningKind
       : null
   );
@@ -222,6 +234,7 @@ function createAnalysisStore() {
   // across store re-creation (e.g. HMR) or stale after reset.
   _loadPersistWarningKind = null;
   _loadTruncatedTxCount = null;
+  _loadRestoreError = null;
 
   // Cache category labels to avoid rebuilding the Map on every reoptimize call.
   let cachedCategoryLabels: Map<string, string> | undefined;
@@ -230,6 +243,7 @@ function createAnalysisStore() {
     signal?: AbortSignal,
   ): Promise<Map<string, string>> {
     if (cachedCategoryLabels) return cachedCategoryLabels;
+    const { loadCategories } = await import('./cards.js');
     const nodes = await loadCategories(signal);
     if (signal?.aborted) {
       throw new DOMException('재계산이 취소되었어요.', 'AbortError');
@@ -367,7 +381,7 @@ function createAnalysisStore() {
         // where result.previousMonthSpendingOption was accessed before the null
         // check at the bottom of this method (C45-01).
         if (!result) {
-          clearStorage();
+          clearPersistedAnalysis();
           error = '분석 결과가 없어요. 다시 분석해 보세요.';
           return;
         }
@@ -460,20 +474,14 @@ function createAnalysisStore() {
     },
 
     reset(): void {
-      // Reset aborts owned work and clears both state and storage. Unlike an
-      // idle cancel (which preserves a committed result), reset is destructive.
-      operationEpoch.invalidate();
-      result = null;
-      error = null;
-      loading = false;
-      persistWarningKind = null;
-      truncatedTxCount = null;
-      // NOTE: module-level `_loadPersistWarningKind` / `_loadTruncatedTxCount`
-      // are already consumed + nulled during store construction (:379-380) and
-      // this store is a singleton, so resetting them here is a no-op. Removed
-      // in cycle 8 as D7-M1 cleanup.
-      cachedCategoryLabels = undefined;
-      clearStorage();
+      resetAnalysisState(replacementState, {
+        clearPersistedAnalysis,
+        invalidateOperations: () => operationEpoch.invalidate(),
+        clearCachedData: () => {
+          cachedCategoryLabels = undefined;
+        },
+        clearDismissedWarning,
+      });
     },
   };
 }

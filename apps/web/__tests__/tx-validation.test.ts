@@ -13,6 +13,7 @@ interface MinimalTx {
   merchant: string;
   amount: number;
   category: string;
+  confidence: number;
 }
 
 describe('isOptimizableTx', () => {
@@ -22,6 +23,7 @@ describe('isOptimizableTx', () => {
     merchant: 'Test Store',
     amount: 10000,
     category: 'dining',
+    confidence: 1,
   };
 
   test('accepts positive amounts', () => {
@@ -36,6 +38,48 @@ describe('isOptimizableTx', () => {
     expect(isOptimizableTx({ ...baseTx, fuelVolumeLiters: 200.01 })).toBe(false);
     expect(isOptimizableTx({ ...baseTx, fuelVolumeLiters: 1e308 })).toBe(false);
     expect(isOptimizableTx({ ...baseTx, fuelVolumeLiters: Infinity })).toBe(false);
+  });
+
+  test('accepts the complete optional fact contract', () => {
+    expect(isOptimizableTx({
+      ...baseTx,
+      subcategory: 'cafe',
+      installments: 3,
+      rawCategory: '카페',
+      memo: '메모',
+      paymentType: 'overseas',
+      channel: 'online',
+      performanceExclusionTags: ['annual_fee', 'overseas'],
+      factProvenance: {
+        paymentType: 'statement',
+        channel: 'user',
+        fuelVolumeLiters: 'statement',
+        performanceExclusionTags: 'user',
+      },
+    })).toBe(true);
+  });
+
+  test.each([
+    ['subcategory type', { subcategory: 1 }],
+    ['empty subcategory', { subcategory: '' }],
+    ['missing confidence', { confidence: undefined }],
+    ['fractional confidence', { confidence: 1.01 }],
+    ['negative confidence', { confidence: -0.01 }],
+    ['NaN confidence', { confidence: Number.NaN }],
+    ['zero installments', { installments: 0 }],
+    ['fractional installments', { installments: 1.5 }],
+    ['unsafe installments', { installments: Number.MAX_SAFE_INTEGER + 1 }],
+    ['payment type enum', { paymentType: 'international' }],
+    ['channel enum', { channel: 'mobile' }],
+    ['object exclusion tags', { performanceExclusionTags: { annual_fee: true } }],
+    ['unknown exclusion tag', { performanceExclusionTags: ['future_tag'] }],
+    ['array provenance', { factProvenance: [] }],
+    ['unknown provenance key', { factProvenance: { merchant: 'statement' } }],
+    ['unknown provenance source', { factProvenance: { channel: 'model' } }],
+    ['memo type', { memo: 7 }],
+    ['raw category type', { rawCategory: false }],
+  ])('rejects malformed optional facts: %s', (_name, override) => {
+    expect(isOptimizableTx({ ...baseTx, ...override })).toBe(false);
   });
 
   test('rejects zero amounts (balance inquiries)', () => {
@@ -64,6 +108,7 @@ describe('isOptimizableTx', () => {
   test('rejects missing date', () => {
     expect(isOptimizableTx({ ...baseTx, date: '' })).toBe(false);
     expect(isOptimizableTx({ ...baseTx, date: undefined })).toBe(false);
+    expect(isOptimizableTx({ ...baseTx, date: '2026-02-30' })).toBe(false);
   });
 
   test('rejects missing merchant', () => {

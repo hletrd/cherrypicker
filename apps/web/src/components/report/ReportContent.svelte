@@ -3,6 +3,7 @@
   import { formatWon, formatRate, formatRatePrecise, formatYearMonthKo, getIssuerFromCardId, formatSavingsValue, buildPageUrl } from '../../lib/formatters.js';
   import {
     describePreviousSpendingBasis,
+    GROSS_MONTHLY_REWARD_DISCLOSURE,
     summarizeUnsupportedRules,
   } from '../../lib/analysis-disclosures.js';
   import IssuerBadge from '../ui/IssuerBadge.svelte';
@@ -61,17 +62,20 @@
           </tr>
         {/if}
         <tr class="border-b border-[var(--color-border)]">
-          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">체리피킹 혜택</th>
+          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">연회비 차감 전 월간 총혜택</th>
           <td class="px-4 py-3 font-mono text-[var(--color-primary-fg)]">{formatWon(opt.totalReward)}</td>
         </tr>
         <tr class="border-b border-[var(--color-border)]">
-          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">{opt.savingsVsSingleCard >= 0 ? '추가 절약' : '추가 비용'}</th>
+          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">
+            {opt.savingsVsSingleCard >= 0 ? '단일 카드 대비 월간 추가 혜택' : '추천 조합의 월간 혜택 부족분'}
+            (연회비 차감 전)
+          </th>
           <td class="px-4 py-3 font-mono {opt.savingsVsSingleCard >= 0 ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}">
             {formatSavingsValue(opt.savingsVsSingleCard)}
           </td>
         </tr>
         <tr class="border-b border-[var(--color-border)]">
-          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">실효 혜택률</th>
+          <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">연회비 차감 전 월간 혜택률</th>
           <td class="px-4 py-3 font-mono text-[var(--color-text)]">{formatRatePrecise(opt.effectiveRate)}</td>
         </tr>
         <tr>
@@ -81,6 +85,12 @@
       </tbody>
     </table>
   </div>
+  <p
+    class="mb-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text-muted)]"
+    data-testid="report-gross-reward-disclosure"
+  >
+    {GROSS_MONTHLY_REWARD_DISCLOSURE}
+  </p>
 
   {#if unsupportedRulesSummary}
     <section
@@ -94,7 +104,7 @@
       <p class="mt-1">
         {unsupportedRulesSummary.transactionCount}개 거래의
         {unsupportedRulesSummary.ruleCount}개 혜택 규칙은 필요한 정보가 없어
-        예상 혜택에 포함하지 않았어요.
+        연회비 차감 전 월간 총혜택에 포함하지 않았어요.
       </p>
       <ul class="mt-2 list-disc space-y-1 pl-5">
         {#each unsupportedRulesSummary.reasons as reason}
@@ -119,9 +129,9 @@
             <span class="min-w-0 break-keep [overflow-wrap:anywhere] text-sm">{a.assignedCardName}</span>
           </div>
           <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-            <dt class="text-[var(--color-text-muted)]">혜택률</dt>
+            <dt class="text-[var(--color-text-muted)]">월간 혜택률 (연회비 차감 전)</dt>
             <dd class="text-right font-mono text-[var(--color-primary-fg)]">{formatRate(a.rate)}</dd>
-            <dt class="text-[var(--color-text-muted)]">혜택</dt>
+            <dt class="text-[var(--color-text-muted)]">월간 혜택 (연회비 차감 전)</dt>
             <dd class="text-right font-mono">{formatWon(a.reward)}</dd>
             <dt class="text-[var(--color-text-muted)]">지출</dt>
             <dd class="text-right font-mono">{formatWon(a.spending)}</dd>
@@ -134,8 +144,8 @@
         <tr class="border-b border-[var(--color-border)] bg-[var(--color-bg)] text-left text-xs text-[var(--color-text-muted)]">
           <th scope="col" class="px-4 py-2.5 font-medium">카테고리</th>
           <th scope="col" class="px-4 py-2.5 font-medium">추천 카드</th>
-          <th scope="col" class="px-4 py-2.5 text-right font-medium">혜택률</th>
-          <th scope="col" class="px-4 py-2.5 text-right font-medium">혜택</th>
+          <th scope="col" class="px-4 py-2.5 text-right font-medium">월간 혜택률 (연회비 차감 전)</th>
+          <th scope="col" class="px-4 py-2.5 text-right font-medium">월간 혜택 (연회비 차감 전)</th>
           <th scope="col" class="px-4 py-2.5 text-right font-medium">지출</th>
         </tr>
       </thead>
@@ -172,9 +182,9 @@
             <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
               <dt class="text-[var(--color-text-muted)]">해당 지출</dt>
               <dd class="text-right font-mono">{formatWon(cr.totalSpending)}</dd>
-              <dt class="text-[var(--color-text-muted)]">예상 혜택</dt>
+              <dt class="text-[var(--color-text-muted)]">월간 혜택 (연회비 차감 전)</dt>
               <dd class="text-right font-mono font-semibold text-[var(--color-primary-fg)]">{formatWon(cr.totalReward)}</dd>
-              <dt class="text-[var(--color-text-muted)]">혜택률</dt>
+              <dt class="text-[var(--color-text-muted)]">연회비 차감 전 혜택률</dt>
               <dd class="text-right font-mono">{formatRate(cr.effectiveRate)}</dd>
             </dl>
           </article>
@@ -185,8 +195,8 @@
           <tr class="border-b border-[var(--color-border)] bg-[var(--color-bg)] text-left text-xs text-[var(--color-text-muted)]">
             <th scope="col" class="px-4 py-2.5 font-medium">카드명</th>
             <th scope="col" class="px-4 py-2.5 text-right font-medium">해당 지출</th>
-            <th scope="col" class="px-4 py-2.5 text-right font-medium">예상 혜택</th>
-            <th scope="col" class="px-4 py-2.5 text-right font-medium">혜택률</th>
+            <th scope="col" class="px-4 py-2.5 text-right font-medium">월간 혜택 (연회비 차감 전)</th>
+            <th scope="col" class="px-4 py-2.5 text-right font-medium">연회비 차감 전 혜택률</th>
           </tr>
         </thead>
         <tbody>

@@ -176,6 +176,30 @@ describe('CLI process contract', () => {
     expect(result.stderr).not.toContain('찾을 수 없습니다');
   });
 
+  test('analyze rejects an unsafe aggregate without printing a partial table', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'cherrypicker-overflow-'));
+    temporaryDirectories.push(directory);
+    const statement = join(directory, 'unsafe.csv');
+    await writeFile(
+      statement,
+      [
+        'date,merchant,amount',
+        `2026-01-01,Max,${Number.MAX_SAFE_INTEGER}`,
+        '2026-01-02,Two,2',
+      ].join('\n'),
+    );
+
+    const result = runCli(['analyze', statement]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('안전한 정수 범위');
+    expect(result.stdout).not.toContain('지출 내역 요약');
+    expect(result.stdout).not.toContain('합계');
+    expect(result.stdout).not.toContain(
+      `${(Number.MAX_SAFE_INTEGER + 1).toLocaleString('ko-KR')}원`,
+    );
+  });
+
   test(
     'optimize uses the compiled web catalog when --cards is omitted',
     async () => {
@@ -259,8 +283,16 @@ describe('CLI process contract', () => {
       const first = runCli(args);
       expect(first.exitCode).toBe(0);
       expect(first.stdout).toContain('보고서 저장 완료');
+      expect(first.stdout).toContain('연회비 차감 전 월간 총혜택');
+      expect(first.stdout).toContain(
+        '포함된 모든 카드를 사용할 수 있다고 가정',
+      );
       expect(first.stderr).toContain('작성용 카드 규칙 모드');
       const firstHtml = await readFile(output, 'utf8');
+      expect(firstHtml).toContain('연회비 차감 전 월간 총혜택');
+      expect(firstHtml).toContain(
+        '포함된 모든 카드를 사용할 수 있다고 가정',
+      );
       expect(firstHtml).toContain('<h2>분석 범위와 제한</h2>');
       expect(firstHtml).toContain('2026-02-05 ~ 2026-02-05');
       expect(firstHtml).toContain('2026-01-05 ~ 2026-02-05');

@@ -118,4 +118,144 @@ describe('public terminal sinks', () => {
     expect(output).toContain('CR LF C1 END');
     expect(output).toContain('LEFTRIGHTEND');
   });
+
+  test.each([
+    [
+      'same category',
+      [
+        {
+          id: 'tx-max',
+          date: '2026-01-01',
+          merchant: 'max',
+          amount: Number.MAX_SAFE_INTEGER,
+          currency: 'KRW',
+          category: 'shopping',
+          confidence: 1,
+        },
+        {
+          id: 'tx-two',
+          date: '2026-01-02',
+          merchant: 'two',
+          amount: 2,
+          currency: 'KRW',
+          category: 'shopping',
+          confidence: 1,
+        },
+      ],
+    ],
+    [
+      'different categories',
+      [
+        {
+          id: 'tx-max',
+          date: '2026-01-01',
+          merchant: 'max',
+          amount: Number.MAX_SAFE_INTEGER,
+          currency: 'KRW',
+          category: 'shopping',
+          confidence: 1,
+        },
+        {
+          id: 'tx-two',
+          date: '2026-01-02',
+          merchant: 'two',
+          amount: 2,
+          currency: 'KRW',
+          category: 'dining',
+          confidence: 1,
+        },
+      ],
+    ],
+  ] as const)(
+    'fails before logging a partial summary for an unsafe %s total',
+    (_name, transactions) => {
+      const original = console.log;
+      const writes: string[] = [];
+      console.log = (...values: unknown[]) => {
+        writes.push(values.map(String).join(' '));
+      };
+      try {
+        expect(() =>
+          printSpendingSummary(
+            [...transactions] as CategorizedTransaction[],
+            new Map(),
+          ),
+        ).toThrow('안전한 정수 범위');
+      } finally {
+        console.log = original;
+      }
+      expect(writes).toEqual([]);
+    },
+  );
+
+  test('prints an exact-safe total while filtering zero amounts and refunds', () => {
+    const transactions: CategorizedTransaction[] = [
+      {
+        id: 'tx-near-max',
+        date: '2026-01-01',
+        merchant: 'near max',
+        amount: Number.MAX_SAFE_INTEGER - 2,
+        currency: 'KRW',
+        category: 'shopping',
+        confidence: 1,
+      },
+      {
+        id: 'tx-two',
+        date: '2026-01-02',
+        merchant: 'two',
+        amount: 2,
+        currency: 'KRW',
+        category: 'shopping',
+        confidence: 1,
+      },
+      {
+        id: 'tx-zero',
+        date: '2026-01-03',
+        merchant: 'zero',
+        amount: 0,
+        currency: 'KRW',
+        category: 'shopping',
+        confidence: 1,
+      },
+      {
+        id: 'tx-refund',
+        date: '2026-01-04',
+        merchant: 'refund',
+        amount: -100,
+        currency: 'KRW',
+        category: 'shopping',
+        confidence: 1,
+      },
+    ];
+
+    const output = captureConsoleLog(() => {
+      printSpendingSummary(transactions, new Map());
+    });
+
+    expect(output).toContain(
+      `${Number.MAX_SAFE_INTEGER.toLocaleString('ko-KR')}원`,
+    );
+    expect(output.match(/\b2\b/g)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('labels recommendation benefits as gross monthly rewards', () => {
+    const result: OptimizationResult = {
+      assignments: [],
+      totalReward: 100,
+      totalSpending: 10_000,
+      effectiveRate: 0.01,
+      savingsVsSingleCard: 20,
+      bestSingleCard: {
+        cardId: 'card-a',
+        cardName: '카드 A',
+        totalReward: 80,
+      },
+      cardResults: [],
+    };
+    const output = captureConsoleLog(() => printOptimizationResult(result));
+
+    expect(output).toContain('연회비 차감 전 월간 총혜택');
+    expect(output).toContain('포함된 모든 카드를 사용할 수 있다고 가정');
+    expect(output).not.toContain('추가 절약');
+  });
 });

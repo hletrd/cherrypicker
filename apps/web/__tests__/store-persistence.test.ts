@@ -86,6 +86,7 @@ function persistedFixture(overrides: Record<string, unknown> = {}): string {
     bank: 'shinhan',
     format: 'csv',
     transactionCount: 1,
+    parseErrors: [],
     optimization: optimizationFixture(),
     ...overrides,
   });
@@ -171,6 +172,29 @@ describe('production persistence parser', () => {
     }
   });
 
+  test.each([
+    ['missing success', { success: undefined }],
+    ['string success', { success: 'false' }],
+    ['invalid bank', { bank: 7 }],
+    ['missing format', { format: undefined }],
+    ['missing transaction count', { transactionCount: undefined }],
+    ['object monthly breakdown', { monthlyBreakdown: {} }],
+    ['object parse warnings', { parseErrors: {} }],
+    ['malformed parse warning', { parseErrors: [{ message: 7 }] }],
+    ['object card selection', { cardIdsOption: {} }],
+    ['mixed card selection', { cardIdsOption: ['card-1', 7] }],
+    ['empty card id', { cardIdsOption: [''] }],
+  ])(
+    'rejects malformed current-version payload fields: %s',
+    (_name, override) => {
+      const result = deserializeAnalysis(persistedFixture(override));
+
+      expect(result.data).toBeNull();
+      expect(result.warningKind).toBe('corrupted');
+      expect(result.shouldRemove).toBe(true);
+    },
+  );
+
   test('filters corrupted transactions while preserving valid optimization', () => {
     const result = deserializeAnalysis(
       persistedFixture({
@@ -182,6 +206,154 @@ describe('production persistence parser', () => {
     expect(result.data?.optimization.cardResults).toHaveLength(0);
     expect(result.data?.transactions).toBeUndefined();
     expect(result.warningKind).toBe('corrupted');
+  });
+
+  test.each([
+    ['object', { id: 'tx-1' }],
+    ['string', 'not-an-array'],
+    ['null', null],
+  ])(
+    'surfaces an explicitly malformed %s transaction container',
+    (_name, transactions) => {
+      const result = deserializeAnalysis(
+        persistedFixture({ transactions }),
+      );
+
+      expect(result.data?.optimization.assignments).toHaveLength(1);
+      expect(result.data?.transactions).toBeUndefined();
+      expect(result.warningKind).toBe('corrupted');
+      expect(result.shouldRemove).toBe(false);
+    },
+  );
+
+  test.each([
+    ['subcategory type', { subcategory: 1 }],
+    ['empty subcategory', { subcategory: '' }],
+    ['missing confidence', { confidence: undefined }],
+    ['confidence above one', { confidence: 1.1 }],
+    ['fractional installments', { installments: 1.5 }],
+    ['zero installments', { installments: 0 }],
+    ['payment type enum', { paymentType: 'international' }],
+    ['channel enum', { channel: 'mobile' }],
+    [
+      'object-shaped exclusion tags',
+      { performanceExclusionTags: { annual_fee: true } },
+    ],
+    ['unknown exclusion tag', { performanceExclusionTags: ['future_tag'] }],
+    ['array provenance', { factProvenance: [] }],
+    [
+      'unknown provenance key',
+      { factProvenance: { merchant: 'statement' } },
+    ],
+    [
+      'unknown provenance source',
+      { factProvenance: { channel: 'model' } },
+    ],
+    ['memo type', { memo: 7 }],
+    ['raw category type', { rawCategory: false }],
+    ['impossible transaction date', { date: '2026-02-30' }],
+  ])('quarantines malformed persisted transaction facts: %s', (_name, override) => {
+    const transaction = {
+      ...analysisFixture().transactions![0]!,
+      ...override,
+    };
+    const result = deserializeAnalysis(
+      persistedFixture({ transactions: [transaction] }),
+    );
+
+    expect(result.data?.transactions).toBeUndefined();
+    expect(result.warningKind).toBe('corrupted');
+    expect(result.shouldRemove).toBe(false);
+  });
+
+  test('accepts every supported optional transaction fact after reload', () => {
+    const transaction: NonNullable<AnalysisResult['transactions']>[number] = {
+      ...analysisFixture().transactions![0]!,
+      subcategory: 'cafe',
+      installments: 3,
+      rawCategory: '카페',
+      memo: '오전 결제',
+      paymentType: 'overseas',
+      channel: 'online',
+      fuelVolumeLiters: 18.5,
+      performanceExclusionTags: ['annual_fee', 'overseas'],
+      factProvenance: {
+        paymentType: 'statement',
+        channel: 'user',
+        fuelVolumeLiters: 'statement',
+        performanceExclusionTags: 'user',
+      },
+    };
+    const result = deserializeAnalysis(
+      persistedFixture({ transactions: [transaction] }),
+    );
+
+    expect(result.warningKind).toBeNull();
+    expect(result.data?.transactions?.[0]).toEqual(transaction);
+  });
+
+  test.each([
+    ['missing start', { end: '2026-07-31' }],
+    ['missing end', { start: '2026-07-01' }],
+    ['impossible start', { start: '2026-02-30', end: '2026-03-01' }],
+    ['impossible end', { start: '2026-02-01', end: '2026-02-30' }],
+    ['reversed order', { start: '2026-07-31', end: '2026-07-01' }],
+    ['array shape', ['2026-07-01', '2026-07-31']],
+    ['null shape', null],
+  ])('rejects malformed statement periods: %s', (_name, period) => {
+    for (const field of ['statementPeriod', 'fullStatementPeriod'] as const) {
+      const result = deserializeAnalysis(
+        persistedFixture({ [field]: period }),
+      );
+      expect(result.data).toBeNull();
+      expect(result.warningKind).toBe('corrupted');
+      expect(result.shouldRemove).toBe(true);
+    }
+  });
+
+  test('accepts real, ordered statement periods', () => {
+    const statementPeriod = {
+      start: '2026-07-01',
+      end: '2026-07-31',
+    };
+    const result = deserializeAnalysis(
+      persistedFixture({
+        statementPeriod,
+        fullStatementPeriod: {
+          start: '2026-06-01',
+          end: '2026-07-31',
+        },
+      }),
+    );
+
+    expect(result.data?.statementPeriod).toEqual(statementPeriod);
+    expect(result.data?.fullStatementPeriod).toEqual({
+      start: '2026-06-01',
+      end: '2026-07-31',
+    });
+  });
+
+  test('rejects individually safe months whose displayed total is unsafe', () => {
+    const result = deserializeAnalysis(
+      persistedFixture({
+        monthlyBreakdown: [
+          {
+            month: '2026-06',
+            spending: Number.MAX_SAFE_INTEGER,
+            transactionCount: 1,
+          },
+          {
+            month: '2026-07',
+            spending: Number.MAX_SAFE_INTEGER,
+            transactionCount: 1,
+          },
+        ],
+      }),
+    );
+
+    expect(result.data).toBeNull();
+    expect(result.warningKind).toBe('corrupted');
+    expect(result.shouldRemove).toBe(true);
   });
 
   test('accepts fully shaped nested optimization entries', () => {

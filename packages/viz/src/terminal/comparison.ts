@@ -1,6 +1,10 @@
 import Table from 'cli-table3';
 import type { OptimizationResult } from '@cherrypicker/core';
 import { sanitizeTerminalText } from './sanitize.js';
+import {
+  GROSS_MONTHLY_REWARD_DISCLOSURE_KO,
+  GROSS_MONTHLY_REWARD_LABEL_KO,
+} from '../reward-disclosure.js';
 
 function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
@@ -15,12 +19,18 @@ function formatRate(rate: number): string {
 }
 
 export function printOptimizationResult(result: OptimizationResult): void {
-  console.log('\n최적 카드 배정 결과');
+  console.log('\n추천 카드 배정 결과');
   console.log('='.repeat(70));
+  console.log(GROSS_MONTHLY_REWARD_DISCLOSURE_KO);
 
   // Best card per category table
   const assignTable = new Table({
-    head: ['카테고리', '추천카드', '혜택률', '예상혜택'],
+    head: [
+      '카테고리',
+      '추천카드',
+      '월간 혜택률',
+      '연회비 차감 전 월간 혜택',
+    ],
     colAligns: ['left', 'left', 'right', 'right'],
     style: { head: ['cyan'] },
   });
@@ -40,13 +50,13 @@ export function printOptimizationResult(result: OptimizationResult): void {
   console.log('\n요약');
   console.log('-'.repeat(50));
   console.log(`  총 지출액:          ${formatWon(result.totalSpending)}`);
-  console.log(`  총 예상 혜택:       ${formatWon(result.totalReward)}`);
-  console.log(`  유효 혜택률:        ${formatRate(result.effectiveRate)}`);
+  console.log(`  ${GROSS_MONTHLY_REWARD_LABEL_KO}: ${formatWon(result.totalReward)}`);
+  console.log(`  연회비 차감 전 혜택률: ${formatRate(result.effectiveRate)}`);
   console.log(
-    `  단일 최적 카드:     ${sanitizeTerminalText(result.bestSingleCard.cardName)} (${formatWon(result.bestSingleCard.totalReward)})`,
+    `  단일 카드 월간 총혜택: ${sanitizeTerminalText(result.bestSingleCard.cardName)} (${formatWon(result.bestSingleCard.totalReward)}, 연회비 차감 전)`,
   );
   console.log(
-    `  다카드 추가 혜택:   ${formatWon(result.savingsVsSingleCard)} (${result.savingsVsSingleCard >= 0 ? '+' : ''}${formatRate(result.totalSpending > 0 ? result.savingsVsSingleCard / result.totalSpending : 0)})`,
+    `  단일 카드 대비 월간 혜택 차이: ${formatWon(result.savingsVsSingleCard)} (${result.savingsVsSingleCard >= 0 ? '+' : ''}${formatRate(result.totalSpending > 0 ? result.savingsVsSingleCard / result.totalSpending : 0)}, 연회비 차감 전)`,
   );
 
   // Caps hit warnings

@@ -3,8 +3,10 @@ import type { AnalysisResult } from './store.svelte.js';
 import { isOptimizableTx } from './tx-validation.js';
 import {
   isYearMonth,
+  sumMonthlySpending,
   type PreviousSpendingBasis,
 } from './analysis-context.js';
+import { isValidISODate } from '@cherrypicker/parser/browser';
 
 export const STORAGE_KEY = 'cherrypicker:analysis';
 export const STORAGE_VERSION = 2;
@@ -320,6 +322,71 @@ function safeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value);
 }
 
+function validStatementPeriod(
+  value: unknown,
+): value is { start: string; end: string } {
+  return (
+    isPlainObject(value) &&
+    typeof value.start === 'string' &&
+    typeof value.end === 'string' &&
+    isValidISODate(value.start) &&
+    isValidISODate(value.end) &&
+    value.start <= value.end
+  );
+}
+
+function validPersistedParseWarning(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    typeof value.fileName === 'string' &&
+    value.fileName.length > 0 &&
+    typeof value.format === 'string' &&
+    value.format.length > 0 &&
+    typeof value.message === 'string' &&
+    value.message.length > 0 &&
+    (
+      value.line === undefined ||
+      (
+        typeof value.line === 'number' &&
+        Number.isSafeInteger(value.line) &&
+        value.line > 0
+      )
+    ) &&
+    (
+      value.count === undefined ||
+      (
+        typeof value.count === 'number' &&
+        Number.isSafeInteger(value.count) &&
+        value.count > 0
+      )
+    )
+  );
+}
+
+function validCurrentPayloadShape(value: Record<string, unknown>): boolean {
+  return (
+    typeof value.success === 'boolean' &&
+    (typeof value.bank === 'string' || value.bank === null) &&
+    typeof value.format === 'string' &&
+    safeNonnegativeInteger(value.transactionCount) &&
+    Array.isArray(value.parseErrors) &&
+    value.parseErrors.every(validPersistedParseWarning) &&
+    (
+      value.monthlyBreakdown === undefined ||
+      Array.isArray(value.monthlyBreakdown)
+    ) &&
+    (
+      value.cardIdsOption === undefined ||
+      (
+        Array.isArray(value.cardIdsOption) &&
+        value.cardIdsOption.every(
+          (cardId) => typeof cardId === 'string' && cardId.length > 0,
+        )
+      )
+    )
+  );
+}
+
 function truncateEnd(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength - 1)}…`;
@@ -477,6 +544,12 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
 
   const version = storedVersion(parsed);
   if (version === null) return invalidResult();
+  if (
+    version === STORAGE_VERSION &&
+    !validCurrentPayloadShape(parsed)
+  ) {
+    return invalidResult();
+  }
   let migrated: Record<string, unknown>;
   try {
     migrated = migrate(parsed, version);
@@ -517,6 +590,14 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
     (
       migrated.previousMonthSpendingOption !== undefined &&
       !safeNonnegativeInteger(migrated.previousMonthSpendingOption)
+    ) ||
+    (
+      migrated.statementPeriod !== undefined &&
+      !validStatementPeriod(migrated.statementPeriod)
+    ) ||
+    (
+      migrated.fullStatementPeriod !== undefined &&
+      !validStatementPeriod(migrated.fullStatementPeriod)
     )
   ) {
     return invalidResult();
@@ -531,6 +612,10 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
     if (validTransactions.length !== migrated.transactions.length) {
       warningKind = 'corrupted';
     }
+  } else if (migrated.transactions !== undefined) {
+    // An omitted field is valid for legacy/truncated payloads, but an explicit
+    // non-array container cannot be treated as an intentionally empty result.
+    warningKind = 'corrupted';
   } else if (
     safeNonnegativeInteger(migrated._truncatedTxCount)
   ) {
@@ -545,15 +630,22 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
         (item) =>
           isPlainObject(item) &&
           typeof item.month === 'string' &&
+          isYearMonth(item.month) &&
           safeNonnegativeInteger(item.spending) &&
           safeNonnegativeInteger(item.transactionCount),
       )
     ) {
       return invalidResult();
     }
-    monthlyBreakdown = migrated.monthlyBreakdown as NonNullable<
+    const validatedBreakdown = migrated.monthlyBreakdown as NonNullable<
       AnalysisResult['monthlyBreakdown']
     >;
+    try {
+      sumMonthlySpending(validatedBreakdown);
+    } catch {
+      return invalidResult();
+    }
+    monthlyBreakdown = validatedBreakdown;
   }
 
   const format = typeof migrated.format === 'string' ? migrated.format : 'unknown';
@@ -586,14 +678,14 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
         ? migrated.bank
         : null,
     format,
-    statementPeriod: isPlainObject(migrated.statementPeriod)
-      ? (migrated.statementPeriod as { start: string; end: string })
+    statementPeriod: validStatementPeriod(migrated.statementPeriod)
+      ? migrated.statementPeriod
       : undefined,
     transactionCount: safeNonnegativeInteger(migrated.transactionCount)
       ? migrated.transactionCount
       : 0,
-    fullStatementPeriod: isPlainObject(migrated.fullStatementPeriod)
-      ? (migrated.fullStatementPeriod as { start: string; end: string })
+    fullStatementPeriod: validStatementPeriod(migrated.fullStatementPeriod)
+      ? migrated.fullStatementPeriod
       : undefined,
     totalTransactionCount: safeNonnegativeInteger(migrated.totalTransactionCount)
       ? migrated.totalTransactionCount
@@ -609,7 +701,8 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
       : undefined,
     cardIdsOption: Array.isArray(migrated.cardIdsOption)
       ? migrated.cardIdsOption.filter(
-          (cardId): cardId is string => typeof cardId === 'string',
+          (cardId): cardId is string =>
+            typeof cardId === 'string' && cardId.length > 0,
         )
       : undefined,
     previousSpendingBasis: restoredPreviousSpendingBasis,
