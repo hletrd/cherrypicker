@@ -46,6 +46,13 @@ const result: OptimizationResult = {
       performanceTier: 'tier0',
       capsHit: [
         {
+          category: 'clipped-purchase',
+          capType: 'per_transaction',
+          capAmount: 100,
+          actualReward: 120,
+          appliedReward: 100,
+        },
+        {
           category: 'exact-global',
           capType: 'monthly_total',
           capAmount: 100,
@@ -150,10 +157,10 @@ describe('exact versus clipped cap disclosure', () => {
       'online_shopping: 한도 10,000원 도달',
     );
     expect(html).toContain(
-      'online_shopping: 월 한도 5,000원 도달',
+      'online_shopping: 카테고리별 월 한도 5,000원 도달',
     );
     expect(html).toContain(
-      'online_shopping: 월 한도 10,000원 도달',
+      'online_shopping: 카테고리별 월 한도 10,000원 도달',
     );
   });
 
@@ -192,16 +199,19 @@ describe('exact versus clipped cap disclosure', () => {
     );
 
     expect(html).toContain(
-      'exact-global: 월 한도 100원 도달 — 혜택 손실 없음',
+      'clipped-purchase: 건당 한도 100원 도달 — 20원 혜택 손실',
     );
     expect(html).toContain(
-      'exact-rule: 월 한도 100원 도달 — 혜택 손실 없음',
+      'exact-global: 카드 월 통합 한도 100원 도달 — 혜택 손실 없음',
     );
     expect(html).toContain(
-      'clipped-global: 월 한도 100원 도달 — 20원 혜택 손실',
+      'exact-rule: 카테고리별 월 한도 100원 도달 — 혜택 손실 없음',
+    );
+    expect(html).toContain(
+      'clipped-global: 카드 월 통합 한도 100원 도달 — 20원 혜택 손실',
     );
     expect(html).not.toContain(
-      'exact-global: 월 한도 100원 도달 — 0원 혜택 손실',
+      'exact-global: 카드 월 통합 한도 100원 도달 — 0원 혜택 손실',
     );
   });
 });
