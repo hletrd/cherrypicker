@@ -10,6 +10,10 @@ export default defineConfig({
   vite: {
     build: {
       manifest: true,
+      // Format-specific parser workers are intentionally deferred and include
+      // large PDF/XLSX runtimes. `check-web-bundles.ts` verifies that none enter
+      // the initial graph and enforces tighter initial/catalog budgets.
+      chunkSizeWarningLimit: 1_400,
     },
     plugins: [tailwindcss()],
   },

@@ -40,9 +40,9 @@ export function staticImportSpecifiers(source: string): string[] {
 export function dynamicImportSpecifiers(source: string): string[] {
   const specifiers: string[] = [];
   for (const match of source.matchAll(
-    /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
+    /\bimport\s*\(\s*(["'`])([^"'`]+)\1\s*\)/g,
   )) {
-    specifiers.push(match[1]!);
+    specifiers.push(match[2]!);
   }
   return specifiers;
 }

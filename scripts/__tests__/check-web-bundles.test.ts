@@ -49,8 +49,9 @@ describe('web bundle graph parsing', () => {
         const csv = import("./csv.js");
         const ignored = import(variable);
         const pdf = import( './pdf.js' );
+        const html = import(\`./html.js\`);
       `),
-    ).toEqual(['./csv.js', './pdf.js']);
+    ).toEqual(['./csv.js', './pdf.js', './html.js']);
   });
 });
 

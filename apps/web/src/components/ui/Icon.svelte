@@ -1,11 +1,4 @@
-<script lang="ts">
-  interface Props {
-    name: string;
-    size?: number;
-    class?: string;
-  }
-  let { name, size = 20, class: className = '' }: Props = $props();
-
+<script module lang="ts">
   const icons: Record<string, string> = {
     // Dashboard
     'wallet': '<path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9m18 0V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3"/>',
@@ -39,6 +32,16 @@
     'light-bulb': '<path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/>',
     'inbox-tray': '<path stroke-linecap="round" stroke-linejoin="round" d="M9 13.5l3 3m0 0 3-3m-3 3v-6m1.06-4.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"/>',
   };
+</script>
+
+<script lang="ts">
+  interface Props {
+    name: string;
+    size?: number;
+    class?: string;
+  }
+
+  let { name, size = 20, class: className = '' }: Props = $props();
 </script>
 
 {#if icons[name]}

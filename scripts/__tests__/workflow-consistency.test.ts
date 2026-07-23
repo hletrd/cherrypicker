@@ -33,6 +33,7 @@ const workflow = readFileSync(
   resolve(repoRoot, '.github/workflows/deploy.yml'),
   'utf8',
 );
+const readme = readFileSync(resolve(repoRoot, 'README.md'), 'utf8');
 const workflowDefinition = parse(workflow) as WorkflowDefinition;
 const e2eRunner = readFileSync(
   resolve(repoRoot, 'scripts/run-e2e.ts'),
@@ -101,9 +102,18 @@ describe('deployment workflow consistency', () => {
     const declared = declaredBunVersion(packageJson.packageManager);
     const workflowPin = workflow.match(/bun-version:\s*([0-9.]+)/)?.[1];
     expect(workflowPin).toBe(declared);
+    expect(readme).toContain(`필수 도구는 Bun ${declared}예요.`);
     expect(workflow.indexOf('bun run toolchain:check')).toBeLessThan(
       workflow.indexOf('bun install --frozen-lockfile'),
     );
+  });
+
+  test('blocks advisory-bearing lockfiles in the verified deployment path', () => {
+    expect(packageJson.scripts['security:audit']).toBe('bun audit');
+    expect(packageJson.scripts.verify).toContain(
+      'bun run dependencies:check && bun run security:audit && bun run data:check',
+    );
+    expect(workflow).toContain('run: bun run verify');
   });
 
   test('runs regression E2E before Pages upload and never substitutes screenshots', () => {
