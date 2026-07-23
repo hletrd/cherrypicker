@@ -7,6 +7,7 @@ import { declaredBunVersion } from '../check-toolchain.js';
 
 const repoRoot = resolve(import.meta.dir, '../..');
 interface WorkflowStep {
+  if?: string;
   name?: string;
   run?: string;
   uses?: string;
@@ -15,12 +16,18 @@ interface WorkflowStep {
 
 interface WorkflowJob {
   environment?: string | { name?: string };
+  if?: string;
   uses?: string;
   permissions?: Record<string, string>;
   steps?: WorkflowStep[];
 }
 
 interface WorkflowDefinition {
+  concurrency?: {
+    group?: string;
+    'cancel-in-progress'?: boolean;
+  };
+  on?: Record<string, unknown>;
   permissions?: Record<string, string>;
   jobs: Record<string, WorkflowJob>;
 }
@@ -54,6 +61,30 @@ const browserSpecs = [
 ].map((path) => readFileSync(resolve(repoRoot, path), 'utf8'));
 
 describe('deployment workflow consistency', () => {
+  test('verifies pull requests without granting them publication authority', () => {
+    const trustedPublicationCondition =
+      "github.event_name == 'workflow_dispatch' || " +
+      "(github.event_name == 'push' && github.ref == 'refs/heads/main')";
+    const events = workflowDefinition.on ?? {};
+    expect(Object.keys(events).sort()).toEqual([
+      'pull_request',
+      'push',
+      'workflow_dispatch',
+    ]);
+    expect(events).not.toHaveProperty('pull_request_target');
+
+    expect(workflowDefinition.concurrency?.group).toContain(
+      'github.event.pull_request.number',
+    );
+    const pagesUpload = workflowDefinition.jobs.build?.steps?.find(
+      (step) => step.uses?.startsWith('actions/upload-pages-artifact@'),
+    );
+    expect(pagesUpload?.if).toBe(trustedPublicationCondition);
+    expect(workflowDefinition.jobs.deploy?.if).toBe(
+      trustedPublicationCondition,
+    );
+  });
+
   test('pins every action to a full commit SHA and scopes write permissions to deploy', () => {
     const actionReferences = Object.values(workflowDefinition.jobs).flatMap(
       (job) => [
