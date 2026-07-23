@@ -1,7 +1,7 @@
 # Plan 126 — Cycle 11 Merchant Boundary Performance
 
 **Findings:** C11-002 (Medium/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -43,20 +43,35 @@ short-alias correctness.
 
 ## Acceptance
 
-- [ ] Authored static and taxonomy terms compile edge metadata once.
-- [ ] A no-occurrence comparison performs no boundary regular-expression
+- [x] Authored static and taxonomy terms compile edge metadata once.
+- [x] A no-occurrence comparison performs no boundary regular-expression
       work.
-- [ ] Reverse matching reuses one compiled merchant representation.
-- [ ] CU/KT/SKT intended variants still match, and unrelated Latin
+- [x] Reverse matching reuses one compiled merchant representation.
+- [x] CU/KT/SKT intended variants still match, and unrelated Latin
       near-collisions remain rejected.
-- [ ] Korean/descriptive substring and repeated-occurrence behavior remains
+- [x] Korean/descriptive substring and repeated-occurrence behavior remains
       unchanged.
-- [ ] The unique-miss benchmark materially improves without claiming the
+- [x] The unique-miss benchmark materially improves without claiming the
       deferred full-scan architecture is closed.
 
 ## Execution note
 
-The requested `ralph` skill is unavailable. Prompt 3 will use the approved
+The requested `ralph` skill is unavailable. Prompt 3 used the approved
 manual test-first fallback with focused semantic tests, an equal-output
 operation/performance probe, and then the repository-wide gates. No deployment
-is part of this plan.
+was part of this plan.
+
+## Completion evidence
+
+- Commit: `5cd38530c947b3d3dfe2e8760e1717ff4365e0ad`
+  (`⚡ perf(core): compile merchant boundaries once`).
+- Expected red: the new compile-once contract failed because
+  `compileNormalizedMerchantTerm` did not exist.
+- Focused green: 57 tests and 853 expectations passed across the Cycle 11
+  operation contract, Cycle 10 boundary matrix, and categorizer suites.
+- The deterministic operation probe observed zero boundary regular-expression
+  tests and two character reads for a unique miss.
+- The 1,000-merchant unique-miss median improved from 707.1 ms to 261.6 ms
+  (2.70× faster, 63.0% lower); a final rerun measured 218.9 ms.
+- `D-C1-041` remains open because eliminating the older full-corpus scan is a
+  separate architectural task.

@@ -1,7 +1,7 @@
 # Plan 127 — Cycle 11 Rule-Scoped Cap Telemetry
 
 **Findings:** C11-003 (Medium/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -46,20 +46,34 @@ category field remains accepted only as deprecated legacy input.
 
 ## Acceptance
 
-- [ ] The real `kb-all` two-purchase optimizer result remains 15,000 Won and
+- [x] The real `kb-all` two-purchase optimizer result remains 15,000 Won and
       passes web coherence.
-- [ ] New rule-scoped cap events carry non-empty `ruleId` and `capGroup`.
-- [ ] `capsHit` preserves both same-category events and downstream
+- [x] New rule-scoped cap events carry non-empty `ruleId` and `capGroup`.
+- [x] `capsHit` preserves both same-category events and downstream
       disclosures render both.
-- [ ] New calculator output omits the ambiguous singular category cap.
-- [ ] Existing coherent v4 payloads without cap identity still deserialize;
+- [x] New calculator output omits the ambiguous singular category cap.
+- [x] Existing coherent v4 payloads without cap identity still deserialize;
       malformed new identity fails closed.
-- [ ] Legacy one-cap singular agreement and mismatch tests remain meaningful.
-- [ ] No storage-version bump invents unrecoverable historical rule identity.
+- [x] Legacy one-cap singular agreement and mismatch tests remain meaningful.
+- [x] No storage-version bump invents unrecoverable historical rule identity.
 
 ## Execution note
 
-The requested `ralph` skill is unavailable. Prompt 3 will use the approved
+The requested `ralph` skill is unavailable. Prompt 3 used the approved
 manual red-green fallback across the core producer, worker wire boundary, web
 coherence, persistence, and visualization consumers before repository-wide
-gates. No deployment is part of this plan.
+gates. No deployment was part of this plan.
+
+## Completion evidence
+
+- Commit: `c0bebe869adfbf36f0a569ceedfe8359673af0c2`
+  (`🐛 fix(core): preserve rule-scoped cap telemetry`).
+- Expected red: 14 new contract assertions failed while 262 controls passed.
+- Focused green: 276 tests passed. Full package evidence added 268 core tests,
+  829 web tests followed by 177 final changed web tests, and 23 visualization
+  tests.
+- The real one- and two-purchase `kb-all` controls validate at 5,000 and
+  15,000 Won. The two cap events retain distinct rule and cap-group identity.
+- Worker decoding requires current rule-scoped identities; v4 persistence
+  accepts valid legacy identity-less events and preserves new identities
+  without a storage-version bump.

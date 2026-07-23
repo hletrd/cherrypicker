@@ -197,10 +197,31 @@ No Cycle 11 finding is deferred, rejected, or silently dropped. The requested
 `ralph` skill is not registered in the available skill roots, so each plan
 records the approved manual test-first fallback.
 
-## Prompt 2 conclusion
+## Prompt 3 completion
 
-All four plans are ready for Prompt 3. Source and test implementation has not
-begun at this boundary.
+All four plans were implemented with the approved manual test-first fallback.
+Every retained finding has one completed plan and one fine-grained signed
+repair commit:
+
+| Plan | Finding | Expected red | Focused green | Commit |
+|---|---|---|---|---|
+| 125 | C11-001 | 6 failures exposed positive composed negatives and admitted refunds | 260 tests, 437 expectations | `c848436` |
+| 126 | C11-002 | Missing compiled-term contract | 57 tests, 853 expectations; unique-miss median 707.1 → 261.6 ms | `5cd3853` |
+| 127 | C11-003 | 14 plural-cap/identity contract failures | 276 focused; 268 core; 829 web; 23 visualization tests | `c0bebe8` |
+| 128 | C11-004 | Missing neutral helper and obsolete official-link contract | 58 tests, 372 expectations | `52fc999` |
+
+The parser now applies one negative polarity to composed markers. Merchant
+edge metadata compiles once and miss paths defer boundary inspection until an
+occurrence exists. Rule-scoped cap telemetry is plural and identity-bearing
+while v4 legacy payloads remain readable. Card links identify reviewed source
+hosts without claiming issuer ownership.
+
+`D-C1-041` remains open: Plan 126 removed only the Cycle 10 constant-factor
+regression and did not claim to replace the older linear full-corpus scan.
+No Cycle 11 finding was deferred or dropped.
+
+Final repository gates will be recorded after this closure documentation is
+committed, so that every required command verifies the resulting HEAD.
 
 The six protected untracked Cycle 42 artifacts remain byte-identical,
 untracked, and unstaged at their recorded SHA-256 values.

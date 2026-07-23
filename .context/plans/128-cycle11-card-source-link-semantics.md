@@ -1,7 +1,7 @@
 # Plan 128 — Cycle 11 Card Source Link Semantics
 
 **Findings:** C11-004 (Medium/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -45,19 +45,31 @@ see the destination host before leaving CherryPicker.
 
 ## Acceptance
 
-- [ ] No existing `card.url` is labeled as an official card page.
-- [ ] The 26 conservative third-party records render neutral source copy and
+- [x] No existing `card.url` is labeled as an official card page.
+- [x] The 26 conservative third-party records render neutral source copy and
       expose their destination hostname.
-- [ ] Safe issuer-host links also use the truthful generic source wording
+- [x] Safe issuer-host links also use the truthful generic source wording
       until a distinct official-host contract exists.
-- [ ] Unsafe or malformed URLs remain absent from the rendered UI.
-- [ ] Cycle 10 model-authority and external-link security regressions remain
+- [x] Unsafe or malformed URLs remain absent from the rendered UI.
+- [x] Cycle 10 model-authority and external-link security regressions remain
       green.
-- [ ] Link accessibility and browser security attributes remain intact.
+- [x] Link accessibility and browser security attributes remain intact.
 
 ## Execution note
 
-The requested `ralph` skill is unavailable. Prompt 3 will use the approved
+The requested `ralph` skill is unavailable. Prompt 3 used the approved
 manual test-first fallback across component contracts, URL helpers, current
 catalog examples, and E2E security coverage before repository-wide gates. No
-deployment is part of this plan.
+deployment was part of this plan.
+
+## Completion evidence
+
+- Commit: `52fc9992e7e85b221e838af0caa56236418ab1a5`
+  (`📝 fix(web): label card links as sources`).
+- Expected red: the neutral helper export was absent and the component still
+  satisfied the obsolete issuer-official copy contract.
+- Focused green: 58 tests and 372 expectations passed across the component,
+  URL helper, rules security, catalog publication, and SVG semantics suites.
+- Every safe URL now renders as `상품 정보 출처 · hostname`; malformed URLs
+  remain hidden and external-target, `noopener noreferrer`, and decorative
+  SVG semantics are preserved.
