@@ -20,38 +20,49 @@ class FakeOptimizerWorker implements OptimizerWorkerLike {
     (event: MessageEvent<OptimizerWorkerResponse>) => void
   >();
   errorListeners = new Set<(event: ErrorEvent) => void>();
+  messageErrorListeners = new Set<(event: MessageEvent<unknown>) => void>();
 
   postMessage(message: OptimizerWorkerRequest): void {
     this.messages.push(message);
   }
 
   addEventListener(
-    type: 'message' | 'error',
+    type: 'message' | 'error' | 'messageerror',
     listener:
       | ((event: MessageEvent<OptimizerWorkerResponse>) => void)
-      | ((event: ErrorEvent) => void),
+      | ((event: ErrorEvent) => void)
+      | ((event: MessageEvent<unknown>) => void),
   ): void {
     if (type === 'message') {
       this.messageListeners.add(
         listener as (event: MessageEvent<OptimizerWorkerResponse>) => void,
       );
-    } else {
+    } else if (type === 'error') {
       this.errorListeners.add(listener as (event: ErrorEvent) => void);
+    } else {
+      this.messageErrorListeners.add(
+        listener as (event: MessageEvent<unknown>) => void,
+      );
     }
   }
 
   removeEventListener(
-    type: 'message' | 'error',
+    type: 'message' | 'error' | 'messageerror',
     listener:
       | ((event: MessageEvent<OptimizerWorkerResponse>) => void)
-      | ((event: ErrorEvent) => void),
+      | ((event: ErrorEvent) => void)
+      | ((event: MessageEvent<unknown>) => void),
   ): void {
     if (type === 'message') {
       this.messageListeners.delete(
         listener as (event: MessageEvent<OptimizerWorkerResponse>) => void,
       );
-    } else {
+    } else if (type === 'error') {
       this.errorListeners.delete(listener as (event: ErrorEvent) => void);
+    } else {
+      this.messageErrorListeners.delete(
+        listener as (event: MessageEvent<unknown>) => void,
+      );
     }
   }
 
@@ -62,6 +73,14 @@ class FakeOptimizerWorker implements OptimizerWorkerLike {
   respond(response: OptimizerWorkerResponse): void {
     for (const listener of this.messageListeners) {
       listener({ data: response } as MessageEvent<OptimizerWorkerResponse>);
+    }
+  }
+
+  emitMessageError(): void {
+    for (const listener of this.messageErrorListeners) {
+      listener({
+        data: { privatePayload: 'must not escape into the error' },
+      } as MessageEvent<unknown>);
     }
   }
 }
@@ -118,6 +137,7 @@ describe('browser optimizer worker ownership', () => {
     expect(cancelledWorker.terminations).toBe(1);
     expect(cancelledWorker.messageListeners.size).toBe(0);
     expect(cancelledWorker.errorListeners.size).toBe(0);
+    expect(cancelledWorker.messageErrorListeners.size).toBe(0);
     expect(cancelledWorker.messages[0]?.cardRules).toHaveLength(683);
 
     // A late result from the terminated worker has no listener and cannot
@@ -126,6 +146,47 @@ describe('browser optimizer worker ownership', () => {
     liveWorker.respond({ ok: true, result: optimizationResult });
     expect(await live).toBe(optimizationResult);
     expect(liveWorker.terminations).toBe(1);
+    expect(liveWorker.messageListeners.size).toBe(0);
+    expect(liveWorker.errorListeners.size).toBe(0);
+    expect(liveWorker.messageErrorListeners.size).toBe(0);
     expect(liveWorker.messages[0]?.cardRules).toHaveLength(683);
+  });
+
+  test('messageerror rejects once and removes every terminal listener', async () => {
+    const worker = new FakeOptimizerWorker();
+    const controller = new AbortController();
+    let resolutions = 0;
+    let rejections = 0;
+    const optimizing = optimizeWithWorker(
+      constraints,
+      [],
+      controller.signal,
+      () => worker,
+    ).then(
+      (value) => {
+        resolutions++;
+        return { kind: 'resolved' as const, value };
+      },
+      (reason: unknown) => {
+        rejections++;
+        return { kind: 'rejected' as const, reason };
+      },
+    );
+
+    worker.emitMessageError();
+    worker.respond({ ok: true, result: optimizationResult });
+    controller.abort();
+
+    const outcome = await optimizing;
+    expect(outcome).toMatchObject({
+      kind: 'rejected',
+      reason: { message: '최적화 작업자 응답을 읽을 수 없어요.' },
+    });
+    expect(resolutions).toBe(0);
+    expect(rejections).toBe(1);
+    expect(worker.terminations).toBe(1);
+    expect(worker.messageListeners.size).toBe(0);
+    expect(worker.errorListeners.size).toBe(0);
+    expect(worker.messageErrorListeners.size).toBe(0);
   });
 });

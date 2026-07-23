@@ -26,6 +26,7 @@ class FakeWorker implements ParserWorkerLike {
     (event: MessageEvent<ParserWorkerResponse>) => void
   >();
   errorListeners = new Set<(event: ErrorEvent) => void>();
+  messageErrorListeners = new Set<(event: MessageEvent<unknown>) => void>();
 
   postMessage(
     message: ParserWorkerRequest,
@@ -36,32 +37,42 @@ class FakeWorker implements ParserWorkerLike {
   }
 
   addEventListener(
-    type: 'message' | 'error',
+    type: 'message' | 'error' | 'messageerror',
     listener:
       | ((event: MessageEvent<ParserWorkerResponse>) => void)
-      | ((event: ErrorEvent) => void),
+      | ((event: ErrorEvent) => void)
+      | ((event: MessageEvent<unknown>) => void),
   ): void {
     if (type === 'message') {
       this.messageListeners.add(
         listener as (event: MessageEvent<ParserWorkerResponse>) => void,
       );
-    } else {
+    } else if (type === 'error') {
       this.errorListeners.add(listener as (event: ErrorEvent) => void);
+    } else {
+      this.messageErrorListeners.add(
+        listener as (event: MessageEvent<unknown>) => void,
+      );
     }
   }
 
   removeEventListener(
-    type: 'message' | 'error',
+    type: 'message' | 'error' | 'messageerror',
     listener:
       | ((event: MessageEvent<ParserWorkerResponse>) => void)
-      | ((event: ErrorEvent) => void),
+      | ((event: ErrorEvent) => void)
+      | ((event: MessageEvent<unknown>) => void),
   ): void {
     if (type === 'message') {
       this.messageListeners.delete(
         listener as (event: MessageEvent<ParserWorkerResponse>) => void,
       );
-    } else {
+    } else if (type === 'error') {
       this.errorListeners.delete(listener as (event: ErrorEvent) => void);
+    } else {
+      this.messageErrorListeners.delete(
+        listener as (event: MessageEvent<unknown>) => void,
+      );
     }
   }
 
@@ -72,6 +83,14 @@ class FakeWorker implements ParserWorkerLike {
   respond(response: ParserWorkerResponse): void {
     for (const listener of this.messageListeners) {
       listener({ data: response } as MessageEvent<ParserWorkerResponse>);
+    }
+  }
+
+  emitMessageError(): void {
+    for (const listener of this.messageErrorListeners) {
+      listener({
+        data: { privatePayload: 'must not escape into the error' },
+      } as MessageEvent<unknown>);
     }
   }
 }
@@ -115,6 +134,52 @@ describe('browser parser worker ownership', () => {
     expect(worker.terminations).toBe(1);
     expect(worker.messageListeners.size).toBe(0);
     expect(worker.errorListeners.size).toBe(0);
+    expect(worker.messageErrorListeners.size).toBe(0);
+  });
+
+  test('messageerror rejects once and removes every terminal listener', async () => {
+    const worker = new FakeWorker();
+    const controller = new AbortController();
+    let resolutions = 0;
+    let rejections = 0;
+    const parsing = parseWithWorker(
+      { format: 'json', payload: new ArrayBuffer(8) },
+      controller.signal,
+      () => worker,
+    ).then(
+      (value) => {
+        resolutions++;
+        return { kind: 'resolved' as const, value };
+      },
+      (reason: unknown) => {
+        rejections++;
+        return { kind: 'rejected' as const, reason };
+      },
+    );
+
+    worker.emitMessageError();
+    worker.respond({
+      ok: true,
+      result: {
+        bank: null,
+        format: 'json',
+        transactions: [],
+        errors: [],
+      },
+    });
+    controller.abort();
+
+    const outcome = await parsing;
+    expect(outcome).toMatchObject({
+      kind: 'rejected',
+      reason: { message: '파서 작업자 응답을 읽을 수 없어요.' },
+    });
+    expect(resolutions).toBe(0);
+    expect(rejections).toBe(1);
+    expect(worker.terminations).toBe(1);
+    expect(worker.messageListeners.size).toBe(0);
+    expect(worker.errorListeners.size).toBe(0);
+    expect(worker.messageErrorListeners.size).toBe(0);
   });
 
   test.each(['csv', 'xlsx', 'json', 'ofx', 'html'] as const)(
@@ -229,6 +294,7 @@ describe('browser parser worker ownership', () => {
     expect(worker.terminations).toBe(1);
     expect(worker.messageListeners.size).toBe(0);
     expect(worker.errorListeners.size).toBe(0);
+    expect(worker.messageErrorListeners.size).toBe(0);
   });
 
   test('rehydrates structured text-encoding worker failures', async () => {

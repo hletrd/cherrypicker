@@ -11,13 +11,22 @@ type WorkerMessageListener = (
   event: MessageEvent<ParserWorkerResponse>,
 ) => void;
 type WorkerErrorListener = (event: ErrorEvent) => void;
+type WorkerMessageErrorListener = (event: MessageEvent<unknown>) => void;
 
 export interface ParserWorkerLike {
   postMessage(message: ParserWorkerRequest, transfer?: Transferable[]): void;
   addEventListener(type: 'message', listener: WorkerMessageListener): void;
   addEventListener(type: 'error', listener: WorkerErrorListener): void;
+  addEventListener(
+    type: 'messageerror',
+    listener: WorkerMessageErrorListener,
+  ): void;
   removeEventListener(type: 'message', listener: WorkerMessageListener): void;
   removeEventListener(type: 'error', listener: WorkerErrorListener): void;
+  removeEventListener(
+    type: 'messageerror',
+    listener: WorkerMessageErrorListener,
+  ): void;
   terminate(): void;
 }
 
@@ -77,6 +86,7 @@ export function parseWithWorker(
       signal?.removeEventListener('abort', onAbort);
       worker.removeEventListener('message', onMessage);
       worker.removeEventListener('error', onError);
+      worker.removeEventListener('messageerror', onMessageError);
       worker.terminate();
     };
     const settle = (): boolean => {
@@ -106,10 +116,14 @@ export function parseWithWorker(
     const onError: WorkerErrorListener = (event) => {
       fail(new Error(event.message || '파서 작업자가 실패했어요.'));
     };
+    const onMessageError: WorkerMessageErrorListener = () => {
+      fail(new Error('파서 작업자 응답을 읽을 수 없어요.'));
+    };
 
     signal?.addEventListener('abort', onAbort, { once: true });
     worker.addEventListener('message', onMessage);
     worker.addEventListener('error', onError);
+    worker.addEventListener('messageerror', onMessageError);
     try {
       worker.postMessage(request, [request.payload]);
     } catch (error) {
