@@ -52,6 +52,7 @@ describe('public terminal sinks', () => {
           assignedCardId: 'card-a',
           assignedCardName: osc8,
           spending: 10_000,
+          transactionCount: 1,
           reward: 100,
           rate: 0.01,
           alternatives: [

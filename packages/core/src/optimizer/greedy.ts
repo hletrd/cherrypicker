@@ -18,6 +18,7 @@ import {
   calculateRewards,
   isRewardEligibleTransaction,
 } from '../calculator/reward.js';
+import { normalizeMerchantText } from '../categorizer/normalize.js';
 import {
   addSafeNonnegativeIntegers,
   assertSafeNonnegativeInteger,
@@ -45,6 +46,124 @@ interface TxAssignment {
 
 function compareAscii(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function compareOptionalAscii(
+  left: string | undefined,
+  right: string | undefined,
+): number {
+  if (left === right) return 0;
+  if (left === undefined) return -1;
+  if (right === undefined) return 1;
+  return compareAscii(left, right);
+}
+
+function compareOptionalNumber(
+  left: number | undefined,
+  right: number | undefined,
+): number {
+  if (Object.is(left, right)) return 0;
+  if (left === undefined) return -1;
+  if (right === undefined) return 1;
+  if (Number.isNaN(left)) return Number.isNaN(right) ? 0 : -1;
+  if (Number.isNaN(right)) return 1;
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function compareOptionalAsciiSet(
+  left: readonly string[] | undefined,
+  right: readonly string[] | undefined,
+): number {
+  if (left === undefined) return right === undefined ? 0 : -1;
+  if (right === undefined) return 1;
+
+  const normalizedLeft = [...new Set(left)].sort(compareAscii);
+  const normalizedRight = [...new Set(right)].sort(compareAscii);
+  const sharedLength = Math.min(
+    normalizedLeft.length,
+    normalizedRight.length,
+  );
+  for (let index = 0; index < sharedLength; index += 1) {
+    const difference = compareAscii(
+      normalizedLeft[index]!,
+      normalizedRight[index]!,
+    );
+    if (difference !== 0) return difference;
+  }
+  return normalizedLeft.length - normalizedRight.length;
+}
+
+const FACT_PROVENANCE_KEYS = [
+  'paymentType',
+  'channel',
+  'fuelVolumeLiters',
+  'performanceExclusionTags',
+] as const;
+
+/**
+ * Canonically orders every immutable transaction fact that can affect reward
+ * calculation. Upload-derived IDs are deliberately excluded: equivalent
+ * financial facts must remain interchangeable across file permutations.
+ */
+export function compareRewardRelevantTransactions(
+  left: CategorizedTransaction,
+  right: CategorizedTransaction,
+): number {
+  const amountDifference = right.amount - left.amount;
+  if (amountDifference !== 0) return amountDifference;
+
+  const stringPairs: ReadonlyArray<readonly [string | undefined, string | undefined]> = [
+    [normalizeMerchantText(left.merchant), normalizeMerchantText(right.merchant)],
+    [left.date, right.date],
+    [left.category, right.category],
+    [left.subcategory, right.subcategory],
+    [left.paymentType, right.paymentType],
+    [left.channel, right.channel],
+  ];
+  for (const [leftValue, rightValue] of stringPairs) {
+    const difference = compareOptionalAscii(leftValue, rightValue);
+    if (difference !== 0) return difference;
+  }
+
+  const fuelDifference = compareOptionalNumber(
+    left.fuelVolumeLiters,
+    right.fuelVolumeLiters,
+  );
+  if (fuelDifference !== 0) return fuelDifference;
+
+  for (const key of FACT_PROVENANCE_KEYS) {
+    const difference = compareOptionalAscii(
+      left.factProvenance?.[key],
+      right.factProvenance?.[key],
+    );
+    if (difference !== 0) return difference;
+  }
+
+  const installmentDifference = compareOptionalNumber(
+    left.installments,
+    right.installments,
+  );
+  if (installmentDifference !== 0) return installmentDifference;
+
+  const exclusionDifference = compareOptionalAsciiSet(
+    left.performanceExclusionTags,
+    right.performanceExclusionTags,
+  );
+  if (exclusionDifference !== 0) return exclusionDifference;
+
+  const remainingStringPairs: ReadonlyArray<
+    readonly [string | undefined, string | undefined]
+  > = [
+    [left.currency, right.currency],
+    [left.rawCategory, right.rawCategory],
+    [left.memo, right.memo],
+  ];
+  for (const [leftValue, rightValue] of remainingStringPairs) {
+    const difference = compareOptionalAscii(leftValue, rightValue);
+    if (difference !== 0) return difference;
+  }
+
+  return 0;
 }
 
 function getCardName(rule: CardRuleSet): string {
@@ -131,7 +250,15 @@ function deduplicateCalculationIssues(
     ].join('\u0000');
     if (!unique.has(key)) unique.set(key, issue);
   }
-  return [...unique.values()];
+  return [...unique.values()].sort(
+    (left, right) =>
+      compareAscii(left.cardId, right.cardId) ||
+      compareAscii(left.transactionId, right.transactionId) ||
+      compareAscii(left.ruleId, right.ruleId) ||
+      compareAscii(left.category, right.category) ||
+      compareAscii(left.reason, right.reason) ||
+      compareOptionalAscii(left.detail, right.detail),
+  );
 }
 
 function buildAssignments(
@@ -171,6 +298,11 @@ function buildAssignments(
         assignment.tx.amount,
         'assignment spending',
       );
+      current.transactionCount = addSafeNonnegativeIntegers(
+        current.transactionCount,
+        1,
+        'assignment transaction count',
+      );
       current.reward = addSafeNonnegativeIntegers(
         current.reward,
         assignment.reward,
@@ -190,6 +322,7 @@ function buildAssignments(
         assignedCardId: assignment.assignedCardId,
         assignedCardName: assignment.assignedCardName,
         spending: assignment.tx.amount,
+        transactionCount: 1,
         reward: assignment.reward,
         rate: assignment.rate,
         alternatives: [],
@@ -285,7 +418,7 @@ function buildCardResults(
       byCategory,
       performanceTier: output.performanceTier,
       capsHit,
-      unsupportedRules: output.unsupportedRules,
+      unsupportedRules: deduplicateCalculationIssues(output.unsupportedRules),
     });
   }
 
@@ -349,14 +482,7 @@ export function greedyOptimize(
   // comparisons which sort inconsistently across JS engines.
   const sortedTransactions = [...constraints.transactions]
     .filter(isRewardEligibleTransaction)
-    .sort((a, b) => {
-      const amountDiff = b.amount - a.amount;
-      if (amountDiff !== 0) return amountDiff;
-      // Secondary sort keys for deterministic ordering (C32-V12)
-      const merchantDiff = a.merchant.localeCompare(b.merchant);
-      if (merchantDiff !== 0) return merchantDiff;
-      return a.date.localeCompare(b.date);
-    });
+    .sort(compareRewardRelevantTransactions);
 
   const txAssignments: TxAssignment[] = [];
   const candidateUnsupportedRules: CalculationIssue[] = [];

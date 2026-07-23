@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { join } from 'path';
 import { calculateRewards } from '../src/calculator/reward.js';
+import { normalizeMerchantText } from '../src/categorizer/normalize.js';
 import {
   cardRuleSetSchema,
   loadAllCardRules,
@@ -1699,6 +1700,99 @@ describe('calculateRewards - merchant applicability', () => {
         }).totalReward
       ),
     ).toEqual(cases.map((testCase) => testCase.expectedReward));
+  });
+
+  test('CU matches statement variants but not embedded ASCII tokens', () => {
+    const cuCard = catalogCards.find(
+      (card) => card.card.id === 'kb-kakaopay-check',
+    )!;
+    const rewardFor = (merchant: string) =>
+      calculateRewards({
+        transactions: [
+          makeTx('cu-boundary', 'uncategorized', 10_000, merchant),
+        ],
+        previousMonthSpending: 0,
+        cardRule: cuCard,
+      }).totalReward;
+
+    expect(['CU', 'cu 강남점', '(CU)편의점'].map(rewardFor)).toEqual([
+      100,
+      100,
+      100,
+    ]);
+    expect(
+      [
+        'SECURITY SERVICE',
+        'CULTURE CENTER',
+        'CUBAN RESTAURANT',
+      ].map(rewardFor),
+    ).toEqual([0, 0, 0]);
+  });
+
+  test('short Latin catalog aliases reject embedded ASCII near-collisions', () => {
+    const aliasesByNormalizedText = new Map<string, string>();
+    for (const card of catalogCards) {
+      for (const rule of card.rewards) {
+        for (const alias of rule.conditions?.specificMerchants ?? []) {
+          const normalized = normalizeMerchantText(alias);
+          if (
+            normalized.length <= 8 &&
+            /^[\x20-\x7e]+$/.test(normalized) &&
+            /^[a-z0-9]/.test(normalized) &&
+            /[a-z0-9]$/.test(normalized)
+          ) {
+            aliasesByNormalizedText.set(normalized, alias);
+          }
+        }
+      }
+    }
+
+    expect([...aliasesByNormalizedText.keys()]).toContain('cu');
+    for (const [normalizedAlias, authoredAlias] of aliasesByNormalizedText) {
+      const fixture = structuredClone(simplePlan);
+      fixture.card.id = `merchant-boundary-${normalizedAlias}`;
+      fixture.rewards = [{
+        ...fixture.rewards[0]!,
+        id: 'merchant-boundary',
+        category: 'uncategorized',
+        conditions: { specificMerchants: [authoredAlias] },
+        support: { status: 'supported' },
+      }];
+
+      const intended = calculateRewards({
+        transactions: [
+          makeTx(
+            `intended-${normalizedAlias}`,
+            'uncategorized',
+            10_000,
+            `${authoredAlias} 강남점`,
+          ),
+        ],
+        previousMonthSpending: 0,
+        cardRule: fixture,
+      });
+      const nearCollision = calculateRewards({
+        transactions: [
+          makeTx(
+            `collision-${normalizedAlias}`,
+            'uncategorized',
+            10_000,
+            `X${authoredAlias}Y`,
+          ),
+        ],
+        previousMonthSpending: 0,
+        cardRule: fixture,
+      });
+
+      expect(
+        intended.totalReward,
+        `${authoredAlias} should match as a merchant token`,
+      ).toBe(100);
+      expect(
+        nearCollision.totalReward,
+        `${authoredAlias} must not match inside an ASCII token`,
+      ).toBe(0);
+    }
   });
 
   test('an unsupported merchant rule is reported only when its merchant matches', () => {

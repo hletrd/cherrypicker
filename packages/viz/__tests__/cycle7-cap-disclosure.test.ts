@@ -18,6 +18,7 @@ const result: OptimizationResult = {
       assignedCardId: 'cap-card',
       assignedCardName: '한도 카드',
       spending: 1_000,
+      transactionCount: 1,
       reward: 100,
       rate: 0.1,
       alternatives: [],

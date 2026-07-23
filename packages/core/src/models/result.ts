@@ -65,6 +65,8 @@ export interface CardAssignment {
   assignedCardId: string;
   assignedCardName: string;
   spending: number;
+  /** Exact number of positive transactions represented by this assignment. */
+  transactionCount: number;
   reward: number;
   rate: number;
   alternatives: { cardId: string; cardName: string; reward: number; rate: number }[];

@@ -188,10 +188,33 @@ function merchantAllowlistMatches(
   const normalizedMerchant = normalizeMerchantText(merchant);
   return allowlist.some((candidate) => {
     const normalizedCandidate = normalizeMerchantText(candidate);
-    return (
-      normalizedCandidate.length > 0 &&
-      normalizedMerchant.includes(normalizedCandidate)
-    );
+    if (normalizedCandidate.length === 0) return false;
+
+    const requiresLeadingBoundary = /^[a-z0-9]/.test(normalizedCandidate);
+    const requiresTrailingBoundary = /[a-z0-9]$/.test(normalizedCandidate);
+    let matchIndex = normalizedMerchant.indexOf(normalizedCandidate);
+
+    while (matchIndex !== -1) {
+      const precedingCharacter = normalizedMerchant[matchIndex - 1];
+      const followingCharacter =
+        normalizedMerchant[matchIndex + normalizedCandidate.length];
+      const hasLeadingBoundary =
+        !requiresLeadingBoundary ||
+        precedingCharacter === undefined ||
+        !/[a-z0-9]/.test(precedingCharacter);
+      const hasTrailingBoundary =
+        !requiresTrailingBoundary ||
+        followingCharacter === undefined ||
+        !/[a-z0-9]/.test(followingCharacter);
+
+      if (hasLeadingBoundary && hasTrailingBoundary) return true;
+      matchIndex = normalizedMerchant.indexOf(
+        normalizedCandidate,
+        matchIndex + 1,
+      );
+    }
+
+    return false;
   });
 }
 

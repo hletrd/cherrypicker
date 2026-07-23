@@ -16,6 +16,7 @@ const optimization: OptimizationResult = {
       assignedCardId: 'simple-plan',
       assignedCardName: '심플플랜',
       spending: 100000,
+      transactionCount: 1,
       reward: 1000,
       rate: 0.01,
       alternatives: [],
