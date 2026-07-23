@@ -14,7 +14,7 @@ let buildConstraints;
 let greedyOptimize;
 
 test.beforeAll(async () => {
-  // Verify dist/ exists and warn if stale (source newer than dist)
+  // Direct Playwright invocation must never exercise stale compiled core code.
   const distDir = path.join(repoRoot, 'packages/core/dist');
   if (!fs.existsSync(distDir)) {
     throw new Error(
@@ -27,8 +27,8 @@ test.beforeAll(async () => {
     const distMtime = fs.statSync(matcherDist).mtimeMs;
     const srcMtime = fs.statSync(matcherSrc).mtimeMs;
     if (srcMtime > distMtime) {
-      console.warn(
-        '[E2E WARNING] packages/core/src is newer than dist/. Run `bun run build` in packages/core to get current code.'
+      throw new Error(
+        'packages/core/src is newer than dist/. Run the suite through `bun run test:e2e` so the current core package is built first.'
       );
     }
   }
@@ -148,6 +148,10 @@ test('optimizer uses transaction-level facts and keeps card totals aligned', () 
       ['fixture-subcategory-card', 0],
       ['fixture-broad-dining-card', 0],
     ]),
+    new Map([
+      ['dining', '외식'],
+      ['dining.cafe', '카페'],
+    ]),
   );
   const result = greedyOptimize(constraints, [subcategoryFixture, broadDiningFixture]);
 
@@ -167,8 +171,10 @@ test('optimizer uses transaction-level facts and keeps card totals aligned', () 
   );
 
   expect(subcategoryAssignment?.reward).toBe(1000);
+  expect(subcategoryAssignment?.categoryNameKo).toBe('카페');
   expect(subcategoryAssignment?.spending).toBe(20_000);
   expect(broadAssignment?.reward).toBe(600);
+  expect(broadAssignment?.categoryNameKo).toBe('외식');
   expect(broadAssignment?.spending).toBe(20_000);
   expect(subcategoryCard?.totalReward).toBe(1000);
   expect(subcategoryCard?.totalSpending).toBe(20_000);

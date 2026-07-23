@@ -13,7 +13,7 @@ export function isOptimizableTx(tx: unknown): tx is CategorizedTx {
     typeof obj.date === 'string' && obj.date.length > 0 &&
     typeof obj.merchant === 'string' &&
     typeof obj.amount === 'number' &&
-    Number.isFinite(obj.amount) &&
+    Number.isSafeInteger(obj.amount) &&
     obj.amount !== 0 &&
     typeof obj.category === 'string' && obj.category.length > 0
   );

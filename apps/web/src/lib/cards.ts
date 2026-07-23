@@ -1,28 +1,12 @@
-// Load card data from static JSON files served by GitHub Pages
-import type { CardRuleSet, PerformanceTier } from '@cherrypicker/rules';
+// Load independently generated catalog artifacts served by GitHub Pages.
+import type { CardRuleSet } from '@cherrypicker/rules/browser';
+import type { CardDetailShardArtifact } from './card-catalog-reader.js';
 
-export interface RewardTier {
-  performanceTier: string;
-  rate: number | null;
-  fixedAmount?: number | null;
-  unit?: string | null;
-  monthlyCap: number | null;
-  perTransactionCap: number | null;
-}
+const REQUEST_TIMEOUT_MS = 10_000;
+const SAFE_ISSUER_ID = /^[a-z0-9][a-z0-9-]*$/;
 
-export interface RewardEntry {
-  category: string;
-  subcategory?: string;
-  label?: string;
-  type: string;
-  tiers: RewardTier[];
-  conditions?: {
-    specificMerchants?: string[];
-    minAmount?: number;
-    note?: string;
-    [key: string]: unknown;
-  };
-}
+export type RewardTier = CardRuleSet['rewards'][number]['tiers'][number];
+export type RewardEntry = CardRuleSet['rewards'][number];
 
 export interface CardSummary {
   id: string;
@@ -31,51 +15,54 @@ export interface CardSummary {
   issuerNameEn: string;
   name: string;
   nameKo: string;
-  type: string;
+  type: CardRuleSet['card']['type'];
   annualFee: { domestic: number; international: number };
-  url?: string;
-  lastUpdated: string;
-  source: string;
   rewardCategories: string[];
+  url?: string;
+  lastUpdated?: string;
+  source?: CardRuleSet['card']['source'];
 }
 
 export interface CardDetail extends CardSummary {
-  performanceTiers: PerformanceTier[];
-  performanceExclusions: string[];
-  rewards: RewardEntry[];
-  globalConstraints?: {
-    monthlyTotalDiscountCap: number | null;
-    minimumAnnualSpending: number | null;
-  };
+  lastUpdated: string;
+  source: CardRuleSet['card']['source'];
+  performanceTiers: CardRuleSet['performanceTiers'];
+  performanceExclusions: CardRuleSet['performanceExclusions'];
+  rewards: CardRuleSet['rewards'];
+  globalConstraints: CardRuleSet['globalConstraints'];
 }
 
-interface IssuerData {
+export interface CatalogMeta {
+  version: string;
+  generatedAt: string;
+  totalIssuers: number;
+  totalCards: number;
+  categories?: string[];
+  sourceHash?: string;
+}
+
+export interface IssuerSummary {
   id: string;
   nameKo: string;
   nameEn: string;
   website: string;
   cardCount: number;
-  cards: CardRuleSet[];
 }
 
-interface CardsJson {
-  meta: { version: string; generatedAt: string; totalIssuers: number; totalCards: number; categories: string[] };
-  issuers: IssuerData[];
-  categories: unknown[];
-  index: {
-    byCategory: Record<string, Array<{
-      cardId: string;
-      issuer: string;
-      type: string;
-      rewardValue: number;
-      rewardValueKind: 'rate' | 'fixedAmount';
-      unit: string | null;
-      monthlyCap: number | null;
-      subcategory?: string;
-    }>>;
-    byType: { credit: string[]; check: string[]; prepaid: string[] };
-    noMinSpend: string[];
-  };
+export interface CardSummaryArtifactEntry {
+  id: string;
+  issuer: string;
+  name: string;
+  nameKo: string;
+  type: CardRuleSet['card']['type'];
+  annualFee: { domestic: number; international: number };
+  rewardCategories: string[];
+}
+
+export interface CardsSummaryArtifact {
+  meta: CatalogMeta;
+  issuers: IssuerSummary[];
+  cards: CardSummaryArtifactEntry[];
 }
 
 export interface CategoryNode {
@@ -86,228 +73,429 @@ export interface CategoryNode {
   subcategories?: CategoryNode[];
 }
 
-// Cached data — the promise resolves to undefined when an AbortError occurs
-// (component unmount or signal cancellation), so callers must guard with
-// `if (!data)`. Downstream functions (getAllCardRules, getCardList, getCardById)
-// already handle this case.
-let cardsPromise: Promise<CardsJson | undefined> | null = null;
-let cardsAbortController: AbortController | null = null;
-let categoriesPromise: Promise<{ categories: CategoryNode[] } | undefined> | null = null;
+interface LoadedSummary {
+  artifact: CardsSummaryArtifact;
+  cards: CardSummary[];
+  byId: Map<string, CardSummary>;
+}
+
+interface LoadedDetailShard {
+  artifact: CardDetailShardArtifact;
+  byId: Map<string, CardRuleSet>;
+}
+
+// Each artifact owns its request lifecycle. A caller's AbortSignal races only
+// that caller's wait and never aborts a request shared with another consumer.
+let summaryPromise: Promise<LoadedSummary> | null = null;
+let summaryAbortController: AbortController | null = null;
+let optimizerPromise: Promise<CardRuleSet[]> | null = null;
+let optimizerAbortController: AbortController | null = null;
+const detailPromises = new Map<string, Promise<LoadedDetailShard>>();
+const detailAbortControllers = new Map<string, AbortController>();
+let categoriesPromise: Promise<{ categories: CategoryNode[] }> | null = null;
 let categoriesAbortController: AbortController | null = null;
 
-// Card-by-ID index for O(1) lookups instead of O(n) linear scan (C62-09).
-// Built once when loadCardsData() first resolves, cleared on error/reset.
-let cardIndex: Map<string, { issuer: IssuerData; card: CardRuleSet }> | null = null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-function buildCardIndex(data: CardsJson): Map<string, { issuer: IssuerData; card: CardRuleSet }> {
-  const index = new Map<string, { issuer: IssuerData; card: CardRuleSet }>();
-  for (const issuer of data.issuers) {
-    for (const card of issuer.cards) {
-      index.set(card.card.id, { issuer, card });
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function isAnnualFee(
+  value: unknown,
+): value is { domestic: number; international: number } {
+  if (!isRecord(value)) return false;
+  return (
+    Number.isSafeInteger(value.domestic) &&
+    (value.domestic as number) >= 0 &&
+    Number.isSafeInteger(value.international) &&
+    (value.international as number) >= 0
+  );
+}
+
+function isCardType(value: unknown): value is CardRuleSet['card']['type'] {
+  return value === 'credit' || value === 'check' || value === 'prepaid';
+}
+
+/** Validate the compact summary without expanding it into full card rules. */
+export function readCardsSummaryArtifact(value: unknown): CardsSummaryArtifact {
+  if (
+    !isRecord(value) ||
+    !isRecord(value.meta) ||
+    !Array.isArray(value.issuers) ||
+    !Array.isArray(value.cards)
+  ) {
+    throw new Error('카드 목록 데이터 형식이 올바르지 않아요');
+  }
+
+  const { meta } = value;
+  if (
+    !isNonEmptyString(meta.version) ||
+    !isNonEmptyString(meta.generatedAt) ||
+    !Number.isSafeInteger(meta.totalIssuers) ||
+    !Number.isSafeInteger(meta.totalCards) ||
+    meta.totalIssuers !== value.issuers.length ||
+    meta.totalCards !== value.cards.length ||
+    value.cards.length === 0
+  ) {
+    throw new Error('카드 목록 데이터의 메타 정보가 맞지 않아요');
+  }
+
+  const issuers = new Map<string, IssuerSummary>();
+  for (const rawIssuer of value.issuers) {
+    if (
+      !isRecord(rawIssuer) ||
+      !isNonEmptyString(rawIssuer.id) ||
+      !SAFE_ISSUER_ID.test(rawIssuer.id) ||
+      !isNonEmptyString(rawIssuer.nameKo) ||
+      !isNonEmptyString(rawIssuer.nameEn) ||
+      !isNonEmptyString(rawIssuer.website) ||
+      !Number.isSafeInteger(rawIssuer.cardCount) ||
+      (rawIssuer.cardCount as number) < 1 ||
+      issuers.has(rawIssuer.id)
+    ) {
+      throw new Error('카드 목록 데이터의 카드사 정보가 올바르지 않아요');
+    }
+    issuers.set(rawIssuer.id, rawIssuer as unknown as IssuerSummary);
+  }
+
+  const issuerCardCounts = new Map<string, number>();
+  const cardIds = new Set<string>();
+  for (const rawCard of value.cards) {
+    if (
+      !isRecord(rawCard) ||
+      !isNonEmptyString(rawCard.id) ||
+      cardIds.has(rawCard.id) ||
+      !isNonEmptyString(rawCard.issuer) ||
+      !issuers.has(rawCard.issuer) ||
+      !isNonEmptyString(rawCard.name) ||
+      !isNonEmptyString(rawCard.nameKo) ||
+      !isCardType(rawCard.type) ||
+      !isAnnualFee(rawCard.annualFee) ||
+      !Array.isArray(rawCard.rewardCategories) ||
+      !rawCard.rewardCategories.every(isNonEmptyString)
+    ) {
+      throw new Error('카드 목록 데이터의 카드 정보가 올바르지 않아요');
+    }
+    cardIds.add(rawCard.id);
+    issuerCardCounts.set(
+      rawCard.issuer,
+      (issuerCardCounts.get(rawCard.issuer) ?? 0) + 1,
+    );
+  }
+
+  for (const issuer of issuers.values()) {
+    if (issuer.cardCount !== issuerCardCounts.get(issuer.id)) {
+      throw new Error(`카드 목록 데이터의 ${issuer.id} 카드 수가 맞지 않아요`);
     }
   }
-  return index;
+
+  return value as unknown as CardsSummaryArtifact;
+}
+
+function materializeSummary(artifact: CardsSummaryArtifact): LoadedSummary {
+  const issuers = new Map(artifact.issuers.map((issuer) => [issuer.id, issuer]));
+  const cards = artifact.cards.map((card): CardSummary => {
+    const issuer = issuers.get(card.issuer)!;
+    return {
+      ...card,
+      issuerNameKo: issuer.nameKo,
+      issuerNameEn: issuer.nameEn,
+    };
+  });
+  return {
+    artifact,
+    cards,
+    byId: new Map(cards.map((card) => [card.id, card])),
+  };
 }
 
 function getBaseUrl(): string {
   return import.meta.env.BASE_URL ?? '/';
 }
 
-/** Chain an external AbortSignal to an internal AbortController so that
- *  aborting the external signal also aborts the internal controller's fetch.
- *  Returns early if the external signal is already aborted. */
-function chainAbortSignal(controller: AbortController, signal?: AbortSignal): void {
-  if (!signal) return;
-  if (signal.aborted) {
+function callerAbortReason(signal: AbortSignal): Error {
+  if (signal.reason instanceof DOMException && signal.reason.name === 'AbortError') {
+    return signal.reason;
+  }
+  const message = signal.reason instanceof Error
+    ? signal.reason.message
+    : '요청이 취소되었습니다';
+  return new DOMException(message, 'AbortError');
+}
+
+/** Race a caller's wait against its signal without touching the shared request. */
+function waitForCaller<T>(request: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return request;
+  if (signal.aborted) return Promise.reject(callerAbortReason(signal));
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      cleanup();
+      reject(callerAbortReason(signal));
+    };
+    const cleanup = () => signal.removeEventListener('abort', onAbort);
+
+    signal.addEventListener('abort', onAbort, { once: true });
+    request.then(
+      value => {
+        cleanup();
+        resolve(value);
+      },
+      error => {
+        cleanup();
+        reject(error);
+      },
+    );
+  });
+}
+
+async function fetchJson(
+  path: string,
+  controller: AbortController,
+  messages: {
+    response: string;
+    timeout: string;
+    malformed: string;
+  },
+): Promise<unknown> {
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
     controller.abort();
-    return;
+  }, REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${getBaseUrl()}${path}`, {
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(messages.response);
+    return await response.json();
+  } catch (error) {
+    if (timedOut) throw new Error(messages.timeout);
+    if (error instanceof Error && error.message === messages.response) throw error;
+    throw new Error(messages.malformed);
+  } finally {
+    clearTimeout(timeout);
   }
-  signal.addEventListener('abort', () => controller.abort(), { once: true });
 }
 
-/** Check if an error is an AbortError (expected cancellation from component
- *  unmount or explicit signal abort). Used to distinguish intentional
- *  cancellations from real network failures in fetch catch blocks. */
-function isAbortError(err: unknown): boolean {
-  return err instanceof DOMException && err.name === 'AbortError';
+function startSummaryRequest(): Promise<LoadedSummary> {
+  const controller = new AbortController();
+  summaryAbortController = controller;
+  const request = fetchJson('data/cards-summary.json', controller, {
+    response: '카드 목록 데이터를 불러올 수 없어요. 다시 시도해 주세요.',
+    timeout: '카드 목록 데이터 요청 시간이 초과됐어요. 다시 시도해 주세요.',
+    malformed: '카드 목록 데이터를 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
+  })
+    .then(readCardsSummaryArtifact)
+    .then(materializeSummary);
+
+  summaryPromise = request;
+  void request.then(
+    () => {
+      if (summaryAbortController === controller) summaryAbortController = null;
+    },
+    () => {
+      if (summaryAbortController === controller) summaryAbortController = null;
+      if (summaryPromise === request) summaryPromise = null;
+    },
+  );
+  return request;
 }
 
-export async function loadCardsData(signal?: AbortSignal): Promise<CardsJson | undefined> {
-  // If an in-flight fetch was aborted, reset the cache so a retry can succeed
-  if (cardsPromise && cardsAbortController?.signal.aborted) {
-    cardsPromise = null;
-    cardsAbortController = null;
-  }
+function startOptimizerRequest(): Promise<CardRuleSet[]> {
+  const controller = new AbortController();
+  optimizerAbortController = controller;
+  const request = fetchJson('data/cards-optimizer.json', controller, {
+    response: '카드 혜택 데이터를 불러올 수 없어요. 다시 시도해 주세요.',
+    timeout: '카드 혜택 데이터 요청 시간이 초과됐어요. 다시 시도해 주세요.',
+    malformed: '카드 혜택 데이터를 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
+  }).then(async (value) => {
+    const { readOptimizerCatalog } = await import('./card-catalog-reader.js');
+    return readOptimizerCatalog(value);
+  });
 
-  if (!cardsPromise) {
-    const controller = new AbortController();
-    chainAbortSignal(controller, signal);
-    cardsAbortController = controller;
+  optimizerPromise = request;
+  void request.then(
+    () => {
+      if (optimizerAbortController === controller) optimizerAbortController = null;
+    },
+    () => {
+      if (optimizerAbortController === controller) optimizerAbortController = null;
+      if (optimizerPromise === request) optimizerPromise = null;
+    },
+  );
+  return request;
+}
 
-    const fetchTimeout = setTimeout(() => controller.abort(), 10_000);
-    cardsPromise = fetch(`${getBaseUrl()}data/cards.json`, { signal: controller.signal })
-      .then(res => {
-        clearTimeout(fetchTimeout);
-        if (!res.ok) throw new Error('카드 데이터를 불러올 수 없습니다');
-        return res.json() as Promise<CardsJson>;
-      })
-      .then(data => {
-        // Build card-by-ID index for O(1) lookups (C62-09)
-        cardIndex = buildCardIndex(data);
-        return data;
-      })
-      .catch(err => {
-        cardsPromise = null;
-        cardsAbortController = null;
-        cardIndex = null; // Clear stale index on error
-        // AbortError is expected (component unmount, signal cancellation).
-        // Don't propagate it — callers who passed a signal already know
-        // about the abort. Callers without signals should not receive an
-        // unexpected AbortError rejection. The cache reset above ensures
-        // the next call re-fetches successfully.
-        if (isAbortError(err)) return undefined;
-        throw err;
-      });
-  } else if (signal) {
-    // A fetch is already in-flight — chain the new caller's signal so they
-    // can still abort the active request if needed.
-    chainAbortSignal(cardsAbortController!, signal);
+function startDetailRequest(issuerId: string): Promise<LoadedDetailShard> {
+  const controller = new AbortController();
+  detailAbortControllers.set(issuerId, controller);
+  const request = fetchJson(
+    `data/card-details/${encodeURIComponent(issuerId)}.json`,
+    controller,
+    {
+      response: '카드 상세 데이터를 불러올 수 없어요. 다시 시도해 주세요.',
+      timeout: '카드 상세 데이터 요청 시간이 초과됐어요. 다시 시도해 주세요.',
+      malformed: '카드 상세 데이터를 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
+    },
+  ).then(async (value) => {
+    const { readCardDetailShard } = await import('./card-catalog-reader.js');
+    const artifact = readCardDetailShard(value, issuerId);
+    return {
+      artifact,
+      byId: new Map(artifact.cards.map((card) => [card.card.id, card])),
+    };
+  });
+
+  detailPromises.set(issuerId, request);
+  void request.then(
+    () => {
+      if (detailAbortControllers.get(issuerId) === controller) {
+        detailAbortControllers.delete(issuerId);
+      }
+    },
+    () => {
+      if (detailAbortControllers.get(issuerId) === controller) {
+        detailAbortControllers.delete(issuerId);
+      }
+      if (detailPromises.get(issuerId) === request) {
+        detailPromises.delete(issuerId);
+      }
+    },
+  );
+  return request;
+}
+
+function startCategoriesRequest(): Promise<{ categories: CategoryNode[] }> {
+  const controller = new AbortController();
+  categoriesAbortController = controller;
+  const request = fetchJson('data/categories.json', controller, {
+    response: '카테고리 데이터를 불러올 수 없어요. 다시 시도해 주세요.',
+    timeout: '카테고리 데이터 요청 시간이 초과됐어요. 다시 시도해 주세요.',
+    malformed: '카테고리 데이터를 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
+  }).then((value) => {
+    if (
+      !isRecord(value) ||
+      !Array.isArray(value.categories) ||
+      value.categories.length === 0
+    ) {
+      throw new Error('카테고리 데이터가 비어 있어 분석을 시작할 수 없어요');
+    }
+    return value as unknown as { categories: CategoryNode[] };
+  });
+
+  categoriesPromise = request;
+  void request.then(
+    () => {
+      if (categoriesAbortController === controller) categoriesAbortController = null;
+    },
+    () => {
+      if (categoriesAbortController === controller) categoriesAbortController = null;
+      if (categoriesPromise === request) categoriesPromise = null;
+    },
+  );
+  return request;
+}
+
+async function loadSummary(signal?: AbortSignal): Promise<LoadedSummary> {
+  if (!summaryPromise) startSummaryRequest();
+  return waitForCaller(summaryPromise!, signal);
+}
+
+export async function loadCardSummaries(
+  signal?: AbortSignal,
+): Promise<CardSummary[]> {
+  return (await loadSummary(signal)).cards;
+}
+
+export async function loadOptimizerCatalog(
+  signal?: AbortSignal,
+): Promise<CardRuleSet[]> {
+  if (!optimizerPromise) void startOptimizerRequest();
+  return waitForCaller(optimizerPromise!, signal);
+}
+
+export async function loadCardDetailShard(
+  issuerId: string,
+  signal?: AbortSignal,
+): Promise<CardDetailShardArtifact> {
+  if (!SAFE_ISSUER_ID.test(issuerId)) {
+    throw new Error('카드사 ID가 올바르지 않아요');
   }
-  const result = await cardsPromise;
-  // If the awaited promise resolved to undefined (AbortError), another caller
-  // may have already started a new fetch (the catch handler resets
-  // cardsPromise to null, and a concurrent call would set a new one).
-  // Retry with the new promise instead of returning undefined (C72-05).
-  if (result === undefined && cardsPromise) {
-    return cardsPromise;
-  }
-  return result;
+  if (!detailPromises.has(issuerId)) startDetailRequest(issuerId);
+  return (await waitForCaller(detailPromises.get(issuerId)!, signal)).artifact;
 }
 
 export async function loadCategories(signal?: AbortSignal): Promise<CategoryNode[]> {
-  // If an in-flight fetch was aborted, reset the cache so a retry can succeed
-  if (categoriesPromise && categoriesAbortController?.signal.aborted) {
-    categoriesPromise = null;
-    categoriesAbortController = null;
-  }
-
-  if (!categoriesPromise) {
-    const controller = new AbortController();
-    chainAbortSignal(controller, signal);
-    categoriesAbortController = controller;
-
-    const fetchTimeout = setTimeout(() => controller.abort(), 10_000);
-    categoriesPromise = fetch(`${getBaseUrl()}data/categories.json`, { signal: controller.signal })
-      .then(res => {
-        clearTimeout(fetchTimeout);
-        if (!res.ok) throw new Error('카테고리 데이터를 불러올 수 없습니다');
-        return res.json() as Promise<{ categories: CategoryNode[] }>;
-      })
-      .catch(err => {
-        categoriesPromise = null;
-        categoriesAbortController = null;
-        // AbortError is expected (component unmount, signal cancellation).
-        // Don't propagate it — same rationale as loadCardsData above.
-        if (isAbortError(err)) return undefined;
-        throw err;
-      });
-  } else if (signal) {
-    chainAbortSignal(categoriesAbortController!, signal);
-  }
-  let data = await categoriesPromise;
-  // If the awaited promise resolved to undefined (AbortError), another caller
-  // may have already started a new fetch (the catch handler resets
-  // categoriesPromise to null, and a concurrent call would set a new one).
-  // Retry with the new promise instead of returning [] (C72-05).
-  if (!data && categoriesPromise) {
-    data = await categoriesPromise;
-  }
-  // data may be undefined after an AbortError — return empty array so callers
-  // that don't pass a signal never crash on an unexpected abort.
-  if (!data) return [];
-  return data.categories;
+  if (!categoriesPromise) startCategoriesRequest();
+  return (await waitForCaller(categoriesPromise!, signal)).categories;
 }
 
 export async function getAllCardRules(): Promise<CardRuleSet[]> {
-  const data = await loadCardsData();
-  if (!data) return [];
-  return data.issuers.flatMap(issuer => issuer.cards);
+  return loadOptimizerCatalog();
 }
 
-export async function getCardList(filters?: { issuer?: string; type?: string }, options?: { signal?: AbortSignal }): Promise<CardSummary[]> {
-  const data = await loadCardsData(options?.signal);
-  if (!data) return [];
-  let cards: CardSummary[] = data.issuers.flatMap(issuer =>
-    issuer.cards.map(c => ({
-      id: c.card.id,
-      issuer: c.card.issuer,
-      issuerNameKo: issuer.nameKo,
-      issuerNameEn: issuer.nameEn,
-      name: c.card.name,
-      nameKo: c.card.nameKo,
-      type: c.card.type,
-      annualFee: c.card.annualFee,
-      url: c.card.url,
-      lastUpdated: c.card.lastUpdated,
-      source: c.card.source,
-      rewardCategories: c.rewards.map(r => r.category),
-    }))
-  );
-  if (filters?.issuer) cards = cards.filter(c => c.issuer === filters.issuer);
-  if (filters?.type) cards = cards.filter(c => c.type === filters.type);
+export async function getCardList(
+  filters?: { issuer?: string; type?: string },
+  options?: { signal?: AbortSignal },
+): Promise<CardSummary[]> {
+  let cards = await loadCardSummaries(options?.signal);
+  if (filters?.issuer) cards = cards.filter(card => card.issuer === filters.issuer);
+  if (filters?.type) cards = cards.filter(card => card.type === filters.type);
   return cards;
 }
 
-export async function getCardById(cardId: string, options?: { signal?: AbortSignal }): Promise<CardDetail | null> {
-  const data = await loadCardsData(options?.signal);
-  if (!data) return null;
-  // Use the O(1) index when available, fall back to linear scan (C62-09)
-  if (cardIndex) {
-    const entry = cardIndex.get(cardId);
-    if (!entry) return null;
-    const { issuer, card } = entry;
-    return {
-      id: card.card.id,
-      issuer: card.card.issuer,
-      issuerNameKo: issuer.nameKo,
-      issuerNameEn: issuer.nameEn,
-      name: card.card.name,
-      nameKo: card.card.nameKo,
-      type: card.card.type,
-      annualFee: card.card.annualFee,
-      url: card.card.url,
-      lastUpdated: card.card.lastUpdated,
-      source: card.card.source,
-      rewardCategories: card.rewards.map(r => r.category),
-      performanceTiers: card.performanceTiers,
-      performanceExclusions: card.performanceExclusions,
-      rewards: card.rewards,
-      globalConstraints: card.globalConstraints,
-    };
-  }
-  // Fallback: linear scan (should not normally be reached)
-  for (const issuer of data.issuers) {
-    const card = issuer.cards.find(c => c.card.id === cardId);
-    if (card) {
-      return {
-        id: card.card.id,
-        issuer: card.card.issuer,
-        issuerNameKo: issuer.nameKo,
-        issuerNameEn: issuer.nameEn,
-        name: card.card.name,
-        nameKo: card.card.nameKo,
-        type: card.card.type,
-        annualFee: card.card.annualFee,
-        url: card.card.url,
-        lastUpdated: card.card.lastUpdated,
-        source: card.card.source,
-        rewardCategories: card.rewards.map(r => r.category),
-        performanceTiers: card.performanceTiers,
-        performanceExclusions: card.performanceExclusions,
-        rewards: card.rewards,
-        globalConstraints: card.globalConstraints,
-      };
-    }
-  }
-  return null;
+export async function getCardSummaryById(
+  cardId: string,
+  options?: { signal?: AbortSignal },
+): Promise<CardSummary | null> {
+  return (await loadSummary(options?.signal)).byId.get(cardId) ?? null;
+}
+
+export async function getCardById(
+  cardId: string,
+  options?: { signal?: AbortSignal },
+): Promise<CardDetail | null> {
+  const summary = await getCardSummaryById(cardId, options);
+  if (!summary) return null;
+
+  if (!detailPromises.has(summary.issuer)) startDetailRequest(summary.issuer);
+  const shard = await waitForCaller(
+    detailPromises.get(summary.issuer)!,
+    options?.signal,
+  );
+  const rule = shard.byId.get(cardId);
+  if (!rule) return null;
+
+  return {
+    ...summary,
+    url: rule.card.url,
+    lastUpdated: rule.card.lastUpdated,
+    source: rule.card.source,
+    performanceTiers: rule.performanceTiers,
+    performanceExclusions: rule.performanceExclusions,
+    rewards: rule.rewards,
+    globalConstraints: rule.globalConstraints,
+  };
+}
+
+/** Test-only: production resets must not invalidate immutable artifact caches. */
+export function resetCardArtifactCachesForTests(): void {
+  summaryAbortController?.abort();
+  optimizerAbortController?.abort();
+  categoriesAbortController?.abort();
+  for (const controller of detailAbortControllers.values()) controller.abort();
+
+  summaryPromise = null;
+  summaryAbortController = null;
+  optimizerPromise = null;
+  optimizerAbortController = null;
+  detailPromises.clear();
+  detailAbortControllers.clear();
+  categoriesPromise = null;
+  categoriesAbortController = null;
 }

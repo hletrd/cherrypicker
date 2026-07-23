@@ -1,7 +1,8 @@
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
-  import { formatWon, formatRate, formatRatePrecise, getIssuerColor, getIssuerTextColor, getIssuerFromCardId, formatSavingsValue, buildPageUrl } from '../../lib/formatters.js';
+  import { formatWon, formatRate, formatRatePrecise, getIssuerFromCardId, formatSavingsValue, buildPageUrl } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
+  import IssuerBadge from '../ui/IssuerBadge.svelte';
 
   const homeUrl = buildPageUrl('');
 
@@ -141,10 +142,10 @@
 {#if analysisStore.loading}
   <div class="mt-4 grid gap-6 md:grid-cols-3">
     {#each Array(3) as _}
-      <div class="animate-pulse rounded-xl border border-gray-100 p-6 space-y-3">
-        <div class="h-4 w-24 rounded bg-gray-200"></div>
-        <div class="h-8 w-32 rounded bg-gray-300"></div>
-        <div class="h-4 w-20 rounded bg-gray-200"></div>
+      <div class="animate-pulse space-y-3 rounded-xl border border-[var(--color-border)] p-6">
+        <div class="h-4 w-24 rounded bg-[var(--color-border)]"></div>
+        <div class="h-8 w-32 rounded bg-[var(--color-border)]"></div>
+        <div class="h-4 w-20 rounded bg-[var(--color-border)]"></div>
       </div>
     {/each}
   </div>
@@ -156,29 +157,29 @@
     <div class="mb-3 text-xs font-medium text-[var(--color-text-muted)]">혜택 비교</div>
     <div class="space-y-2.5">
       <!-- Single card bar -->
-      <div class="flex items-center gap-3">
-        <div class="w-24 shrink-0 text-xs text-[var(--color-text-muted)]">카드 한 장</div>
-        <div class="flex-1 h-6 overflow-hidden rounded-lg bg-[var(--color-bg)]">
+      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(8rem,1fr)_7rem]">
+        <div class="text-xs text-[var(--color-text-muted)]">카드 한 장</div>
+        <div class="whitespace-nowrap text-right text-sm font-mono text-[var(--color-text-muted)] sm:order-3">
+          {formatWon(opt.bestSingleCard.totalReward)}
+        </div>
+        <div class="col-span-2 h-6 min-w-[8rem] overflow-hidden rounded-lg bg-[var(--color-bg)] sm:col-span-1 sm:order-2" data-testid="single-card-bar-track">
           <div
             class="h-full rounded-lg bg-[var(--color-border)] transition-all duration-700"
             style="width: {singleBarWidth}%"
           ></div>
         </div>
-        <div class="w-28 shrink-0 text-right text-sm font-mono text-[var(--color-text-muted)]">
-          {formatWon(opt.bestSingleCard.totalReward)}
-        </div>
       </div>
       <!-- Cherry-pick bar (100% when optimal, proportional when suboptimal) -->
-      <div class="flex items-center gap-3">
-        <div class="w-24 shrink-0 text-xs font-semibold text-[var(--color-primary)]">체리피킹</div>
-        <div class="flex-1 h-6 overflow-hidden rounded-lg bg-[var(--color-primary-light)]">
+      <div class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(8rem,1fr)_7rem]">
+        <div class="text-xs font-semibold text-[var(--color-primary-fg)]">체리피킹</div>
+        <div class="whitespace-nowrap text-right text-sm font-mono font-bold text-[var(--color-primary-fg)] sm:order-3">
+          {formatWon(opt.totalReward)}
+        </div>
+        <div class="col-span-2 h-6 min-w-[8rem] overflow-hidden rounded-lg bg-[var(--color-primary-light)] sm:col-span-1 sm:order-2" data-testid="cherrypick-bar-track">
           <div
-            class="h-full rounded-lg bg-[var(--color-primary)] transition-all duration-700"
+            class="h-full rounded-lg bg-[var(--color-primary-fill)] transition-all duration-700"
             style="width: {cherrypickBarWidth}%"
           ></div>
-        </div>
-        <div class="w-28 shrink-0 text-right text-sm font-mono font-bold text-[var(--color-primary)]">
-          {formatWon(opt.totalReward)}
         </div>
       </div>
     </div>
@@ -194,12 +195,7 @@
         <div class="text-xs font-medium text-[var(--color-text-muted)]">카드 한 장으로 받는 혜택</div>
         {#if opt.bestSingleCard.cardId}
           {@const issuer = getIssuerFromCardId(opt.bestSingleCard.cardId)}
-          <span
-            class="rounded-full px-2 py-0.5 text-xs {getIssuerTextColor(issuer)}"
-            style="background-color: {getIssuerColor(issuer)}"
-          >
-            {issuer.toUpperCase()}
-          </span>
+          <IssuerBadge {issuer} />
         {/if}
       </div>
       <div class="text-sm font-semibold text-[var(--color-text)] mb-2">{opt.bestSingleCard.cardName}</div>
@@ -211,12 +207,12 @@
     {/if}
 
     <!-- Center: Cherry-pick (highlighted) -->
-    <div class="rounded-xl border-2 border-[var(--color-primary)] bg-gradient-to-br from-blue-50 to-blue-100 p-5 dark:from-blue-950 dark:to-blue-900/50 shadow-md">
-      <div class="mb-3 flex items-center gap-1.5 text-xs font-semibold text-[var(--color-primary)]">
+    <div class="rounded-xl border-2 border-[var(--color-primary-fill)] bg-gradient-to-br from-blue-50 to-blue-100 p-5 dark:from-blue-950 dark:to-blue-900/50 shadow-md">
+      <div class="mb-3 flex items-center gap-1.5 text-xs font-semibold text-[var(--color-primary-fg)]">
         <Icon name="sparkles" size={14} />
         체리피킹 혜택
       </div>
-      <div class="text-3xl font-bold text-[var(--color-primary)]">{formatWon(opt.totalReward)}</div>
+      <div class="text-3xl font-bold text-[var(--color-primary-fg)]">{formatWon(opt.totalReward)}</div>
       <!-- text-blue-600 on from-blue-50/-100 gradient = 5.17:1 (passes WCAG AA
            4.5:1); text-blue-500 was 4.14:1 (fails) — C6UI-22. -->
       <div class="mt-1 text-xs text-blue-600 dark:text-blue-300">
@@ -244,7 +240,7 @@
            but unconditional abs is correct because the label always determines
            the direction and the number should always show magnitude. -->
       <div class="text-3xl font-bold text-green-700 dark:text-green-400">{formatSavingsValue(displayedSavings, opt.savingsVsSingleCard)}</div>
-      <div class="mt-1 text-xs text-green-600 dark:text-green-400">
+      <div class="mt-1 text-xs text-green-700 dark:text-green-300">
         연간 약 {formatSavingsValue(displayedAnnualSavings, opt.savingsVsSingleCard * 12)} {opt.savingsVsSingleCard >= 0 ? '절약' : '추가 비용'} (최근 월 기준 단순 연환산)
       </div>
       {#if savingsPct === Infinity}
@@ -267,16 +263,38 @@
   <!-- Breakdown toggle -->
   <div class="mt-5">
     <button
-      class="flex items-center gap-2 text-sm font-medium text-[var(--color-primary)] hover:underline"
+      type="button"
+      class="flex min-h-11 items-center gap-2 py-2 text-sm font-medium text-[var(--color-primary-fg)] hover:underline"
+      aria-expanded={showBreakdown}
+      aria-controls="card-benefit-breakdown"
       onclick={() => (showBreakdown = !showBreakdown)}
     >
-      <span class="transition-transform duration-200 inline-block {showBreakdown ? 'rotate-90' : ''}">▶</span>
+      <span aria-hidden="true" class="transition-transform duration-200 inline-block {showBreakdown ? 'rotate-90' : ''}">▶</span>
       카드별 상세 보기
     </button>
 
     {#if showBreakdown}
-      <div class="mt-3 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-        <table class="w-full text-sm">
+      <div id="card-benefit-breakdown" class="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div class="space-y-3 p-3 md:hidden print:hidden">
+          {#each cardBreakdown as card}
+            {@const issuer = getIssuerFromCardId(card.cardId)}
+            <article class="rounded-lg border border-[var(--color-border)] p-3">
+              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                <IssuerBadge {issuer} />
+                <h3 class="min-w-0 break-keep [overflow-wrap:anywhere] text-sm font-semibold">{card.cardName}</h3>
+              </div>
+              <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <dt class="text-[var(--color-text-muted)]">해당 지출</dt>
+                <dd class="text-right font-mono">{formatWon(card.spending)}</dd>
+                <dt class="text-[var(--color-text-muted)]">예상 혜택</dt>
+                <dd class="text-right font-mono font-semibold text-[var(--color-primary-fg)]">{formatWon(card.reward)}</dd>
+                <dt class="text-[var(--color-text-muted)]">혜택률</dt>
+                <dd class="text-right font-mono">{formatRate(card.rate)}</dd>
+              </dl>
+            </article>
+          {/each}
+        </div>
+        <table class="hidden w-full text-sm md:table print:table">
           <thead>
             <tr class="border-b border-[var(--color-border)] bg-[var(--color-bg)] text-left text-xs text-[var(--color-text-muted)]">
               <th scope="col" class="px-4 py-2.5 font-medium">카드명</th>
@@ -288,18 +306,12 @@
           <tbody>
             {#each cardBreakdown as card}
               {@const issuer = getIssuerFromCardId(card.cardId)}
-              {@const issuerColor = getIssuerColor(issuer)}
               <tr class="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)]">
                 <td class="px-4 py-3">
-                  <span
-                    class="inline-block rounded-full px-2 py-0.5 text-xs {getIssuerTextColor(issuer)}"
-                    style="background-color: {issuerColor}"
-                  >
-                    {card.cardName}
-                  </span>
+                  <div class="flex items-center gap-2"><IssuerBadge {issuer} /><span class="font-medium">{card.cardName}</span></div>
                 </td>
                 <td class="px-4 py-3 text-right font-mono text-xs">{formatWon(card.spending)}</td>
-                <td class="px-4 py-3 text-right font-mono text-xs font-semibold text-[var(--color-primary)]">
+                <td class="px-4 py-3 text-right font-mono text-xs font-semibold text-[var(--color-primary-fg)]">
                   {formatWon(card.reward)}
                 </td>
                 <td class="px-4 py-3 text-right font-mono text-xs text-[var(--color-text-muted)]">
@@ -321,7 +333,7 @@
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 올리면 얼마나 아끼는지 보여줘요</div>
     <a
       href={homeUrl}
-      class="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
+      class="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary-fill)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-fill-hover)] transition-colors"
     >
       명세서 올리러 가기
     </a>

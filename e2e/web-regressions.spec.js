@@ -2,9 +2,7 @@ const path = require('node:path');
 const { expect, test } = require('@playwright/test');
 
 const uploadFixture = path.join(__dirname, 'fixtures', 'regression-upload.csv');
-const homeUrl = 'http://127.0.0.1:4173/cherrypicker/';
-
-test.describe.configure({ mode: 'serial' });
+const homeUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/cherrypicker/';
 
 // CSP now includes 'unsafe-inline' for script-src, so Playwright should
 // enforce it and surface any real CSP violations in production.
@@ -77,5 +75,44 @@ test('browser flow classifies regression merchants and renders dashboard/results
   await expect(page.locator('#report-data-content')).toContainText('추천 카드 조합');
   await expect(page.locator('#report-data-content')).not.toContainText('아직 분석 결과가 없어요');
 
+  expect(pageErrors).toEqual([]);
+});
+
+test('built app bounds persisted-state migration and recovers safely', async ({ page }) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await page.goto(homeUrl);
+  await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
+  await page.locator('input[type="file"]').first().setInputFiles(uploadFixture);
+  await page.getByRole('spinbutton').fill('300000');
+  await page.getByRole('button', { name: /^분석 시작/ }).click();
+  await page.waitForURL('**/dashboard', { timeout: 30_000 });
+  await expect(page.locator('#dashboard-data-content')).toBeVisible();
+
+  await page.evaluate(() => {
+    const key = 'cherrypicker:analysis';
+    const persisted = JSON.parse(sessionStorage.getItem(key));
+    delete persisted._v;
+    persisted.transactions = [{ id: '', date: 1 }];
+    sessionStorage.setItem(key, JSON.stringify(persisted));
+  });
+  await page.reload();
+
+  await expect(page.locator('#dashboard-data-content')).toBeVisible();
+  await expect(page.getByText('거래 내역을 불러오지 못했어요. 다시 분석해 보세요.')).toBeVisible();
+
+  await page.evaluate(() => {
+    const key = 'cherrypicker:analysis';
+    const persisted = JSON.parse(sessionStorage.getItem(key));
+    persisted._v = 999;
+    sessionStorage.setItem(key, JSON.stringify(persisted));
+  });
+  await page.reload();
+
+  await expect(page.locator('#dashboard-empty-state')).toBeVisible();
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('cherrypicker:analysis')),
+  ).toBeNull();
   expect(pageErrors).toEqual([]);
 });

@@ -3,13 +3,20 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
+  --color-primary: #1d4ed8;
+  --color-primary-dark: #1e3a8a;
   --color-primary-light: #dbeafe;
+  --color-primary-fill: #1d4ed8;
+  --color-primary-fill-hover: #1e3a8a;
+  --color-primary-fg: #1d4ed8;
+  --color-focus: #1d4ed8;
   --color-accent: #f59e0b;
   --color-warning: #f59e0b;
+  --color-warning-fg: #92400e;
   --color-success: #10b981;
+  --color-success-fg: #047857;
   --color-danger: #ef4444;
+  --color-danger-fg: #b91c1c;
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
   --color-text: #0f172a;
@@ -42,6 +49,11 @@ html.dark {
   --color-text-muted: #94a3b8;
   --color-border: #334155;
   --color-primary-light: #1e3a5f;
+  --color-primary-fg: #93c5fd;
+  --color-focus: #60a5fa;
+  --color-warning-fg: #fcd34d;
+  --color-success-fg: #6ee7b7;
+  --color-danger-fg: #fca5a5;
 }
 
 html {
@@ -85,21 +97,68 @@ body {
   box-shadow: var(--shadow-card-hover);
 }
 
+html.print-mode body {
+  color: #000 !important;
+  background: #fff !important;
+  transition: none !important;
+}
+
 @media print {
   @page {
     margin: 1.5cm;
   }
   body {
     font-size: 12pt;
-    color: #000;
-    background: #fff;
+    color: #000 !important;
+    background: #fff !important;
+    transition: none !important;
+  }
+  html,
+  html.dark,
+  html.print-mode {
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-text: #000000;
+    --color-text-muted: #334155;
+    --color-border: #94a3b8;
+    --color-primary-fg: #1e3a8a;
+    --color-success-fg: #065f46;
+    color-scheme: light;
   }
   nav, footer, .print\:hidden {
     display: none !important;
   }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .print-scroll-hint,
+  [data-print-control] {
+    display: none !important;
+  }
+  .analysis-warning-details {
+    display: block !important;
+  }
+  main *,
+  main *::before,
+  main *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  main table {
+    break-inside: auto;
+  }
+  main tr,
+  main article,
+  main section {
+    break-inside: avoid;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *, *::before, *::after,
   .animate-spin, .animate-pulse, .animate-bounce {
     animation-duration: 0.01ms !important;

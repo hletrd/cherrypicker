@@ -1,92 +1,35 @@
 import { MerchantMatcher, buildConstraints, greedyOptimize } from '@cherrypicker/core';
-import type { CategorizedTransaction, CardRuleSet as CoreCardRuleSet } from '@cherrypicker/core';
-import type { CategoryNode as RulesCategoryNode } from '@cherrypicker/rules';
+import type { CategorizedTransaction } from '@cherrypicker/core';
+import type { PerformanceExclusionId } from '@cherrypicker/rules/browser';
 import { parseFile } from './parser/index.js';
 import type { RawTransaction } from './parser/types.js';
 import type { BankId } from './parser/types.js';
-import { getAllCardRules, loadCategories } from './cards.js';
+import { loadCategories, loadOptimizerCatalog } from './cards.js';
 
 const VALID_BANK_IDS: Set<string> = new Set([
   'hyundai', 'kb', 'ibk', 'woori', 'samsung', 'shinhan', 'lotte', 'hana', 'nh', 'bc',
   'kakao', 'toss', 'kbank', 'bnk', 'dgb', 'suhyup', 'jb', 'kwangju', 'jeju', 'sc',
   'mg', 'cu', 'kdb', 'epost',
 ]);
-import type { CardRuleSet } from '@cherrypicker/rules';
 import type { CategoryNode } from './cards.js';
 import { buildCategoryLabelMap } from './category-labels.js';
-import type { AnalysisResult, AnalyzeOptions } from './store.svelte.js';
-
-// ---------------------------------------------------------------------------
-// Type adapters — safely bridge local types to core/rules types without
-// bypassing TypeScript's structural checking via `as unknown as`.
-// ---------------------------------------------------------------------------
-
-/** Project the web CategoryNode (which has `label` but no `labelEn`) to the
- *  rules package's CategoryNode shape (which has `labelKo` + `labelEn`).
- *  We provide `labelEn` as an empty string since it is not used by the
- *  MerchantMatcher — only `id`, `labelKo`, and `keywords` matter for
- *  matching. */
-function toRulesCategoryNodes(nodes: CategoryNode[]): RulesCategoryNode[] {
-  return nodes.map((node) => ({
-    id: node.id,
-    labelKo: node.labelKo,
-    labelEn: '', // not present in web CategoryNode; unused by matcher
-    keywords: node.keywords,
-    ...(node.subcategories
-      ? { subcategories: toRulesCategoryNodes(node.subcategories) }
-      : {}),
-  }));
-}
-
-/** Validate and narrow the web CardRuleSet to the core package's CardRuleSet.
- *  Fields that differ between web and core types:
- *  - `card.source`: web has `string`, core expects `'manual' | 'llm-scrape' | 'web'`
- *  - `rewards[].type`: web has `string`, core expects `RewardType`
- *  The static JSON is validated by the Zod schema at build time, so the narrowing
- *  is safe — but we assert explicitly so the type system stays honest. */
-const VALID_SOURCES = new Set(['manual', 'llm-scrape', 'web']);
-const VALID_REWARD_TYPES = new Set(['discount', 'points', 'cashback', 'mileage']);
-
-// Cache for toCoreCardRuleSets — rules from static JSON don't change per session.
-// The cache is keyed by existence only (not by cardIds) because:
-// 1. getAllCardRules() returns a new array via flatMap on every call, making
-//    reference comparisons always fail.
-// 2. The web app always calls analyze() (unfiltered) first, then reoptimize()
-//    with the same cardIds — no alternation between filtered/unfiltered.
-// 3. Filtering AFTER cache retrieval is O(rules) which is negligible (< 500).
-// If the calling pattern changes to alternate cardId sets, key by cardIds hash.
-let cachedCoreRules: CoreCardRuleSet[] | null = null;
-
-function toCoreCardRuleSets(rules: CardRuleSet[]): CoreCardRuleSet[] {
-  return rules.map((rule) => ({
-    ...rule,
-    card: {
-      ...rule.card,
-      source: VALID_SOURCES.has(rule.card.source)
-        ? (rule.card.source as 'manual' | 'llm-scrape' | 'web')
-        : 'web',
-    },
-    rewards: rule.rewards
-      .filter((r) => VALID_REWARD_TYPES.has(r.type))
-      .map((r) => ({
-        ...r,
-        type: r.type as 'discount' | 'points' | 'cashback' | 'mileage',
-        tiers: r.tiers.map((t) => ({
-          ...t,
-          // Ensure unit is narrowed from string | undefined to the expected union
-          unit: t.unit ?? null,
-        })),
-      })),
-  }));
-}
-
-/** Invalidate the cached core rules so the next call to
- *  optimizeFromTransactions() re-fetches and re-transforms card data.
- *  Called from analysisStore.reset() alongside cachedCategoryLabels
- *  invalidation to maintain consistency (C26-03). */
-export function invalidateAnalyzerCaches(): void {
-  cachedCoreRules = null;
-}
+import type {
+  AnalysisResult,
+  AnalyzeExecution,
+  AnalyzeOptions,
+} from './store.svelte.js';
+import {
+  buildAnalysisContext,
+  type PreviousSpendingBasis,
+} from './analysis-context.js';
+import {
+  assertCatalogAvailable,
+  assertRequestedCardsResolved,
+  attachParseWarningIdentity,
+  toRulesCategoryNodes,
+} from './analyzer-helpers.js';
+import { calculatePerformanceSpending } from './performance-spending.js';
+import { runFileParseQueue } from './file-parse-queue.js';
 
 export interface CategorizedTx {
   id: string;
@@ -99,6 +42,10 @@ export interface CategorizedTx {
   confidence: number;
   rawCategory?: string;
   memo?: string;
+  paymentType?: 'domestic' | 'overseas';
+  channel?: 'online' | 'offline';
+  fuelVolumeLiters?: number;
+  performanceExclusionTags?: PerformanceExclusionId[];
 }
 
 export async function parseAndCategorize(
@@ -186,30 +133,16 @@ export async function optimizeFromTransactions(
     category: tx.category,
     subcategory: tx.subcategory,
     confidence: tx.confidence,
+    paymentType: tx.paymentType,
+    channel: tx.channel,
+    fuelVolumeLiters: tx.fuelVolumeLiters,
+    performanceExclusionTags: tx.performanceExclusionTags,
   }));
 
-  // cardRules from static JSON are validated and narrowed to the core
-  // CardRuleSet shape via the adapter function. Cache the FULL unfiltered
-  // result since the underlying cards.json data never changes within a session.
-  // The cardIds filter is applied after cache retrieval so filtered calls
-  // don't get stale unfiltered data from the cache.
-  const allCardRules = await getAllCardRules();
-  let transformed: CoreCardRuleSet[] | null = null;
-  if (!cachedCoreRules) {
-    transformed = toCoreCardRuleSets(allCardRules);
-    // Don't cache an empty array — it may result from an AbortError in
-    // loadCardsData() (which returns [] on abort). Caching [] would poison
-    // all subsequent optimizations to produce 0 rewards until manual reset
-    // (C72-02). Leaving cachedCoreRules as null forces a retry on next call.
-    if (transformed.length > 0) {
-      cachedCoreRules = transformed;
-    }
-  }
-  // cachedCoreRules may still be null when loadCardsData() returned [] due to
-  // AbortError and we chose not to cache the empty array (C72-02). In that
-  // case, fall back to the empty transformation result so the optimizer gets
-  // an empty array instead of null. The next call will retry the fetch.
-  let coreRules: CoreCardRuleSet[] = cachedCoreRules ?? transformed ?? [];
+  // The generated optimizer artifact already has the canonical core shape.
+  // Its loader validates and caches the original JSON object graph once.
+  let coreRules = await loadOptimizerCatalog();
+  assertCatalogAvailable(coreRules.length);
 
   // Apply cardIds filter AFTER cache retrieval to avoid returning stale
   // unfiltered rules when a filtered set is requested.
@@ -217,48 +150,54 @@ export async function optimizeFromTransactions(
     const idSet = new Set(options.cardIds);
     coreRules = coreRules.filter(r => idSet.has(r.card.id));
   }
+  assertRequestedCardsResolved(options?.cardIds, coreRules.length);
 
   // 전월실적 기본값: 사용자가 입력하지 않으면 이번 달 총 지출과 같다고 가정
   // 단, 카드사별 performanceExclusions에 포함된 카테고리의 지출은 전월실적에서 제외
   // 각 카드마다 제외 항목이 다르므로 카드별로 개별 계산
   // Pre-compute total positive spending for the fast-path (cards with no exclusions).
-  const totalPositiveSpending = transactions.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0);
+  const previousBasis: PreviousSpendingBasis | undefined =
+    options?.previousSpendingBasis ??
+    (options?.previousMonthSpending !== undefined &&
+    Number.isFinite(options.previousMonthSpending) &&
+    options.previousMonthSpending >= 0
+      ? { kind: 'user-total', amount: options.previousMonthSpending }
+      : undefined);
+  const performanceTransactions =
+    options?.previousMonthTransactions ?? transactions;
+  const totalPositiveSpending = performanceTransactions.reduce(
+    (sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0),
+    0,
+  );
   const cardPreviousSpending = new Map<string, number>();
+  const performanceBasisIssues: NonNullable<
+    AnalysisResult['optimization']['unsupportedRules']
+  > = [];
   for (const rule of coreRules) {
-    if (
-      options?.previousMonthSpending !== undefined &&
-      Number.isFinite(options.previousMonthSpending) &&
-      options.previousMonthSpending >= 0
-    ) {
-      // 사용자가 명시적으로 입력한 값 — 모든 카드에 동일 적용
-      cardPreviousSpending.set(rule.card.id, options.previousMonthSpending);
+    if (previousBasis?.kind === 'user-total') {
+      cardPreviousSpending.set(rule.card.id, previousBasis.amount);
+    } else if (previousBasis?.kind === 'missing-calendar-month') {
+      cardPreviousSpending.set(rule.card.id, previousBasis.assumedAmount);
     } else if (rule.performanceExclusions.length === 0) {
       // Fast path: no exclusions means all positive spending qualifies
       cardPreviousSpending.set(rule.card.id, totalPositiveSpending);
     } else {
-      // 카드별 performanceExclusions에 따라 전월실적 개별 계산
-      // Match against three key forms: parent category (e.g. "tax_payment"),
-      // subcategory leaf ID (e.g. "cafe"), and dot-notation key (e.g. "dining.cafe").
-      // This ensures that subcategory-level exclusions work correctly even when
-      // the transaction's category is the parent (e.g. tx.category="dining",
-      // tx.subcategory="cafe", exclusion entry="cafe").
-      // Single-pass loop avoids intermediate array allocation from filter+reduce.
-      const exclusions = new Set(rule.performanceExclusions);
-      let qualifying = 0;
-      for (const tx of transactions) {
-        // Only positive amounts contribute to 전월실적 (gross spending convention).
-        // Including refunds (negative) or zero-amount rows would understate the
-        // user's performance, placing them in a lower tier with worse rewards (C1-01/C5-01).
-        if (tx.amount <= 0) continue;
-        if (
-          !exclusions.has(tx.category) &&
-          !(tx.subcategory && exclusions.has(tx.subcategory)) &&
-          !(tx.subcategory && exclusions.has(`${tx.category}.${tx.subcategory}`))
-        ) {
-          qualifying += tx.amount;
-        }
+      const performance = calculatePerformanceSpending(
+        performanceTransactions,
+        rule.performanceExclusions,
+      );
+      cardPreviousSpending.set(rule.card.id, performance.amount);
+      if (performance.unknownExclusions.length > 0) {
+        performanceBasisIssues.push({
+          transactionId: 'performance-basis',
+          ruleId: `${rule.card.id}:performance-exclusions`,
+          category: 'performance',
+          reason: 'missing_performance_exclusion_fact',
+          detail:
+            '전월실적 제외 여부를 확인할 거래 정보가 없어 실적을 0원으로 처리했어요: ' +
+            performance.unknownExclusions.join(', '),
+        });
       }
-      cardPreviousSpending.set(rule.card.id, qualifying);
     }
   }
   // Build category labels map from taxonomy for the optimizer
@@ -276,26 +215,35 @@ export async function optimizeFromTransactions(
   const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
 
   const optimizationResult = greedyOptimize(constraints, coreRules);
-
-  return optimizationResult;
-}
-
-/** Determine the latest month (YYYY-MM) from a list of categorized transactions. */
-export function getLatestMonth(transactions: CategorizedTx[]): string | null {
-  if (transactions.length === 0) return null;
-  const months = new Set<string>();
-  for (const tx of transactions) {
-    if (tx.date && tx.date.length >= 7) {
-      months.add(tx.date.slice(0, 7));
+  if (performanceBasisIssues.length > 0) {
+    optimizationResult.unsupportedRules = [
+      ...(optimizationResult.unsupportedRules ?? []),
+      ...performanceBasisIssues,
+    ];
+    const issuesByCard = new Map<string, typeof performanceBasisIssues>();
+    for (const issue of performanceBasisIssues) {
+      const cardId = issue.ruleId.replace(/:performance-exclusions$/, '');
+      const issues = issuesByCard.get(cardId) ?? [];
+      issues.push(issue);
+      issuesByCard.set(cardId, issues);
+    }
+    for (const cardResult of optimizationResult.cardResults) {
+      const issues = issuesByCard.get(cardResult.cardId);
+      if (!issues) continue;
+      cardResult.unsupportedRules = [
+        ...(cardResult.unsupportedRules ?? []),
+        ...issues,
+      ];
     }
   }
-  const sorted = [...months].sort();
-  return sorted[sorted.length - 1] ?? null;
+
+  return optimizationResult;
 }
 
 export async function analyzeMultipleFiles(
   files: File[],
   options?: AnalyzeOptions,
+  execution?: AnalyzeExecution,
 ): Promise<AnalysisResult> {
   // 1. Construct MerchantMatcher once (shared across all files) to avoid
   // redundant loadCategories() fetches and matcher construction per file.
@@ -307,55 +255,93 @@ export async function analyzeMultipleFiles(
   if (categoryNodes.length === 0) {
     throw new Error('카테고리 데이터를 불러올 수 없어요. 다시 시도해 보세요.');
   }
+  if (execution && !execution.run.isCurrent()) {
+    const error = new Error('분석이 취소되었어요.');
+    error.name = 'AbortError';
+    throw error;
+  }
   const sharedMatcher = new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
 
   // 2. Parse and categorize ALL files using the shared matcher
   // Pass categoryNodes to avoid redundant loadCategories() calls inside
   // parseAndCategorize() — the caller already has the data (C81-03).
-  // Wrap each call in try/catch so one failing file doesn't abort the batch (C41-BUG02).
-  const allParsed: {
-    transactions: CategorizedTx[];
-    bank: string | null;
-    format: string;
-    parseErrors: { line?: number; message: string; raw?: string }[];
-    categoryNodes: CategoryNode[];
-  }[] = [];
-  const fileErrors: { fileName: string; message: string }[] = [];
-
-  const parseResults = await Promise.all(
-    files.map(async (f, i) => {
-      try {
-        return await parseAndCategorize(f, options, i, sharedMatcher, categoryNodes);
-      } catch (err) {
-        fileErrors.push({
-          fileName: f.name,
-          message: err instanceof Error ? err.message : '파일을 분석할 수 없어요',
-        });
-        return null;
-      }
-    })
+  // Each worker returns only normalized transactions and warnings. Parser
+  // buffers/workbooks remain local to parseFile and are released before this
+  // promise settles and the queue yields/dequeues another file.
+  const fallbackExecution = execution ?? {
+    run: {
+      generation: 0,
+      signal: new AbortController().signal,
+      isCurrent: () => true,
+      commit: (effect: () => void) => {
+        effect();
+        return true;
+      },
+    },
+  };
+  const parseQueue = await runFileParseQueue(
+    files,
+    async (file, index) => ({
+      ...(await parseAndCategorize(
+        file,
+        options,
+        index,
+        sharedMatcher,
+        categoryNodes,
+      )),
+      fileName: file.name,
+    }),
+    {
+      run: fallbackExecution.run,
+      onProgress: execution?.onProgress,
+    },
   );
-
-  for (const result of parseResults) {
-    if (result) allParsed.push(result);
+  if (parseQueue.cancelled || parseQueue.stale) {
+    const error = new Error('분석이 취소되었어요.');
+    error.name = 'AbortError';
+    throw error;
   }
 
   // 2. Merge all transactions and build category labels from the first parsed result
   const allTransactions: CategorizedTx[] = [];
-  const allErrors: { line?: number; message: string; raw?: string }[] = [];
+  const allErrors: AnalysisResult['parseErrors'] = [];
+  const failedFileNames: string[] = [];
   let bank: string | null = null;
   let format = 'csv';
 
-  // Include per-file errors in the aggregated error list
-  for (const fe of fileErrors) {
-    allErrors.push({ message: `${fe.fileName}: ${fe.message}` });
-  }
-
-  // Build category labels once from the taxonomy data returned by parseAndCategorize
+  // Consume settled outcomes in input order even when workers completed in a
+  // different order. This keeps transactions and every warning/error stable.
   let categoryLabels: Map<string, string> | undefined;
-  for (const parsed of allParsed) {
+  for (const [index, outcome] of parseQueue.outcomes.entries()) {
+    const file = files[index]!;
+    if (outcome.status === 'cancelled') {
+      const error = new Error('분석이 취소되었어요.');
+      error.name = 'AbortError';
+      throw error;
+    }
+    if (outcome.status === 'rejected') {
+      failedFileNames.push(file.name);
+      allErrors.push({
+        fileName: file.name,
+        format: file.name.split('.').at(-1)?.toLowerCase() ?? 'unknown',
+        message:
+          outcome.reason instanceof Error
+            ? outcome.reason.message
+            : '파일을 분석할 수 없어요',
+        count: 1,
+      });
+      continue;
+    }
+
+    const parsed = outcome.value;
     allTransactions.push(...parsed.transactions);
-    allErrors.push(...parsed.parseErrors);
+    allErrors.push(
+      ...attachParseWarningIdentity(
+        parsed.parseErrors,
+        parsed.fileName,
+        parsed.format,
+      ),
+    );
     if (parsed.bank) bank = parsed.bank;
     format = parsed.format;
     // Build labels from the first parsed result (all results use the same taxonomy)
@@ -365,9 +351,7 @@ export async function analyzeMultipleFiles(
   }
 
   if (allTransactions.length === 0) {
-    const errorDetail = fileErrors.length > 0
-      ? fileErrors.map((fe) => fe.fileName).join(', ')
-      : '';
+    const errorDetail = failedFileNames.join(', ');
     throw new Error(
       errorDetail
         ? `거래 내역을 찾을 수 없어요: ${errorDetail}`
@@ -375,83 +359,25 @@ export async function analyzeMultipleFiles(
     );
   }
 
-  // 3. Sort transactions by date
-  allTransactions.sort((a, b) => a.date.localeCompare(b.date));
-
-  // 4. Detect months and calculate per-month spending + transaction counts
-  const monthlySpending = new Map<string, number>();
-  const monthlyTxCount = new Map<string, number>();
-  for (const tx of allTransactions) {
-    // Guard against malformed dates shorter than 7 chars (YYYY-MM) —
-    // matches the guard in getLatestMonth() above.
-    if (!tx.date || tx.date.length < 7) continue;
-    const month = tx.date.slice(0, 7); // "2026-01"
-    // Only accumulate positive amounts (purchases) for monthlySpending.
-    // Korean card issuers define 전월실적 (previous month performance) as
-    // gross spending, not net. Including refunds would understate the user's
-    // performance, placing them in a lower tier with worse rewards (C1-01).
-    if (tx.amount > 0) {
-      monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
-    }
-    monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
-  }
-
-  // 5. Find the latest month's transactions for optimization.
-  // If monthlySpending is empty, it means every transaction was filtered
-  // out by the date-length guard (line 323) — i.e., all rows had
-  // unparseable dates that parsers returned as-is. Without this guard,
-  // `months[months.length - 1]!` would be `undefined`, `latestTransactions`
-  // would be `[]` (since `startsWith("undefined")` never matches), and the
-  // optimizer would silently return a zero-reward result. Surface the
-  // failure as an error instead of pretending success (C96-01).
-  const months = [...monthlySpending.keys()].sort();
-  if (months.length === 0) {
+  // 3. Build one strict calendar/provenance context for every downstream
+  // consumer. Invalid-date rows stay in `transactions` for review but cannot
+  // affect month selection, periods, counts, or optimization.
+  const context = buildAnalysisContext(
+    allTransactions,
+    options?.previousMonthSpending,
+  );
+  if (!context) {
     throw new Error('거래 내역의 날짜를 해석할 수 없어요. 파일 형식을 확인해 주세요.');
   }
-  const latestMonth = months[months.length - 1]!;
-  const previousMonth = months.length >= 2 ? months[months.length - 2]! : null;
 
-  // Use previous month's spending as performance tier input
-  // If only one month uploaded, leave undefined so optimizeFromTransactions
-  // computes per-card exclusion-filtered spending automatically
-  const previousMonthSpending = previousMonth
-    ? (monthlySpending.get(previousMonth) ?? 0)
-    : options?.previousMonthSpending;
-
-  // 6. Filter to latest month for optimization
-  const latestTransactions = allTransactions.filter(tx => tx.date.startsWith(latestMonth));
-
-  // 7. Optimize using the latest month's transactions with previous month's spending
-  const optimization = await optimizeFromTransactions(latestTransactions, {
+  // 4. Optimize the latest valid month. Automatic performance spending uses
+  // only the exact previous calendar month's transactions and is computed
+  // separately for each card after its exclusions.
+  const optimization = await optimizeFromTransactions(context.latestTransactions, {
     ...options,
-    previousMonthSpending,
+    previousSpendingBasis: context.previousSpendingBasis,
+    previousMonthTransactions: context.previousTransactions,
   }, categoryLabels);
-
-  // 8. Calculate statement periods from transactions
-  // - fullStatementPeriod / totalTransactionCount: all uploaded months
-  // - statementPeriod / transactionCount: optimized month only
-  // Filter to valid ISO dates (YYYY-MM-DD, length 10) before sorting. Short
-  // or non-ISO strings (e.g., Korean footer rows "소계", truncated "2026-")
-  // survived into `allTransactions` because the length guard at line 323 only
-  // gates monthlySpending accumulation, not the underlying array. A bare
-  // .sort() places these ahead of valid ISO dates lexicographically and
-  // corrupts the period bounds — polluting sessionStorage even though the UI
-  // formatter (formatYearMonthKo) degrades gracefully to '-' (C97-01).
-  const allDates = allTransactions
-    .map(tx => tx.date)
-    .filter((d): d is string => typeof d === 'string' && d.length >= 10)
-    .sort();
-  const fullStatementPeriod = allDates.length > 0
-    ? { start: allDates[0]!, end: allDates[allDates.length - 1]! }
-    : undefined;
-
-  const optimizedDates = latestTransactions
-    .map(tx => tx.date)
-    .filter((d): d is string => typeof d === 'string' && d.length >= 10)
-    .sort();
-  const statementPeriod = optimizedDates.length > 0
-    ? { start: optimizedDates[0]!, end: optimizedDates[optimizedDates.length - 1]! }
-    : undefined;
 
   // Note: `transactions` includes ALL months for display/editing, but the
   // optimization only covers the latest month. When reoptimize is called
@@ -463,20 +389,15 @@ export async function analyzeMultipleFiles(
     success: true,
     bank,
     format,
-    statementPeriod,
-    transactionCount: latestTransactions.length,
-    fullStatementPeriod,
-    totalTransactionCount: allTransactions.length,
+    statementPeriod: context.statementPeriod,
+    transactionCount: context.latestTransactions.length,
+    fullStatementPeriod: context.fullStatementPeriod,
+    totalTransactionCount: context.validTransactions.length,
     parseErrors: allErrors,
     transactions: allTransactions,
     optimization,
-    monthlyBreakdown: [...monthlySpending.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, spending]) => ({
-        month,
-        spending,
-        transactionCount: monthlyTxCount.get(month) ?? 0,
-      })),
+    monthlyBreakdown: context.monthlyBreakdown,
+    previousSpendingBasis: context.previousSpendingBasis,
   };
 }
 

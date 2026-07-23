@@ -5,9 +5,10 @@
   interface Props {
     dataContentId: string;
     emptyStateId: string;
+    statusTextId?: string;
   }
 
-  let { dataContentId, emptyStateId }: Props = $props();
+  let { dataContentId, emptyStateId, statusTextId }: Props = $props();
 
   // Cached element references — queried once on first effect run, then reused
   // to avoid repeated getElementById calls on every store change. Stale refs
@@ -19,6 +20,7 @@
   let cachedStatTotalSavings: HTMLElement | null = null;
   let cachedStatCardsNeeded: HTMLElement | null = null;
   let cachedStatSavingsLabel: HTMLElement | null = null;
+  let cachedStatusText: HTMLElement | null = null;
   let originalSavingsLabelText: string | null = null;
 
   function getOrRefreshElement(
@@ -59,9 +61,21 @@
     // Cache or refresh element references
     cachedDataEl = getOrRefreshElement(cachedDataEl, dataContentId);
     cachedEmptyEl = getOrRefreshElement(cachedEmptyEl, emptyStateId);
+    if (statusTextId) cachedStatusText = getOrRefreshElement(cachedStatusText, statusTextId);
 
     if (cachedDataEl && cachedDataEl.isConnected) cachedDataEl.classList.toggle('hidden', !hasData);
     if (cachedEmptyEl && cachedEmptyEl.isConnected) cachedEmptyEl.classList.toggle('hidden', hasData);
+    if (cachedStatusText?.isConnected) {
+      cachedStatusText.textContent = analysisStore.loading
+        ? '분석 결과를 불러오는 중이에요'
+        : analysisStore.error
+          ? '분석 결과를 표시하지 못했어요'
+          : hasData && (analysisStore.result?.parseErrors.length ?? 0) > 0
+            ? '분석 완료 — 확인할 항목 있음'
+            : hasData
+              ? '분석이 끝났어요'
+              : '명세서를 올리면 분석 결과를 보여줘요';
+    }
 
     // Only query stat elements if we have data and a valid data container
     // (i.e., we're on the results page). On the dashboard page these elements

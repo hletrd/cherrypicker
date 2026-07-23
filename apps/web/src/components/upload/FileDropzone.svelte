@@ -4,10 +4,28 @@
   import { formatFileSize, buildPageUrl } from '../../lib/formatters.js';
   import { detectBankFromText } from '../../lib/parser/detect.js';
   import type { BankId } from '../../lib/parser/types.js';
+  import {
+    STATEMENT_FILE_ACCEPT,
+    SUPPORTED_STATEMENT_FORMAT_LABELS,
+    isSupportedStatementFile,
+  } from '../../lib/supported-formats.js';
+  import {
+    MAX_PREVIOUS_SPENDING_KRW,
+    validatePreviousSpending,
+  } from '../../lib/upload-validation.js';
+  import {
+    LatestFileParseRun,
+    type FileParseProgress,
+  } from '../../lib/file-parse-queue.js';
   import Icon from '../ui/Icon.svelte';
 
+  const analysisRuns = new LatestFileParseRun();
   let navigateTimeout: ReturnType<typeof setTimeout> | null = null;
-  onDestroy(() => { if (navigateTimeout) clearTimeout(navigateTimeout); });
+  onDestroy(() => {
+    if (navigateTimeout) clearTimeout(navigateTimeout);
+    analysisRuns.cancel();
+    analysisStore.cancelAnalysis();
+  });
 
   // Flag-based beforeunload guard: survives Astro View Transition remounts
   // because the listener is registered once and simply checks a flag (C6UI-16).
@@ -73,9 +91,13 @@
   let primaryFileInputEl = $state<HTMLInputElement | null>(null);
   let addFileInputEl = $state<HTMLInputElement | null>(null);
   let uploadStatus = $state<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  let analysisProgress = $state<FileParseProgress>({ completed: 0, total: 0 });
   let errorMessages = $state<string[]>([]);
+  let warningMessages = $state<string[]>([]);
   let bank = $state('');
   let previousSpending = $state<string>('');
+  let previousSpendingError = $state<string | null>(null);
+  let previousSpendingInputEl = $state<HTMLInputElement | null>(null);
   let showAllBanks = $state(false);
   let detectedBankId = $state<BankId | null>(null);
   let detectedBankLabel = $derived(() => {
@@ -93,17 +115,6 @@
   });
 
   const STEPS = ['파일 선택', '카드사 선택', '분석 중', '완료'];
-
-  const ACCEPTED_TYPES = [
-    'text/csv',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-excel',
-    'application/pdf',
-    'application/json',
-    'application/ofx',
-    'text/html',
-  ];
-  const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx', '.xls', '.pdf', '.json', '.ofx', '.qfx', '.html', '.htm'];
 
   const ALL_BANKS: { value: string; label: string }[] = [
     { value: 'hyundai', label: '현대카드' },
@@ -144,13 +155,24 @@
     return 'document-text';
   }
 
-  function isValidFile(file: File): boolean {
-    if (ACCEPTED_TYPES.includes(file.type)) return true;
-    return ACCEPTED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext));
-  }
-
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per file
   const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50 MB total
+
+  function updateTotalSizeWarning() {
+    const totalSize = uploadedFiles.reduce((sum, file) => sum + file.size, 0);
+    warningMessages = totalSize > MAX_TOTAL_SIZE
+      ? ['전체 파일 크기가 50MB를 초과해 처리 시간이 길어질 수 있어요.']
+      : [];
+  }
+
+  function cancelActiveAnalysis(): void {
+    if (uploadStatus !== 'uploading') return;
+    analysisRuns.cancel();
+    analysisStore.cancelAnalysis();
+    analysisProgress = { completed: 0, total: 0 };
+    uploadStatus = 'idle';
+    isBlockingNavigation = false;
+  }
 
   /** Read the first uploaded file's text and run bank detection.
    *  Only reads enough for detection (first ~4KB) to avoid loading
@@ -178,6 +200,7 @@
   }
 
   function addFiles(newFiles: File[]) {
+    cancelActiveAnalysis();
     const invalid: string[] = [];
     const oversized: string[] = [];
     const duplicateNames: string[] = [];
@@ -187,7 +210,7 @@
         oversized.push(`${f.name} (${formatFileSize(f.size)})`);
         continue;
       }
-      if (isValidFile(f)) {
+      if (isSupportedStatementFile(f)) {
         // Avoid duplicates by name AND size — same name with different size
         // is likely a different statement (e.g., "statement.csv" from a
         // different month). Same name AND same size is likely the same file
@@ -206,14 +229,9 @@
       uploadedFiles = [...uploadedFiles, ...valid];
       uploadStatus = 'idle';
       errorMessages = [];
+      updateTotalSizeWarning();
       // Auto-detect bank from first file content (non-blocking)
       detectBankFromFile();
-    }
-    // Then check total size and show warning (but keep files)
-    const totalSize = uploadedFiles.reduce((sum, f) => sum + f.size, 0);
-    if (totalSize > MAX_TOTAL_SIZE) {
-      errorMessages = [`전체 파일 크기가 50MB를 초과합니다. 일부 파일이 느리게 처리될 수 있어요.`];
-      // Don't set uploadStatus to 'error' — let user proceed
     }
     // Show individual file errors — accumulate ALL error types so the user
     // can see all issues at once instead of discovering them one retry at a
@@ -223,7 +241,7 @@
       errorParts.push(`파일 크기는 10MB 이하여야 합니다 (초과: ${oversized.join(', ')})`);
     }
     if (invalid.length > 0) {
-      errorParts.push(`CSV, Excel, PDF 파일만 지원합니다 (제외됨: ${invalid.join(', ')})`);
+      errorParts.push(`${SUPPORTED_STATEMENT_FORMAT_LABELS} 파일만 지원합니다 (제외됨: ${invalid.join(', ')})`);
     }
     if (duplicateNames.length > 0) {
       errorParts.push(`같은 이름의 파일이 이미 있어요 (제외됨: ${duplicateNames.join(', ')})`);
@@ -235,10 +253,13 @@
   }
 
   function removeFile(index: number) {
+    cancelActiveAnalysis();
     uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
+    updateTotalSizeWarning();
     if (uploadedFiles.length === 0) {
       uploadStatus = 'idle';
       errorMessages = [];
+      previousSpendingError = null;
       bank = '';
       previousSpending = '';
       detectedBankId = null;
@@ -250,23 +271,17 @@
   }
 
   function clearAllFiles() {
+    cancelActiveAnalysis();
     uploadedFiles = [];
     uploadStatus = 'idle';
     errorMessages = [];
+    warningMessages = [];
+    previousSpendingError = null;
     bank = '';
     previousSpending = '';
     detectedBankId = null;
     if (primaryFileInputEl) primaryFileInputEl.value = '';
     if (addFileInputEl) addFileInputEl.value = '';
-  }
-
-  function handleDrop(e: DragEvent) {
-    e.preventDefault();
-    isDragOver = false;
-    const files = e.dataTransfer?.files;
-    if (files && files.length > 0) {
-      addFiles(Array.from(files));
-    }
   }
 
   function handleFileInput(e: Event) {
@@ -279,50 +294,40 @@
     target.value = '';
   }
 
-  /** Parse the previous-month-spending input field into a validated number.
-   *  Returns undefined for empty or invalid inputs, matching the store's
-   *  expected type. Extracted from inline IIFE for readability (C41-03).
-   *  Clamped to MAX_PREVIOUS_SPENDING_KRW to prevent a typo from inflating
-   *  performance-tier selection and downstream projected rewards (C6UI-34).
-   *  Accepts unknown because Svelte 5's `bind:value` on `<input type="number">`
-   *  coerces the bound variable to `number` at runtime regardless of the
-   *  declared type — calling `.trim()` on a number throws "t.trim is not a
-   *  function" and breaks the upload flow (C7E-01). */
-  const MAX_PREVIOUS_SPENDING_KRW = 10_000_000_000; // 100억원 sanity bound
-  function parsePreviousSpending(raw: unknown): number | undefined {
-    if (raw === undefined || raw === null || raw === '') return undefined;
-    if (typeof raw === 'number') {
-      if (!Number.isFinite(raw) || raw < 0) return undefined;
-      // Coerce -0 → +0 for asymmetric downstream consumers (e.g., string
-      // concatenation, Object.is checks). Math.round(-0) === -0 and -0 >= 0,
-      // so the existing guards don't catch this (D7-M4 / C8-02).
-      const rounded = Math.round(raw);
-      const normalized = rounded === 0 ? 0 : rounded;
-      return Math.min(normalized, MAX_PREVIOUS_SPENDING_KRW);
-    }
-    if (typeof raw !== 'string') return undefined;
-    const v = raw.trim();
-    if (v === '') return undefined;
-    const n = Math.round(Number(v));
-    if (!(Number.isFinite(n) && n >= 0)) return undefined;
-    // Coerce -0 → +0 (D7-M4 / C8-02). For string inputs like "-0" or "-0.1"
-    // (rounded to 0), Number(v) produces -0 which survives Math.round and
-    // fails Object.is(result, 0) assertions.
-    const normalized = n === 0 ? 0 : n;
-    return Math.min(normalized, MAX_PREVIOUS_SPENDING_KRW);
-  }
-
-  async function handleUpload() {
+  async function handleUpload(event?: SubmitEvent) {
+    event?.preventDefault();
     if (uploadedFiles.length === 0) return;
+    const previousSpendingValidation = validatePreviousSpending(previousSpending);
+    if (!previousSpendingValidation.valid) {
+      previousSpendingError = previousSpendingValidation.message;
+      queueMicrotask(() => previousSpendingInputEl?.focus());
+      return;
+    }
+    previousSpendingError = null;
+    const files = [...uploadedFiles];
+    const run = analysisRuns.begin();
+    analysisProgress = { completed: 0, total: files.length };
     uploadStatus = 'uploading';
     errorMessages = [];
     isBlockingNavigation = true;
 
     try {
-      await analysisStore.analyze(uploadedFiles, {
-        bank: bank || undefined,
-        previousMonthSpending: parsePreviousSpending(previousSpending),
-      });
+      await analysisStore.analyze(
+        files,
+        {
+          bank: bank || undefined,
+          previousMonthSpending: previousSpendingValidation.value,
+        },
+        {
+          run,
+          onProgress: (progress) => {
+            run.commit(() => {
+              analysisProgress = progress;
+            });
+          },
+        },
+      );
+      if (!run.isCurrent()) return;
 
       // analysisStore.analyze() catches errors internally (sets error, result=null)
       // without re-throwing, so we must check analysisStore.error here.
@@ -337,6 +342,7 @@
         // otherwise stack and both fire navigate() back-to-back (D7-M3 / C8-04).
         if (navigateTimeout) { clearTimeout(navigateTimeout); navigateTimeout = null; }
         navigateTimeout = setTimeout(async () => {
+          if (!run.isCurrent()) return;
           // Use Astro client-side navigation to preserve in-memory store
           // state instead of a full page reload (C62-15). Fall back to
           // full reload if View Transitions are not enabled.
@@ -350,6 +356,7 @@
         }, 1200);
       }
     } catch (e) {
+      if (!run.isCurrent()) return;
       errorMessages = [e instanceof Error ? e.message : '분석 실패'];
       uploadStatus = 'error';
     } finally {
@@ -357,12 +364,26 @@
       // timer, error path shows the error card. Neither should block future
       // navigation (C6UI-16). The listener itself stays on window and checks
       // the flag, so it survives Astro View Transition remounts.
-      isBlockingNavigation = false;
+      if (run.isCurrent()) {
+        isBlockingNavigation = false;
+      }
     }
+  }
+
+  function handlePreviousSpendingInvalid(event: Event) {
+    event.preventDefault();
+    const validation = validatePreviousSpending(previousSpending);
+    previousSpendingError = validation.valid
+      ? '전월 카드 이용액을 원 단위 정수로 입력해 주세요.'
+      : validation.message;
+    queueMicrotask(() => previousSpendingInputEl?.focus());
   }
 
   function handleRetry() {
     if (navigateTimeout) { clearTimeout(navigateTimeout); navigateTimeout = null; }
+    analysisRuns.cancel();
+    analysisStore.cancelAnalysis();
+    analysisProgress = { completed: 0, total: 0 };
     uploadStatus = 'idle';
     errorMessages = [];
   }
@@ -386,7 +407,7 @@
               {isDone
                 ? 'bg-green-500 text-white'
                 : isActive
-                  ? 'bg-[var(--color-primary)] text-white shadow-md shadow-[var(--color-primary)]/30'
+                  ? 'bg-[var(--color-primary-fill)] text-white shadow-md'
                   : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'}"
           >
             {#if isDone}
@@ -399,7 +420,7 @@
           </div>
           <span
             class="text-xs transition-colors duration-200
-              {isActive ? 'font-semibold text-[var(--color-primary)]' : isDone ? 'text-green-700' : 'text-[var(--color-text-muted)]'}"
+              {isActive ? 'font-semibold text-[var(--color-primary-fg)]' : isDone ? 'text-green-700 dark:text-green-300' : 'text-[var(--color-text-muted)]'}"
           >
             {step}
           </span>
@@ -420,27 +441,19 @@
     {#if isDragOver}파일을 놓으세요{/if}
   </div>
 
-  <!-- Drop zone -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <!-- Drop zone. The file input remains the sole keyboard interaction target;
+       the surrounding region only communicates page-wide drag-and-drop state. -->
   <div
     class="rounded-2xl border-2 p-6 text-center transition-all duration-200
       {isDragOver
-        ? 'animate-pulse border-[var(--color-primary)] bg-[var(--color-primary-light)] shadow-inner'
+        ? 'animate-pulse border-[var(--color-primary-fg)] bg-[var(--color-primary-light)] shadow-inner'
         : uploadedFiles.length > 0
           ? 'border-green-400 bg-green-50 dark:bg-green-900/20'
-          : 'border-dashed border-[var(--color-border)] hover:border-[var(--color-primary)]/50'}"
-    role="button"
-    tabindex="0"
-    aria-label="파일 업로드 영역. 엔터나 스페이스를 눌러 파일을 선택하세요."
+          : 'border-dashed border-[var(--color-border)] hover:border-[var(--color-primary-fg)]'}"
+    role="region"
+    aria-label="카드 명세서 업로드"
     ondragover={(e) => { e.preventDefault(); isDragOver = true; }}
     ondragleave={() => (isDragOver = false)}
-    ondrop={handleDrop}
-    onkeydown={(e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        primaryFileInputEl?.click();
-      }
-    }}
   >
     {#if uploadStatus === 'success'}
       <!-- Success state with checkmark -->
@@ -450,10 +463,12 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <p class="text-base font-semibold text-green-700">분석 완료</p>
+        <p class="text-base font-semibold text-green-700 dark:text-green-300">
+          {analysisStore.result?.parseErrors.length ? '분석 완료 — 확인할 항목 있음' : '분석 완료'}
+        </p>
         <!-- text-green-700 on white is 5.09:1 (passes WCAG AA 4.5:1);
              text-green-600 was 3.77:1 (fails) — C6UI-31. -->
-        <p class="text-sm text-green-700">대시보드로 이동할게요</p>
+        <p class="text-sm text-green-700 dark:text-green-300">대시보드로 이동할게요</p>
       </div>
     {:else if uploadedFiles.length > 0}
       <!-- File list -->
@@ -468,9 +483,10 @@
               <p class="text-xs text-[var(--color-text-muted)]">{formatFileSize(file.size)}</p>
             </div>
             <button
+              type="button"
               class="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] hover:bg-red-50 hover:text-red-500 transition-colors"
               onclick={() => removeFile(i)}
-              aria-label="파일 제거"
+              aria-label={`${file.name} 제거`}
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -480,14 +496,15 @@
         {/each}
         <!-- Add / clear buttons -->
         <div class="mt-1 flex items-center gap-2">
-          <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/60 hover:text-[var(--color-primary)] transition-colors">
+          <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-primary-fg)] hover:text-[var(--color-primary-fg)] focus-within:outline-none focus-within:ring-2 focus-within:ring-[var(--color-focus)]">
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             파일 추가
-            <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf,.json,.ofx,.qfx,.html,.htm" multiple onchange={handleFileInput} bind:this={addFileInputEl} />
+            <input type="file" class="sr-only" accept={STATEMENT_FILE_ACCEPT} multiple onchange={handleFileInput} bind:this={addFileInputEl} />
           </label>
           <button
+            type="button"
             class="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:border-red-300 hover:text-red-500 transition-colors"
             onclick={clearAllFiles}
           >
@@ -500,11 +517,11 @@
         <div class="text-[var(--color-text-muted)]">
           <Icon name={isDragOver ? 'folder-open' : 'arrow-up-tray'} size={40} />
         </div>
-        <p class="mt-1 text-base font-medium">카드 명세서를 끌어다 놓으세요</p>
-        <p class="text-sm text-[var(--color-text-muted)]">CSV, Excel, PDF, JSON, OFX, HTML 지원 · 여러 파일 동시 업로드 가능</p>
-        <label class="mt-3 inline-block cursor-pointer rounded-xl bg-[var(--color-primary)] px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[var(--color-primary-dark)] transition-colors">
+        <p id="dropzone-title" class="mt-1 text-base font-medium">카드 명세서를 끌어다 놓으세요</p>
+        <p class="text-sm text-[var(--color-text-muted)]">{SUPPORTED_STATEMENT_FORMAT_LABELS} 지원 · 여러 파일 동시 업로드 가능</p>
+        <label class="mt-3 inline-block cursor-pointer rounded-xl bg-[var(--color-primary-fill)] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[var(--color-primary-fill-hover)] focus-within:outline-none focus-within:ring-2 focus-within:ring-[var(--color-focus)] focus-within:ring-offset-2">
           파일 선택
-          <input type="file" class="hidden" accept=".csv,.xlsx,.xls,.pdf,.json,.ofx,.qfx,.html,.htm" multiple onchange={handleFileInput} bind:this={primaryFileInputEl} />
+          <input type="file" class="sr-only" accept={STATEMENT_FILE_ACCEPT} multiple onchange={handleFileInput} bind:this={primaryFileInputEl} />
         </label>
       </div>
     {/if}
@@ -512,15 +529,16 @@
 
   <!-- Bank selector + Upload (shown after file selected, before success) -->
   {#if uploadedFiles.length > 0 && uploadStatus !== 'success'}
-    <div class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-4">
+    <form class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-4" onsubmit={handleUpload}>
       <div>
         <p class="mb-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">카드사를 고르면 더 정확해요</p>
         <div class="flex flex-wrap gap-2" role="group" aria-label="카드사 선택">
           <!-- Auto-detect pill -->
           <button
+            type="button"
             class="rounded-full border px-3 py-1.5 text-xs font-medium transition-all
               {bank === ''
-                ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-sm'
+                ? 'border-[var(--color-primary-fill)] bg-[var(--color-primary-fill)] text-white shadow-sm'
                 : 'border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] hover:border-gray-400'}"
             aria-pressed={bank === ''}
             data-testid="bank-pill-auto"
@@ -536,9 +554,10 @@
           {/if}
           {#each displayedBanks as b}
             <button
+              type="button"
               class="rounded-full border px-3 py-1.5 text-xs font-medium transition-all
                 {bank === b.value
-                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white shadow-sm'
+                  ? 'border-[var(--color-primary-fill)] bg-[var(--color-primary-fill)] text-white shadow-sm'
                   : 'border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] hover:border-gray-400'}"
               aria-pressed={bank === b.value}
               data-testid={`bank-pill-${b.value}`}
@@ -549,7 +568,8 @@
           {/each}
           {#if !showAllBanks && ALL_BANKS.length > TOP_BANKS.length}
             <button
-              class="rounded-full border border-dashed border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all"
+              type="button"
+              class="rounded-full border border-dashed border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:border-[var(--color-focus)] hover:text-[var(--color-primary-fg)] transition-all"
               onclick={() => (showAllBanks = true)}
             >
               더보기 ({ALL_BANKS.length - TOP_BANKS.length})
@@ -560,50 +580,73 @@
 
       <!-- Previous month spending input -->
       <div>
-        <p class="mb-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">전월 카드 이용액</p>
+        <label for="previous-spending" class="mb-2.5 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">전월 카드 이용액</label>
         <div class="relative">
           <input
-            type="number" inputmode="numeric" aria-label="전월 카드 이용액"
+            id="previous-spending"
+            type="number"
+            inputmode="numeric"
             bind:value={previousSpending}
+            bind:this={previousSpendingInputEl}
+            oninput={() => (previousSpendingError = null)}
+            oninvalid={handlePreviousSpendingInvalid}
             placeholder="500,000"
             min="0"
-            max="10000000000"
-            step="10000"
+            max={MAX_PREVIOUS_SPENDING_KRW}
+            step="1"
+            aria-invalid={previousSpendingError ? 'true' : undefined}
+            aria-describedby={previousSpendingError ? 'previous-spending-error previous-spending-help' : 'previous-spending-help'}
             data-testid="previous-spending-input"
-            class="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all"
+            class="w-full rounded-xl border bg-[var(--color-surface)] px-4 py-2 pr-9 text-sm outline-none transition-all focus:ring-2 focus:ring-[var(--color-focus)]
+              {previousSpendingError ? 'border-red-500' : 'border-[var(--color-border)] focus:border-[var(--color-focus)]'}"
           />
           <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)]">원</span>
         </div>
+        {#if previousSpendingError}
+          <p id="previous-spending-error" class="mt-1 text-xs text-red-700 dark:text-red-300" role="alert">
+            {previousSpendingError}
+          </p>
+        {/if}
         {#if uploadedFiles.length >= 2}
-          <p class="mt-1 text-xs text-[var(--color-text-muted)]">여러 달 업로드 시 전월 실적이 자동으로 사용돼요. 직접 입력하면 덮어써요.</p>
+          <p id="previous-spending-help" class="mt-1 text-xs text-[var(--color-text-muted)]">여러 달 업로드 시 전월 실적이 자동으로 사용돼요. 직접 입력하면 덮어써요.</p>
         {:else}
-          <p class="mt-1 text-xs text-[var(--color-text-muted)]">입력하지 않으면 이번 달 지출액을 기준으로 자동 계산해요</p>
+          <p id="previous-spending-help" class="mt-1 text-xs text-[var(--color-text-muted)]">입력하지 않으면 이번 달 지출액을 기준으로 자동 계산해요</p>
         {/if}
       </div>
 
       <!-- Upload button -->
       <button
-        onclick={handleUpload}
+        type="submit"
         disabled={uploadStatus === 'uploading'}
         aria-busy={uploadStatus === 'uploading'}
         class="w-full rounded-xl py-3 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed disabled:opacity-60
           {uploadStatus === 'uploading'
-            ? 'bg-[var(--color-primary)]/80'
-            : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] shadow-sm hover:shadow-md'}"
+            ? 'bg-[var(--color-primary-fill)]/80'
+            : 'bg-[var(--color-primary-fill)] hover:bg-[var(--color-primary-fill-hover)] shadow-sm hover:shadow-md'}"
       >
         {#if uploadStatus === 'uploading'}
-          <span class="flex items-center justify-center gap-2">
+          <span class="flex items-center justify-center gap-2" aria-live="polite">
             <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            분석하는 중
+            분석하는 중 ({analysisProgress.completed}/{analysisProgress.total})
           </span>
         {:else}
           분석 시작 {uploadedFiles.length > 1 ? `(${uploadedFiles.length}개 파일)` : ''}
         {/if}
       </button>
 
+    </form>
+  {/if}
+
+  {#if warningMessages.length > 0}
+    <div role="status" class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+      <ul class="list-disc space-y-0.5 pl-5">
+        {#each warningMessages as message}
+          <li>{message}</li>
+        {/each}
+      </ul>
     </div>
   {/if}
 
@@ -616,7 +659,7 @@
       </svg>
       <div class="flex-1">
         <p class="font-medium">문제가 생겼어요</p>
-        <ul class="mt-1 list-disc list-inside space-y-0.5 text-red-600">
+        <ul class="mt-1 list-disc list-inside space-y-0.5 text-red-700 dark:text-red-300">
           {#each errorMessages as msg}
             <li>{msg}</li>
           {/each}

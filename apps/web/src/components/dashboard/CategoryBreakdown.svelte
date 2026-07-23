@@ -179,19 +179,19 @@
   <div class="mt-4 space-y-3">
     {#each [80, 60, 45, 70, 35, 55] as w}
       <div class="animate-pulse flex items-center gap-3">
-        <div class="h-4 w-5 rounded bg-gray-200"></div>
-        <div class="h-4 w-20 rounded bg-gray-200"></div>
+        <div class="h-4 w-5 rounded bg-[var(--color-border)]"></div>
+        <div class="h-4 w-20 rounded bg-[var(--color-border)]"></div>
         <div class="flex-1">
-          <div class="h-6 rounded-lg bg-gray-200" style="width: {w}%"></div>
+          <div class="h-6 rounded-lg bg-[var(--color-border)]" style="width: {w}%"></div>
         </div>
-        <div class="h-4 w-24 rounded bg-gray-200"></div>
-        <div class="h-4 w-10 rounded bg-gray-200"></div>
+        <div class="h-4 w-24 rounded bg-[var(--color-border)]"></div>
+        <div class="h-4 w-10 rounded bg-[var(--color-border)]"></div>
       </div>
     {/each}
   </div>
 {:else if categories.length > 0}
   <!-- Summary row -->
-  <div class="mt-4 mb-3 flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+  <div class="mt-4 mb-3 flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-muted)]">
     <span>총 <strong class="text-[var(--color-text)]">{categories.length}개</strong> 항목</span>
     <span class="text-[var(--color-border)]">·</span>
     <span>가장 많이 쓴 곳: <strong class="text-[var(--color-text)]">{topCategoryName}</strong></span>
@@ -201,11 +201,7 @@
     {#each categories as cat, i}
       {@const isTop3 = i < 3}
       <div
-        class="relative rounded-lg px-3 py-2 transition-colors duration-150 cursor-default focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-1 {isTop3 ? 'bg-[var(--color-bg)]' : ''} {hoveredIndex === i ? 'bg-[var(--color-primary-light)]' : ''}"
-        role="button"
-        tabindex="0"
-        aria-label={cat.labelKo}
-        aria-expanded={hoveredIndex === i}
+        class="relative rounded-lg transition-colors duration-150 {isTop3 ? 'bg-[var(--color-bg)]' : ''} {hoveredIndex === i ? 'bg-[var(--color-primary-light)]' : ''}"
         onmouseenter={() => (hoveredIndex = i)}
         onmouseleave={() => (hoveredIndex = null)}
         onfocusin={() => (hoveredIndex = i)}
@@ -215,43 +211,54 @@
             hoveredIndex = null;
           }
         }}
-        onclick={() => (hoveredIndex = hoveredIndex === i ? null : i)}
-        onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); hoveredIndex = hoveredIndex === i ? null : i; } }}
       >
-        <div class="flex items-center gap-3">
-          <!-- Rank -->
-          <div class="w-5 text-center text-xs font-bold {i < 3 ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}">
-            {cat.isOther ? '…' : i + 1}
-          </div>
+        <button
+          type="button"
+          class="w-full rounded-lg px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] focus:ring-offset-1"
+          aria-label={`${cat.labelKo}, ${formatWon(cat.amount)}, ${cat.percentage}%, 상세 정보`}
+          aria-expanded={hoveredIndex === i}
+          aria-controls={`category-details-${i}`}
+          onclick={() => (hoveredIndex = hoveredIndex === i ? null : i)}
+        >
+          <div class="grid min-w-0 grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 sm:grid-cols-[1.25rem_6rem_minmax(8rem,1fr)_7rem_3rem] sm:gap-x-3">
+            <!-- Rank -->
+            <div class="text-center text-xs font-bold {i < 3 ? 'text-[var(--color-primary-fg)]' : 'text-[var(--color-text-muted)]'}">
+              {cat.isOther ? '…' : i + 1}
+            </div>
 
-          <!-- Color legend dot + label -->
-          <div class="flex w-24 items-center gap-1.5 shrink-0">
-            <span class="inline-block h-2.5 w-2.5 rounded-full shrink-0" style="background-color: {cat.color}"></span>
-            <span class="truncate text-sm font-medium">{cat.labelKo}</span>
-          </div>
+            <!-- Color legend dot + label -->
+            <div class="flex min-w-0 items-center gap-1.5">
+              <span class="inline-block h-2.5 w-2.5 rounded-full shrink-0" style="background-color: {cat.color}"></span>
+              <span class="min-w-0 break-keep [overflow-wrap:anywhere] text-sm font-medium">{cat.labelKo}</span>
+            </div>
 
-          <!-- Bar -->
-          <div class="flex-1 relative">
-            <div class="h-6 overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-inner">
-              <div
-                class="h-full rounded-lg transition-all duration-700 ease-out"
-                style="width: {(cat.percentage / maxPercentage) * 100}%; background-color: {cat.color}; opacity: {hoveredIndex === i ? 1 : 0.8}"
-              ></div>
+            <div class="flex items-baseline justify-end gap-2 sm:hidden">
+              <span class="whitespace-nowrap text-sm font-medium">{formatWon(cat.amount)}</span>
+              <span class="whitespace-nowrap text-xs font-semibold {i < 3 ? 'text-[var(--color-primary-fg)]' : 'text-[var(--color-text-muted)]'}">{cat.percentage}%</span>
+            </div>
+
+            <!-- Bar -->
+            <div class="relative col-span-3 min-w-[8rem] sm:col-span-1">
+              <div class="h-5 overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-inner sm:h-6" data-testid="category-bar-track">
+                <div
+                  class="h-full rounded-lg transition-all duration-700 ease-out"
+                  style="width: {(cat.percentage / maxPercentage) * 100}%; background-color: {cat.color}; opacity: {hoveredIndex === i ? 1 : 0.8}"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Amount -->
+            <div class="hidden whitespace-nowrap text-right text-sm font-medium sm:block">{formatWon(cat.amount)}</div>
+
+            <!-- Percentage -->
+            <div class="hidden whitespace-nowrap text-right text-xs font-semibold sm:block {i < 3 ? 'text-[var(--color-primary-fg)]' : 'text-[var(--color-text-muted)]'}">
+              {cat.percentage}%
             </div>
           </div>
-
-          <!-- Amount -->
-          <div class="w-28 text-right text-sm font-medium">{formatWon(cat.amount)}</div>
-
-          <!-- Percentage -->
-          <div class="w-12 text-right text-xs font-semibold {i < 3 ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}">
-            {cat.percentage}%
-          </div>
-        </div>
+        </button>
 
         <!-- Hover tooltip expansion -->
-        {#if hoveredIndex === i}
-          <div class="mt-2 ml-8 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs shadow-md">
+        <div id={`category-details-${i}`} class="mx-3 mb-2 mt-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs shadow-md sm:ml-8 {hoveredIndex === i ? 'block' : 'hidden'}">
             <div class="flex justify-between gap-8">
               <span class="text-[var(--color-text-muted)]">정확한 금액</span>
               <span class="font-semibold">{formatWon(cat.amount)}</span>
@@ -270,8 +277,7 @@
                 {/each}
               </div>
             {/if}
-          </div>
-        {/if}
+        </div>
       </div>
     {/each}
   </div>
@@ -284,7 +290,7 @@
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 올려 보세요</div>
     <a
       href={homeUrl}
-      class="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
+      class="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary-fill)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-fill-hover)] transition-colors"
     >
       명세서 올리러 가기
     </a>

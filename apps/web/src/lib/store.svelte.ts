@@ -1,11 +1,34 @@
 // Shared Svelte 5 state store for analysis results across dashboard components
 // Must be .svelte.ts so that $state runes are compiled properly
 
-import { analyzeMultipleFiles, optimizeFromTransactions, getLatestMonth, invalidateAnalyzerCaches } from './analyzer.js';
 import type { CategorizedTx } from './analyzer.js';
+import {
+  buildAnalysisContext,
+  type PreviousSpendingBasis,
+} from './analysis-context.js';
 import { loadCategories } from './cards.js';
 import { buildCategoryLabelMap } from './category-labels.js';
-import { isOptimizableTx } from './tx-validation.js';
+import {
+  deserializeAnalysis,
+  serializeAnalysis,
+  STORAGE_KEY,
+} from './persistence.js';
+import type {
+  PersistResult,
+  PersistWarningKind,
+} from './persistence.js';
+import type {
+  FileParseProgress,
+  FileParseRun,
+} from './file-parse-queue.js';
+
+type AnalyzerModule = typeof import('./analyzer.js');
+let analyzerModulePromise: Promise<AnalyzerModule> | null = null;
+
+function loadAnalyzerModule(): Promise<AnalyzerModule> {
+  analyzerModulePromise ??= import('./analyzer.js');
+  return analyzerModulePromise;
+}
 
 // --- Types matching the API response shape ---
 
@@ -37,6 +60,15 @@ export interface CardRewardResult {
   byCategory: CategoryReward[];
   performanceTier: string;
   capsHit: CapInfo[];
+  unsupportedRules?: CalculationIssue[];
+}
+
+export interface CalculationIssue {
+  transactionId: string;
+  ruleId: string;
+  category: string;
+  reason: string;
+  detail?: string;
 }
 
 export interface CardAssignment {
@@ -63,6 +95,7 @@ export interface OptimizationResult {
   savingsVsSingleCard: number;
   bestSingleCard: { cardId: string; cardName: string; totalReward: number };
   cardResults: CardRewardResult[];
+  unsupportedRules?: CalculationIssue[];
 }
 
 export interface AnalysisResult {
@@ -75,7 +108,14 @@ export interface AnalysisResult {
   /** Period and count spanning all uploaded months */
   fullStatementPeriod?: { start: string; end: string };
   totalTransactionCount?: number;
-  parseErrors: { line?: number; message: string; raw?: string }[];
+  parseErrors: {
+    fileName: string;
+    format: string;
+    line?: number;
+    message: string;
+    raw?: string;
+    count?: number;
+  }[];
   transactions?: CategorizedTx[];
   optimization: OptimizationResult;
   monthlyBreakdown?: { month: string; spending: number; transactionCount: number }[];
@@ -88,110 +128,39 @@ export interface AnalysisResult {
    *  Forwarded to reoptimize() so that category edits preserve the user's
    *  card selection instead of silently optimizing against all cards. */
   cardIdsOption?: string[];
+  /** Inspectable provenance for the performance-spending input. */
+  previousSpendingBasis?: PreviousSpendingBasis;
 }
 
 export interface AnalyzeOptions {
   bank?: string;
   previousMonthSpending?: number;
   cardIds?: string[];
+  /** Internal normalized context shared by initial analysis/reoptimization. */
+  previousSpendingBasis?: PreviousSpendingBasis;
+  /** Exact previous-calendar-month rows for card-specific exclusions. */
+  previousMonthTransactions?: CategorizedTx[];
+}
+
+export interface AnalyzeExecution {
+  run: FileParseRun;
+  onProgress?: (progress: FileParseProgress) => void;
 }
 
 // --- SessionStorage persistence ---
 // NOTE(C33-F4): sessionStorage persists analysis data as plaintext JSON.
 // This is acceptable for the current threat model (single-user browser tab)
 // but means financial data is visible to any JavaScript on the origin,
-// including browser extensions. Data is validated on load (see safeJSONParse
-// and isPlainObject) to mitigate prototype pollution, but encryption is
-// not implemented. If encryption is added in the future, migrate via
-// STORAGE_VERSION and the MIGRATIONS registry below.
-
-const STORAGE_KEY = 'cherrypicker:analysis';
-
-/** Schema version for sessionStorage persistence. Incremented when the
- *  persisted data shape changes incompatibly. On load, a version mismatch
- *  logs a warning but still attempts validation — only genuinely corrupted
- *  data is removed. This prevents silent data loss on app upgrades where
- *  the old data may still be partially valid (C74-02). */
-const STORAGE_VERSION = 1;
-
-/** Migration functions keyed by source version. Each function receives the
- *  raw parsed object and returns a (possibly transformed) object. Migrations
- *  run BEFORE validation so the validation logic sees the current schema shape.
- *  Example: when STORAGE_VERSION becomes 2, add: `1: (data) => ({ ...data, newField: data.newField ?? defaultValue })`
- *  (C75-03). */
-const MIGRATIONS: Record<number, (data: unknown) => unknown> = {
-  // No migrations yet -- v1 is the first versioned schema
-};
-
-type PersistedAnalysisResult = Pick<
-  AnalysisResult,
-  'success' | 'bank' | 'format' | 'statementPeriod' | 'transactionCount' | 'fullStatementPeriod' | 'totalTransactionCount' | 'optimization' | 'monthlyBreakdown' | 'transactions' | 'previousMonthSpendingOption' | 'cardIdsOption'
-> & {
-  /** When transactions are omitted due to size limits, records how many
-   *  were lost so the warning can inform the user (C22-03). */
-  _truncatedTxCount?: number;
-  /** Schema version at time of persist. Used to detect version mismatches
-   *  on load without silently deleting data (C74-02). */
-  _v?: number;
-};
-
-/** Maximum serialized payload size to persist in sessionStorage (4MB, leaving
- *  1MB headroom for other keys within the typical 5MB per-origin limit). */
-const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
-
-/** Set when sessionStorage persistence partially or fully failed.
- *  - 'truncated': transactions omitted due to size limit
- *  - 'corrupted': save failed due to quota exceeded, or loaded data failed validation
- *  - 'error': unexpected non-quota persistence failure (e.g., circular reference)
- *  Read by the store to inform the user that their data may not survive a tab close.
- *  Distinguishes quota errors from unexpected failures for better diagnostics (C66-04/C69). */
-type PersistWarningKind = 'truncated' | 'corrupted' | 'quota_exceeded' | 'error' | null;
-
-/** Result of persisting analysis data to sessionStorage.
- *  - kind: 'truncated' (transactions omitted), 'corrupted' (save failed), or null (success)
- *  - truncatedTxCount: when kind is 'truncated', how many transactions were lost (C22-03) */
-interface PersistResult {
-  kind: PersistWarningKind;
-  truncatedTxCount: number | null;
-}
+// including browser extensions. The side-effect-free persistence module
+// validates and migrates data before this store accepts it, but encryption is
+// not implemented.
 
 function persistToStorage(data: AnalysisResult): PersistResult {
   try {
     if (typeof sessionStorage !== 'undefined') {
-      const persisted: PersistedAnalysisResult = {
-        success: data.success,
-        bank: data.bank,
-        format: data.format,
-        statementPeriod: data.statementPeriod,
-        transactionCount: data.transactionCount,
-        fullStatementPeriod: data.fullStatementPeriod,
-        totalTransactionCount: data.totalTransactionCount,
-        optimization: data.optimization,
-        monthlyBreakdown: data.monthlyBreakdown,
-        transactions: data.transactions,
-        previousMonthSpendingOption: data.previousMonthSpendingOption,
-        cardIdsOption: data.cardIdsOption,
-        _v: STORAGE_VERSION,
-      };
-      const serialized = JSON.stringify(persisted);
-      const byteSize = new TextEncoder().encode(serialized).length;
-      if (byteSize > MAX_PERSIST_SIZE) {
-        // Transactions are the largest field — omit them if over budget.
-        // Record how many were lost so the warning can inform the user (C22-03).
-        const txCount = data.transactions?.length ?? 0;
-        const withoutTxs: PersistedAnalysisResult = {
-          ...persisted,
-          transactions: undefined,
-          transactionCount: 0,
-          totalTransactionCount: 0,
-          _truncatedTxCount: txCount,
-        };
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(withoutTxs));
-        return { kind: 'truncated', truncatedTxCount: txCount }; // Data was truncated — transactions not saved
-      } else {
-        sessionStorage.setItem(STORAGE_KEY, serialized);
-        return { kind: null, truncatedTxCount: null }; // Full save succeeded
-      }
+      const { serialized, result } = serializeAnalysis(data);
+      sessionStorage.setItem(STORAGE_KEY, serialized);
+      return result;
     }
   } catch (err) {
     // QuotaExceededError is expected in private browsing or with very large data
@@ -217,145 +186,18 @@ let _loadPersistWarningKind: PersistWarningKind = null;
  *  the _truncatedTxCount field in the persisted data (C22-03). */
 let _loadTruncatedTxCount: number | null = null;
 
-const FORBIDDEN_KEYS = new Set([
-  '__proto__', 'constructor', 'prototype',
-  '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__',
-]);
-function safeJSONParse(text: string): unknown {
-  return JSON.parse(text, (key, value) => {
-    if (FORBIDDEN_KEYS.has(key)) {
-      throw new Error(`Forbidden key in JSON: ${key}`);
-    }
-    return value;
-  }) as unknown;
-}
-
-/** Type guard for plain objects (not arrays, not null).
- *  Replaces `as Record<string, unknown>` casts on external data (C33-F6). */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
 function loadFromStorage(): AnalysisResult | null {
   try {
     if (typeof sessionStorage !== 'undefined') {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      let parsed: any = safeJSONParse(raw);
-      // Check schema version — log a warning on mismatch but continue
-      // validation so we don't silently delete data that may still be
-      // partially valid after an app upgrade (C74-02).
-      // Legacy data persisted before the versioning fix has no _v field,
-      // so treat undefined as version 0 (pre-versioning) to ensure
-      // migrations run correctly for all data (C76-01).
-      const storedVersion = parsed._v ?? 0;
-      if (storedVersion < STORAGE_VERSION) {
-        // Version mismatch: attempt migrations (if any) then continue validation.
-        // The UI does not warn on version mismatch — data is loaded best-effort.
-        // Apply migrations from the stored version to the current version
-        // before validation, so the validator sees the current schema shape
-        // (C75-03). Legacy data (_v undefined, treated as version 0) will
-        // run all migrations from v0 up, ensuring pre-versioning data is
-        // correctly transformed (C76-01).
-        for (let v = storedVersion; v < STORAGE_VERSION; v++) {
-          const migrator = MIGRATIONS[v];
-          if (migrator) parsed = migrator(parsed);
-        }
+      const deserialized = deserializeAnalysis(raw);
+      _loadPersistWarningKind = deserialized.warningKind;
+      _loadTruncatedTxCount = deserialized.truncatedTxCount;
+      if (deserialized.shouldRemove) {
+        sessionStorage.removeItem(STORAGE_KEY);
       }
-      if (
-        parsed &&
-        typeof parsed === 'object' &&
-        parsed.optimization &&
-        Array.isArray(parsed.optimization.assignments) &&
-        typeof parsed.optimization.totalReward === 'number' &&
-        typeof parsed.optimization.totalSpending === 'number' &&
-        typeof parsed.optimization.effectiveRate === 'number'
-      ) {
-        // Validate assignment entries — each must have required fields to
-        // prevent downstream crashes in OptimalCardMap / CategoryBreakdown (C31-CR04)
-        if (Array.isArray(parsed.optimization.assignments)) {
-          const validAssignments = parsed.optimization.assignments.filter(
-            (a: unknown): boolean => {
-              if (!isPlainObject(a)) return false;
-              return (
-                typeof a.assignedCardId === 'string' && a.assignedCardId.length > 0 &&
-                typeof a.category === 'string' && a.category.length > 0 &&
-                typeof a.spending === 'number' && Number.isFinite(a.spending) && a.spending >= 0
-              );
-            }
-          );
-          if (validAssignments.length !== parsed.optimization.assignments.length) {
-            parsed.optimization.assignments = validAssignments;
-          }
-        }
-        // Shallow validation of cardResults entries — each must have the
-        // essential fields that dashboard components access during rendering.
-        // If any entry fails validation, strip the entire cardResults array
-        // to prevent TypeError crashes in CategoryBreakdown / OptimalCardMap.
-        if (Array.isArray(parsed.optimization.cardResults)) {
-          const validCardResults = parsed.optimization.cardResults.filter(
-            (cr: unknown): boolean => {
-              if (!isPlainObject(cr)) return false;
-              return (
-                typeof cr.cardId === 'string' &&
-                cr.cardId.length > 0 &&
-                typeof cr.totalReward === 'number' &&
-                Number.isFinite(cr.totalReward) &&
-                cr.totalReward >= 0 &&
-                Array.isArray(cr.byCategory)
-              );
-            }
-          );
-          parsed.optimization.cardResults = validCardResults;
-        }
-        // Restore transactions with validation — each entry must have
-        // the essential fields; invalid entries are silently dropped.
-        let transactions: CategorizedTx[] | undefined;
-        if (Array.isArray(parsed.transactions)) {
-          const validTxs = parsed.transactions.filter(isOptimizableTx);
-          transactions = validTxs.length > 0 ? validTxs : undefined;
-          // If the transactions array existed but all entries failed validation,
-          // that's data corruption rather than truncation
-          if (validTxs.length === 0 && parsed.transactions.length > 0) {
-            _loadPersistWarningKind = 'corrupted';
-          }
-        } else if (!Array.isArray(parsed.transactions) && typeof parsed._truncatedTxCount === 'number') {
-          // Transactions were omitted during save due to size limits.
-          // Record how many were lost so the warning can inform the user (C22-03).
-          _loadPersistWarningKind = 'truncated';
-          _loadTruncatedTxCount = parsed._truncatedTxCount;
-        }
-
-        return {
-          success: Boolean(parsed.success),
-          bank: typeof parsed.bank === 'string' || parsed.bank === null ? parsed.bank : null,
-          format: typeof parsed.format === 'string' ? parsed.format : 'unknown',
-          statementPeriod: parsed.statementPeriod,
-          transactionCount: typeof parsed.transactionCount === 'number' && Number.isFinite(parsed.transactionCount) ? parsed.transactionCount : 0,
-          fullStatementPeriod: parsed.fullStatementPeriod,
-          totalTransactionCount: typeof parsed.totalTransactionCount === 'number' && Number.isFinite(parsed.totalTransactionCount) ? parsed.totalTransactionCount : undefined,
-          parseErrors: [],
-          transactions,
-          optimization: parsed.optimization,
-          monthlyBreakdown: Array.isArray(parsed.monthlyBreakdown)
-            ? parsed.monthlyBreakdown.map((item: unknown) => {
-                const entry = isPlainObject(item) ? item : null;
-                return {
-                  month: entry && typeof entry.month === 'string' ? entry.month : '',
-                  spending: entry && typeof entry.spending === 'number' ? entry.spending : 0,
-                  transactionCount: entry && typeof entry.transactionCount === 'number' ? entry.transactionCount : 0,
-                };
-              })
-            : undefined,
-          previousMonthSpendingOption:
-            typeof parsed.previousMonthSpendingOption === 'number' &&
-            Number.isFinite(parsed.previousMonthSpendingOption)
-              ? parsed.previousMonthSpendingOption
-              : undefined,
-          cardIdsOption: Array.isArray(parsed.cardIdsOption) ? parsed.cardIdsOption : undefined,
-        } as AnalysisResult;
-      }
-      sessionStorage.removeItem(STORAGE_KEY);
+      return deserialized.data;
     }
   } catch (err) {
     // Load failure handles JSON.parse errors, validation failures, and
@@ -395,6 +237,9 @@ function createAnalysisStore() {
   // refresh, the condition `gen !== lastSyncedGeneration` is false, and
   // editedTxs stays empty even though the store has transactions (C7-01).
   let generation = $state(result !== null ? 1 : 0);
+  // Separate from the published-result generation. This request counter makes
+  // every async analyze commit conditional on still being the newest request.
+  let analysisRequestId = 0;
   // Set when sessionStorage persistence was partial (transactions truncated)
   // or failed entirely (quota exceeded). Reset on successful full save.
   // Only set the warning when we have evidence the data came from storage
@@ -485,13 +330,26 @@ function createAnalysisStore() {
       return result?.transactions ?? [];
     },
 
-    async analyze(files: File | File[], options?: AnalyzeOptions): Promise<void> {
+    async analyze(
+      files: File | File[],
+      options: AnalyzeOptions | undefined,
+      execution: AnalyzeExecution,
+    ): Promise<void> {
+      const requestId = ++analysisRequestId;
+      const isActiveRequest = () =>
+        requestId === analysisRequestId && execution.run.isCurrent();
       loading = true;
       error = null;
 
       try {
         const fileArray = Array.isArray(files) ? files : [files];
-        const analysisResult = await analyzeMultipleFiles(fileArray, options);
+        const { analyzeMultipleFiles } = await loadAnalyzerModule();
+        const analysisResult = await analyzeMultipleFiles(
+          fileArray,
+          options,
+          execution,
+        );
+        if (!isActiveRequest()) return;
         // Preserve the user's explicit previousMonthSpending input so
         // reoptimize() can forward it instead of silently dropping it (C44-01).
         if (
@@ -512,11 +370,22 @@ function createAnalysisStore() {
         persistWarningKind = persistResult.kind;
         truncatedTxCount = persistResult.truncatedTxCount;
       } catch (e) {
+        if (!isActiveRequest() || (e instanceof Error && e.name === 'AbortError')) {
+          return;
+        }
         error = e instanceof Error ? e.message : '분석 중 문제가 생겼어요';
         result = null;
       } finally {
-        loading = false;
+        if (requestId === analysisRequestId) {
+          loading = false;
+        }
       }
+    },
+
+    cancelAnalysis(): void {
+      analysisRequestId++;
+      loading = false;
+      error = null;
     },
 
     async reoptimize(editedTransactions: CategorizedTx[], options?: AnalyzeOptions): Promise<void> {
@@ -542,74 +411,29 @@ function createAnalysisStore() {
         const snapshot = result;
 
         const categoryLabels = await getCategoryLabels();
-        // Filter to the latest month to match the initial optimization behavior.
-        // analyzeMultipleFiles only optimizes the latest month; reoptimize must
-        // do the same to avoid cap distortion from non-latest-month transactions.
-        const latestMonth = getLatestMonth(editedTransactions);
-        const latestTransactions = latestMonth
-          ? editedTransactions.filter(tx => tx.date.startsWith(latestMonth))
-          : editedTransactions;
-
-        // Recalculate monthlyBreakdown from the edited transactions FIRST so
-        // that previousMonthSpending reflects the user's edits (not stale data
-        // from the initial analysis). Without this, editing a previous month's
-        // transaction wouldn't affect the previousMonthSpending used for the
-        // optimizer's performance tier calculation.
-        const monthlySpending = new Map<string, number>();
-        const monthlyTxCount = new Map<string, number>();
-        for (const tx of editedTransactions) {
-          // Guard against malformed dates shorter than 7 chars (YYYY-MM) —
-          // matches the guard in analyzer.ts getLatestMonth().
-          if (!tx.date || tx.date.length < 7) continue;
-          const month = tx.date.slice(0, 7);
-          // Only accumulate positive amounts (purchases) for monthlySpending.
-          // Korean card issuers define 전월실적 (previous month performance) as
-          // gross spending, not net. Including refunds would understate the user's
-          // performance, placing them in a lower tier with worse rewards (C1-01).
-          if (tx.amount > 0) {
-            monthlySpending.set(month, (monthlySpending.get(month) ?? 0) + tx.amount);
-          }
-          monthlyTxCount.set(month, (monthlyTxCount.get(month) ?? 0) + 1);
-        }
-        const updatedMonthlyBreakdown = [...monthlySpending.entries()]
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([month, spending]) => ({
-            month,
-            spending,
-            transactionCount: monthlyTxCount.get(month) ?? 0,
-          }));
-
-        // Compute previousMonthSpending: prefer the user's explicit input from
-        // the initial analysis (stored in result.previousMonthSpendingOption) so
-        // that category edits preserve the user's original performance tier
-        // baseline instead of silently recomputing it (C44-01). Fall back to
-        // the FRESH monthly breakdown (derived from editedTransactions) when
-        // the user did not provide an explicit value.
-        let previousMonthSpending: number | undefined;
-        if (options?.previousMonthSpending !== undefined && Number.isFinite(options.previousMonthSpending) && options.previousMonthSpending >= 0) {
-          // Caller explicitly provided a value — use it
-          previousMonthSpending = options.previousMonthSpending;
-        } else if (snapshot.previousMonthSpendingOption !== undefined) {
-          // User explicitly provided previousMonthSpending during the initial
-          // analyze() call (only set when options.previousMonthSpending !== undefined,
-          // per analyze() line 461-463). Preserve the user's explicit input across
-          // reoptimize calls so that category edits don't silently change the
-          // performance tier baseline (C44-01).
-          previousMonthSpending = snapshot.previousMonthSpendingOption;
-        } else if (latestMonth) {
-          // No explicit value — compute from the fresh monthly breakdown
-          const months = updatedMonthlyBreakdown.map(m => m.month).sort();
-          const latestIdx = months.indexOf(latestMonth);
-          if (latestIdx > 0) {
-            const prevMonth = months[latestIdx - 1];
-            const prevData = updatedMonthlyBreakdown.find(m => m.month === prevMonth);
-            previousMonthSpending = prevData?.spending;
-          }
+        const explicitPreviousMonthSpending =
+          options?.previousMonthSpending ??
+          (options?.previousSpendingBasis?.kind === 'user-total'
+            ? options.previousSpendingBasis.amount
+            : snapshot.previousSpendingBasis?.kind === 'user-total'
+              ? snapshot.previousSpendingBasis.amount
+              : snapshot.previousMonthSpendingOption);
+        const context = buildAnalysisContext(
+          editedTransactions,
+          explicitPreviousMonthSpending,
+        );
+        if (!context) {
+          throw new Error(
+            '거래 내역의 날짜를 해석할 수 없어요. 파일 형식을 확인해 주세요.',
+          );
         }
 
-        const optimization = await optimizeFromTransactions(latestTransactions, {
+        const { optimizeFromTransactions } = await loadAnalyzerModule();
+        const optimization = await optimizeFromTransactions(context.latestTransactions, {
           ...options,
-          previousMonthSpending,
+          previousMonthSpending: explicitPreviousMonthSpending,
+          previousSpendingBasis: context.previousSpendingBasis,
+          previousMonthTransactions: context.previousTransactions,
           // Forward the user's cardIds selection from the initial analysis
           // so reoptimize doesn't silently switch to optimizing against all cards.
           cardIds: options?.cardIds ?? snapshot.cardIdsOption,
@@ -617,21 +441,6 @@ function createAnalysisStore() {
         // result is guaranteed non-null here (early null guard at top of try block).
         // Keep all months in the transactions field for display/editing,
         // but the optimization only covers the latest month.
-        // Recompute metadata from edited transactions so counts and periods
-        // reflect the current data set, not the pre-edit snapshot (C25-COR02).
-        const newTransactionCount = editedTransactions.length;
-        const newTotalTransactionCount = editedTransactions.length;
-        const dates = editedTransactions
-          .filter((tx) => tx.date && tx.date.length >= 10)
-          .map((tx) => tx.date)
-          .sort();
-        const newStatementPeriod = dates.length > 0
-          ? { start: dates[0], end: dates[dates.length - 1] }
-          : snapshot.statementPeriod;
-        const newFullStatementPeriod = dates.length > 0
-          ? { start: dates[0], end: dates[dates.length - 1] }
-          : snapshot.fullStatementPeriod;
-
         // Use the snapshot captured at function entry instead of reading the
         // reactive result variable, which may have changed during the async
         // gaps above (C81-01).
@@ -639,11 +448,16 @@ function createAnalysisStore() {
           ...snapshot,
           transactions: editedTransactions,
           optimization,
-          monthlyBreakdown: updatedMonthlyBreakdown,
-          transactionCount: newTransactionCount,
-          totalTransactionCount: newTotalTransactionCount,
-          statementPeriod: newStatementPeriod,
-          fullStatementPeriod: newFullStatementPeriod,
+          monthlyBreakdown: context.monthlyBreakdown,
+          transactionCount: context.latestTransactions.length,
+          totalTransactionCount: context.validTransactions.length,
+          statementPeriod: context.statementPeriod,
+          fullStatementPeriod: context.fullStatementPeriod,
+          previousSpendingBasis: context.previousSpendingBasis,
+          previousMonthSpendingOption:
+            context.previousSpendingBasis.kind === 'user-total'
+              ? context.previousSpendingBasis.amount
+              : undefined,
         };
         generation++;
         const persistResult = persistToStorage(result);
@@ -667,7 +481,6 @@ function createAnalysisStore() {
       // this store is a singleton, so resetting them here is a no-op. Removed
       // in cycle 8 as D7-M1 cleanup.
       cachedCategoryLabels = undefined;
-      invalidateAnalyzerCaches();
       clearStorage();
     },
   };

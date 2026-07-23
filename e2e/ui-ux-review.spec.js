@@ -208,7 +208,11 @@ test.describe('Upload flow', () => {
     const tmpFile = '/tmp/test-invalid.txt';
     require('fs').writeFileSync(tmpFile, 'not a statement');
     await page.locator('input[type="file"]').first().setInputFiles(tmpFile);
-    await expect(page.getByText(/CSV, Excel, PDF 파일만 지원/)).toBeVisible();
+    await expect(
+      page.getByTestId('upload-error-banner').getByRole('listitem'),
+    ).toHaveText(
+      /^CSV\/TSV, Excel, PDF, JSON, OFX\/QFX, HTML 파일만 지원합니다 \(제외됨: test-invalid\.txt\)$/,
+    );
   });
 
   test('can remove individual files from upload list', async ({ page }) => {
@@ -218,7 +222,10 @@ test.describe('Upload flow', () => {
     // Should see file listed
     await expect(page.getByText('regression-upload.csv')).toBeVisible();
     // Click remove
-    await page.getByRole('button', { name: '파일 제거' }).click();
+    await page.getByRole('button', {
+      name: 'regression-upload.csv 제거',
+      exact: true,
+    }).click();
     // Should go back to empty state
     await expect(page.getByText('카드 명세서를 끌어다 놓으세요')).toBeVisible();
   });
@@ -272,11 +279,17 @@ test.describe('Dashboard', () => {
   });
 
   test('transaction review can expand and show table', async ({ page }) => {
-    await page.getByText('거래 내역 확인').click();
-    // Table should appear with headers
-    await expect(page.getByText('가맹점').first()).toBeVisible();
-    await expect(page.getByText('금액').first()).toBeVisible();
-    await expect(page.getByText('분류').first()).toBeVisible();
+    await page.getByTestId('tx-review-toggle').click();
+    const table = page.getByTestId('tx-review-panel').getByRole('table');
+    await expect(
+      table.getByRole('columnheader', { name: '가맹점', exact: true }),
+    ).toBeVisible();
+    await expect(
+      table.getByRole('columnheader', { name: '금액', exact: true }),
+    ).toBeVisible();
+    await expect(
+      table.getByRole('columnheader', { name: '분류', exact: true }),
+    ).toBeVisible();
   });
 
   test('transaction category dropdown has options', async ({ page }) => {
@@ -389,12 +402,19 @@ test.describe('Cards page', () => {
     await expect(page.getByRole('heading', { name: '카드 목록' })).toBeVisible();
     // Search input
     await expect(page.getByPlaceholder('카드 이름으로 검색')).toBeVisible();
-    // Type filter tabs — the CardGrid renders multiple filter-pill sets
-    // (card-type + issuer) where "전체" appears in both; anchor via .first()
-    // (C7E-bucket-A).
-    await expect(page.getByText('전체').first()).toBeVisible();
-    await expect(page.getByText('신용카드')).toBeVisible();
-    await expect(page.getByText('체크카드')).toBeVisible();
+    const typeFilters = page.getByRole('group', {
+      name: '카드 종류',
+      exact: true,
+    });
+    await expect(
+      typeFilters.getByRole('button', { name: '전체', exact: true }),
+    ).toBeVisible();
+    await expect(
+      typeFilters.getByRole('button', { name: '신용카드', exact: true }),
+    ).toBeVisible();
+    await expect(
+      typeFilters.getByRole('button', { name: '체크카드', exact: true }),
+    ).toBeVisible();
   });
 
   test('card grid loads cards from JSON', async ({ page }) => {
@@ -479,18 +499,14 @@ test.describe('Accessibility', () => {
   test('form inputs have associated labels', async ({ page }) => {
     await page.goto(BASE);
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
-    const inputs = await page.locator('input[type="number"], input[type="text"]').all();
-    for (const input of inputs) {
-      const id = await input.getAttribute('id');
-      const placeholder = await input.getAttribute('placeholder');
-      const ariaLabel = await input.getAttribute('aria-label');
-      const labelledBy = await input.getAttribute('aria-labelledby');
-      // At least one label mechanism should exist
-      expect(
-        placeholder || ariaLabel || labelledBy || id,
-        `Input at index has no label mechanism`
-      ).toBeTruthy();
-    }
+    await page.getByLabel('파일 선택', { exact: true }).setInputFiles(FIXTURE);
+    await expect(
+      page.getByLabel('전월 카드 이용액', { exact: true }),
+    ).toBeVisible();
+
+    await page.goto(BASE + 'cards');
+    await expect(page.getByLabel('카드 검색', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('정렬', { exact: true })).toBeVisible();
   });
 
   test('buttons have accessible names', async ({ page }) => {

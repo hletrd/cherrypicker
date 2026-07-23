@@ -3,7 +3,7 @@
   import CardGrid from './CardGrid.svelte';
   import CardDetail from './CardDetail.svelte';
   import Icon from '../ui/Icon.svelte';
-  import { getCardById } from '../../lib/cards.js';
+  import { getCardSummaryById } from '../../lib/cards.js';
   import { buildPageUrl } from '../../lib/formatters.js';
 
   const homeUrl = buildPageUrl('');
@@ -16,7 +16,7 @@
     if (!selectedCardId) { cardName = ''; return; }
     const gen = ++fetchGeneration;
     const controller = new AbortController();
-    getCardById(selectedCardId, { signal: controller.signal })
+    getCardSummaryById(selectedCardId, { signal: controller.signal })
       .then(c => {
         if (!controller.signal.aborted && gen === fetchGeneration) {
           cardName = c?.nameKo ?? selectedCardId ?? '';
@@ -33,7 +33,8 @@
   function selectCard(id: string) {
     selectedCardId = id;
     window.location.hash = id;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }
 
   function goBack() {
@@ -64,13 +65,13 @@
   <nav aria-label="breadcrumb" class="mb-6">
     <ol class="flex flex-wrap items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
       <li>
-        <a href={homeUrl} class="transition-colors hover:text-[var(--color-primary)]">홈</a>
+        <a href={homeUrl} class="transition-colors hover:text-[var(--color-primary-fg)]">홈</a>
       </li>
       <li class="select-none text-[var(--color-border)]">/</li>
       <li>
         <button
           type="button"
-          class="transition-colors hover:text-[var(--color-primary)] text-inherit bg-transparent border-none cursor-pointer p-0 font-inherit"
+          class="transition-colors hover:text-[var(--color-primary-fg)] text-inherit bg-transparent border-none cursor-pointer p-0 font-inherit"
           onclick={goBack}
         >카드 목록</button>
       </li>
@@ -83,7 +84,7 @@
 
   <div class="mb-4">
     <button
-      class="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)]"
+      class="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary-fg)]"
       onclick={goBack}
     >
       <Icon name="arrow-left" size={16} />

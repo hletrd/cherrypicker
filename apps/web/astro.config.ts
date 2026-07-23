@@ -8,6 +8,9 @@ export default defineConfig({
   site: 'https://hletrd.github.io',
   base: '/cherrypicker/',
   vite: {
+    build: {
+      manifest: true,
+    },
     plugins: [tailwindcss()],
   },
 });

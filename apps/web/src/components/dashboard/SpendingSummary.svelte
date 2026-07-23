@@ -2,6 +2,10 @@
   import { onMount } from 'svelte';
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatWon, formatRatePrecise, formatYearMonthKo, buildPageUrl } from '../../lib/formatters.js';
+  import {
+    describePreviousSpendingBasis,
+    summarizeUnsupportedRules,
+  } from '../../lib/analysis-disclosures.js';
   import Icon from '../ui/Icon.svelte';
 
   const homeUrl = buildPageUrl('');
@@ -30,6 +34,16 @@
     const mb = analysisStore.result?.monthlyBreakdown;
     return mb ? mb.reduce((sum, m) => sum + m.spending, 0) : 0;
   });
+  let previousSpendingDisclosure = $derived(
+    describePreviousSpendingBasis(
+      analysisStore.result?.previousSpendingBasis,
+    ),
+  );
+  let unsupportedRulesSummary = $derived(
+    summarizeUnsupportedRules(
+      analysisStore.optimization?.unsupportedRules,
+    ),
+  );
 
   onMount(() => {
     try {
@@ -63,8 +77,8 @@
   <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
     {#each Array(5) as _}
       <div class="animate-pulse rounded-xl bg-[var(--color-bg)] p-4">
-        <div class="mb-2 h-4 w-16 rounded bg-gray-200"></div>
-        <div class="h-7 w-24 rounded bg-gray-300"></div>
+        <div class="mb-2 h-4 w-16 rounded bg-[var(--color-border)]"></div>
+        <div class="h-7 w-24 rounded bg-[var(--color-border)]"></div>
       </div>
     {/each}
   </div>
@@ -72,11 +86,11 @@
   <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
     <!-- 최근 월 지출 (optimization covers latest month only) -->
     <div class="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm dark:from-blue-950 dark:to-blue-900/50">
-      <div class="flex items-center gap-1.5 text-sm text-blue-500 dark:text-blue-400">
+      <div class="flex items-center gap-1.5 text-sm text-blue-700 dark:text-blue-300">
         <Icon name="credit-card" size={15} />
         <span>최근 월 지출</span>
       </div>
-      <div class="mt-1 text-2xl font-bold text-[var(--color-primary)]">
+      <div class="mt-1 text-2xl font-bold text-[var(--color-primary-fg)]">
         {formatWon(analysisStore.optimization?.totalSpending ?? 0)}
       </div>
       {#if analysisStore.result?.monthlyBreakdown && analysisStore.result.monthlyBreakdown.length > 1}
@@ -88,11 +102,11 @@
 
     <!-- 거래 건수 (latest month primary, total secondary) -->
     <div class="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 p-4 shadow-sm dark:from-amber-950 dark:to-amber-900/50">
-      <div class="flex items-center gap-1.5 text-sm text-amber-500 dark:text-amber-400">
+      <div class="flex items-center gap-1.5 text-sm text-amber-700 dark:text-amber-300">
         <Icon name="receipt" size={15} />
         <span>거래 건수</span>
       </div>
-      <div class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
+      <div class="mt-1 text-2xl font-bold text-amber-700 dark:text-amber-300">
         {analysisStore.transactionCount}건
       </div>
       {#if analysisStore.result?.monthlyBreakdown && analysisStore.result.monthlyBreakdown.length > 1}
@@ -115,7 +129,7 @@
 
     <!-- 최다 지출 카테고리 -->
     <div class="rounded-xl bg-gradient-to-br from-green-50 to-green-100 p-4 shadow-sm dark:from-green-950 dark:to-green-900/50">
-      <div class="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400">
+      <div class="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-300">
         <Icon name="tag" size={15} />
         <span>최다 지출 카테고리</span>
       </div>
@@ -135,23 +149,39 @@
       </div>
     </div>
   </div>
-  {#if analysisStore.result?.monthlyBreakdown && analysisStore.result.monthlyBreakdown.length > 1}
-    {@const mb = analysisStore.result.monthlyBreakdown}
-    {@const prevMonth = mb[mb.length - 2]}
-    {@const latestMonth = mb[mb.length - 1]}
-    {@const monthRe = /^\d{4}-\d{2}$/}
-    {@const m1Valid = monthRe.test(latestMonth.month)}
-    {@const m2Valid = monthRe.test(prevMonth.month)}
-    {@const m1 = m1Valid ? parseInt(latestMonth.month.slice(5, 7), 10) : NaN}
-    {@const m2 = m2Valid ? parseInt(prevMonth.month.slice(5, 7), 10) : NaN}
-    {@const y1 = m1Valid ? parseInt(latestMonth.month.slice(0, 4), 10) : NaN}
-    {@const y2 = m2Valid ? parseInt(prevMonth.month.slice(0, 4), 10) : NaN}
-    {@const monthDiff = (Number.isFinite(y1) && Number.isFinite(y2) && Number.isFinite(m1) && Number.isFinite(m2)) ? (y1 - y2) * 12 + (m1 - m2) : NaN}
-    {@const prevLabel = !Number.isFinite(monthDiff) || monthDiff === 0 ? '이전 실적' : monthDiff === 1 ? '전월실적' : `${monthDiff}개월 전 실적`}
-    <div class="col-span-full mt-2 rounded-lg bg-[var(--color-bg)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
-      {mb.length}개월 데이터 분석 ·
-      {prevLabel} {formatWon(prevMonth?.spending ?? 0)} 기준
+  {#if previousSpendingDisclosure}
+    <div
+      class="mt-3 rounded-lg border px-3 py-2 text-xs
+        {previousSpendingDisclosure.tone === 'warning'
+          ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100'
+          : 'border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-muted)]'}"
+      role={previousSpendingDisclosure.tone === 'warning' ? 'status' : undefined}
+      data-testid="previous-spending-basis"
+    >
+      <span class="font-semibold">전월실적 기준:</span>
+      {previousSpendingDisclosure.text}
     </div>
+  {/if}
+  {#if unsupportedRulesSummary}
+    <section
+      class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+      aria-labelledby="unsupported-rules-heading"
+      data-testid="unsupported-rules-summary"
+    >
+      <h3 id="unsupported-rules-heading" class="font-semibold">
+        일부 혜택은 계산에서 제외됐어요
+      </h3>
+      <p class="mt-1">
+        {unsupportedRulesSummary.transactionCount}개 거래의
+        {unsupportedRulesSummary.ruleCount}개 혜택 규칙은 필요한 정보가 없어
+        예상 혜택에 포함하지 않았어요.
+      </p>
+      <ul class="mt-1 list-disc pl-5">
+        {#each unsupportedRulesSummary.reasons as reason}
+          <li>{reason.label} ({reason.count}건)</li>
+        {/each}
+      </ul>
+    </section>
   {/if}
   {#if analysisStore.result && !dismissed}
     <div class="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800">
@@ -185,7 +215,7 @@
     <div class="text-xs text-[var(--color-text-muted)]">명세서를 올려 보세요</div>
     <a
       href={homeUrl}
-      class="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-dark)] transition-colors"
+      class="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary-fill)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-fill-hover)] transition-colors"
     >
       명세서 올리러 가기
     </a>

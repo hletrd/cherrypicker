@@ -1,199 +1,236 @@
-/**
- * Unit tests for sessionStorage persistence logic in store.svelte.ts.
- * Tests safeJSONParse, isPlainObject, and load-time validation logic
- * by mirroring the implementation (the real functions are private).
- */
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import type { AnalysisResult } from '../src/lib/store.svelte.js';
+import {
+  MAX_PERSISTED_WARNINGS,
+  deserializeAnalysis,
+  isPlainObject,
+  MAX_PERSIST_SIZE,
+  MAX_WARNING_FILENAME_LENGTH,
+  MAX_WARNING_FORMAT_LENGTH,
+  MAX_WARNING_MESSAGE_LENGTH,
+  safeJSONParse,
+  serializeAnalysis,
+  STORAGE_VERSION,
+} from '../src/lib/persistence.js';
 
-// Mirror of store.svelte.ts safeJSONParse
-const FORBIDDEN_KEYS = new Set([
-  '__proto__', 'constructor', 'prototype',
-  '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__',
-]);
-function safeJSONParse(text: string): unknown {
-  return JSON.parse(text, (key, value) => {
-    if (FORBIDDEN_KEYS.has(key)) {
-      throw new Error(`Forbidden key in JSON: ${key}`);
-    }
-    return value;
-  }) as unknown;
+function persistedFixture(overrides: Record<string, unknown> = {}): string {
+  return JSON.stringify({
+    _v: STORAGE_VERSION,
+    success: true,
+    bank: 'shinhan',
+    format: 'csv',
+    transactionCount: 1,
+    optimization: {
+      assignments: [
+        {
+          assignedCardId: 'card-1',
+          category: 'dining',
+          spending: 10_000,
+        },
+      ],
+      cardResults: [],
+      totalReward: 500,
+      totalSpending: 10_000,
+      effectiveRate: 0.05,
+    },
+    ...overrides,
+  });
 }
 
-// Mirror of store.svelte.ts isPlainObject
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+function analysisFixture(merchant = '테스트 식당'): AnalysisResult {
+  return {
+    success: true,
+    bank: 'shinhan',
+    format: 'csv',
+    transactionCount: 1,
+    parseErrors: [
+      {
+        fileName: 'july.csv',
+        format: 'csv',
+        line: 7,
+        message: '날짜를 읽을 수 없음',
+        raw: 'bad,row',
+        count: 1,
+      },
+    ],
+    transactions: [
+      {
+        id: 'tx-1',
+        date: '2026-07-23',
+        merchant,
+        amount: 10_000,
+        category: 'dining',
+        subcategory: undefined,
+        confidence: 1,
+      },
+    ],
+    optimization: {
+      assignments: [],
+      totalReward: 0,
+      totalSpending: 10_000,
+      effectiveRate: 0,
+      savingsVsSingleCard: 0,
+      bestSingleCard: { cardId: 'card-1', cardName: '카드', totalReward: 0 },
+      cardResults: [],
+    },
+    previousSpendingBasis: {
+      kind: 'missing-calendar-month',
+      month: '2026-06',
+      assumedAmount: 0,
+    },
+  };
 }
 
-describe('safeJSONParse — prototype pollution defense', () => {
-  test('parses normal JSON without issue', () => {
-    const result = safeJSONParse('{"a":1,"b":"hello"}');
-    expect(result).toEqual({ a: 1, b: 'hello' });
+describe('production persistence parser', () => {
+  test('rejects prototype-pollution keys at any depth', () => {
+    expect(() =>
+      safeJSONParse('{"nested":{"__proto__":{"polluted":true}}}'),
+    ).toThrow('Forbidden key in JSON: __proto__');
+    expect(safeJSONParse('{"safe":"__proto__"}')).toEqual({
+      safe: '__proto__',
+    });
   });
 
-  test('rejects JSON with __proto__ key', () => {
-    expect(() => safeJSONParse('{"__proto__":{"polluted":true}}')).toThrow('Forbidden key in JSON: __proto__');
-  });
-
-  test('rejects JSON with constructor key', () => {
-    // JSON.parse reviver processes keys bottom-up, so nested "prototype"
-    // is encountered before "constructor" — any forbidden key in the
-    // subtree throws, which is sufficient for pollution defense.
-    expect(() => safeJSONParse('{"constructor":{"prototype":{"polluted":true}}}')).toThrow('Forbidden key in JSON: prototype');
-  });
-
-  test('rejects JSON with prototype key', () => {
-    expect(() => safeJSONParse('{"prototype":{"polluted":true}}')).toThrow('Forbidden key in JSON: prototype');
-  });
-
-  test('rejects nested forbidden keys', () => {
-    expect(() => safeJSONParse('{"a":{"__proto__":true}}')).toThrow('Forbidden key in JSON: __proto__');
-  });
-
-  test('allows __proto__ as a value (not a key)', () => {
-    const result = safeJSONParse('{"safeKey":"__proto__"}');
-    expect(result).toEqual({ safeKey: '__proto__' });
-  });
-
-  test('parses empty object', () => {
-    expect(safeJSONParse('{}')).toEqual({});
-  });
-
-  test('parses arrays', () => {
-    expect(safeJSONParse('[1,2,3]')).toEqual([1, 2, 3]);
-  });
-});
-
-describe('isPlainObject — type guard', () => {
-  test('returns true for plain objects', () => {
-    expect(isPlainObject({})).toBe(true);
-    expect(isPlainObject({ a: 1 })).toBe(true);
-  });
-
-  test('returns false for arrays', () => {
+  test('accepts only plain objects', () => {
+    expect(isPlainObject({ value: 1 })).toBe(true);
+    expect(isPlainObject(Object.create(null))).toBe(true);
     expect(isPlainObject([])).toBe(false);
-    expect(isPlainObject([1, 2])).toBe(false);
-  });
-
-  test('returns false for null', () => {
+    expect(isPlainObject(new Date())).toBe(false);
     expect(isPlainObject(null)).toBe(false);
   });
 
-  test('returns false for primitives', () => {
-    expect(isPlainObject(42)).toBe(false);
-    expect(isPlainObject('hello')).toBe(false);
-    expect(isPlainObject(true)).toBe(false);
-    expect(isPlainObject(undefined)).toBe(false);
+  test('loads legacy version-zero data through the bounded migration path', () => {
+    const legacy = JSON.parse(persistedFixture()) as Record<string, unknown>;
+    delete legacy._v;
+    const result = deserializeAnalysis(JSON.stringify(legacy));
+
+    expect(result.shouldRemove).toBe(false);
+    expect(result.data?.bank).toBe('shinhan');
   });
 
-  test('returns true for Date objects (typeof object, not array)', () => {
-    // isPlainObject in store.svelte.ts intentionally accepts any non-null
-    // non-array object — Date and RegExp pass the guard (C33-F6).
-    expect(isPlainObject(new Date())).toBe(true);
+  test('rejects malformed or future versions and requests storage cleanup', () => {
+    for (const value of [-1, STORAGE_VERSION + 1, 1.5, '1']) {
+      const result = deserializeAnalysis(persistedFixture({ _v: value }));
+      expect(result.data).toBeNull();
+      expect(result.warningKind).toBe('corrupted');
+      expect(result.shouldRemove).toBe(true);
+    }
   });
 
-  test('returns true for RegExp objects (typeof object, not array)', () => {
-    expect(isPlainObject(/abc/)).toBe(true);
+  test('filters unsafe assignments and reports corrupted transactions', () => {
+    const result = deserializeAnalysis(
+      persistedFixture({
+        transactions: [{ id: '', date: 1 }],
+        optimization: {
+          assignments: [
+            {
+              assignedCardId: 'card-1',
+              category: 'dining',
+              spending: 10_000,
+            },
+            { assignedCardId: '', category: 'dining', spending: 10_000 },
+            {
+              assignedCardId: 'card-2',
+              category: 'dining',
+              spending: -1,
+            },
+          ],
+          cardResults: [],
+          totalReward: 500,
+          totalSpending: 10_000,
+          effectiveRate: 0.05,
+        },
+      }),
+    );
+
+    expect(result.data?.optimization.assignments).toHaveLength(1);
+    expect(result.data?.transactions).toBeUndefined();
+    expect(result.warningKind).toBe('corrupted');
   });
 });
 
-describe('persistence validation — store load logic mirror', () => {
-  // Minimal mirror of loadFromStorage validation logic
-  function validateLoadedData(parsed: unknown): boolean {
-    if (!parsed || typeof parsed !== 'object') return false;
-    const p = parsed as Record<string, unknown>;
-    if (!p.optimization || typeof p.optimization !== 'object') return false;
-    const opt = p.optimization as Record<string, unknown>;
-    if (!Array.isArray(opt.assignments)) return false;
-    if (typeof opt.totalReward !== 'number') return false;
-    if (typeof opt.totalSpending !== 'number') return false;
-    if (typeof opt.effectiveRate !== 'number') return false;
-    return true;
-  }
-
-  test('valid data passes validation', () => {
-    const data = {
-      optimization: {
-        assignments: [{ assignedCardId: 'c1', category: 'dining', spending: 10000 }],
-        totalReward: 500,
-        totalSpending: 10000,
-        effectiveRate: 0.05,
+describe('production persistence serializer', () => {
+  test('round-trips a normal analysis payload with its schema version', () => {
+    const { serialized, result } = serializeAnalysis(analysisFixture());
+    expect(result).toEqual({ kind: null, truncatedTxCount: null });
+    expect(JSON.parse(serialized)._v).toBe(STORAGE_VERSION);
+    const restored = deserializeAnalysis(serialized).data;
+    expect(restored?.transactions).toHaveLength(1);
+    expect(restored?.parseErrors).toEqual([
+      {
+        fileName: 'july.csv',
+        format: 'csv',
+        line: 7,
+        message: '날짜를 읽을 수 없음',
+        count: 1,
       },
-    };
-    expect(validateLoadedData(data)).toBe(true);
+    ]);
+    expect(restored?.previousSpendingBasis).toEqual(
+      analysisFixture().previousSpendingBasis,
+    );
   });
 
-  test('missing optimization fails validation', () => {
-    expect(validateLoadedData({})).toBe(false);
+  test('omits transactions and records their count above the storage budget', () => {
+    const oversized = analysisFixture('x'.repeat(MAX_PERSIST_SIZE));
+    const { serialized, result } = serializeAnalysis(oversized);
+    const parsed = JSON.parse(serialized);
+
+    expect(result).toEqual({ kind: 'truncated', truncatedTxCount: 1 });
+    expect(parsed.transactions).toBeUndefined();
+    expect(parsed._truncatedTxCount).toBe(1);
+    expect(deserializeAnalysis(serialized).warningKind).toBe('truncated');
   });
 
-  test('non-numeric totalReward fails validation', () => {
-    const data = {
-      optimization: {
-        assignments: [],
-        totalReward: 'not-a-number',
-        totalSpending: 10000,
-        effectiveRate: 0.05,
-      },
-    };
-    expect(validateLoadedData(data)).toBe(false);
-  });
+  test('persists a bounded warning summary without raw statement content', () => {
+    const warningHeavy = analysisFixture();
+    warningHeavy.parseErrors = Array.from(
+      { length: MAX_PERSISTED_WARNINGS * 20 },
+      (_, index) => ({
+        fileName: `statement-${index}-${'f'.repeat(
+          MAX_WARNING_FILENAME_LENGTH * 2,
+        )}.csv`,
+        format: `csv-${'x'.repeat(MAX_WARNING_FORMAT_LENGTH * 2)}`,
+        line: index + 1,
+        message: `경고 ${index}: ${'m'.repeat(
+          MAX_WARNING_MESSAGE_LENGTH * 2,
+        )}`,
+        raw: `private-statement-row-${index}-${'r'.repeat(2_048)}`,
+        count: 2,
+      }),
+    );
 
-  test('non-array assignments fails validation', () => {
-    const data = {
-      optimization: {
-        assignments: 'bad',
-        totalReward: 500,
-        totalSpending: 10000,
-        effectiveRate: 0.05,
-      },
-    };
-    expect(validateLoadedData(data)).toBe(false);
-  });
+    const { serialized, result } = serializeAnalysis(warningHeavy);
+    const serializedBytes = new TextEncoder().encode(serialized).length;
+    const persisted = JSON.parse(serialized);
 
-  test('null data fails validation', () => {
-    expect(validateLoadedData(null)).toBe(false);
-  });
-
-  test('corrupted assignment entry is filtered out', () => {
-    // Mirror of assignment validation in loadFromStorage
-    const assignments = [
-      { assignedCardId: 'c1', category: 'dining', spending: 10000 },
-      { assignedCardId: '', category: 'grocery', spending: 5000 },  // invalid: empty cardId
-      { assignedCardId: 'c2', category: '', spending: 3000 },       // invalid: empty category
-      { assignedCardId: 'c3', category: 'transportation', spending: -100 }, // invalid: negative spending
-      'not-an-object',                                             // invalid: not an object
-    ];
-    const valid = assignments.filter((a: unknown): boolean => {
-      if (!isPlainObject(a)) return false;
-      return (
-        typeof a.assignedCardId === 'string' && a.assignedCardId.length > 0 &&
-        typeof a.category === 'string' && a.category.length > 0 &&
-        typeof a.spending === 'number' && Number.isFinite(a.spending) && a.spending >= 0
-      );
+    expect(serializedBytes).toBeLessThanOrEqual(MAX_PERSIST_SIZE);
+    expect(result).toEqual({ kind: null, truncatedTxCount: null });
+    expect(persisted.transactions).toHaveLength(1);
+    expect(persisted.parseErrors).toHaveLength(MAX_PERSISTED_WARNINGS);
+    expect(persisted.parseErrors[0].fileName.startsWith('statement-0-')).toBe(
+      true,
+    );
+    expect(persisted.parseErrors[0].fileName.length).toBeLessThanOrEqual(
+      MAX_WARNING_FILENAME_LENGTH,
+    );
+    expect(persisted.parseErrors[0].format.length).toBeLessThanOrEqual(
+      MAX_WARNING_FORMAT_LENGTH,
+    );
+    expect(persisted.parseErrors[0].message.length).toBeLessThanOrEqual(
+      MAX_WARNING_MESSAGE_LENGTH,
+    );
+    expect(persisted.parseErrors[0]).not.toHaveProperty('raw');
+    expect(persisted.parseErrors.at(-1)).toMatchObject({
+      fileName: '기타 업로드 파일',
+      format: '요약',
+      count: (MAX_PERSISTED_WARNINGS * 20 - 99) * 2,
     });
-    // Only the first entry passes all checks — the rest fail for empty cardId,
-    // empty category, negative spending, or not being an object.
-    expect(valid.length).toBe(1);
-    expect((valid[0] as Record<string, unknown>).assignedCardId).toBe('c1');
-  });
-});
+    expect(serialized).not.toContain('private-statement-row');
 
-describe('migration logic — version handling', () => {
-  test('versioned data is recognized', () => {
-    const data = { _v: 1, optimization: { assignments: [], totalReward: 0, totalSpending: 0, effectiveRate: 0 } };
-    const storedVersion = (data as Record<string, unknown>)._v ?? 0;
-    expect(storedVersion).toBe(1);
-  });
-
-  test('legacy data without _v is treated as version 0', () => {
-    const data = { optimization: { assignments: [], totalReward: 0, totalSpending: 0, effectiveRate: 0 } };
-    const storedVersion = (data as Record<string, unknown>)._v ?? 0;
-    expect(storedVersion).toBe(0);
-  });
-
-  test('truncation tracking survives round-trip', () => {
-    const data = { _truncatedTxCount: 150, optimization: { assignments: [], totalReward: 0, totalSpending: 0, effectiveRate: 0 } };
-    const truncatedCount = typeof data._truncatedTxCount === 'number' ? data._truncatedTxCount : null;
-    expect(truncatedCount).toBe(150);
+    const restored = deserializeAnalysis(serialized).data;
+    expect(restored?.parseErrors).toEqual(persisted.parseErrors);
+    expect(restored?.parseErrors.every((warning) => !('raw' in warning))).toBe(
+      true,
+    );
   });
 });

@@ -107,7 +107,8 @@
         categoryOptions = options;
         categoryGroups = groups;
         categoryMap = new Map(options.map(c => [c.id, c.label]));
-      } catch {
+      } catch (error) {
+        if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return;
         if (typeof console !== 'undefined') console.debug('[cherrypicker] Category options fetch failed, using fallback list');
         // Fall back to hardcoded list
         categoryOptions = FALLBACK_CATEGORIES;
@@ -250,7 +251,7 @@
               bind:value={searchQuery}
               placeholder="가맹점 검색"
               aria-label="가맹점 검색"
-              class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-xs outline-none focus:border-[var(--color-primary)]"
+              class="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-1.5 text-xs outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)]"
             />
           </div>
           <label class="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] cursor-pointer">
@@ -261,7 +262,7 @@
             <button
               onclick={applyEdits}
               disabled={reoptimizing}
-              class="rounded-lg bg-[var(--color-primary)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-primary-dark)] disabled:opacity-50 transition-colors"
+              class="rounded-lg bg-[var(--color-primary-fill)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-primary-fill-hover)] disabled:opacity-50 transition-colors"
             >
               {reoptimizing ? '재계산 중' : '변경 적용'}
             </button>
@@ -300,7 +301,7 @@
                       aria-label={tx.merchant + " 카테고리"}
                       data-testid={`tx-category-select-${tx.id}`}
                       onchange={(e) => changeCategory(tx.id, (e.target as HTMLSelectElement).value)}
-                      class="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-xs outline-none focus:border-[var(--color-primary)] cursor-pointer
+                      class="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-xs outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)] cursor-pointer
                         {tx.category === 'uncategorized' ? 'border-red-300 bg-red-50 text-red-700' : tx.confidence < 0.5 ? 'border-amber-300 bg-amber-50 text-amber-700' : ''}"
                     >
                       {#each categoryGroups as group}
