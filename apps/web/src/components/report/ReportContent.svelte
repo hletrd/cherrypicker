@@ -53,6 +53,15 @@
           <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">총 지출</th>
           <td class="px-4 py-3 font-mono text-[var(--color-text)]">{formatWon(opt.totalSpending)}</td>
         </tr>
+        {#if opt.unassignedTransactionCount > 0}
+          <tr class="border-b border-[var(--color-border)]">
+            <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">혜택 미배정 지출</th>
+            <td class="px-4 py-3 text-[var(--color-text)]">
+              <span class="font-mono">{formatWon(opt.unassignedSpending)}</span>
+              <span class="text-[var(--color-text-muted)]">({opt.unassignedTransactionCount}건 · 계산 가능한 양의 혜택 없음)</span>
+            </td>
+          </tr>
+        {/if}
         {#if previousSpendingDisclosure}
           <tr class="border-b border-[var(--color-border)]">
             <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">전월실적 기준</th>
@@ -67,11 +76,17 @@
         </tr>
         <tr class="border-b border-[var(--color-border)]">
           <th scope="row" class="px-4 py-3 font-medium text-left text-[var(--color-text-muted)] bg-[var(--color-bg)]">
-            {opt.savingsVsSingleCard >= 0 ? '단일 카드 대비 월간 추가 혜택' : '추천 조합의 월간 혜택 부족분'}
+            {opt.bestSingleCard === null
+              ? '단일 카드 비교'
+              : opt.savingsVsSingleCard >= 0
+                ? '단일 카드 대비 월간 추가 혜택'
+                : '추천 조합의 월간 혜택 부족분'}
             (연회비 차감 전)
           </th>
           <td class="px-4 py-3 font-mono {opt.savingsVsSingleCard >= 0 ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}">
-            {formatSavingsValue(opt.savingsVsSingleCard)}
+            {opt.bestSingleCard === null
+              ? '비교할 양의 혜택 없음'
+              : formatSavingsValue(opt.savingsVsSingleCard)}
           </td>
         </tr>
         <tr class="border-b border-[var(--color-border)]">
@@ -120,7 +135,12 @@
   <!-- Assignments table -->
   <div class="rounded-xl border border-[var(--color-border)]">
     <div data-testid="report-assignments-mobile" class="space-y-3 p-3 md:hidden print:hidden">
-      {#each assignments as a}
+      {#if assignments.length === 0}
+        <p class="py-4 text-center text-sm text-[var(--color-text-muted)]">
+          계산 가능한 양의 혜택이 없어 추천 카드 배정이 없습니다.
+        </p>
+      {:else}
+        {#each assignments as a}
         {@const issuer = getIssuerFromCardId(a.assignedCardId)}
         <article class="rounded-lg border border-[var(--color-border)] p-3">
           <h3 class="break-keep [overflow-wrap:anywhere] text-sm font-semibold">{a.categoryNameKo}</h3>
@@ -137,7 +157,8 @@
             <dd class="text-right font-mono">{formatWon(a.spending)}</dd>
           </dl>
         </article>
-      {/each}
+        {/each}
+      {/if}
     </div>
     <table data-testid="report-assignments-table" class="hidden w-full text-sm md:table print:table">
       <thead>
@@ -150,7 +171,14 @@
         </tr>
       </thead>
       <tbody>
-        {#each assignments as a}
+        {#if assignments.length === 0}
+          <tr>
+            <td colspan="5" class="px-4 py-6 text-center text-[var(--color-text-muted)]">
+              계산 가능한 양의 혜택이 없어 추천 카드 배정이 없습니다.
+            </td>
+          </tr>
+        {:else}
+          {#each assignments as a}
           {@const issuer = getIssuerFromCardId(a.assignedCardId)}
           <tr class="border-b border-[var(--color-border)] last:border-0">
             <td class="px-4 py-2.5 font-medium text-[var(--color-text)]">{a.categoryNameKo}</td>
@@ -161,7 +189,8 @@
             <td class="px-4 py-2.5 text-right font-mono text-[var(--color-text)]">{formatWon(a.reward)}</td>
             <td class="px-4 py-2.5 text-right font-mono text-[var(--color-text-muted)]">{formatWon(a.spending)}</td>
           </tr>
-        {/each}
+          {/each}
+        {/if}
       </tbody>
     </table>
   </div>

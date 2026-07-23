@@ -23,6 +23,8 @@ const optimization: OptimizationResult = {
   ],
   totalReward: 1000,
   totalSpending: 100000,
+  unassignedSpending: 0,
+  unassignedTransactionCount: 0,
   effectiveRate: 0.01,
   savingsVsSingleCard: 0,
   bestSingleCard: {
@@ -89,6 +91,37 @@ describe('generateHTMLReport', () => {
     expect(html).toContain('포함된 모든 카드를 사용할 수 있다고 가정');
     expect(html).not.toContain('추가 절약');
     expect(html).not.toContain('<이마트>');
+  });
+
+  test('renders explicit no-benefit and unassigned-spending copy', () => {
+    const noBenefit: OptimizationResult = {
+      assignments: [],
+      cardResults: [],
+      totalReward: 0,
+      totalSpending: 100_000,
+      unassignedSpending: 100_000,
+      unassignedTransactionCount: 1,
+      effectiveRate: 0,
+      savingsVsSingleCard: 0,
+      bestSingleCard: null,
+    };
+
+    const html = generateHTMLReport(
+      noBenefit,
+      transactions,
+      categoryLabels,
+      reportContext,
+    );
+
+    expect(html).toContain('혜택 미배정 지출');
+    expect(html).toContain('1건 · 계산 가능한 양의 혜택 없음');
+    expect(html).toContain('비교할 양의 혜택 없음');
+    expect(html).toContain(
+      '계산 가능한 양의 혜택이 없어 추천 카드 배정이 없습니다.',
+    );
+    expect(html).toContain(
+      '100,000원은 계산 가능한 양의 혜택이 없어 카드에 배정하지 않았습니다.',
+    );
   });
 
   test.each([

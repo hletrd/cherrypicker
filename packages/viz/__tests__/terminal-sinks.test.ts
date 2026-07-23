@@ -66,6 +66,8 @@ describe('public terminal sinks', () => {
       ],
       totalReward: 100,
       totalSpending: 10_000,
+      unassignedSpending: 0,
+      unassignedTransactionCount: 0,
       effectiveRate: 0.01,
       savingsVsSingleCard: 0,
       bestSingleCard: {
@@ -253,6 +255,8 @@ describe('public terminal sinks', () => {
       assignments: [],
       totalReward: 100,
       totalSpending: 10_000,
+      unassignedSpending: 0,
+      unassignedTransactionCount: 0,
       effectiveRate: 0.01,
       savingsVsSingleCard: 20,
       bestSingleCard: {
@@ -267,5 +271,33 @@ describe('public terminal sinks', () => {
     expect(output).toContain('연회비 차감 전 월간 총혜택');
     expect(output).toContain('포함된 모든 카드를 사용할 수 있다고 가정');
     expect(output).not.toContain('추가 절약');
+  });
+
+  test('prints an explicit no-benefit and unassigned-spending state', () => {
+    const result: OptimizationResult = {
+      assignments: [],
+      totalReward: 0,
+      totalSpending: 10_000,
+      unassignedSpending: 10_000,
+      unassignedTransactionCount: 2,
+      effectiveRate: 0,
+      savingsVsSingleCard: 0,
+      bestSingleCard: null,
+      cardResults: [],
+    };
+
+    const output = captureConsoleLog(() => printOptimizationResult(result));
+
+    expect(output).toContain(
+      '계산 가능한 양의 혜택이 없어 추천 카드 배정이 없습니다.',
+    );
+    expect(output).toContain('혜택 미배정 지출:');
+    expect(output).toContain('10,000원 (2건');
+    expect(output).toContain(
+      '단일 카드 월간 총혜택: 계산 가능한 양의 혜택 없음',
+    );
+    expect(output).toContain(
+      '단일 카드 대비 월간 혜택 차이: 비교할 양의 혜택 없음',
+    );
   });
 });

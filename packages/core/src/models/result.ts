@@ -41,10 +41,20 @@ export interface CalculationIssue {
 export interface OptimizationResult {
   assignments: CardAssignment[];
   totalReward: number;
+  /** All positive KRW spending analyzed, assigned or not. */
   totalSpending: number;
+  /** Positive KRW spending for which no executable card earned a positive reward. */
+  unassignedSpending: number;
+  /** Number of positive KRW transactions represented by unassignedSpending. */
+  unassignedTransactionCount: number;
   effectiveRate: number;
   savingsVsSingleCard: number;    // vs best single card
-  bestSingleCard: { cardId: string; cardName: string; totalReward: number };
+  /** Null when no executable card earns a positive reward for the input. */
+  bestSingleCard: {
+    cardId: string;
+    cardName: string;
+    totalReward: number;
+  } | null;
   cardResults: CardRewardResult[];
   unsupportedRules?: CalculationIssue[];
 }

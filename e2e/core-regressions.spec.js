@@ -61,12 +61,14 @@ test('optimizer uses transaction-level facts and keeps card totals aligned', () 
       {
         category: 'dining',
         type: 'discount',
+        support: { status: 'supported' },
         tiers: [{ performanceTier: 'tier0', rate: 2, monthlyCap: null, perTransactionCap: null }],
       },
       {
         category: 'dining',
         subcategory: 'cafe',
         type: 'discount',
+        support: { status: 'supported' },
         tiers: [{ performanceTier: 'tier0', rate: 5, monthlyCap: null, perTransactionCap: null }],
         conditions: { specificMerchants: ['메가커피'] },
       },
@@ -92,6 +94,7 @@ test('optimizer uses transaction-level facts and keeps card totals aligned', () 
       {
         category: 'dining',
         type: 'discount',
+        support: { status: 'supported' },
         tiers: [{ performanceTier: 'tier0', rate: 3, monthlyCap: null, perTransactionCap: null }],
       },
     ],

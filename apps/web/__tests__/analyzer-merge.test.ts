@@ -1,8 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  appendCategorizedTransactions,
-  type CategorizedTx,
-} from '../src/lib/analyzer.js';
+import { appendCategorizedTransactions } from '../src/lib/analyzer.js';
+import type { CategorizedTx } from '../src/lib/analysis-result.js';
 
 describe('large analyzer transaction merge', () => {
   test('retains order above JavaScript spread-argument limits', () => {

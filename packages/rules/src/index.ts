@@ -113,5 +113,6 @@ export {
 export type { UnmodeledRestrictionReason } from './rule-semantics.js';
 
 export {
+  isOptimizationExecutableCard,
   isRecommendationEligibleCard,
 } from './card-availability.js';

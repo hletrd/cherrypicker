@@ -43,6 +43,27 @@ describe('persisted result route states', () => {
 });
 
 describe('page-level visual and print contracts', () => {
+  test('wires explicit unassigned and no-benefit states into every web result sink', async () => {
+    const [summary, optimal, savings, report, visibility] = await Promise.all([
+      source('../src/components/dashboard/SpendingSummary.svelte'),
+      source('../src/components/dashboard/OptimalCardMap.svelte'),
+      source('../src/components/dashboard/SavingsComparison.svelte'),
+      source('../src/components/report/ReportContent.svelte'),
+      source('../src/components/ui/VisibilityToggle.svelte'),
+    ]);
+
+    for (const sink of [summary, optimal, savings, report]) {
+      expect(sink).toContain('unassignedSpending');
+      expect(sink).toContain('unassignedTransactionCount');
+      expect(sink).toContain('계산 가능한 양의 혜택');
+    }
+    expect(optimal).toContain('data-testid="optimal-card-no-benefit"');
+    expect(savings).toContain('data-testid="savings-no-benefit"');
+    expect(report).toContain('추천 카드 배정이 없습니다');
+    expect(visibility).toContain('!opt.bestSingleCard');
+    expect(visibility).toContain('계산 가능한 양의 혜택 없음');
+  });
+
   test('uses contrast-safe SpendingSummary foregrounds', async () => {
     const summary = await source(
       '../src/components/dashboard/SpendingSummary.svelte',

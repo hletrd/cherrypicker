@@ -1,8 +1,10 @@
-import type {
-  AnalysisResult,
-  AnalyzeExecution,
-  AnalyzeOptions,
-} from './store.svelte.js';
+import {
+  isAnalysisResultCoherent,
+  normalizeCardIdsOption,
+  type AnalysisResult,
+  type AnalyzeExecution,
+  type AnalyzeOptions,
+} from './analysis-result.js';
 import type {
   PersistResult,
   PersistWarningKind,
@@ -178,8 +180,14 @@ export class AnalysisReplacementRuntime {
         analysisResult.previousMonthSpendingOption =
           options.previousMonthSpending;
       }
-      if (options?.cardIds && options.cardIds.length > 0) {
-        analysisResult.cardIdsOption = [...options.cardIds];
+      const selectedCardIds = normalizeCardIdsOption(options?.cardIds);
+      if (selectedCardIds) {
+        analysisResult.cardIdsOption = selectedCardIds;
+      }
+      if (!isAnalysisResultCoherent(analysisResult)) {
+        throw new Error(
+          '분석 결과의 합계가 거래 내역과 일치하지 않아요. 다시 시도해 주세요.',
+        );
       }
 
       // Check ownership immediately before each externally visible commit.

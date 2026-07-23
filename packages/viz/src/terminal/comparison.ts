@@ -45,20 +45,34 @@ export function printOptimizationResult(result: OptimizationResult): void {
     ]);
   }
 
-  console.log(assignTable.toString());
+  if (result.assignments.length > 0) {
+    console.log(assignTable.toString());
+  } else {
+    console.log('  계산 가능한 양의 혜택이 없어 추천 카드 배정이 없습니다.');
+  }
 
   // Summary section
   console.log('\n요약');
   console.log('-'.repeat(50));
   console.log(`  총 지출액:          ${formatWon(result.totalSpending)}`);
+  if (result.unassignedTransactionCount > 0) {
+    console.log(
+      `  혜택 미배정 지출:   ${formatWon(result.unassignedSpending)} (${result.unassignedTransactionCount.toLocaleString('ko-KR')}건, 계산 가능한 양의 혜택 없음)`,
+    );
+  }
   console.log(`  ${GROSS_MONTHLY_REWARD_LABEL_KO}: ${formatWon(result.totalReward)}`);
   console.log(`  연회비 차감 전 혜택률: ${formatRate(result.effectiveRate)}`);
-  console.log(
-    `  단일 카드 월간 총혜택: ${sanitizeTerminalText(result.bestSingleCard.cardName)} (${formatWon(result.bestSingleCard.totalReward)}, 연회비 차감 전)`,
-  );
-  console.log(
-    `  단일 카드 대비 월간 혜택 차이: ${formatWon(result.savingsVsSingleCard)} (${result.savingsVsSingleCard >= 0 ? '+' : ''}${formatRate(result.totalSpending > 0 ? result.savingsVsSingleCard / result.totalSpending : 0)}, 연회비 차감 전)`,
-  );
+  if (result.bestSingleCard) {
+    console.log(
+      `  단일 카드 월간 총혜택: ${sanitizeTerminalText(result.bestSingleCard.cardName)} (${formatWon(result.bestSingleCard.totalReward)}, 연회비 차감 전)`,
+    );
+    console.log(
+      `  단일 카드 대비 월간 혜택 차이: ${formatWon(result.savingsVsSingleCard)} (${result.savingsVsSingleCard >= 0 ? '+' : ''}${formatRate(result.totalSpending > 0 ? result.savingsVsSingleCard / result.totalSpending : 0)}, 연회비 차감 전)`,
+    );
+  } else {
+    console.log('  단일 카드 월간 총혜택: 계산 가능한 양의 혜택 없음');
+    console.log('  단일 카드 대비 월간 혜택 차이: 비교할 양의 혜택 없음');
+  }
 
   // Caps hit warnings
   const allCaps = result.cardResults.flatMap((r) =>

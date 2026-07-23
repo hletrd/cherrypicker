@@ -48,6 +48,7 @@ describe('public optimizer API', () => {
           {
             category: 'dining',
             type: 'discount',
+            support: { status: 'supported' },
             tiers: [
               {
                 performanceTier: 'tier0',

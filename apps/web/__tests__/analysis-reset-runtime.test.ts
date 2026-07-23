@@ -10,14 +10,17 @@ import {
   serializeAnalysis,
   STORAGE_KEY,
 } from '../src/lib/persistence.js';
-import type { AnalysisResult } from '../src/lib/store.svelte.js';
+import type { AnalysisResult } from '../src/lib/analysis-result.js';
 
 function analysisFixture(): AnalysisResult {
   return {
     success: true,
     bank: 'shinhan',
     format: 'csv',
+    statementPeriod: { start: '2026-07-23', end: '2026-07-23' },
     transactionCount: 1,
+    fullStatementPeriod: { start: '2026-07-23', end: '2026-07-23' },
+    totalTransactionCount: 1,
     parseErrors: [],
     transactions: [
       {
@@ -34,14 +37,20 @@ function analysisFixture(): AnalysisResult {
       assignments: [],
       totalReward: 0,
       totalSpending: 10_000,
+      unassignedSpending: 10_000,
+      unassignedTransactionCount: 1,
       effectiveRate: 0,
       savingsVsSingleCard: 0,
-      bestSingleCard: {
-        cardId: 'card-1',
-        cardName: '카드',
-        totalReward: 0,
-      },
+      bestSingleCard: null,
       cardResults: [],
+    },
+    monthlyBreakdown: [
+      { month: '2026-07', spending: 10_000, transactionCount: 1 },
+    ],
+    previousSpendingBasis: {
+      kind: 'missing-calendar-month',
+      month: '2026-06',
+      assumedAmount: 0,
     },
   };
 }

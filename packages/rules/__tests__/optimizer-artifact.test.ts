@@ -7,6 +7,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  isOptimizationExecutableCard,
   isRecommendationEligibleCard,
   loadAllCardRules,
   loadOptimizerCatalogArtifact,
@@ -89,6 +90,24 @@ describe('compiled optimizer artifact contract', () => {
         JSON.parse(JSON.stringify(artifact)) as unknown,
       ),
     ).toEqual(artifact);
+  });
+
+  test('keeps unsupported-only active cards browseable but not executable', () => {
+    const unsupportedOnly = structuredClone(validCard);
+    unsupportedOnly.card.id = 'unsupported-only-card';
+    unsupportedOnly.rewards[0]!.support = {
+      status: 'unsupported',
+      reason: 'benefit requires facts the calculator does not model',
+    };
+
+    const artifact = parseOptimizerCatalogArtifact({
+      sourceHash: HASH,
+      cards: [unsupportedOnly],
+    });
+
+    expect(artifact.cards).toHaveLength(1);
+    expect(isRecommendationEligibleCard(artifact.cards[0]!)).toBe(true);
+    expect(isOptimizationExecutableCard(artifact.cards[0]!)).toBe(false);
   });
 
   test.each([

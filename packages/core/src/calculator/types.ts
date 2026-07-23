@@ -131,7 +131,10 @@ export function calculatePercentageReward(
     reward,
     'monthly reward total',
   );
-  const capReached = raw > 0 && newMonthUsed >= monthlyCap;
+  const capReached =
+    raw > 0 &&
+    currentMonthUsed < monthlyCap &&
+    newMonthUsed === monthlyCap;
 
   return {
     reward,

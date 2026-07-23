@@ -132,6 +132,20 @@
       </div>
     {/each}
   </div>
+{:else if opt && !opt.bestSingleCard}
+  <div
+    class="mt-4 flex min-h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-border)] px-4 text-center"
+    data-testid="savings-no-benefit"
+  >
+    <div class="opacity-40 text-[var(--color-text-muted)]">
+      <Icon name="banknotes" size={40} />
+    </div>
+    <div class="text-sm font-medium text-[var(--color-text)]">비교할 수 있는 양의 카드 혜택이 없어요</div>
+    <div class="text-xs text-[var(--color-text-muted)]">
+      {opt.unassignedTransactionCount}건,
+      {formatWon(opt.unassignedSpending)} 모두 계산 가능한 혜택이 0원이어서 임의 배정하지 않았어요.
+    </div>
+  </div>
 {:else if opt}
   <!-- Visual bar comparison — hidden when both rewards are zero (zero-width bars
        look broken and provide no useful information) (C86-07) -->
@@ -248,6 +262,15 @@
   >
     {GROSS_MONTHLY_REWARD_DISCLOSURE}
   </p>
+  {#if opt.unassignedTransactionCount > 0}
+    <p
+      class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+      data-testid="savings-unassigned-spending"
+    >
+      계산 가능한 양의 혜택이 없는 {opt.unassignedTransactionCount}건,
+      {formatWon(opt.unassignedSpending)}은 추천 조합에 배정하지 않았어요.
+    </p>
+  {/if}
 
   <!-- Breakdown toggle -->
   <div class="mt-5">

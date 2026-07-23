@@ -65,9 +65,11 @@ describe('buildStandaloneReportContext', () => {
       assignments: [],
       totalReward: 0,
       totalSpending: 0,
+      unassignedSpending: 0,
+      unassignedTransactionCount: 0,
       effectiveRate: 0,
       savingsVsSingleCard: 0,
-      bestSingleCard: { cardId: 'card-a', cardName: 'Card A', totalReward: 0 },
+      bestSingleCard: null,
       unsupportedRules: [issue, { ...issue }],
       cardResults: [
         {

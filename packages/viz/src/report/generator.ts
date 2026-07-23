@@ -251,9 +251,26 @@ function formatCount(count: number): string {
 
 function buildSummary(result: OptimizationResult): string {
   const savingsSign = result.savingsVsSingleCard >= 0 ? '+' : '';
-  const differenceLabel = result.savingsVsSingleCard >= 0
-    ? '단일 최적 카드 대비 월간 추가 혜택'
-    : '추천 조합의 월간 혜택 부족분';
+  const differenceLabel = result.bestSingleCard === null
+    ? '단일 카드 비교'
+    : result.savingsVsSingleCard >= 0
+      ? '단일 최적 카드 대비 월간 추가 혜택'
+      : '추천 조합의 월간 혜택 부족분';
+  const differenceValue = result.bestSingleCard === null
+    ? '비교할 양의 혜택 없음'
+    : `${savingsSign}${formatWon(Math.abs(result.savingsVsSingleCard))}`;
+  const singleCardDetail = result.bestSingleCard === null
+    ? '계산 가능한 양의 혜택 없음'
+    : `단일 최적: ${esc(result.bestSingleCard.cardName)}`;
+  const unassignedMetric = result.unassignedTransactionCount > 0
+    ? `
+      <div class="metric-card">
+        <div class="label">혜택 미배정 지출</div>
+        <div class="value">${formatWon(result.unassignedSpending)}</div>
+        <div class="sub">${formatCount(result.unassignedTransactionCount)}건 · 계산 가능한 양의 혜택 없음</div>
+      </div>
+    `
+    : '';
   return `
     <div class="metrics-grid">
       <div class="metric-card">
@@ -270,9 +287,10 @@ function buildSummary(result: OptimizationResult): string {
       </div>
       <div class="metric-card">
         <div class="label">${differenceLabel} (연회비 차감 전)</div>
-        <div class="value">${savingsSign}${formatWon(Math.abs(result.savingsVsSingleCard))}</div>
-        <div class="sub">단일 최적: ${esc(result.bestSingleCard.cardName)}</div>
+        <div class="value">${differenceValue}</div>
+        <div class="sub">${singleCardDetail}</div>
       </div>
+      ${unassignedMetric}
     </div>
   `;
 }
@@ -365,7 +383,7 @@ function buildCardComparison(result: OptimizationResult): string {
 }
 
 function buildAssignments(result: OptimizationResult): string {
-  const rowsHtml = result.assignments
+  const assignmentRows = result.assignments
     .map((a) => {
       const alts = a.alternatives.length > 0
         ? a.alternatives
@@ -385,6 +403,11 @@ function buildAssignments(result: OptimizationResult): string {
       `;
     })
     .join('');
+  const rowsHtml = assignmentRows || `
+    <tr>
+      <td colspan="6">계산 가능한 양의 혜택이 없어 추천 카드 배정이 없습니다.</td>
+    </tr>
+  `;
 
   // Caps hit warnings block
   const allCaps = result.cardResults.flatMap((r) =>
@@ -403,6 +426,12 @@ function buildAssignments(result: OptimizationResult): string {
             .join('')}
         </div>`
       : '';
+  const unassignedBlock = result.unassignedTransactionCount > 0
+    ? `<div class="warn-box">
+        <strong>혜택 미배정 지출</strong>
+        <p>${formatCount(result.unassignedTransactionCount)}건, ${formatWon(result.unassignedSpending)}은 계산 가능한 양의 혜택이 없어 카드에 배정하지 않았습니다.</p>
+      </div>`
+    : '';
 
   return `
     <table>
@@ -419,6 +448,7 @@ function buildAssignments(result: OptimizationResult): string {
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
+    ${unassignedBlock}
     ${capsBlock}
   `;
 }

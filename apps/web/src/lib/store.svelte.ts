@@ -1,7 +1,6 @@
 // Shared Svelte 5 state store for analysis results across dashboard components
 // Must be .svelte.ts so that $state runes are compiled properly
 
-import type { CategorizedTx } from './analyzer.js';
 import type {
   CardAssignment,
   CardRewardResult,
@@ -15,10 +14,21 @@ export type {
   CategoryReward,
   OptimizationResult,
 } from '@cherrypicker/core';
+import { buildAnalysisContext } from './analysis-context.js';
 import {
-  buildAnalysisContext,
-  type PreviousSpendingBasis,
-} from './analysis-context.js';
+  isAnalysisResultCoherent,
+  normalizeCardIdsOption,
+  type AnalysisResult,
+  type AnalyzeExecution,
+  type AnalyzeOptions,
+  type CategorizedTx,
+} from './analysis-result.js';
+export type {
+  AnalysisResult,
+  AnalyzeExecution,
+  AnalyzeOptions,
+  CategorizedTx,
+} from './analysis-result.js';
 import { buildCategoryLabelMap } from './category-labels.js';
 import {
   deserializeAnalysis,
@@ -29,10 +39,7 @@ import type {
   PersistResult,
   PersistWarningKind,
 } from './persistence.js';
-import type {
-  FileParseProgress,
-  FileParseRun,
-} from './file-parse-queue.js';
+import type { FileParseRun } from './file-parse-queue.js';
 import { OperationEpoch } from './operation-epoch.js';
 import {
   AnalysisReplacementRuntime,
@@ -46,59 +53,6 @@ let analyzerModulePromise: Promise<AnalyzerModule> | null = null;
 function loadAnalyzerModule(): Promise<AnalyzerModule> {
   analyzerModulePromise ??= import('./analyzer.js');
   return analyzerModulePromise;
-}
-
-// --- Web-owned analysis state built around core result contracts ---
-
-export interface AnalysisResult {
-  success: boolean;
-  bank: string | null;
-  format: string;
-  /** Period and count for the optimized month only */
-  statementPeriod?: { start: string; end: string };
-  transactionCount: number;
-  /** Period and count spanning all uploaded months */
-  fullStatementPeriod?: { start: string; end: string };
-  totalTransactionCount?: number;
-  parseErrors: {
-    fileName: string;
-    format: string;
-    line?: number;
-    message: string;
-    raw?: string;
-    count?: number;
-    kind?: 'summary';
-    affectedFileCount?: number;
-  }[];
-  transactions?: CategorizedTx[];
-  optimization: OptimizationResult;
-  monthlyBreakdown?: { month: string; spending: number; transactionCount: number }[];
-  /** The user's explicit previousMonthSpending input (if provided during
-   *  analysis). Forwarded to reoptimize() so that category edits preserve
-   *  the user's original performance tier baseline instead of silently
-   *  recomputing it from exclusion-filtered spending (C44-01). */
-  previousMonthSpendingOption?: number;
-  /** The user's explicit cardIds filter (if provided during analysis).
-   *  Forwarded to reoptimize() so that category edits preserve the user's
-   *  card selection instead of silently optimizing against all cards. */
-  cardIdsOption?: string[];
-  /** Inspectable provenance for the performance-spending input. */
-  previousSpendingBasis?: PreviousSpendingBasis;
-}
-
-export interface AnalyzeOptions {
-  bank?: string;
-  previousMonthSpending?: number;
-  cardIds?: string[];
-  /** Internal normalized context shared by initial analysis/reoptimization. */
-  previousSpendingBasis?: PreviousSpendingBasis;
-  /** Exact previous-calendar-month rows for card-specific exclusions. */
-  previousMonthTransactions?: CategorizedTx[];
-}
-
-export interface AnalyzeExecution {
-  run: FileParseRun;
-  onProgress?: (progress: FileParseProgress) => void;
 }
 
 // --- SessionStorage persistence ---
@@ -417,6 +371,10 @@ function createAnalysisStore() {
 
         const { optimizeFromTransactions } = await loadAnalyzerModule();
         if (!operation.isCurrent() || result !== snapshot) return;
+        const selectedCardIds = normalizeCardIdsOption(
+          options?.cardIds,
+          snapshot.cardIdsOption,
+        );
         const reoptimizationRun: FileParseRun = Object.freeze({
           generation: operation.epoch,
           signal: operation.signal,
@@ -435,7 +393,7 @@ function createAnalysisStore() {
           previousMonthTransactions: context.previousTransactions,
           // Forward the user's cardIds selection from the initial analysis
           // so reoptimize doesn't silently switch to optimizing against all cards.
-          cardIds: options?.cardIds ?? snapshot.cardIdsOption,
+          cardIds: selectedCardIds,
         }, categoryLabels, { run: reoptimizationRun });
         if (!operation.isCurrent() || result !== snapshot) return;
         // result is guaranteed non-null here (early null guard at top of try block).
@@ -444,7 +402,7 @@ function createAnalysisStore() {
         // Use the snapshot captured at function entry instead of reading the
         // reactive result variable, which may have changed during the async
         // gaps above (C81-01).
-        result = {
+        const nextResult: AnalysisResult = {
           ...snapshot,
           transactions: editedTransactions,
           optimization,
@@ -454,11 +412,18 @@ function createAnalysisStore() {
           statementPeriod: context.statementPeriod,
           fullStatementPeriod: context.fullStatementPeriod,
           previousSpendingBasis: context.previousSpendingBasis,
+          cardIdsOption: selectedCardIds,
           previousMonthSpendingOption:
             context.previousSpendingBasis.kind === 'user-total'
               ? context.previousSpendingBasis.amount
               : undefined,
         };
+        if (!isAnalysisResultCoherent(nextResult)) {
+          throw new Error(
+            '재계산 결과의 합계가 거래 내역과 일치하지 않아요. 다시 분석해 주세요.',
+          );
+        }
+        result = nextResult;
         generation++;
         if (!operation.isCurrent()) return;
         const persistResult = persistToStorage(result);

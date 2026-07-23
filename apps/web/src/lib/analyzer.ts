@@ -2,10 +2,7 @@ import { MerchantMatcher } from '@cherrypicker/core/categorizer/matcher';
 import { buildConstraints } from '@cherrypicker/core/optimizer';
 import { resolveCardPreviousSpending } from '@cherrypicker/core/analysis/performance';
 import type { CategorizedTransaction } from '@cherrypicker/core';
-import {
-  isRecommendationEligibleCard,
-  type PerformanceExclusionId,
-} from '@cherrypicker/rules/browser';
+import { isRecommendationEligibleCard } from '@cherrypicker/rules/browser';
 import { isValidFuelVolumeLiters } from '@cherrypicker/parser/browser';
 import { parseFile } from './parser/index.js';
 import type { RawTransaction } from './parser/types.js';
@@ -23,7 +20,10 @@ import type {
   AnalysisResult,
   AnalyzeExecution,
   AnalyzeOptions,
-} from './store.svelte.js';
+  CategorizedTx,
+} from './analysis-result.js';
+import { isAnalysisResultCoherent } from './analysis-result.js';
+export type { CategorizedTx } from './analysis-result.js';
 import {
   buildAnalysisContext,
   type PreviousSpendingBasis,
@@ -52,24 +52,6 @@ function assertExecutionCurrent(execution?: AnalyzeExecution): void {
   ) {
     throw analysisAbortError();
   }
-}
-
-export interface CategorizedTx {
-  id: string;
-  date: string;
-  merchant: string;
-  amount: number;
-  installments?: number;
-  category: string;
-  subcategory: string | undefined;
-  confidence: number;
-  rawCategory?: string;
-  memo?: string;
-  paymentType?: 'domestic' | 'overseas';
-  channel?: 'online' | 'offline';
-  fuelVolumeLiters?: number;
-  performanceExclusionTags?: PerformanceExclusionId[];
-  factProvenance?: RawTransaction['factProvenance'];
 }
 
 export function appendCategorizedTransactions(
@@ -442,7 +424,7 @@ export async function analyzeMultipleFiles(
   // optimization uses only the latest valid month and the exact predecessor
   // month remains available solely as the performance-spending basis.
   assertExecutionCurrent(execution);
-  return {
+  const result: AnalysisResult = {
     success: true,
     bank,
     format,
@@ -456,6 +438,12 @@ export async function analyzeMultipleFiles(
     monthlyBreakdown: context.monthlyBreakdown,
     previousSpendingBasis: context.previousSpendingBasis,
   };
+  if (!isAnalysisResultCoherent(result)) {
+    throw new Error(
+      '분석 결과의 합계가 거래 내역과 일치하지 않아요. 다시 시도해 주세요.',
+    );
+  }
+  return result;
 }
 
 // Keep the original combined function for backward compatibility

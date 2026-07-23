@@ -1,4 +1,4 @@
-import type { CategorizedTx } from './analyzer.js';
+import type { CategorizedTx } from './analysis-result.js';
 import {
   isValidFuelVolumeLiters,
   isValidISODate,

@@ -560,14 +560,18 @@ function applyMonthlyCap(
 
   const remaining = Math.max(0, monthlyCap - currentMonthUsed);
   const reward = Math.min(rawReward, remaining);
+  const newMonthUsed = addSafeNonnegativeIntegers(
+    currentMonthUsed,
+    reward,
+    'monthly reward total',
+  );
   return {
     reward,
-    newMonthUsed: addSafeNonnegativeIntegers(
-      currentMonthUsed,
-      reward,
-      'monthly reward total',
-    ),
-    capReached: rawReward > remaining,
+    newMonthUsed,
+    capReached:
+      rawReward > 0 &&
+      currentMonthUsed < monthlyCap &&
+      newMonthUsed === monthlyCap,
   };
 }
 
@@ -876,16 +880,6 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     }
 
     ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed);
-    if (
-      ruleResult.capReached ||
-      (
-        monthlyCap !== null &&
-        ruleResult.newMonthUsed >= monthlyCap &&
-        rawReward > 0
-      )
-    ) {
-      bucket.capReached = true;
-    }
 
     const rewardAfterMonthlyCap = ruleResult.reward;
     let appliedReward = rewardAfterMonthlyCap;
@@ -943,7 +937,13 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     rewardTypeAccum.set(categoryKey, typeMap);
     bucket.capAmount = monthlyCap ?? undefined;
 
-    if (ruleResult.capReached && monthlyCap !== null) {
+    const finalRuleMonthUsed = ruleMonthUsed.get(rewardKey) ?? 0;
+    const reachedRuleCap =
+      ruleResult.capReached &&
+      monthlyCap !== null &&
+      finalRuleMonthUsed === monthlyCap;
+    if (reachedRuleCap) {
+      bucket.capReached = true;
       capsHit.push({
         category: categoryKey,
         capType: 'monthly_category',

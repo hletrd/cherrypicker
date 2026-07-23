@@ -59,6 +59,16 @@
     {/each}
   </div>
 {:else if assignments.length > 0}
+  {#if analysisStore.optimization && analysisStore.optimization.unassignedTransactionCount > 0}
+    <div
+      class="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+      data-testid="optimal-card-unassigned"
+    >
+      계산 가능한 양의 혜택이 없는
+      {analysisStore.optimization.unassignedTransactionCount}건
+      ({formatWon(analysisStore.optimization.unassignedSpending)})은 추천 카드에 배정하지 않았어요.
+    </div>
+  {/if}
   <div class="mt-4 mb-3 flex flex-wrap items-center justify-between gap-3">
     <div class="text-sm text-[var(--color-text-muted)]">
       총 <strong class="text-[var(--color-text)]">{uniqueCardCount}장</strong>의 카드면 충분해요
@@ -203,6 +213,20 @@
       {/each}
     </tbody>
   </table>
+{:else if analysisStore.optimization}
+  <div
+    class="mt-4 flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-border)] px-4 text-center"
+    data-testid="optimal-card-no-benefit"
+  >
+    <div class="opacity-40 text-[var(--color-text-muted)]">
+      <Icon name="credit-card" size={40} />
+    </div>
+    <div class="text-sm font-medium text-[var(--color-text)]">계산 가능한 양의 카드 혜택이 없어요</div>
+    <div class="text-xs text-[var(--color-text-muted)]">
+      {analysisStore.optimization.unassignedTransactionCount}건,
+      {formatWon(analysisStore.optimization.unassignedSpending)}을 임의의 카드에 배정하지 않았어요.
+    </div>
+  </div>
 {:else}
   <div class="mt-4 flex h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--color-border)]">
     <div class="opacity-40 text-[var(--color-text-muted)]">

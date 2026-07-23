@@ -1,4 +1,5 @@
 import {
+  isOptimizationExecutableCard,
   isRecommendationEligibleCard,
   type CardRuleSet,
 } from '@cherrypicker/rules/browser';
@@ -227,6 +228,7 @@ function buildAssignments(
           rate: assignment.spending > 0 ? reward / assignment.spending : 0,
         };
       })
+      .filter((alternative) => alternative.reward > 0)
       .sort(
         (a, b) => b.reward - a.reward || compareAscii(a.cardId, b.cardId),
       )
@@ -309,8 +311,11 @@ export function greedyOptimize(
       'cardRules must contain at least one recommendation-eligible card',
     );
   }
+  const executableCardRules = eligibleCardRules.filter(
+    isOptimizationExecutableCard,
+  );
   const eligibleCardIds = new Set(
-    eligibleCardRules.map((rule) => rule.card.id),
+    executableCardRules.map((rule) => rule.card.id),
   );
   for (const transaction of constraints.transactions) {
     if (
@@ -334,7 +339,7 @@ export function greedyOptimize(
     constraints.cards.map((c) => [c.cardId, c.previousMonthSpending]),
   );
   const assignedTransactionsByCard = new Map<string, CategorizedTransaction[]>();
-  for (const rule of eligibleCardRules) {
+  for (const rule of executableCardRules) {
     assignedTransactionsByCard.set(rule.card.id, []);
   }
 
@@ -355,18 +360,32 @@ export function greedyOptimize(
 
   const txAssignments: TxAssignment[] = [];
   const candidateUnsupportedRules: CalculationIssue[] = [];
+  let unassignedSpending = 0;
+  let unassignedTransactionCount = 0;
 
   for (const transaction of sortedTransactions) {
     const scoring = scoreCardsForTransaction(
       transaction,
-      eligibleCardRules,
+      executableCardRules,
       cardPreviousSpending,
       assignedTransactionsByCard,
     );
     const { scores } = scoring;
     candidateUnsupportedRules.push(...scoring.unsupportedRules);
     const best = scores[0];
-    if (!best) continue;
+    if (!best || best.reward === 0) {
+      unassignedSpending = addSafeNonnegativeIntegers(
+        unassignedSpending,
+        transaction.amount,
+        'optimizer unassigned spending',
+      );
+      unassignedTransactionCount = addSafeNonnegativeIntegers(
+        unassignedTransactionCount,
+        1,
+        'optimizer unassigned transaction count',
+      );
+      continue;
+    }
 
     // On first insertion, create a new array and store it in the map.
     // On subsequent insertions, push in-place — the map already holds the
@@ -391,12 +410,12 @@ export function greedyOptimize(
   const assignments = buildAssignments(
     txAssignments,
     constraints.categoryLabels,
-    eligibleCardRules,
+    executableCardRules,
     cardPreviousSpending,
     assignedTransactionsByCard,
   );
   const cardResults = buildCardResults(
-    eligibleCardRules,
+    executableCardRules,
     cardPreviousSpending,
     assignedTransactionsByCard,
     constraints.categoryLabels,
@@ -410,25 +429,31 @@ export function greedyOptimize(
     ),
     0,
   );
-  const totalSpending = txAssignments.reduce(
+  const assignedSpending = txAssignments.reduce(
     (sum, assignment) => addSafeNonnegativeIntegers(
       sum,
       assignment.tx.amount,
-      'optimizer total spending',
+      'optimizer assigned spending',
     ),
     0,
+  );
+  const totalSpending = addSafeNonnegativeIntegers(
+    assignedSpending,
+    unassignedSpending,
+    'optimizer total spending',
   );
   const effectiveRate = totalSpending > 0 ? totalReward / totalSpending : 0;
 
   let bestSingleCard:
     | { cardId: string; cardName: string; totalReward: number }
-    | undefined;
-  for (const rule of eligibleCardRules) {
+    | null = null;
+  for (const rule of executableCardRules) {
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
     const output = calculateCardOutput(sortedTransactions, previousMonthSpending, rule);
+    if (output.totalReward === 0) continue;
 
     if (
-      bestSingleCard === undefined ||
+      bestSingleCard === null ||
       output.totalReward > bestSingleCard.totalReward ||
       (
         output.totalReward === bestSingleCard.totalReward &&
@@ -443,10 +468,13 @@ export function greedyOptimize(
     }
   }
 
-  if (bestSingleCard === undefined) {
-    throw new Error('cardRules must contain at least one card');
+  if (bestSingleCard === null && totalReward !== 0) {
+    throw new Error(
+      'optimizer invariant violated: positive optimized reward without a positive single-card result',
+    );
   }
-  const savingsVsSingleCard = totalReward - bestSingleCard.totalReward;
+  const savingsVsSingleCard =
+    bestSingleCard === null ? 0 : totalReward - bestSingleCard.totalReward;
   if (!Number.isSafeInteger(savingsVsSingleCard)) {
     throw new Error(
       `optimizer savings is not safely representable: ${savingsVsSingleCard}`,
@@ -461,6 +489,8 @@ export function greedyOptimize(
     assignments,
     totalReward,
     totalSpending,
+    unassignedSpending,
+    unassignedTransactionCount,
     effectiveRate,
     savingsVsSingleCard,
     bestSingleCard,

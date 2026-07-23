@@ -1,4 +1,4 @@
-import type { AnalysisResult } from './store.svelte.js';
+import type { AnalysisResult } from './analysis-result.js';
 import type {
   PersistResult,
   PersistWarningKind,

@@ -201,7 +201,7 @@
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatWon } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
-  import type { CategorizedTx } from '../../lib/analyzer.js';
+  import type { CategorizedTx } from '../../lib/analysis-result.js';
   import { onMount, tick } from 'svelte';
   import { loadCategories } from '../../lib/cards.js';
 

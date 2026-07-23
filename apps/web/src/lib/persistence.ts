@@ -1,5 +1,8 @@
-import type { CategorizedTx } from './analyzer.js';
-import type { AnalysisResult } from './store.svelte.js';
+import {
+  isAnalysisResultCoherent,
+  type AnalysisResult,
+  type CategorizedTx,
+} from './analysis-result.js';
 import { isOptimizableTx } from './tx-validation.js';
 import {
   isYearMonth,
@@ -9,7 +12,7 @@ import {
 import { isValidISODate } from '@cherrypicker/parser/browser';
 
 export const STORAGE_KEY = 'cherrypicker:analysis';
-export const STORAGE_VERSION = 2;
+export const STORAGE_VERSION = 3;
 export const MAX_PERSIST_SIZE = 4 * 1024 * 1024;
 export const MAX_PERSISTED_WARNINGS = 100;
 export const MAX_WARNING_FILENAME_LENGTH = 160;
@@ -83,6 +86,17 @@ const MIGRATIONS: Readonly<
         ? { kind: 'user-total', amount: data.previousMonthSpendingOption }
         : undefined,
     _v: 2,
+  }),
+  2: (data) => ({
+    ...data,
+    optimization: isPlainObject(data.optimization)
+      ? {
+          ...data.optimization,
+          unassignedSpending: 0,
+          unassignedTransactionCount: 0,
+        }
+      : data.optimization,
+    _v: 3,
   }),
 };
 
@@ -268,6 +282,7 @@ function validCardResult(value: unknown): boolean {
 }
 
 function validBestSingleCard(value: unknown): boolean {
+  if (value === null) return true;
   if (!isPlainObject(value)) return false;
   return (
     typeof value.cardId === 'string' &&
@@ -570,6 +585,47 @@ function invalidResult(): DeserializedAnalysis {
   };
 }
 
+function legacyFullyAssignedSemanticsProven(
+  data: AnalysisResult,
+): boolean {
+  if (
+    !data.transactions ||
+    data.optimization.unassignedSpending !== 0 ||
+    data.optimization.unassignedTransactionCount !== 0
+  ) {
+    return false;
+  }
+  const latestMonth = data.transactions
+    .map(({ date }) => date.slice(0, 7))
+    .sort()
+    .at(-1);
+  if (!latestMonth) return false;
+
+  const transactionGroups = data.transactions
+    .filter(
+      ({ date, amount }) =>
+        date.startsWith(latestMonth) && amount > 0,
+    )
+    .map(({ category, subcategory, amount }) =>
+      JSON.stringify([
+        subcategory ? `${category}.${subcategory}` : category,
+        amount,
+      ]),
+    )
+    .sort();
+  const assignmentGroups = data.optimization.assignments
+    .map(({ category, spending }) =>
+      JSON.stringify([category, spending]),
+    )
+    .sort();
+  return (
+    transactionGroups.length === assignmentGroups.length &&
+    transactionGroups.every(
+      (group, index) => group === assignmentGroups[index],
+    )
+  );
+}
+
 export function deserializeAnalysis(raw: string): DeserializedAnalysis {
   let parsed: unknown;
   try {
@@ -601,6 +657,8 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
     !optimization.assignments.every(validAssignment) ||
     !safeNonnegativeInteger(optimization.totalReward) ||
     !safeNonnegativeInteger(optimization.totalSpending) ||
+    !safeNonnegativeInteger(optimization.unassignedSpending) ||
+    !safeNonnegativeInteger(optimization.unassignedTransactionCount) ||
     !finiteNonnegativeNumber(optimization.effectiveRate) ||
     !safeInteger(optimization.savingsVsSingleCard) ||
     !validBestSingleCard(optimization.bestSingleCard) ||
@@ -644,19 +702,23 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
   let truncatedTxCount: number | null = null;
   let transactions: CategorizedTx[] | undefined;
   if (Array.isArray(migrated.transactions)) {
+    if (migrated._truncatedTxCount !== undefined) {
+      return invalidResult();
+    }
     if (!migrated.transactions.every(isOptimizableTx)) {
       return invalidResult();
     }
-    transactions = migrated.transactions.length > 0
-      ? migrated.transactions as CategorizedTx[]
-      : undefined;
+    transactions = migrated.transactions as CategorizedTx[];
   } else if (migrated.transactions !== undefined) {
     return invalidResult();
   } else if (
-    safeNonnegativeInteger(migrated._truncatedTxCount)
+    safeNonnegativeInteger(migrated._truncatedTxCount) &&
+    migrated._truncatedTxCount > 0
   ) {
     warningKind = 'truncated';
     truncatedTxCount = migrated._truncatedTxCount;
+  } else {
+    return invalidResult();
   }
 
   let monthlyBreakdown: AnalysisResult['monthlyBreakdown'];
@@ -743,6 +805,20 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
       : undefined,
     previousSpendingBasis: restoredPreviousSpendingBasis,
   };
+  if (
+    !isAnalysisResultCoherent(
+      data,
+      truncatedTxCount === null
+        ? undefined
+        : { truncatedTransactionCount: truncatedTxCount },
+    ) ||
+    (
+      version < STORAGE_VERSION &&
+      !legacyFullyAssignedSemanticsProven(data)
+    )
+  ) {
+    return invalidResult();
+  }
 
   return {
     data,

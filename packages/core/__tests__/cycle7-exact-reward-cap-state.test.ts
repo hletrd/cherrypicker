@@ -54,6 +54,7 @@ function makeCard(options: {
         id: 'cycle7-exact-reward',
         category: 'dining',
         type: 'discount',
+        support: { status: 'supported' },
         tiers: [
           {
             performanceTier: 'tier0',
@@ -151,7 +152,7 @@ describe('public percentage-point helpers', () => {
       expect(helper(10_000, 0.7, 0, 0)).toEqual({
         reward: 0,
         newMonthUsed: 0,
-        capReached: true,
+        capReached: false,
       });
     },
   );
@@ -296,6 +297,106 @@ describe('main calculator exact global-cap telemetry', () => {
       capAmount: 100,
       actualReward: 100,
       appliedReward: 100,
+    });
+  });
+});
+
+describe('main calculator exact rule-cap telemetry', () => {
+  test('records one exact event with equal actual and applied reward', () => {
+    const result = calculateRewards({
+      transactions: [makeTransaction('rule-single-exact', 1_000)],
+      previousMonthSpending: 0,
+      cardRule: makeCard({ rate: 10, ruleCap: 100 }),
+    });
+
+    expect(result.totalReward).toBe(100);
+    expect(result.capsHit).toEqual([
+      {
+        category: 'dining',
+        capType: 'monthly_category',
+        capAmount: 100,
+        actualReward: 100,
+        appliedReward: 100,
+      },
+    ]);
+  });
+
+  test('emits cumulative exact exhaustion once and not again after exhaustion', () => {
+    const result = calculateRewards({
+      transactions: [
+        makeTransaction('rule-first', 500),
+        makeTransaction('rule-exact', 500),
+        makeTransaction('rule-after-cap', 500),
+      ],
+      previousMonthSpending: 0,
+      cardRule: makeCard({ rate: 10, ruleCap: 100 }),
+    });
+
+    expect(result.totalReward).toBe(100);
+    expect(result.capsHit).toEqual([
+      {
+        category: 'dining',
+        capType: 'monthly_category',
+        capAmount: 100,
+        actualReward: 50,
+        appliedReward: 50,
+      },
+    ]);
+  });
+
+  test('distinguishes one below, clipping, and a zero rule cap', () => {
+    const oneBelow = calculateRewards({
+      transactions: [makeTransaction('rule-one-below', 990)],
+      previousMonthSpending: 0,
+      cardRule: makeCard({ rate: 10, ruleCap: 100 }),
+    });
+    expect(oneBelow.capsHit).toEqual([]);
+
+    const clipped = calculateRewards({
+      transactions: [makeTransaction('rule-clipped', 1_100)],
+      previousMonthSpending: 0,
+      cardRule: makeCard({ rate: 10, ruleCap: 100 }),
+    });
+    expect(clipped.capsHit).toEqual([
+      {
+        category: 'dining',
+        capType: 'monthly_category',
+        capAmount: 100,
+        actualReward: 110,
+        appliedReward: 100,
+      },
+    ]);
+
+    const zeroCap = calculateRewards({
+      transactions: [makeTransaction('rule-zero-cap', 1_000)],
+      previousMonthSpending: 0,
+      cardRule: makeCard({ rate: 10, ruleCap: 0 }),
+    });
+    expect(zeroCap.totalReward).toBe(0);
+    expect(zeroCap.capsHit).toEqual([]);
+  });
+
+  test('does not claim rule exhaustion when a tighter global cap rolls it back', () => {
+    const result = calculateRewards({
+      transactions: [makeTransaction('rule-global-rollback', 1_000)],
+      previousMonthSpending: 0,
+      cardRule: makeCard({
+        rate: 10,
+        ruleCap: 100,
+        globalCap: 50,
+      }),
+    });
+
+    expect(result.totalReward).toBe(50);
+    expect(
+      result.capsHit.filter((cap) => cap.capType === 'monthly_category'),
+    ).toEqual([]);
+    expect(result.capsHit).toContainEqual({
+      category: 'dining',
+      capType: 'monthly_total',
+      capAmount: 50,
+      actualReward: 100,
+      appliedReward: 50,
     });
   });
 });

@@ -25,6 +25,8 @@ const result: OptimizationResult = {
   ],
   totalReward: 100,
   totalSpending: 1_000,
+  unassignedSpending: 0,
+  unassignedTransactionCount: 0,
   effectiveRate: 0.1,
   savingsVsSingleCard: 0,
   bestSingleCard: {
@@ -45,6 +47,13 @@ const result: OptimizationResult = {
         {
           category: 'exact-global',
           capType: 'monthly_total',
+          capAmount: 100,
+          actualReward: 100,
+          appliedReward: 100,
+        },
+        {
+          category: 'exact-rule',
+          capType: 'monthly_category',
           capAmount: 100,
           actualReward: 100,
           appliedReward: 100,
@@ -112,6 +121,9 @@ describe('exact versus clipped cap disclosure', () => {
       'exact-global: 한도 100원 도달 — 혜택 손실 없음',
     );
     expect(output).toContain(
+      'exact-rule: 한도 100원 도달 — 혜택 손실 없음',
+    );
+    expect(output).toContain(
       'clipped-global: 한도 100원 도달 (20원 혜택 손실)',
     );
     expect(output).toContain(
@@ -132,6 +144,9 @@ describe('exact versus clipped cap disclosure', () => {
 
     expect(html).toContain(
       'exact-global: 월 한도 100원 도달 — 혜택 손실 없음',
+    );
+    expect(html).toContain(
+      'exact-rule: 월 한도 100원 도달 — 혜택 손실 없음',
     );
     expect(html).toContain(
       'clipped-global: 월 한도 100원 도달 — 20원 혜택 손실',

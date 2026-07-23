@@ -156,6 +156,18 @@
       </div>
     </div>
   </div>
+  {#if analysisStore.optimization && analysisStore.optimization.unassignedTransactionCount > 0}
+    <div
+      class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+      role="status"
+      data-testid="unassigned-spending-summary"
+    >
+      <span class="font-semibold">혜택 미배정 지출:</span>
+      계산 가능한 양의 혜택이 없어
+      {analysisStore.optimization.unassignedTransactionCount}건,
+      {formatWon(analysisStore.optimization.unassignedSpending)}을 카드에 배정하지 않았어요.
+    </div>
+  {/if}
   {#if previousSpendingDisclosure}
     <div
       class="mt-3 rounded-lg border px-3 py-2 text-xs

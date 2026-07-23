@@ -76,9 +76,11 @@ const optimizationResult: OptimizationResult = {
   assignments: [],
   totalReward: 0,
   totalSpending: 0,
+  unassignedSpending: 0,
+  unassignedTransactionCount: 0,
   effectiveRate: 0,
   savingsVsSingleCard: 0,
-  bestSingleCard: { cardId: '', cardName: '', totalReward: 0 },
+  bestSingleCard: null,
   cardResults: [],
 };
 

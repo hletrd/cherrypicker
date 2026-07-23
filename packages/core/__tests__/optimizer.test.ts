@@ -61,12 +61,14 @@ const subcategoryFixture: CardRuleSet = {
     {
       category: 'dining',
       type: 'discount',
+      support: { status: 'supported' },
       tiers: [{ performanceTier: 'tier0', rate: 2, monthlyCap: null, perTransactionCap: null }],
     },
     {
       category: 'dining',
       subcategory: 'cafe',
       type: 'discount',
+      support: { status: 'supported' },
       tiers: [{ performanceTier: 'tier0', rate: 5, monthlyCap: null, perTransactionCap: null }],
       conditions: { specificMerchants: ['메가커피'] },
     },
@@ -95,6 +97,7 @@ const broadDiningFixture: CardRuleSet = {
     {
       category: 'dining',
       type: 'discount',
+      support: { status: 'supported' },
       tiers: [{ performanceTier: 'tier0', rate: 3, monthlyCap: null, perTransactionCap: null }],
     },
   ],
@@ -193,14 +196,14 @@ describe('greedyOptimize - two cards', () => {
     }
   });
 
-  test('alternatives array contains the non-chosen card', () => {
+  test('alternatives omit a non-chosen card with no positive modeled benefit', () => {
     const constraints = makeConstraints([makeTx('t1', 'convenience_store', 50000)], new Map([
       ['shinhan-simple-plan', 0],
       ['shinhan-mr-life', 500000],
     ]));
     const result = greedyOptimize(constraints, [simplePlan, mrLife]);
     const assignment = result.assignments[0];
-    expect(assignment?.alternatives).toHaveLength(1);
+    expect(assignment?.alternatives).toEqual([]);
   });
 
   test('retains unsupported issues from a losing candidate card', () => {
@@ -336,8 +339,14 @@ describe('greedyOptimize - edge cases', () => {
     );
 
     expect(result.totalSpending).toBe(10_000);
-    expect(assignmentSpending).toBe(result.totalSpending);
-    expect(cardResultSpending).toBe(result.totalSpending);
+    expect(result.unassignedSpending).toBe(0);
+    expect(result.unassignedTransactionCount).toBe(0);
+    expect(assignmentSpending + result.unassignedSpending).toBe(
+      result.totalSpending,
+    );
+    expect(cardResultSpending + result.unassignedSpending).toBe(
+      result.totalSpending,
+    );
   });
 
   test('all-merchant wildcard rewards a categorized transaction', () => {
@@ -350,18 +359,24 @@ describe('greedyOptimize - edge cases', () => {
     expect(dining!.reward).toBe(500);
   });
 
-  test('all cards giving 0 reward still produces assignments', () => {
+  test('a supported card with no matching benefit leaves spending unassigned', () => {
     // mr-life has no tier0 reward for entertainment.
     const constraints = makeConstraints([
       makeTx('t1', 'entertainment', 50000),
     ], new Map([['shinhan-mr-life', 0]]));
     const result = greedyOptimize(constraints, [mrLife]);
-    expect(result.assignments.length).toBeGreaterThan(0);
+    expect(result.assignments).toEqual([]);
     expect(result.totalReward).toBe(0);
-    expect(result.bestSingleCard.cardId).toBe('shinhan-mr-life');
+    expect(result.totalSpending).toBe(50_000);
+    expect(result.unassignedSpending).toBe(50_000);
+    expect(result.unassignedTransactionCount).toBe(1);
+    expect(result.effectiveRate).toBe(0);
+    expect(result.bestSingleCard).toBeNull();
+    expect(result.savingsVsSingleCard).toBe(0);
+    expect(result.cardResults).toEqual([]);
   });
 
-  test('tied rewards use the ASCII card ID regardless of input order', () => {
+  test('zero-reward ties do not manufacture an ASCII card recommendation', () => {
     const first = structuredClone(mrLife);
     const second = structuredClone(mrLife);
     first.card.id = 'zero-z';
@@ -378,13 +393,10 @@ describe('greedyOptimize - edge cases', () => {
 
     const result = greedyOptimize(constraints, [first, second]);
     expect(result.totalReward).toBe(0);
-    expect(result.bestSingleCard).toEqual({
-      cardId: second.card.id,
-      cardName: second.card.nameKo,
-      totalReward: 0,
-    });
-    expect(result.assignments[0]?.assignedCardId).toBe(second.card.id);
-    expect(result.assignments[0]?.alternatives[0]?.cardId).toBe(first.card.id);
+    expect(result.bestSingleCard).toBeNull();
+    expect(result.assignments).toEqual([]);
+    expect(result.unassignedSpending).toBe(50_000);
+    expect(result.unassignedTransactionCount).toBe(1);
     expect(greedyOptimize(constraints, [second, first])).toEqual(result);
   });
 
@@ -411,7 +423,7 @@ describe('greedyOptimize - edge cases', () => {
     );
 
     expect(result.assignments[0]?.assignedCardId).toBe(simplePlan.card.id);
-    expect(result.bestSingleCard.cardId).toBe(simplePlan.card.id);
+    expect(result.bestSingleCard?.cardId).toBe(simplePlan.card.id);
     expect(result.cardResults.map((card) => card.cardId)).not.toContain(
       discontinued.card.id,
     );
@@ -583,8 +595,6 @@ describe('buildConstraints', () => {
     // 메가커피 matches the specific cafe rule (5% = 1000).
     // 스타벅스 does NOT match the specific cafe rule (merchant not '메가커피'),
     // and broad dining rule is blocked because tx has subcategory → 0 reward.
-    // Both go to subcategory card since it has the higher reward for 메가커피
-    // and equal (0) reward for 스타벅스.
     expect(result.assignments.length).toBeGreaterThanOrEqual(1);
     const subcategoryAssignment = result.assignments.find((assignment) => assignment.assignedCardId === 'fixture-subcategory-card');
     expect(subcategoryAssignment).toBeDefined();

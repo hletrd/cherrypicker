@@ -139,7 +139,9 @@
         // (C82-03/C84-01). Use Math.abs() when negative to avoid redundant minus under
         // the negative-delta label, matching SavingsComparison and ReportContent
         // (C83-03/C84-02).
-        cachedStatTotalSavings.textContent = formatSavingsValue(opt.savingsVsSingleCard);
+        cachedStatTotalSavings.textContent = opt.bestSingleCard
+          ? formatSavingsValue(opt.savingsVsSingleCard)
+          : '—';
       }
 
       if (cachedStatCardsNeeded) {
@@ -153,7 +155,10 @@
       }
 
       // Describe the unsigned delta without implying net savings or annual-fee treatment.
-      if (cachedStatSavingsLabel && opt.savingsVsSingleCard < 0) {
+      if (cachedStatSavingsLabel && !opt.bestSingleCard) {
+        cachedStatSavingsLabel.textContent =
+          '계산 가능한 양의 혜택 없음';
+      } else if (cachedStatSavingsLabel && opt.savingsVsSingleCard < 0) {
         cachedStatSavingsLabel.textContent =
           '추천 조합의 월간 혜택 부족분 (연회비 차감 전)';
       } else if (cachedStatSavingsLabel) {

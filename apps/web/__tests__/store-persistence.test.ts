@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AnalysisResult } from '../src/lib/store.svelte.js';
+import type { AnalysisResult } from '../src/lib/analysis-result.js';
 import {
   MAX_PERSISTED_WARNINGS,
   deserializeAnalysis,
@@ -65,9 +65,11 @@ function optimizationFixture(
 ): Record<string, unknown> {
   return {
     assignments: [assignmentFixture()],
-    cardResults: [],
+    cardResults: [cardResultFixture()],
     totalReward: 500,
     totalSpending: 10_000,
+    unassignedSpending: 0,
+    unassignedTransactionCount: 0,
     effectiveRate: 0.05,
     savingsVsSingleCard: 100,
     bestSingleCard: {
@@ -85,8 +87,30 @@ function persistedFixture(overrides: Record<string, unknown> = {}): string {
     success: true,
     bank: 'shinhan',
     format: 'csv',
+    statementPeriod: {
+      start: '2026-07-23',
+      end: '2026-07-23',
+    },
     transactionCount: 1,
+    fullStatementPeriod: {
+      start: '2026-07-23',
+      end: '2026-07-23',
+    },
+    totalTransactionCount: 1,
     parseErrors: [],
+    transactions: [
+      {
+        id: 'tx-1',
+        date: '2026-07-23',
+        merchant: '테스트 식당',
+        amount: 10_000,
+        category: 'dining',
+        confidence: 1,
+      },
+    ],
+    monthlyBreakdown: [
+      { month: '2026-07', spending: 10_000, transactionCount: 1 },
+    ],
     optimization: optimizationFixture(),
     ...overrides,
   });
@@ -97,7 +121,16 @@ function analysisFixture(merchant = '테스트 식당'): AnalysisResult {
     success: true,
     bank: 'shinhan',
     format: 'csv',
+    statementPeriod: {
+      start: '2026-07-23',
+      end: '2026-07-23',
+    },
     transactionCount: 1,
+    fullStatementPeriod: {
+      start: '2026-07-23',
+      end: '2026-07-23',
+    },
+    totalTransactionCount: 1,
     parseErrors: [
       {
         fileName: 'july.csv',
@@ -123,11 +156,16 @@ function analysisFixture(merchant = '테스트 식당'): AnalysisResult {
       assignments: [],
       totalReward: 0,
       totalSpending: 10_000,
+      unassignedSpending: 10_000,
+      unassignedTransactionCount: 1,
       effectiveRate: 0,
       savingsVsSingleCard: 0,
-      bestSingleCard: { cardId: 'card-1', cardName: '카드', totalReward: 0 },
+      bestSingleCard: null,
       cardResults: [],
     },
+    monthlyBreakdown: [
+      { month: '2026-07', spending: 10_000, transactionCount: 1 },
+    ],
     previousSpendingBasis: {
       kind: 'missing-calendar-month',
       month: '2026-06',
@@ -161,6 +199,137 @@ describe('production persistence parser', () => {
 
     expect(result.shouldRemove).toBe(false);
     expect(result.data?.bank).toBe('shinhan');
+  });
+
+  test('migrates version-two optimizer results with assigned-only defaults', () => {
+    const legacy = JSON.parse(persistedFixture()) as {
+      _v: number;
+      optimization: Record<string, unknown>;
+    };
+    legacy._v = 2;
+    delete legacy.optimization.unassignedSpending;
+    delete legacy.optimization.unassignedTransactionCount;
+
+    const result = deserializeAnalysis(JSON.stringify(legacy));
+
+    expect(result.shouldRemove).toBe(false);
+    expect(result.data?.optimization.unassignedSpending).toBe(0);
+    expect(result.data?.optimization.unassignedTransactionCount).toBe(0);
+  });
+
+  test('rejects a version-two mixed aggregate whose assignment status is ambiguous', () => {
+    const legacy = JSON.parse(persistedFixture()) as {
+      _v: number;
+      transactionCount: number;
+      totalTransactionCount: number;
+      transactions: Array<Record<string, unknown>>;
+      monthlyBreakdown: Array<Record<string, unknown>>;
+      optimization: Record<string, unknown>;
+    };
+    legacy._v = 2;
+    legacy.transactionCount = 2;
+    legacy.totalTransactionCount = 2;
+    legacy.transactions.push({
+      ...legacy.transactions[0],
+      id: 'tx-2',
+      amount: 5_000,
+    });
+    legacy.monthlyBreakdown = [
+      { month: '2026-07', spending: 15_000, transactionCount: 2 },
+    ];
+    legacy.optimization = optimizationFixture({
+      assignments: [
+        assignmentFixture({
+          spending: 15_000,
+          rate: 500 / 15_000,
+        }),
+      ],
+      cardResults: [
+        cardResultFixture({
+          totalSpending: 15_000,
+          effectiveRate: 500 / 15_000,
+          byCategory: [
+            categoryRewardFixture({
+              spending: 15_000,
+              rate: 500 / 15_000,
+            }),
+          ],
+        }),
+      ],
+    });
+    delete legacy.optimization.unassignedSpending;
+    delete legacy.optimization.unassignedTransactionCount;
+
+    expect(deserializeAnalysis(JSON.stringify(legacy))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
+  test('rejects a legacy zero-benefit assignment that cannot be migrated honestly', () => {
+    const legacy = JSON.parse(
+      persistedFixture({
+        _v: 2,
+        optimization: optimizationFixture({
+          assignments: [assignmentFixture({ reward: 0, rate: 0 })],
+          cardResults: [
+            cardResultFixture({
+              totalReward: 0,
+              effectiveRate: 0,
+              byCategory: [
+                categoryRewardFixture({ reward: 0, rate: 0 }),
+              ],
+            }),
+          ],
+          totalReward: 0,
+          effectiveRate: 0,
+          savingsVsSingleCard: 0,
+          bestSingleCard: {
+            cardId: 'card-1',
+            cardName: '카드 1',
+            totalReward: 0,
+          },
+        }),
+      }),
+    ) as Record<string, unknown>;
+    const optimization = legacy.optimization as Record<string, unknown>;
+    delete optimization.unassignedSpending;
+    delete optimization.unassignedTransactionCount;
+
+    expect(deserializeAnalysis(JSON.stringify(legacy))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
+  test('rejects transaction deletion without honest truncation provenance', () => {
+    const deleted = JSON.parse(persistedFixture()) as Record<string, unknown>;
+    delete deleted.transactions;
+
+    expect(deserializeAnalysis(JSON.stringify(deleted))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
+  test('requires truncation provenance to be exclusive and positive', () => {
+    const withTransactions = JSON.parse(
+      persistedFixture({ _truncatedTxCount: 1 }),
+    );
+    expect(deserializeAnalysis(JSON.stringify(withTransactions)).data).toBeNull();
+
+    const zeroCount = JSON.parse(persistedFixture()) as Record<string, unknown>;
+    delete zeroCount.transactions;
+    zeroCount.transactionCount = 0;
+    zeroCount.totalTransactionCount = 0;
+    zeroCount._truncatedTxCount = 0;
+    expect(deserializeAnalysis(JSON.stringify(zeroCount)).data).toBeNull();
   });
 
   test('rejects malformed or future versions and requests storage cleanup', () => {
@@ -345,6 +514,38 @@ describe('production persistence parser', () => {
           start: '2026-06-01',
           end: '2026-07-31',
         },
+        transactionCount: 2,
+        totalTransactionCount: 3,
+        transactions: [
+          {
+            id: 'tx-previous',
+            date: '2026-06-01',
+            merchant: '지난달 환불',
+            amount: -1_000,
+            category: 'dining',
+            confidence: 1,
+          },
+          {
+            id: 'tx-current-1',
+            date: '2026-07-01',
+            merchant: '이번달 식당 1',
+            amount: 5_000,
+            category: 'dining',
+            confidence: 1,
+          },
+          {
+            id: 'tx-current-2',
+            date: '2026-07-31',
+            merchant: '이번달 식당 2',
+            amount: 5_000,
+            category: 'dining',
+            confidence: 1,
+          },
+        ],
+        monthlyBreakdown: [
+          { month: '2026-06', spending: 0, transactionCount: 1 },
+          { month: '2026-07', spending: 10_000, transactionCount: 2 },
+        ],
       }),
     );
 
@@ -431,6 +632,31 @@ describe('production persistence parser', () => {
     expect(result.data?.optimization.cardResults[0]?.capsHit).toHaveLength(1);
   });
 
+  test('accepts the explicit no-benefit optimizer contract', () => {
+    const result = deserializeAnalysis(
+      persistedFixture({
+        optimization: optimizationFixture({
+          assignments: [],
+          cardResults: [],
+          totalReward: 0,
+          totalSpending: 10_000,
+          unassignedSpending: 10_000,
+          unassignedTransactionCount: 1,
+          effectiveRate: 0,
+          savingsVsSingleCard: 0,
+          bestSingleCard: null,
+        }),
+      }),
+    );
+
+    expect(result.shouldRemove).toBe(false);
+    expect(result.data?.optimization).toMatchObject({
+      unassignedSpending: 10_000,
+      unassignedTransactionCount: 1,
+      bestSingleCard: null,
+    });
+  });
+
   test.each([
     ['missing cardResults', optimizationFixture({ cardResults: undefined })],
     [
@@ -440,6 +666,14 @@ describe('production persistence parser', () => {
     [
       'missing best single card',
       optimizationFixture({ bestSingleCard: undefined }),
+    ],
+    [
+      'missing unassigned spending',
+      optimizationFixture({ unassignedSpending: undefined }),
+    ],
+    [
+      'missing unassigned transaction count',
+      optimizationFixture({ unassignedTransactionCount: undefined }),
     ],
     ['non-array cardResults', optimizationFixture({ cardResults: {} })],
     [
@@ -543,7 +777,12 @@ describe('production persistence parser', () => {
     Number.NaN,
     Number.POSITIVE_INFINITY,
   ])('rejects non-canonical optimization money %s', (amount) => {
-    for (const field of ['totalReward', 'totalSpending'] as const) {
+    for (const field of [
+      'totalReward',
+      'totalSpending',
+      'unassignedSpending',
+      'unassignedTransactionCount',
+    ] as const) {
       const optimization = optimizationFixture({
         [field]: amount,
       });
@@ -593,29 +832,62 @@ describe('production persistence parser', () => {
     }
   });
 
-  test('accepts safe-integer aggregate and count boundaries', () => {
+  test('accepts safe-integer monetary boundaries with coherent counts', () => {
     const result = deserializeAnalysis(
       persistedFixture({
-        transactionCount: Number.MAX_SAFE_INTEGER,
-        totalTransactionCount: Number.MAX_SAFE_INTEGER,
         previousMonthSpendingOption: Number.MAX_SAFE_INTEGER,
+        previousSpendingBasis: {
+          kind: 'user-total',
+          amount: Number.MAX_SAFE_INTEGER,
+        },
+        transactions: [
+          {
+            id: 'tx-max',
+            date: '2026-07-23',
+            merchant: '최대 금액 거래',
+            amount: Number.MAX_SAFE_INTEGER,
+            category: 'dining',
+            confidence: 1,
+          },
+        ],
         monthlyBreakdown: [
           {
             month: '2026-07',
             spending: Number.MAX_SAFE_INTEGER,
-            transactionCount: Number.MAX_SAFE_INTEGER,
+            transactionCount: 1,
           },
         ],
         optimization: optimizationFixture({
           assignments: [
             assignmentFixture({
               spending: Number.MAX_SAFE_INTEGER,
+              reward: Number.MAX_SAFE_INTEGER,
+              rate: 1,
             }),
           ],
-          cardResults: [],
+          cardResults: [
+            cardResultFixture({
+              totalReward: Number.MAX_SAFE_INTEGER,
+              totalSpending: Number.MAX_SAFE_INTEGER,
+              effectiveRate: 1,
+              byCategory: [
+                categoryRewardFixture({
+                  spending: Number.MAX_SAFE_INTEGER,
+                  reward: Number.MAX_SAFE_INTEGER,
+                  rate: 1,
+                }),
+              ],
+            }),
+          ],
           totalReward: Number.MAX_SAFE_INTEGER,
           totalSpending: Number.MAX_SAFE_INTEGER,
           effectiveRate: 1,
+          savingsVsSingleCard: 0,
+          bestSingleCard: {
+            cardId: 'card-1',
+            cardName: '카드 1',
+            totalReward: Number.MAX_SAFE_INTEGER,
+          },
         }),
       }),
     );
@@ -624,9 +896,72 @@ describe('production persistence parser', () => {
     expect(result.data?.optimization.totalReward).toBe(
       Number.MAX_SAFE_INTEGER,
     );
-    expect(result.data?.monthlyBreakdown?.[0]?.transactionCount).toBe(
+    expect(result.data?.previousMonthSpendingOption).toBe(
       Number.MAX_SAFE_INTEGER,
     );
+  });
+
+  test.each([
+    [
+      'optimized-month count',
+      (payload: AnalysisResult) => {
+        payload.transactionCount = 2;
+      },
+    ],
+    [
+      'all-month count',
+      (payload: AnalysisResult) => {
+        payload.totalTransactionCount = 2;
+      },
+    ],
+    [
+      'monthly spending',
+      (payload: AnalysisResult) => {
+        payload.monthlyBreakdown![0]!.spending = 9_999;
+      },
+    ],
+    [
+      'optimization spending',
+      (payload: AnalysisResult) => {
+        payload.optimization.totalSpending = 9_999;
+      },
+    ],
+    [
+      'unassigned spending',
+      (payload: AnalysisResult) => {
+        payload.optimization.unassignedSpending = 9_999;
+      },
+    ],
+    [
+      'optimization reward',
+      (payload: AnalysisResult) => {
+        payload.optimization.totalReward = 1;
+      },
+    ],
+    [
+      'optimization rate',
+      (payload: AnalysisResult) => {
+        payload.optimization.effectiveRate = 0.5;
+      },
+    ],
+    [
+      'single-card savings',
+      (payload: AnalysisResult) => {
+        payload.optimization.savingsVsSingleCard = 1;
+      },
+    ],
+  ])('rejects a semantically contradictory %s', (_name, mutate) => {
+    const payload = JSON.parse(
+      serializeAnalysis(analysisFixture()).serialized,
+    ) as AnalysisResult;
+    mutate(payload);
+
+    expect(deserializeAnalysis(JSON.stringify(payload))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
   });
 });
 
@@ -649,6 +984,9 @@ describe('production persistence serializer', () => {
     expect(restored?.previousSpendingBasis).toEqual(
       analysisFixture().previousSpendingBasis,
     );
+    expect(restored?.optimization.unassignedSpending).toBe(10_000);
+    expect(restored?.optimization.unassignedTransactionCount).toBe(1);
+    expect(restored?.optimization.bestSingleCard).toBeNull();
   });
 
   test('round-trips card-aware calculation issues and rejects malformed identities', () => {

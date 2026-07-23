@@ -13,14 +13,20 @@ import {
   serializeAnalysis,
   STORAGE_KEY,
 } from '../src/lib/persistence.js';
-import type { AnalysisResult } from '../src/lib/store.svelte.js';
+import {
+  isAnalysisResultCoherent,
+  type AnalysisResult,
+} from '../src/lib/analysis-result.js';
 
 function analysisFixture(merchant: string): AnalysisResult {
   return {
     success: true,
     bank: 'shinhan',
     format: 'csv',
+    statementPeriod: { start: '2026-07-23', end: '2026-07-23' },
     transactionCount: 1,
+    fullStatementPeriod: { start: '2026-07-23', end: '2026-07-23' },
+    totalTransactionCount: 1,
     parseErrors: [],
     transactions: [{
       id: `tx-${merchant}`,
@@ -35,14 +41,20 @@ function analysisFixture(merchant: string): AnalysisResult {
       assignments: [],
       totalReward: 0,
       totalSpending: 10_000,
+      unassignedSpending: 10_000,
+      unassignedTransactionCount: 1,
       effectiveRate: 0,
       savingsVsSingleCard: 0,
-      bestSingleCard: {
-        cardId: 'fixture-card',
-        cardName: '테스트 카드',
-        totalReward: 0,
-      },
+      bestSingleCard: null,
       cardResults: [],
+    },
+    monthlyBreakdown: [
+      { month: '2026-07', spending: 10_000, transactionCount: 1 },
+    ],
+    previousSpendingBasis: {
+      kind: 'missing-calendar-month',
+      month: '2026-06',
+      assumedAmount: 0,
     },
   };
 }
@@ -150,6 +162,40 @@ async function expectRejectedEntryDoesNotDisturbCurrent(
 }
 
 describe('replacement analysis runtime', () => {
+  test('deduplicates and revalidates card selection before commit and persistence', async () => {
+    const state = emptyState();
+    const persisted: AnalysisResult[] = [];
+    const runtime = new AnalysisReplacementRuntime(state, {
+      async loadAnalyzerModule() {
+        return {
+          async analyzeMultipleFiles() {
+            return analysisFixture('deduplicated');
+          },
+        };
+      },
+      persist(data) {
+        persisted.push(data);
+        return { kind: null, truncatedTxCount: null };
+      },
+      clearPersistedAnalysis() {
+        return { kind: null, truncatedTxCount: null };
+      },
+    });
+
+    await runtime.analyze(
+      new File(['row'], 'statement.csv'),
+      { cardIds: ['card-1', 'card-1'] },
+      { run: new LatestFileParseRun().begin() },
+    );
+
+    const committed = state.result;
+    if (!committed) throw new Error('expected a committed analysis result');
+    expect(committed.cardIdsOption).toEqual(['card-1']);
+    expect(isAnalysisResultCoherent(committed)).toBe(true);
+    expect(persisted).toEqual([committed]);
+    expect(state.error).toBeNull();
+  });
+
   test('already-stale entry is a complete no-op and does not abort current owned analysis', async () => {
     await expectRejectedEntryDoesNotDisturbCurrent(rejectedRun('stale'));
   });

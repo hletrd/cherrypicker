@@ -29,6 +29,7 @@ function percentageRule(
     id,
     category,
     type: 'discount',
+    support: { status: 'supported' },
     combination: 'exclusive',
     stackingGroup: 'base',
     tiers: [{
@@ -159,6 +160,7 @@ describe('greedyOptimize - whole-group alternative counterfactuals', () => {
       id: 'candidate-fixed-day',
       category: 'dining',
       type: 'discount',
+      support: { status: 'supported' },
       combination: 'exclusive',
       stackingGroup: 'base',
       tiers: [{
