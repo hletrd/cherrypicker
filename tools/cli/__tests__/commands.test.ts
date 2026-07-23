@@ -1,4 +1,5 @@
 import { describe, expect, test, beforeAll, afterAll } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, writeFileSync, unlinkSync, rmdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -255,8 +256,35 @@ describe('local-first LLM fallback (C1-024)', () => {
     expect(authorizationCalls).toBe(0);
   });
 
+  test('remote-disabled local parsing does not pre-read consent bytes', async () => {
+    const { parser, calls } = createTrackingParser(() =>
+      createParseResult([parsedTransaction]),
+    );
+    let statementReads = 0;
+
+    const result = await parseStatementLocalFirst(
+      {
+        filePath: 'statement.pdf',
+        allowRemoteLLM: false,
+        yes: false,
+      },
+      {
+        parseStatement: parser,
+        readFile: async () => {
+          statementReads++;
+          return Buffer.from('consent snapshot must stay unread');
+        },
+      },
+    );
+
+    expect(result.transactions).toEqual([parsedTransaction]);
+    expect(calls).toEqual([false]);
+    expect(statementReads).toBe(0);
+  });
+
   test('typed local failure without the flag gives instructions and never retries remotely', async () => {
     const { parser, calls } = createTrackingParser(() => createRemoteRequiredResult());
+    let statementReads = 0;
 
     await expect(
       parseStatementLocalFirst(
@@ -265,11 +293,18 @@ describe('local-first LLM fallback (C1-024)', () => {
           allowRemoteLLM: false,
           yes: false,
         },
-        { parseStatement: parser },
+        {
+          parseStatement: parser,
+          readFile: async () => {
+            statementReads++;
+            return Buffer.from('unused consent snapshot');
+          },
+        },
       ),
     ).rejects.toThrow('--allow-remote-llm');
 
     expect(calls).toEqual([false]);
+    expect(statementReads).toBe(0);
   });
 
   test('interactive approval occurs between the local parse and remote retry', async () => {
@@ -303,12 +338,18 @@ describe('local-first LLM fallback (C1-024)', () => {
   });
 
   test('binds local parsing, consent, and remote retry to one captured byte sequence', async () => {
-    let currentPathBytes = Buffer.from('original pdf bytes');
+    const originalPathBytes = Buffer.from('original pdf bytes');
+    let currentPathBytes = originalPathBytes;
     let fileReads = 0;
     const parsedBytes: string[] = [];
+    const completeReads: Uint8Array[] = [];
+    const prefixReads: Uint8Array[] = [];
     let consentIdentity: string | undefined;
     const parser: StatementParser = async (_filePath, options, dependencies) => {
       const bytes = await dependencies?.readFile?.('statement.pdf');
+      const prefix = await dependencies?.readPrefix?.('statement.pdf', 8);
+      if (bytes) completeReads.push(bytes);
+      if (prefix) prefixReads.push(prefix);
       parsedBytes.push(Buffer.from(bytes ?? []).toString('utf8'));
       return options?.allowRemoteLLM
         ? createParseResult([parsedTransaction])
@@ -340,9 +381,47 @@ describe('local-first LLM fallback (C1-024)', () => {
       'original pdf bytes',
       'original pdf bytes',
     ]);
-    expect(consentIdentity).toMatch(
-      /^sha256:[0-9a-f]{64} \(18 bytes\)$/,
+    expect(completeReads).toHaveLength(2);
+    expect(completeReads[0]).toBe(originalPathBytes);
+    expect(completeReads[1]).toBe(completeReads[0]);
+    expect(prefixReads).toHaveLength(2);
+    expect(prefixReads[0]?.buffer).toBe(originalPathBytes.buffer);
+    expect(prefixReads[1]?.buffer).toBe(originalPathBytes.buffer);
+    expect(consentIdentity).toBe(
+      `sha256:${createHash('sha256').update(originalPathBytes).digest('hex')} ` +
+      '(18 bytes)',
     );
+  });
+
+  test('rejects snapshot mutation during consent before the remote retry', async () => {
+    const source = Buffer.from('original pdf bytes');
+    const calls: boolean[] = [];
+    const parser: StatementParser = async (_filePath, options, dependencies) => {
+      calls.push(options?.allowRemoteLLM ?? false);
+      await dependencies?.readFile?.('statement.pdf');
+      return options?.allowRemoteLLM
+        ? createParseResult([parsedTransaction])
+        : createRemoteRequiredResult();
+    };
+
+    await expect(
+      parseStatementLocalFirst(
+        {
+          filePath: 'statement.pdf',
+          allowRemoteLLM: true,
+          yes: false,
+        },
+        {
+          parseStatement: parser,
+          readFile: async () => source,
+          authorizeRemoteFallback: async () => {
+            source[0] = source[0]! ^ 0xff;
+          },
+        },
+      ),
+    ).rejects.toThrow('명세서 바이트 스냅샷이 변경되었습니다');
+
+    expect(calls).toEqual([false]);
   });
 
   test('interactive denial does not trigger a remote retry', async () => {
