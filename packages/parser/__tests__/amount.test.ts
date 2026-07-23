@@ -31,6 +31,20 @@ describe('parseAmountString (server)', () => {
     expect(parseAmountString('1,234-')).toBe(-1234);
   });
 
+  it.each([
+    ['-1000', -1000],
+    ['1000-', -1000],
+    ['마이너스1000', -1000],
+    ['(1000)', -1000],
+    ['(-1000)', -1000],
+    ['-1000-', -1000],
+    ['－１０００－', -1000],
+    ['마이너스-1000', -1000],
+    ['마이너스－１０００', -1000],
+  ])('applies composed negative markers once for %s', (raw, expected) => {
+    expect(parseAmountString(raw)).toBe(expected);
+  });
+
   it('returns null for empty input', () => {
     expect(parseAmountString('')).toBeNull();
     expect(parseAmountString('  ')).toBeNull();

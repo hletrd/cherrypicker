@@ -28,17 +28,17 @@ export function parseAmountString(raw: string): number | null {
   const hasTrailingMinus = /\d-$/.test(cleaned);
   if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
 
-  let isNegative =
-    (cleaned.startsWith('(') && cleaned.endsWith(')'))
-    || hasKoreanMinus
-    || hasTrailingMinus;
-
-  if (cleaned.startsWith('(') && cleaned.endsWith(')')) {
+  const hasAccountingParentheses =
+    cleaned.startsWith('(') && cleaned.endsWith(')');
+  if (hasAccountingParentheses) {
     cleaned = cleaned.slice(1, -1);
-    // Accounting parentheses around an already-negative value must not
-    // accidentally turn it positive.
-    if (cleaned.startsWith('-')) isNegative = false;
   }
+
+  const isNegative =
+    hasAccountingParentheses
+    || hasKoreanMinus
+    || hasTrailingMinus
+    || cleaned.startsWith('-');
 
   const dotCount = (cleaned.match(/\./g) ?? []).length;
   if (!cleaned || dotCount > 1 || cleaned.endsWith('.')) return null;
@@ -49,9 +49,9 @@ export function parseAmountString(raw: string): number | null {
   if (/[\d.]/.test(remainder)) return null;
   if (remainder.trim() && remainder.trim() !== '원') return null;
 
-  const parsed = Math.round(Number(match[0]));
-  if (!Number.isSafeInteger(parsed)) return null;
-  return isNegative ? -parsed : parsed;
+  const magnitude = Math.abs(Math.round(Number(match[0])));
+  if (!Number.isSafeInteger(magnitude)) return null;
+  return isNegative ? -magnitude : magnitude;
 }
 
 export function parseAmount(raw: unknown): number | null {

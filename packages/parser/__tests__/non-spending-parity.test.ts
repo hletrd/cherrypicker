@@ -42,6 +42,16 @@ describe('non-spending amount ParseError parity (C39-TE02)', () => {
     assertNonSpendingError(result.errors);
   });
 
+  test('CSV generic parser rejects composed negative amount markers', () => {
+    const csv = `date,merchant,amount
+2024-01-14,trailing,-1000-
+2024-01-15,korean,마이너스－１０００
+2024-01-16,normal,10000`;
+    const result = parseGenericCSV(csv, null);
+    expect(result.transactions).toHaveLength(1);
+    assertNonSpendingError(result.errors);
+  });
+
   test('CSV generic parser emits ParseError for zero amounts', () => {
     const csv = `date,merchant,amount
 2024-01-15,test,0
@@ -54,6 +64,17 @@ describe('non-spending amount ParseError parity (C39-TE02)', () => {
   test('JSON parser emits ParseError for negative amounts', () => {
     const input = JSON.stringify([
       { date: '2024-01-15', merchant: 'refund', amount: -5000 },
+      { date: '2024-01-16', merchant: 'normal', amount: 10000 },
+    ]);
+    const result = parseJSON(input);
+    expect(result.transactions).toHaveLength(1);
+    assertNonSpendingError(result.errors);
+  });
+
+  test('JSON parser rejects composed negative amount markers', () => {
+    const input = JSON.stringify([
+      { date: '2024-01-14', merchant: 'trailing', amount: '-1000-' },
+      { date: '2024-01-15', merchant: 'korean', amount: '마이너스－１０００' },
       { date: '2024-01-16', merchant: 'normal', amount: 10000 },
     ]);
     const result = parseJSON(input);
