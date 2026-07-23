@@ -1,5 +1,9 @@
 import { cardRuleSetSchema } from '@cherrypicker/rules/browser';
 import type { CardRuleSet } from '@cherrypicker/rules/browser';
+import {
+  readCatalogSourceHash,
+  type CatalogPublicationIdentity,
+} from './catalog-publication-identity.js';
 
 export interface DetailIssuer {
   id: string;
@@ -9,7 +13,13 @@ export interface DetailIssuer {
   cardCount: number;
 }
 
-export interface CardDetailShardArtifact {
+export interface OptimizerCatalogArtifact
+  extends CatalogPublicationIdentity {
+  cards: CardRuleSet[];
+}
+
+export interface CardDetailShardArtifact
+  extends CatalogPublicationIdentity {
   issuer: DetailIssuer;
   cards: CardRuleSet[];
 }
@@ -28,17 +38,14 @@ function validationMessage(
   return `${label}[${index}]${path}: ${issue?.message ?? '형식이 올바르지 않아요'}`;
 }
 
-/**
- * Canonically validate a generated rule array while retaining the exact JSON
- * object graph returned by Response.json(). Zod's parsed projection is used
- * only as validation evidence and is never retained.
- */
+/** Canonically validate and normalize a generated rule array. */
 function readCardRuleArray(value: unknown, label: string): CardRuleSet[] {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error(`${label}가 비어 있거나 배열 형식이 아니에요`);
   }
 
   const ids = new Set<string>();
+  const cards: CardRuleSet[] = [];
   for (let index = 0; index < value.length; index += 1) {
     const result = cardRuleSetSchema.safeParse(value[index]);
     if (!result.success) {
@@ -48,13 +55,22 @@ function readCardRuleArray(value: unknown, label: string): CardRuleSet[] {
       throw new Error(`${label}에 중복 카드 ID가 있어요: ${result.data.card.id}`);
     }
     ids.add(result.data.card.id);
+    cards.push(result.data);
   }
 
-  return value as CardRuleSet[];
+  return cards;
 }
 
-export function readOptimizerCatalog(value: unknown): CardRuleSet[] {
-  return readCardRuleArray(value, '카드 혜택 데이터');
+export function readOptimizerCatalog(
+  value: unknown,
+): OptimizerCatalogArtifact {
+  if (!isRecord(value)) {
+    throw new Error('카드 혜택 데이터 형식이 올바르지 않아요');
+  }
+  return {
+    sourceHash: readCatalogSourceHash(value, '카드 혜택 데이터'),
+    cards: readCardRuleArray(value.cards, '카드 혜택 데이터'),
+  };
 }
 
 export function readCardDetailShard(
@@ -65,6 +81,7 @@ export function readCardDetailShard(
     throw new Error('카드 상세 데이터의 카드사 정보가 올바르지 않아요');
   }
 
+  const sourceHash = readCatalogSourceHash(value, '카드 상세 데이터');
   const issuer = value.issuer;
   if (
     issuer.id !== expectedIssuer ||
@@ -85,5 +102,15 @@ export function readCardDetailShard(
     throw new Error('카드 상세 데이터에 다른 카드사의 카드가 섞여 있어요');
   }
 
-  return value as unknown as CardDetailShardArtifact;
+  return {
+    sourceHash,
+    issuer: {
+      id: issuer.id,
+      nameKo: issuer.nameKo,
+      nameEn: issuer.nameEn,
+      website: issuer.website,
+      cardCount: issuer.cardCount as number,
+    },
+    cards,
+  };
 }

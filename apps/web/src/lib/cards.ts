@@ -1,6 +1,7 @@
-// Load independently generated catalog artifacts served by GitHub Pages.
+// Load one generation of split catalog artifacts served by GitHub Pages.
 import type { CardRuleSet } from '@cherrypicker/rules/browser';
 import type { CardDetailShardArtifact } from './card-catalog-reader.js';
+import { readCatalogSourceHash } from './catalog-publication-identity.js';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const SAFE_ISSUER_ID = /^[a-z0-9][a-z0-9-]*$/;
@@ -38,7 +39,7 @@ export interface CatalogMeta {
   totalIssuers: number;
   totalCards: number;
   categories?: string[];
-  sourceHash?: string;
+  sourceHash: string;
 }
 
 export interface IssuerSummary {
@@ -84,6 +85,11 @@ interface LoadedDetailShard {
   byId: Map<string, CardRuleSet>;
 }
 
+interface CategoriesArtifact {
+  sourceHash: string;
+  categories: CategoryNode[];
+}
+
 // Each artifact owns its request lifecycle. A caller's AbortSignal races only
 // that caller's wait and never aborts a request shared with another consumer.
 let summaryPromise: Promise<LoadedSummary> | null = null;
@@ -92,8 +98,11 @@ let optimizerPromise: Promise<CardRuleSet[]> | null = null;
 let optimizerAbortController: AbortController | null = null;
 const detailPromises = new Map<string, Promise<LoadedDetailShard>>();
 const detailAbortControllers = new Map<string, AbortController>();
-let categoriesPromise: Promise<{ categories: CategoryNode[] }> | null = null;
+let categoriesPromise: Promise<CategoriesArtifact> | null = null;
 let categoriesAbortController: AbortController | null = null;
+// The first fully validated artifact pins this page session. Every later
+// artifact is checked before it can enter a cache or reach a consumer.
+let activeSourceHash: string | null = null;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -119,6 +128,18 @@ function isCardType(value: unknown): value is CardRuleSet['card']['type'] {
   return value === 'credit' || value === 'check' || value === 'prepaid';
 }
 
+function acceptSourceHash(sourceHash: string): void {
+  if (activeSourceHash === null) {
+    activeSourceHash = sourceHash;
+    return;
+  }
+  if (activeSourceHash !== sourceHash) {
+    throw new Error(
+      '카드 데이터 게시 버전이 일치하지 않아요. 페이지를 새로고침해 주세요.',
+    );
+  }
+}
+
 /** Validate the compact summary without expanding it into full card rules. */
 export function readCardsSummaryArtifact(value: unknown): CardsSummaryArtifact {
   if (
@@ -131,6 +152,7 @@ export function readCardsSummaryArtifact(value: unknown): CardsSummaryArtifact {
   }
 
   const { meta } = value;
+  readCatalogSourceHash(meta, '카드 목록 데이터');
   if (
     !isNonEmptyString(meta.version) ||
     !isNonEmptyString(meta.generatedAt) ||
@@ -291,6 +313,10 @@ function startSummaryRequest(): Promise<LoadedSummary> {
     malformed: '카드 목록 데이터를 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
   })
     .then(readCardsSummaryArtifact)
+    .then((artifact) => {
+      acceptSourceHash(artifact.meta.sourceHash);
+      return artifact;
+    })
     .then(materializeSummary);
 
   summaryPromise = request;
@@ -315,7 +341,9 @@ function startOptimizerRequest(): Promise<CardRuleSet[]> {
     malformed: '카드 혜택 데이터를 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
   }).then(async (value) => {
     const { readOptimizerCatalog } = await import('./card-catalog-reader.js');
-    return readOptimizerCatalog(value);
+    const artifact = readOptimizerCatalog(value);
+    acceptSourceHash(artifact.sourceHash);
+    return artifact.cards;
   });
 
   optimizerPromise = request;
@@ -345,6 +373,7 @@ function startDetailRequest(issuerId: string): Promise<LoadedDetailShard> {
   ).then(async (value) => {
     const { readCardDetailShard } = await import('./card-catalog-reader.js');
     const artifact = readCardDetailShard(value, issuerId);
+    acceptSourceHash(artifact.sourceHash);
     return {
       artifact,
       byId: new Map(artifact.cards.map((card) => [card.card.id, card])),
@@ -370,7 +399,7 @@ function startDetailRequest(issuerId: string): Promise<LoadedDetailShard> {
   return request;
 }
 
-function startCategoriesRequest(): Promise<{ categories: CategoryNode[] }> {
+function startCategoriesRequest(): Promise<CategoriesArtifact> {
   const controller = new AbortController();
   categoriesAbortController = controller;
   const request = fetchJson('data/categories.json', controller, {
@@ -385,7 +414,12 @@ function startCategoriesRequest(): Promise<{ categories: CategoryNode[] }> {
     ) {
       throw new Error('카테고리 데이터가 비어 있어 분석을 시작할 수 없어요');
     }
-    return value as unknown as { categories: CategoryNode[] };
+    const sourceHash = readCatalogSourceHash(value, '카테고리 데이터');
+    acceptSourceHash(sourceHash);
+    return {
+      sourceHash,
+      categories: value.categories as CategoryNode[],
+    };
   });
 
   categoriesPromise = request;
@@ -498,4 +532,5 @@ export function resetCardArtifactCachesForTests(): void {
   detailAbortControllers.clear();
   categoriesPromise = null;
   categoriesAbortController = null;
+  activeSourceHash = null;
 }

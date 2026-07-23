@@ -66,7 +66,8 @@
       "utilities.electricity",
       "utilities.gas",
       "utilities.water"
-    ]
+    ],
+    "sourceHash": "3fe52ba42bd0681df31e6b4de2088814e580bb46a515b2855a7348f667cdd7b9"
   },
   "issuers": [
     {
@@ -65250,7 +65251,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -65278,7 +65280,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-003",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -65306,7 +65309,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-004",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -65334,7 +65338,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-005",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -65362,7 +65367,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-006",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -140384,15 +140390,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 5000
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "dining.cafe": [
@@ -143320,15 +143317,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "telecom": [
@@ -145485,15 +145473,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "travel": [
@@ -148126,15 +148105,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 10000
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "transportation.ev_charging": [
@@ -149684,15 +149654,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "medical": [

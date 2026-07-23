@@ -30,6 +30,7 @@ export interface CapInfo {
 }
 
 export interface CalculationIssue {
+  cardId: string;
   transactionId: string;
   ruleId: string;
   category: string;

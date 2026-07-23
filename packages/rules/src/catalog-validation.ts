@@ -25,6 +25,7 @@ export type CatalogIssueCode =
   | 'general_spend_as_uncategorized'
   | 'unverified_merchant_scope'
   | 'unmodeled_reward_value'
+  | 'unexecutable_reward_tier'
   | 'unmodeled_global_constraints'
   | 'unreachable_merchant'
   | 'missing_rule_contract'
@@ -232,6 +233,24 @@ export function collectCardRuleIssues(
           cardId,
           path: `${path}.tiers.${tierIndex}.performanceTier`,
           message: `unknown performance tier "${tier.performanceTier}"`,
+        });
+      }
+      const hasRateReward = (tier.rate ?? 0) > 0;
+      const hasFixedReward = (tier.fixedAmount ?? 0) > 0;
+      const hasExecutableUnit = hasRateReward
+        ? tier.unit === null
+        : !hasFixedReward || tier.unit !== 'miles';
+      if (
+        rule.support?.status === 'supported' &&
+        !hasExecutableUnit
+      ) {
+        issues.push({
+          code: 'unexecutable_reward_tier',
+          cardId,
+          path: `${path}.tiers.${tierIndex}`,
+          message:
+            `supported reward tier uses unit "${String(tier.unit)}" in a ` +
+            'shape the calculator cannot execute',
         });
       }
     });

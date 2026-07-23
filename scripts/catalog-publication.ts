@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { cardRuleSetSchema } from '../packages/rules/src/index.js';
 import type { CardRuleSet } from '../packages/rules/src/index.js';
 
@@ -7,7 +8,7 @@ export interface PublicationMeta {
   totalIssuers: number;
   totalCards: number;
   categories: string[];
-  sourceHash?: string;
+  sourceHash: string;
 }
 
 export interface PublicationIssuer {
@@ -33,10 +34,14 @@ export interface WebCatalogArtifacts {
       rewardCategories: string[];
     }>;
   };
-  optimizer: CardRuleSet[];
+  optimizer: {
+    sourceHash: string;
+    cards: CardRuleSet[];
+  };
   detailShards: Map<
     string,
     {
+      sourceHash: string;
       issuer: Omit<PublicationIssuer, 'cards'>;
       cards: CardRuleSet[];
     }
@@ -45,6 +50,45 @@ export interface WebCatalogArtifacts {
 
 function compareAscii(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalize);
+  }
+  if (typeof value !== 'object' || value === null) {
+    return value;
+  }
+
+  const source = value as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(source).sort(compareAscii)) {
+    result[key] = canonicalize(source[key]);
+  }
+  return result;
+}
+
+export function computePublicationSourceHash(input: {
+  version: string;
+  categories: readonly unknown[];
+  issuers: readonly PublicationIssuer[];
+}): string {
+  const issuers = [...input.issuers]
+    .sort((a, b) => compareAscii(a.id, b.id))
+    .map((issuer) => ({
+      ...issuer,
+      cards: [...issuer.cards].sort((a, b) =>
+        compareAscii(a.card.id, b.card.id)
+      ),
+    }));
+  const canonicalSource = canonicalize({
+    version: input.version,
+    categories: input.categories,
+    issuers,
+  });
+  return createHash('sha256')
+    .update(JSON.stringify(canonicalSource))
+    .digest('hex');
 }
 
 export function staleGeneratedShardNames(
@@ -95,6 +139,7 @@ export function buildWebCatalogArtifacts(
   const detailShards = new Map<
     string,
     {
+      sourceHash: string;
       issuer: Omit<PublicationIssuer, 'cards'>;
       cards: CardRuleSet[];
     }
@@ -106,7 +151,11 @@ export function buildWebCatalogArtifacts(
       compareAscii(a.card.id, b.card.id)
     );
     const { cards: _cards, ...metadata } = issuer;
-    detailShards.set(issuer.id, { issuer: metadata, cards });
+    detailShards.set(issuer.id, {
+      sourceHash: meta.sourceHash,
+      issuer: metadata,
+      cards,
+    });
     optimizer.push(...cards);
   }
   optimizer.sort((a, b) => compareAscii(a.card.id, b.card.id));
@@ -135,7 +184,10 @@ export function buildWebCatalogArtifacts(
         ].sort(compareAscii),
       })),
     },
-    optimizer,
+    optimizer: {
+      sourceHash: meta.sourceHash,
+      cards: optimizer,
+    },
     detailShards,
   };
 }

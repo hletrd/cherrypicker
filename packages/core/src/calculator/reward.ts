@@ -11,6 +11,7 @@ import type {
 import { calculateDiscount } from './discount.js';
 import { calculatePoints } from './points.js';
 import { calculateCashback } from './cashback.js';
+import { normalizeMerchantText } from '../categorizer/normalize.js';
 
 function selectTier(
   performanceTiers: PerformanceTier[],
@@ -99,13 +100,6 @@ function ruleConditionsMatch(
   if (rule.conditions?.maxTransaction !== undefined && tx.amount > rule.conditions.maxTransaction) {
     return { status: 'miss' };
   }
-  if (
-    rule.conditions?.specificMerchants &&
-    rule.conditions.specificMerchants.length > 0 &&
-    !rule.conditions.specificMerchants.some((merchant) => tx.merchant.includes(merchant))
-  ) {
-    return { status: 'miss' };
-  }
   if (rule.conditions?.paymentType) {
     if (!tx.paymentType) {
       return { status: 'unsupported', reason: 'missing_payment_type' };
@@ -147,6 +141,20 @@ function ruleConditionsMatch(
   return { status: 'match' };
 }
 
+function merchantAllowlistMatches(
+  merchant: string,
+  allowlist: readonly string[],
+): boolean {
+  const normalizedMerchant = normalizeMerchantText(merchant);
+  return allowlist.some((candidate) => {
+    const normalizedCandidate = normalizeMerchantText(candidate);
+    return (
+      normalizedCandidate.length > 0 &&
+      normalizedMerchant.includes(normalizedCandidate)
+    );
+  });
+}
+
 function ruleSpecificity(rule: RewardRule): number {
   let score = 0;
   if (rule.category !== '*') score += 100;
@@ -186,6 +194,7 @@ function compareRuleCandidates(
 }
 
 function findRules(
+  cardId: string,
   rules: RewardRule[],
   tx: CategorizedTransaction,
   occurrenceUses: Map<string, number>,
@@ -195,7 +204,16 @@ function findRules(
 
   for (const [ruleIndex, rule] of rules.entries()) {
     const hasMerchantAllowlist = (rule.conditions?.specificMerchants?.length ?? 0) > 0;
-    if (!hasMerchantAllowlist) {
+    if (hasMerchantAllowlist) {
+      if (
+        !merchantAllowlistMatches(
+          tx.merchant,
+          rule.conditions?.specificMerchants ?? [],
+        )
+      ) {
+        continue;
+      }
+    } else {
       if (rule.category !== '*' && rule.category !== tx.category) continue;
       if (rule.subcategory && rule.subcategory !== tx.subcategory) continue;
       if (!tx.subcategory && rule.subcategory) continue;
@@ -205,6 +223,7 @@ function findRules(
     const condition = ruleConditionsMatch(rule, tx, ruleId, occurrenceUses);
     if (condition.status === 'unsupported') {
       unsupported.push({
+        cardId,
         transactionId: tx.id,
         ruleId,
         category: buildCategoryKey(rule.category, rule.subcategory),
@@ -409,7 +428,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     const categoryKey = buildCategoryKey(tx.category, tx.subcategory);
     const selection: RuleSelection = tierId === 'none'
       ? { rules: [], unsupported: [] as UnsupportedRule[] }
-      : findRules(rewardRules, tx, occurrenceUses);
+      : findRules(card.id, rewardRules, tx, occurrenceUses);
     unsupportedRules.push(...selection.unsupported);
     const firstRule = selection.rules[0]?.rule;
     // Register the bucket in the Map immediately after creation so that it is
@@ -464,6 +483,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     if (normalizedRate !== null && normalizedRate > 0) {
       if (tierRate.unit !== null && tierRate.unit !== undefined) {
         unsupportedRules.push({
+          cardId: card.id,
           transactionId: tx.id,
           ruleId: rule.id ?? rewardKey,
           category: categoryKey,
@@ -480,6 +500,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       const fixed = calculateFixedReward(tx, tierRate, rewardKey, dayRewardTracker);
       if (fixed.unsupportedReason) {
         unsupportedRules.push({
+          cardId: card.id,
           transactionId: tx.id,
           ruleId: rule.id ?? rewardKey,
           category: categoryKey,

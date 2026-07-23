@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { join } from 'path';
 import { calculateRewards } from '../src/calculator/reward.js';
-import { loadCardRule } from '@cherrypicker/rules';
+import { loadAllCardRules, loadCardRule } from '@cherrypicker/rules';
 import type { CategorizedTransaction } from '../src/models/transaction.js';
 import type { CardRuleSet } from '@cherrypicker/rules';
 
@@ -18,6 +18,12 @@ let simplePlan: CardRuleSet;
 let mrLife: CardRuleSet;
 let mrLifeCapFixture: CardRuleSet;
 let kbMinCheck: CardRuleSet;
+let catalogCards: CardRuleSet[];
+let hyundaiMBoost: CardRuleSet;
+let shinhanAliExpress: CardRuleSet;
+let wooriDiscount: CardRuleSet;
+let wooriPoint: CardRuleSet;
+let samsungPaycoTaptap: CardRuleSet;
 
 beforeAll(async () => {
   simplePlan = await loadCardRule(join(rulesDir, 'shinhan/simple-plan.yaml'));
@@ -29,6 +35,22 @@ beforeAll(async () => {
   convenienceRule.label = '편의점 할인 테스트 픽스처';
   convenienceRule.support = { status: 'supported' };
   kbMinCheck = await loadCardRule(join(rulesDir, 'kb/min-check.yaml'));
+  catalogCards = await loadAllCardRules(rulesDir);
+  hyundaiMBoost = catalogCards.find(
+    (card) => card.card.id === 'hyundai-m-boost',
+  )!;
+  shinhanAliExpress = catalogCards.find(
+    (card) => card.card.id === 'shinhan-aliexpress',
+  )!;
+  wooriDiscount = catalogCards.find(
+    (card) => card.card.id === 'woori-discount',
+  )!;
+  wooriPoint = catalogCards.find(
+    (card) => card.card.id === 'woori-point',
+  )!;
+  samsungPaycoTaptap = catalogCards.find(
+    (card) => card.card.id === 'samsung-payco-taptap',
+  )!;
 });
 
 function makeTx(
@@ -256,6 +278,22 @@ describe('calculateRewards - simple-plan (tier0, 1% on uncategorized, no cap)', 
 });
 
 describe('calculateRewards - mr-life (tiered, capped)', () => {
+  test('treats maxSpending as inclusive at the tier boundary', () => {
+    const belowThreshold = calculateRewards({
+      transactions: [makeTx('t1', 'convenience_store', 50000)],
+      previousMonthSpending: 299999,
+      cardRule: mrLife,
+    });
+    const atThreshold = calculateRewards({
+      transactions: [makeTx('t1', 'convenience_store', 50000)],
+      previousMonthSpending: 300000,
+      cardRule: mrLife,
+    });
+
+    expect(belowThreshold.performanceTier).toBe('tier0');
+    expect(atThreshold.performanceTier).toBe('tier1');
+  });
+
   test('tier1 selected for previousMonthSpending=300000', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'convenience_store', 50000)],
@@ -382,6 +420,7 @@ describe('calculateRewards - mr-life (tiered, capped)', () => {
     expect(output.totalReward).toBe(0);
     expect(output.unsupportedRules).toContainEqual(
       expect.objectContaining({
+        cardId: 'shinhan-mr-life',
         transactionId: 't1',
         ruleId: 'reward-003',
         reason: 'rule_marked_unsupported',
@@ -799,6 +838,7 @@ describe('calculateRewards - typed condition facts', () => {
     expect(output.totalReward).toBe(0);
     expect(output.unsupportedRules).toEqual([
       expect.objectContaining({
+        cardId: 'fixture-overseas-card',
         transactionId: 't1',
         ruleId: 'overseas-base',
         reason: 'missing_payment_type',
@@ -977,6 +1017,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     expect(transportation!.reward).toBe(0);
     expect(output.unsupportedRules).toEqual([
       expect.objectContaining({
+        cardId: 'shinhan-mr-life',
         transactionId: 't1',
         category: 'transportation',
         reason: 'missing_fuel_volume',
@@ -1111,5 +1152,118 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
         cardRule: simplePlan,
       })
     ).toThrow(/previousMonthSpending must be a non-negative finite number/);
+  });
+});
+
+describe('calculateRewards - merchant applicability', () => {
+  test('unrelated merchant allowlists never emit catalog issues', () => {
+    const unexpectedIssues: string[] = [];
+    const transaction = makeTx(
+      'unrelated-tx',
+      'uncategorized',
+      10_000,
+      '__definitely_unrelated_merchant__',
+    );
+
+    for (const card of catalogCards) {
+      const qualifyingTier = card.performanceTiers.reduce((highest, tier) =>
+        tier.minSpending > highest.minSpending ? tier : highest
+      );
+      const output = calculateRewards({
+        transactions: [transaction],
+        previousMonthSpending: qualifyingTier.minSpending,
+        cardRule: card,
+      });
+
+      for (const issue of output.unsupportedRules) {
+        const rule = card.rewards.find((candidate) => candidate.id === issue.ruleId);
+        const hasMerchantScope =
+          (rule?.conditions?.specificMerchants?.length ?? 0) > 0;
+        const hasCategoryScope =
+          rule?.category === '*' ||
+          (
+            rule?.category === transaction.category &&
+            (!rule.subcategory || rule.subcategory === transaction.subcategory)
+          );
+        if (!rule || hasMerchantScope || !hasCategoryScope) {
+          unexpectedIssues.push(`${card.card.id}:${issue.ruleId}`);
+        }
+      }
+    }
+
+    expect(unexpectedIssues).toEqual([]);
+  });
+
+  test('real-card Latin merchant allowlists match mixed-case statements', () => {
+    const cases = [
+      {
+        card: hyundaiMBoost,
+        merchant: 'cGv 강남',
+        category: 'entertainment',
+        previousMonthSpending: 500_000,
+        expectedReward: 300,
+      },
+      {
+        card: shinhanAliExpress,
+        merchant: 'aLiExPrEsS',
+        category: 'online_shopping',
+        previousMonthSpending: 300_000,
+        expectedReward: 1_000,
+      },
+      {
+        card: wooriDiscount,
+        merchant: 's-OiL 주유소',
+        category: 'transportation',
+        previousMonthSpending: 300_000,
+        expectedReward: 6_000,
+      },
+      {
+        card: wooriPoint,
+        merchant: 'pAyCo',
+        category: 'online_shopping',
+        previousMonthSpending: 300_000,
+        expectedReward: 380,
+      },
+    ];
+
+    expect(
+      cases.map((testCase, index) =>
+        calculateRewards({
+          transactions: [
+            makeTx(
+              `mixed-case-${index}`,
+              testCase.category,
+              10_000,
+              testCase.merchant,
+            ),
+          ],
+          previousMonthSpending: testCase.previousMonthSpending,
+          cardRule: testCase.card,
+        }).totalReward
+      ),
+    ).toEqual(cases.map((testCase) => testCase.expectedReward));
+  });
+
+  test('an unsupported merchant rule is reported only when its merchant matches', () => {
+    const unrelated = calculateRewards({
+      transactions: [makeTx('tx-1', 'grocery', 10_000, '동네마트')],
+      previousMonthSpending: 300_000,
+      cardRule: samsungPaycoTaptap,
+    });
+    const matching = calculateRewards({
+      transactions: [makeTx('tx-2', 'online_shopping', 10_000, 'payco')],
+      previousMonthSpending: 300_000,
+      cardRule: samsungPaycoTaptap,
+    });
+
+    expect(unrelated.unsupportedRules).toEqual([]);
+    expect(matching.unsupportedRules).toEqual([
+      expect.objectContaining({
+        cardId: 'samsung-payco-taptap',
+        transactionId: 'tx-2',
+        ruleId: 'reward-001',
+        reason: 'rule_marked_unsupported',
+      }),
+    ]);
   });
 });

@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import {
   buildWebCatalogArtifacts,
+  computePublicationSourceHash,
   isIndexableReward,
   parsePublicationCard,
   staleGeneratedShardNames,
 } from '../catalog-publication.js';
+
+const SOURCE_HASH = 'a'.repeat(64);
 
 function cardWithUrl(url: string) {
   return {
@@ -111,6 +114,7 @@ describe('catalog publication boundary', () => {
         totalIssuers: 1,
         totalCards: 1,
         categories: ['travel', 'uncategorized'],
+        sourceHash: SOURCE_HASH,
       },
       [
         {
@@ -126,7 +130,10 @@ describe('catalog publication boundary', () => {
 
     expect(artifacts.summary.cards[0]?.rewardCategories).toEqual(['*']);
     expect(artifacts.summary.cards[0]?.rewardCategories).not.toContain('travel');
-    expect(artifacts.optimizer[0]?.rewards).toHaveLength(2);
+    expect(artifacts.summary.meta.sourceHash).toBe(SOURCE_HASH);
+    expect(artifacts.optimizer.sourceHash).toBe(SOURCE_HASH);
+    expect(artifacts.optimizer.cards[0]?.rewards).toHaveLength(2);
+    expect(artifacts.detailShards.get('fixture')?.sourceHash).toBe(SOURCE_HASH);
     expect(artifacts.detailShards.get('fixture')?.cards[0]?.rewards).toHaveLength(
       2,
     );
@@ -154,6 +161,7 @@ describe('catalog publication boundary', () => {
         totalIssuers: 1,
         totalCards: 1,
         categories: ['*'],
+        sourceHash: SOURCE_HASH,
       },
       [{
         id: 'fixture',
@@ -166,7 +174,7 @@ describe('catalog publication boundary', () => {
     );
 
     expect(artifacts.summary.cards[0]?.rewardCategories).toEqual([]);
-    expect(artifacts.optimizer[0]?.rewards[0]?.support).toEqual({
+    expect(artifacts.optimizer.cards[0]?.rewards[0]?.support).toEqual({
       status: 'unsupported',
       reason: 'unverified_merchant_scope',
     });
@@ -199,6 +207,7 @@ describe('catalog publication boundary', () => {
       totalIssuers: 1,
       totalCards: 2,
       categories: ['uncategorized'],
+      sourceHash: SOURCE_HASH,
     };
     const issuer = {
       id: 'fixture',
@@ -221,6 +230,56 @@ describe('catalog publication boundary', () => {
     expect(
       JSON.stringify([...forward.detailShards]),
     ).toBe(JSON.stringify([...reverse.detailShards]));
+  });
+
+  test('computes a deterministic identity from normalized publication content', () => {
+    const first = parsePublicationCard(
+      cardWithUrl('https://example.com/first'),
+      'fixture-first.yaml',
+    );
+    const second = parsePublicationCard(
+      {
+        ...cardWithUrl('https://example.com/second'),
+        card: {
+          ...cardWithUrl('https://example.com/second').card,
+          id: 'fixture-another-card',
+        },
+      },
+      'fixture-second.yaml',
+    );
+    const issuer = {
+      id: 'fixture',
+      nameKo: '픽스처',
+      nameEn: 'Fixture',
+      website: 'https://example.com',
+      cardCount: 2,
+      cards: [first, second],
+    };
+    const input = {
+      version: '1.0.0',
+      categories: [{ id: 'uncategorized', keywords: [] }],
+      issuers: [issuer],
+    };
+
+    const forward = computePublicationSourceHash(input);
+    const reordered = computePublicationSourceHash({
+      ...input,
+      issuers: [{ ...issuer, cards: [...issuer.cards].reverse() }],
+    });
+    const changed = computePublicationSourceHash({
+      ...input,
+      issuers: [{
+        ...issuer,
+        cards: [
+          { ...first, card: { ...first.card, nameKo: '변경된 카드' } },
+          second,
+        ],
+      }],
+    });
+
+    expect(forward).toMatch(/^[a-f0-9]{64}$/);
+    expect(reordered).toBe(forward);
+    expect(changed).not.toBe(forward);
   });
 
   test('finds only stale generated JSON shards in stable order', () => {

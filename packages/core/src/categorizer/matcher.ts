@@ -5,6 +5,7 @@ import { LOCATION_KEYWORDS } from './keywords-locations.js';
 import { ENGLISH_KEYWORDS } from './keywords-english.js';
 import { NICHE_KEYWORDS } from './keywords-niche.js';
 import { EXPLICIT_KEYWORD_OVERRIDES } from './keyword-overrides.js';
+import { normalizeMerchantText } from './normalize.js';
 
 interface KeywordSource {
   name: string;
@@ -81,7 +82,7 @@ export class MerchantMatcher {
       for (const [authoredKeyword, authoredCategory] of Object.entries(
         source.values,
       )) {
-        const keyword = authoredKeyword.trim().toLowerCase();
+        const keyword = normalizeMerchantText(authoredKeyword);
         if (!keyword) continue;
         const categoryToken =
           LEGACY_CATEGORY_ALIASES[authoredCategory] ?? authoredCategory;
@@ -181,7 +182,7 @@ export class MerchantMatcher {
   }
 
   match(merchantName: string, rawCategory?: string): MatchResult {
-    const lower = merchantName.toLowerCase().trim();
+    const lower = normalizeMerchantText(merchantName);
     const cacheKey = `${lower}|${rawCategory?.trim().toLowerCase() ?? ''}`;
 
     // Check LRU cache first

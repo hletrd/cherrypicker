@@ -66,7 +66,8 @@
       "utilities.electricity",
       "utilities.gas",
       "utilities.water"
-    ]
+    ],
+    "sourceHash": "3fe52ba42bd0681df31e6b4de2088814e580bb46a515b2855a7348f667cdd7b9"
   },
   "issuers": [
     {
@@ -8403,39 +8404,11 @@
           "annualFee": 47000,
           "topRewards": [
             {
-              "category": "offline_shopping",
+              "category": "*",
               "type": "mileage",
-              "bestValue": 0.2,
+              "bestValue": 0.1,
               "bestValueKind": "rate",
-              "unit": "miles"
-            },
-            {
-              "category": "transportation",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": "miles"
-            },
-            {
-              "category": "dining",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": "miles"
-            },
-            {
-              "category": "convenience_store",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": "miles"
-            },
-            {
-              "category": "public_transit",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": "miles"
+              "unit": null
             }
           ]
         },
@@ -20233,15 +20206,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 5000
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "dining.cafe": [
@@ -23169,15 +23133,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "telecom": [
@@ -25334,15 +25289,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "travel": [
@@ -27975,15 +27921,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 10000
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "transportation.ev_charging": [
@@ -29533,15 +29470,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": "miles",
-          "monthlyCap": 2000
         }
       ],
       "medical": [

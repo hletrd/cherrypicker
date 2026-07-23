@@ -19,7 +19,33 @@ export type { TaxonomyKeywordConflict } from './categorizer/taxonomy.js';
 export { MerchantMatcher } from './categorizer/matcher.js';
 export { getResolvedKeywordConflicts } from './categorizer/matcher.js';
 export type { KeywordConflict } from './categorizer/matcher.js';
+export { normalizeMerchantText } from './categorizer/normalize.js';
 export { MERCHANT_KEYWORDS } from './categorizer/keywords.js';
+
+// Analysis context
+export {
+  buildAnalysisContext,
+  isValidIsoDate,
+  isYearMonth,
+  previousCalendarMonth,
+  yearMonthOfDate,
+} from './analysis/context.js';
+export type {
+  AnalysisContext,
+  DatedAmount,
+  MonthlyBreakdown,
+  PreviousSpendingBasis,
+  YearMonth,
+} from './analysis/context.js';
+export {
+  calculatePerformanceSpending,
+  resolveCardPreviousSpending,
+} from './analysis/performance.js';
+export type {
+  CardPreviousSpendingResult,
+  PerformanceSpendingResult,
+  PerformanceSpendingTransaction,
+} from './analysis/performance.js';
 
 // Calculator
 export { calculateRewards, buildCategoryKey } from './calculator/reward.js';

@@ -27,6 +27,7 @@ export type UnsupportedReason =
   | 'unsupported_reward_unit';
 
 export interface UnsupportedRule {
+  cardId: string;
   transactionId: string;
   ruleId: string;
   category: string;

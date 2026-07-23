@@ -102,6 +102,7 @@ function deduplicateCalculationIssues(
   const unique = new Map<string, CalculationIssue>();
   for (const issue of issues) {
     const key = [
+      issue.cardId,
       issue.transactionId,
       issue.ruleId,
       issue.category,

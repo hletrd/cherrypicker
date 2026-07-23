@@ -2,6 +2,7 @@ import {
   CategoryRegistry,
   type CategoryNode,
 } from '@cherrypicker/rules/browser';
+import { normalizeMerchantText } from './normalize.js';
 
 interface CategoryMatch {
   category: string;
@@ -85,7 +86,7 @@ export class CategoryTaxonomy {
     for (const root of nodes) {
       for (const entry of flatten(root)) {
         for (const kw of entry.keywords) {
-          const keyword = kw.trim().toLowerCase();
+          const keyword = normalizeMerchantText(kw);
           if (!keyword) continue;
           const canonicalKey = entry.subcategory
             ? `${entry.category}.${entry.subcategory}`
@@ -135,7 +136,7 @@ export class CategoryTaxonomy {
   }
 
   findCategory(merchantName: string): CategoryMatch {
-    const lower = merchantName.toLowerCase();
+    const lower = normalizeMerchantText(merchantName);
 
     // 1. Exact keyword match
     const exact = this.keywordMap.get(lower);

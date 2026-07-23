@@ -6,6 +6,7 @@ import {
   CatalogValidationError,
   CategoryRegistry,
   buildCategoryKey,
+  collectCardRuleIssues,
   collectUnmodeledRuleRestrictions,
   loadAllCardRules,
   loadCategories,
@@ -224,6 +225,97 @@ describe('catalog semantic validation', () => {
     expect(() => validateCardRuleSet(invalid, registry)).toThrow(
       /no positive modeled value/,
     );
+  });
+
+  test('supported tiers must use reward shapes the calculator can execute', () => {
+    const baseRule = cards[0]!.rewards[0]!;
+    const invalidShapes: CardRuleSet[] = [
+      {
+        ...cards[0]!,
+        rewards: [{
+          ...baseRule,
+          support: { status: 'supported' },
+          tiers: [{
+            ...baseRule.tiers[0]!,
+            rate: 1,
+            fixedAmount: null,
+            unit: 'miles',
+            value: { kind: 'mileage_per_spend', amount: 1 },
+          }],
+        }],
+      },
+      {
+        ...cards[0]!,
+        rewards: [{
+          ...baseRule,
+          support: { status: 'supported' },
+          tiers: [{
+            ...baseRule.tiers[0]!,
+            rate: null,
+            fixedAmount: 1,
+            unit: 'miles',
+            value: { kind: 'mileage_per_spend', amount: 1 },
+          }],
+        }],
+      },
+    ];
+
+    for (const invalid of invalidShapes) {
+      expect(
+        collectCardRuleIssues(invalid, registry).map((issue) => issue.code),
+      ).toContain('unexecutable_reward_tier');
+    }
+
+    invalidShapes[0]!.rewards[0]!.support = {
+      status: 'unsupported',
+      reason: 'valuation contract is not modeled',
+    };
+    expect(
+      collectCardRuleIssues(invalidShapes[0]!, registry)
+        .some((issue) => issue.code === 'unexecutable_reward_tier'),
+    ).toBe(false);
+  });
+
+  test('Samsung mileage rules fail closed until a valuation contract exists', () => {
+    const samsungMileage = cards.find(
+      (card) => card.card.id === 'samsung-and-mileage-platinum',
+    )!;
+    const affectedRuleIds = new Set([
+      'reward-002',
+      'reward-003',
+      'reward-004',
+      'reward-005',
+      'reward-006',
+    ]);
+
+    expect(samsungMileage.rewards[0]!.support.status).toBe('supported');
+    expect(
+      samsungMileage.rewards
+        .filter((rule) => affectedRuleIds.has(rule.id))
+        .map((rule) => [rule.id, rule.support.status]),
+    ).toEqual([
+      ['reward-002', 'unsupported'],
+      ['reward-003', 'unsupported'],
+      ['reward-004', 'unsupported'],
+      ['reward-005', 'unsupported'],
+      ['reward-006', 'unsupported'],
+    ]);
+    expect(
+      cards.flatMap((card) =>
+        card.rewards.flatMap((rule) =>
+          rule.support.status === 'supported'
+            ? rule.tiers
+                .filter((tier) =>
+                  ((tier.rate ?? 0) > 0 && tier.unit !== null) ||
+                  ((tier.fixedAmount ?? 0) > 0 && tier.unit === 'miles')
+                )
+                .map((tier) =>
+                  `${card.card.id}:${rule.id}:${tier.performanceTier}`,
+                )
+            : [],
+        ),
+      ),
+    ).toEqual([]);
   });
 
   test('ignored global constraints require every affected reward to fail closed', () => {

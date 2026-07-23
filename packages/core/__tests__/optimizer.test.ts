@@ -218,12 +218,38 @@ describe('greedyOptimize - two cards', () => {
     expect(result.cardResults.some((card) => card.cardId === 'shinhan-mr-life')).toBe(false);
     expect(result.unsupportedRules).toContainEqual(
       expect.objectContaining({
+        cardId: 'shinhan-mr-life',
         transactionId: 't1',
         ruleId: 'reward-003',
         category: 'convenience_store',
         reason: 'rule_marked_unsupported',
       }),
     );
+  });
+
+  test('keeps identical rule IDs from different cards as distinct issues', () => {
+    const firstCard = structuredClone(mrLife);
+    const secondCard = structuredClone(mrLife);
+    firstCard.card.id = 'unsupported-card-a';
+    secondCard.card.id = 'unsupported-card-b';
+    const constraints = makeConstraints(
+      [makeTx('t1', 'convenience_store', 50_000, 'CU 강남점')],
+      new Map([
+        [firstCard.card.id, 500_000],
+        [secondCard.card.id, 500_000],
+      ]),
+    );
+
+    const result = greedyOptimize(constraints, [firstCard, secondCard]);
+    const sharedRuleIssues = (result.unsupportedRules ?? []).filter(
+      (issue) => issue.ruleId === 'reward-003',
+    );
+
+    expect(sharedRuleIssues).toHaveLength(2);
+    expect(sharedRuleIssues.map((issue) => issue.cardId).sort()).toEqual([
+      'unsupported-card-a',
+      'unsupported-card-b',
+    ]);
   });
 
   test('cardResults contains entries for cards that have assignments', () => {

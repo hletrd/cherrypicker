@@ -3,12 +3,14 @@ import { readFile, readdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CardRuleSet } from '@cherrypicker/rules';
+import { calculateRewards } from '@cherrypicker/core';
 import {
   getAllCardRules,
   getCardById,
   getCardList,
   getCardSummaryById,
   loadCardSummaries,
+  loadCardDetailShard,
   loadCategories,
   loadOptimizerCatalog,
   readCardsSummaryArtifact,
@@ -19,9 +21,12 @@ import {
   readCardDetailShard,
   readOptimizerCatalog,
 } from '../src/lib/card-catalog-reader.js';
+import { readCatalogSourceHash } from '../src/lib/catalog-publication-identity.js';
 
 const originalFetch = globalThis.fetch;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const SOURCE_HASH_A = 'a'.repeat(64);
+const SOURCE_HASH_B = 'b'.repeat(64);
 
 const shinhanRule: CardRuleSet = {
   card: {
@@ -81,13 +86,16 @@ const kbRule: CardRuleSet = {
   },
 };
 
-function summaryArtifact(): CardsSummaryArtifact {
+function summaryArtifact(
+  sourceHash = SOURCE_HASH_A,
+): CardsSummaryArtifact {
   return {
     meta: {
       version: '1.0.0',
       generatedAt: '2026-07-23T00:00:00.000Z',
       totalIssuers: 2,
       totalCards: 2,
+      sourceHash,
     },
     issuers: [
       {
@@ -128,9 +136,34 @@ function summaryArtifact(): CardsSummaryArtifact {
   };
 }
 
-function detailShard(rule: CardRuleSet) {
+function optimizerArtifact(
+  cards: CardRuleSet[] = [shinhanRule, kbRule],
+  sourceHash = SOURCE_HASH_A,
+) {
+  return { sourceHash, cards };
+}
+
+function categoriesArtifact(sourceHash = SOURCE_HASH_A) {
+  return {
+    sourceHash,
+    categories: [
+      {
+        id: 'dining',
+        label: '외식',
+        labelKo: '외식',
+        keywords: ['식당'],
+      },
+    ],
+  };
+}
+
+function detailShard(
+  rule: CardRuleSet,
+  sourceHash = SOURCE_HASH_A,
+) {
   const issuer = rule.card.issuer;
   return {
+    sourceHash,
     issuer: {
       id: issuer,
       nameKo: issuer === 'shinhan' ? '신한카드' : 'KB국민카드',
@@ -199,6 +232,9 @@ describe('generated catalog readers', () => {
     const optimizer = readOptimizerCatalog(
       JSON.parse(await readFile(resolve(dataDir, 'cards-optimizer.json'), 'utf8')),
     );
+    const categories = JSON.parse(
+      await readFile(resolve(dataDir, 'categories.json'), 'utf8'),
+    ) as unknown;
     const shardNames = (await readdir(resolve(dataDir, 'card-details')))
       .filter((name) => name.endsWith('.json'))
       .sort();
@@ -217,41 +253,167 @@ describe('generated catalog readers', () => {
       );
       detailCount += shard.cards.length;
       for (const card of shard.cards) detailIds.add(card.card.id);
+      expect(shard.sourceHash).toBe(summary.meta.sourceHash);
     }
 
     expect(shardNames).toHaveLength(summary.meta.totalIssuers);
-    expect(optimizer).toHaveLength(summary.meta.totalCards);
+    expect(optimizer.sourceHash).toBe(summary.meta.sourceHash);
+    expect(readCatalogSourceHash(categories, '카테고리 데이터')).toBe(
+      summary.meta.sourceHash,
+    );
+    expect(optimizer.cards).toHaveLength(summary.meta.totalCards);
     expect(detailCount).toBe(summary.meta.totalCards);
-    expect(detailIds).toEqual(new Set(optimizer.map((card) => card.card.id)));
+    expect(detailIds).toEqual(
+      new Set(optimizer.cards.map((card) => card.card.id)),
+    );
   });
 
-  test('returns the original optimizer object graph after canonical validation', () => {
-    const input = [shinhanRule];
+  test('returns normalized optimizer data that produces finite rewards', () => {
+    const input = {
+      sourceHash: SOURCE_HASH_A,
+      cards: structuredClone([shinhanRule]) as unknown[],
+    };
+    const rawTier = (
+      input.cards[0] as {
+        rewards: Array<{ tiers: Array<Record<string, unknown>> }>;
+      }
+    ).rewards[0]!.tiers[0]!;
+    delete rawTier.fixedAmount;
+    delete rawTier.unit;
+    delete rawTier.monthlyCap;
+    delete rawTier.perTransactionCap;
+    delete rawTier.annualCap;
+    delete rawTier.value;
+
     const result = readOptimizerCatalog(input);
 
-    expect(result).toBe(input);
-    expect(result[0]).toBe(input[0]);
+    expect(result).not.toBe(input);
+    expect(result.sourceHash).toBe(SOURCE_HASH_A);
+    expect(result.cards[0]).not.toBe(input.cards[0]);
+    expect(result.cards[0]!.rewards[0]!.tiers[0]).toEqual(
+      expect.objectContaining({
+        fixedAmount: null,
+        unit: null,
+        monthlyCap: null,
+        perTransactionCap: null,
+        annualCap: null,
+        value: { kind: 'percentage', amount: 1 },
+      }),
+    );
+
+    const output = calculateRewards({
+      transactions: [{
+        id: 'tx-1',
+        date: '2026-07-23',
+        merchant: '테스트 식당',
+        amount: 10_000,
+        currency: 'KRW',
+        category: 'dining',
+        confidence: 1,
+      }],
+      previousMonthSpending: 0,
+      cardRule: result.cards[0]!,
+    });
+    expect(output.totalReward).toBe(100);
+    expect(Number.isFinite(output.totalReward)).toBe(true);
   });
 
-  test('returns original summary and detail artifacts after validation', () => {
+  test('retains summary identity but returns normalized detail artifacts', () => {
     const summary = summaryArtifact();
     const shard = detailShard(shinhanRule);
+    const detail = readCardDetailShard(shard, 'shinhan');
 
     expect(readCardsSummaryArtifact(summary)).toBe(summary);
-    expect(readCardDetailShard(shard, 'shinhan')).toBe(shard);
+    expect(detail).not.toBe(shard);
+    expect(detail.cards[0]).not.toBe(shard.cards[0]);
+    expect(detail).toEqual(shard);
   });
 
   test('rejects malformed optimizer rules and cross-issuer detail shards', () => {
-    expect(() => readOptimizerCatalog([{ card: { id: 'broken' } }])).toThrow(
+    expect(() => readOptimizerCatalog({
+      sourceHash: SOURCE_HASH_A,
+      cards: [{ card: { id: 'broken' } }],
+    })).toThrow(
       '카드 혜택 데이터[0]',
     );
     expect(() =>
       readCardDetailShard(detailShard(shinhanRule), 'kb'),
     ).toThrow('카드사 정보가 일치');
   });
+
+  test('requires a valid publication identity on every split artifact', () => {
+    expect(() => readCardsSummaryArtifact({
+      ...summaryArtifact(),
+      meta: {
+        ...summaryArtifact().meta,
+        sourceHash: undefined,
+      },
+    })).toThrow('게시 버전 정보');
+    expect(() => readOptimizerCatalog({
+      cards: [shinhanRule],
+    })).toThrow('게시 버전 정보');
+    expect(() => readCardDetailShard({
+      ...detailShard(shinhanRule),
+      sourceHash: 'not-a-sha256',
+    }, 'shinhan')).toThrow('게시 버전 정보');
+  });
 });
 
 describe('independent catalog loaders', () => {
+  test('rejects mixed generations and retries each mismatched artifact cache', async () => {
+    const fetchCounts = new Map<string, number>();
+    setFetchMock(async (input: RequestInfo | URL) => {
+      const path = new URL(String(input), 'https://example.test').pathname;
+      const count = (fetchCounts.get(path) ?? 0) + 1;
+      fetchCounts.set(path, count);
+
+      if (path.endsWith('/cards-summary.json')) {
+        return jsonResponse(summaryArtifact(SOURCE_HASH_A));
+      }
+      if (path.endsWith('/cards-optimizer.json')) {
+        return jsonResponse(optimizerArtifact(
+          [shinhanRule, kbRule],
+          count === 1 ? SOURCE_HASH_B : SOURCE_HASH_A,
+        ));
+      }
+      if (path.endsWith('/categories.json')) {
+        return jsonResponse(categoriesArtifact(
+          count === 1 ? SOURCE_HASH_B : SOURCE_HASH_A,
+        ));
+      }
+      if (path.endsWith('/card-details/shinhan.json')) {
+        return jsonResponse(detailShard(
+          shinhanRule,
+          count === 1 ? SOURCE_HASH_B : SOURCE_HASH_A,
+        ));
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
+
+    await loadCardSummaries();
+
+    expect(
+      (await getRejection(loadOptimizerCatalog())).message,
+    ).toContain('게시 버전이 일치');
+    expect(
+      (await getRejection(loadCategories())).message,
+    ).toContain('게시 버전이 일치');
+    expect(
+      (await getRejection(loadCardDetailShard('shinhan'))).message,
+    ).toContain('게시 버전이 일치');
+
+    expect(await loadOptimizerCatalog()).toHaveLength(2);
+    expect(await loadCategories()).toHaveLength(1);
+    expect((await loadCardDetailShard('shinhan')).cards).toHaveLength(1);
+
+    expect(fetchCountEnding(fetchCounts, '/data/cards-summary.json')).toBe(1);
+    expect(fetchCountEnding(fetchCounts, '/data/cards-optimizer.json')).toBe(2);
+    expect(fetchCountEnding(fetchCounts, '/data/categories.json')).toBe(2);
+    expect(
+      fetchCountEnding(fetchCounts, '/data/card-details/shinhan.json'),
+    ).toBe(2);
+  });
+
   test('times out every shared waiter, cleans up, and retries the summary request', async () => {
     const nativeSetTimeout = globalThis.setTimeout;
     const nativeClearTimeout = globalThis.clearTimeout;
@@ -382,22 +544,13 @@ describe('independent catalog loaders', () => {
         return jsonResponse(summaryArtifact());
       }
       if (path.endsWith('/categories.json')) {
-        return jsonResponse({
-          categories: [
-            {
-              id: 'dining',
-              label: '외식',
-              labelKo: '외식',
-              keywords: ['식당'],
-            },
-          ],
-        });
+        return jsonResponse(categoriesArtifact());
       }
       if (path.endsWith('/cards-optimizer.json')) {
         const count = fetchCounts.get(path)!;
         return count === 1
           ? jsonResponse({ error: 'temporary' }, 503)
-          : jsonResponse([shinhanRule, kbRule]);
+          : jsonResponse(optimizerArtifact());
       }
       throw new Error(`Unexpected request: ${path}`);
     });
