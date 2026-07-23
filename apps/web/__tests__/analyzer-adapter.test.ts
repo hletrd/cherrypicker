@@ -6,7 +6,6 @@ import {
   buildMonthlyBreakdown,
   emptyParseResultMessage,
   getLatestMonth,
-  toRulesCategoryNodes,
   validDateRange,
 } from '../src/lib/analyzer-helpers.js';
 import {
@@ -15,45 +14,6 @@ import {
 } from '../src/lib/analyzer.js';
 import { calculateRewards } from '@cherrypicker/core';
 import type { CardRuleSet } from '@cherrypicker/rules';
-
-describe('production category adapter', () => {
-  test('projects nested web categories into the rules shape', () => {
-    expect(
-      toRulesCategoryNodes([
-        {
-          id: 'dining',
-          label: '외식',
-          labelKo: '외식',
-          keywords: ['식당'],
-          subcategories: [
-            {
-              id: 'cafe',
-              label: '카페',
-              labelKo: '카페',
-              keywords: ['커피'],
-            },
-          ],
-        },
-      ]),
-    ).toEqual([
-      {
-        id: 'dining',
-        labelKo: '외식',
-        labelEn: '',
-        keywords: ['식당'],
-        subcategories: [
-          {
-            id: 'cafe',
-            labelKo: '카페',
-            labelEn: '',
-            keywords: ['커피'],
-          },
-        ],
-      },
-    ]);
-  });
-
-});
 
 describe('typed transaction fact adapter', () => {
   test('preserves facts and provenance through the web optimizer boundary', () => {
@@ -149,6 +109,36 @@ describe('typed transaction fact adapter', () => {
       }).totalReward,
     ).toBe(1_250);
   });
+
+  test.each([200.01, 1e308])(
+    'rejects invalid fuel volume %s at parser/core handoffs',
+    (fuelVolumeLiters) => {
+      const raw = {
+        date: '2026-02-10',
+        merchant: 'S-OIL',
+        amount: 10_000,
+        fuelVolumeLiters,
+      };
+      const matcher = {
+        match: () => ({
+          category: 'transportation',
+          subcategory: 'fuel',
+          confidence: 1,
+        }),
+      };
+
+      expect(() => categorizeParsedTransactions([raw], matcher)).toThrow(
+        '유효하지 않은 주유량',
+      );
+      expect(() => toCoreTransactions([{
+        id: 'tx-1',
+        ...raw,
+        category: 'transportation',
+        subcategory: 'fuel',
+        confidence: 1,
+      }])).toThrow('유효하지 않은 주유량');
+    },
+  );
 });
 
 describe('production month helpers', () => {

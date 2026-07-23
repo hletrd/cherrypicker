@@ -1,11 +1,11 @@
 import {
   MerchantMatcher,
   buildConstraints,
-  greedyOptimize,
   resolveCardPreviousSpending,
 } from '@cherrypicker/core';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import type { PerformanceExclusionId } from '@cherrypicker/rules/browser';
+import { isValidFuelVolumeLiters } from '@cherrypicker/parser/browser';
 import { parseFile } from './parser/index.js';
 import type { RawTransaction } from './parser/types.js';
 import type { BankId } from './parser/types.js';
@@ -32,9 +32,26 @@ import {
   assertRequestedCardsResolved,
   attachParseWarningIdentity,
   emptyParseResultMessage,
-  toRulesCategoryNodes,
 } from './analyzer-helpers.js';
 import { runFileParseQueue } from './file-parse-queue.js';
+import { runCancellableOptimizer } from './optimizer/worker-runner.js';
+
+function analysisAbortError(): DOMException {
+  return new DOMException('분석이 취소되었어요.', 'AbortError');
+}
+
+function assertSignalCurrent(signal?: AbortSignal): void {
+  if (signal?.aborted) throw analysisAbortError();
+}
+
+function assertExecutionCurrent(execution?: AnalyzeExecution): void {
+  if (
+    execution &&
+    (execution.run.signal.aborted || !execution.run.isCurrent())
+  ) {
+    throw analysisAbortError();
+  }
+}
 
 export interface CategorizedTx {
   id: string;
@@ -68,6 +85,12 @@ export function categorizeParsedTransactions(
 ): CategorizedTx[] {
   const idPrefix = fileIndex !== undefined ? `f${fileIndex}-` : '';
   return transactions.map((tx, index) => {
+    if (
+      tx.fuelVolumeLiters !== undefined &&
+      !isValidFuelVolumeLiters(tx.fuelVolumeLiters)
+    ) {
+      throw new Error(`유효하지 않은 주유량입니다: ${tx.fuelVolumeLiters}`);
+    }
     const match = matcher.match(tx.merchant, tx.category);
     return {
       id: `tx-${idPrefix}${index}`,
@@ -92,24 +115,32 @@ export function categorizeParsedTransactions(
 export function toCoreTransactions(
   transactions: readonly CategorizedTx[],
 ): CategorizedTransaction[] {
-  return transactions.map((tx) => ({
-    id: tx.id,
-    date: tx.date,
-    merchant: tx.merchant,
-    amount: tx.amount,
-    currency: 'KRW',
-    installments: tx.installments,
-    rawCategory: tx.rawCategory,
-    memo: tx.memo,
-    category: tx.category,
-    subcategory: tx.subcategory,
-    confidence: tx.confidence,
-    paymentType: tx.paymentType,
-    channel: tx.channel,
-    fuelVolumeLiters: tx.fuelVolumeLiters,
-    performanceExclusionTags: tx.performanceExclusionTags,
-    factProvenance: tx.factProvenance,
-  }));
+  return transactions.map((tx) => {
+    if (
+      tx.fuelVolumeLiters !== undefined &&
+      !isValidFuelVolumeLiters(tx.fuelVolumeLiters)
+    ) {
+      throw new Error(`유효하지 않은 주유량입니다: ${tx.fuelVolumeLiters}`);
+    }
+    return {
+      id: tx.id,
+      date: tx.date,
+      merchant: tx.merchant,
+      amount: tx.amount,
+      currency: 'KRW',
+      installments: tx.installments,
+      rawCategory: tx.rawCategory,
+      memo: tx.memo,
+      category: tx.category,
+      subcategory: tx.subcategory,
+      confidence: tx.confidence,
+      paymentType: tx.paymentType,
+      channel: tx.channel,
+      fuelVolumeLiters: tx.fuelVolumeLiters,
+      performanceExclusionTags: tx.performanceExclusionTags,
+      factProvenance: tx.factProvenance,
+    };
+  });
 }
 
 export async function parseAndCategorize(
@@ -125,6 +156,7 @@ export async function parseAndCategorize(
       ? (options.bank as BankId)
       : undefined;
   const parseResult = await parseFile(file, resolvedBank, signal);
+  assertSignalCurrent(signal);
   if (parseResult.transactions.length === 0) {
     throw new Error(emptyParseResultMessage(parseResult.errors));
   }
@@ -132,19 +164,16 @@ export async function parseAndCategorize(
   // Use provided categoryNodes (from analyzeMultipleFiles) or fetch fresh.
   // When a matcher is provided, the caller already loaded categories — skip
   // the redundant loadCategories() call to avoid an unnecessary await (C81-03).
-  const nodes = categoryNodes ?? await loadCategories();
-  // Guard against empty categories — loadCategories() returns [] on AbortError
-  // (component unmount during fetch). Proceeding would produce silently wrong
-  // results with all transactions as "uncategorized" (C71-02).
+  const nodes = categoryNodes ?? await loadCategories(signal);
+  assertSignalCurrent(signal);
+  // Guard against malformed or unexpectedly empty taxonomy data. Proceeding
+  // would produce silently wrong results with every row uncategorized.
   if (nodes.length === 0) {
     throw new Error('카테고리 데이터를 불러올 수 없어요. 다시 시도해 보세요.');
   }
   // Reuse the provided matcher (from analyzeMultipleFiles) or construct a new
   // one for backward compatibility (e.g., analyzeFile single-call path).
-  // MerchantMatcher expects CategoryNode[] from @cherrypicker/rules which has
-  // { id, labelKo, labelEn, keywords, subcategories? }. We project our local
-  // type (which has an extra `label` field) to the rules shape via the adapter.
-  const effectiveMatcher = matcher ?? new MerchantMatcher(toRulesCategoryNodes(nodes));
+  const effectiveMatcher = matcher ?? new MerchantMatcher(nodes);
 
   const transactions = categorizeParsedTransactions(
     parseResult.transactions,
@@ -166,12 +195,15 @@ export async function optimizeFromTransactions(
   transactions: CategorizedTx[],
   options?: AnalyzeOptions,
   prebuiltCategoryLabels?: Map<string, string>,
+  execution?: AnalyzeExecution,
 ): Promise<AnalysisResult['optimization']> {
+  assertExecutionCurrent(execution);
   const categorized = toCoreTransactions(transactions);
 
   // The generated optimizer artifact already has the canonical core shape.
   // Its loader validates and caches the original JSON object graph once.
-  let coreRules = await loadOptimizerCatalog();
+  let coreRules = await loadOptimizerCatalog(execution?.run.signal);
+  assertExecutionCurrent(execution);
   assertCatalogAvailable(coreRules.length);
 
   // Apply cardIds filter AFTER cache retrieval to avoid returning stale
@@ -207,17 +239,24 @@ export async function optimizeFromTransactions(
   // Skip loadCategories() if labels were pre-built by the caller
   let categoryLabels = prebuiltCategoryLabels;
   if (!categoryLabels) {
-    const categoryNodes = await loadCategories();
+    const categoryNodes = await loadCategories(execution?.run.signal);
+    assertExecutionCurrent(execution);
     categoryLabels = buildCategoryLabelMap(categoryNodes);
   }
 
+  assertExecutionCurrent(execution);
   if (categoryLabels.size === 0) {
     throw new Error('카테고리 레이블을 생성할 수 없어요. 카테고리 데이터를 확인해 주세요.');
   }
 
   const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
 
-  const optimizationResult = greedyOptimize(constraints, coreRules);
+  const optimizationResult = await runCancellableOptimizer(
+    constraints,
+    coreRules,
+    execution?.run.signal,
+  );
+  assertExecutionCurrent(execution);
   if (performanceBasisIssues.length > 0) {
     optimizationResult.unsupportedRules = [
       ...(optimizationResult.unsupportedRules ?? []),
@@ -239,6 +278,7 @@ export async function optimizeFromTransactions(
     }
   }
 
+  assertExecutionCurrent(execution);
   return optimizationResult;
 }
 
@@ -247,22 +287,17 @@ export async function analyzeMultipleFiles(
   options?: AnalyzeOptions,
   execution?: AnalyzeExecution,
 ): Promise<AnalysisResult> {
+  assertExecutionCurrent(execution);
   // 1. Construct MerchantMatcher once (shared across all files) to avoid
   // redundant loadCategories() fetches and matcher construction per file.
-  const categoryNodes = await loadCategories();
-  // Guard against empty categories — loadCategories() returns [] on AbortError
-  // (component unmount during fetch). Proceeding with empty categories would
-  // create a MerchantMatcher that categorizes everything as "uncategorized"
-  // with 0 confidence, producing silently wrong results (C71-02).
+  const categoryNodes = await loadCategories(execution?.run.signal);
+  assertExecutionCurrent(execution);
+  // Guard against malformed or unexpectedly empty taxonomy data. Proceeding
+  // would categorize everything as "uncategorized" with zero confidence.
   if (categoryNodes.length === 0) {
     throw new Error('카테고리 데이터를 불러올 수 없어요. 다시 시도해 보세요.');
   }
-  if (execution && !execution.run.isCurrent()) {
-    const error = new Error('분석이 취소되었어요.');
-    error.name = 'AbortError';
-    throw error;
-  }
-  const sharedMatcher = new MerchantMatcher(toRulesCategoryNodes(categoryNodes));
+  const sharedMatcher = new MerchantMatcher(categoryNodes);
 
   // 2. Parse and categorize ALL files using the shared matcher
   // Pass categoryNodes to avoid redundant loadCategories() calls inside
@@ -299,10 +334,9 @@ export async function analyzeMultipleFiles(
       onProgress: execution?.onProgress,
     },
   );
+  assertExecutionCurrent(execution);
   if (parseQueue.cancelled || parseQueue.stale) {
-    const error = new Error('분석이 취소되었어요.');
-    error.name = 'AbortError';
-    throw error;
+    throw analysisAbortError();
   }
 
   // 2. Merge all transactions and build category labels from the first parsed result
@@ -318,9 +352,7 @@ export async function analyzeMultipleFiles(
   for (const [index, outcome] of parseQueue.outcomes.entries()) {
     const file = files[index]!;
     if (outcome.status === 'cancelled') {
-      const error = new Error('분석이 취소되었어요.');
-      error.name = 'AbortError';
-      throw error;
+      throw analysisAbortError();
     }
     if (outcome.status === 'rejected') {
       failedFileNames.push(file.name);
@@ -390,11 +422,13 @@ export async function analyzeMultipleFiles(
     ...options,
     previousSpendingBasis: context.previousSpendingBasis,
     previousMonthTransactions: context.previousTransactions,
-  }, categoryLabels);
+  }, categoryLabels, execution);
+  assertExecutionCurrent(execution);
 
   // `transactions` keeps every uploaded month for display/editing, while
   // optimization uses only the latest valid month and the exact predecessor
   // month remains available solely as the performance-spending basis.
+  assertExecutionCurrent(execution);
   return {
     success: true,
     bank,

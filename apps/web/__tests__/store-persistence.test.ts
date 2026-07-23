@@ -232,6 +232,31 @@ describe('production persistence serializer', () => {
     });
   });
 
+  test('keeps the maximum fuel volume and quarantines larger persisted facts', () => {
+    const accepted = analysisFixture();
+    Object.assign(accepted.transactions![0]!, {
+      fuelVolumeLiters: 200,
+      factProvenance: { fuelVolumeLiters: 'user' },
+    });
+    expect(
+      deserializeAnalysis(serializeAnalysis(accepted).serialized)
+        .data?.transactions?.[0]?.fuelVolumeLiters,
+    ).toBe(200);
+
+    for (const fuelVolumeLiters of [200.01, 1e308]) {
+      const analysis = analysisFixture();
+      analysis.transactions!.push({
+        ...analysis.transactions![0]!,
+        id: `invalid-${fuelVolumeLiters}`,
+        fuelVolumeLiters,
+        factProvenance: { fuelVolumeLiters: 'user' },
+      });
+      const restored = deserializeAnalysis(serializeAnalysis(analysis).serialized);
+      expect(restored.warningKind).toBe('corrupted');
+      expect(restored.data?.transactions?.map(({ id }) => id)).toEqual(['tx-1']);
+    }
+  });
+
   test('omits transactions and records their count above the storage budget', () => {
     const oversized = analysisFixture('x'.repeat(MAX_PERSIST_SIZE));
     const { serialized, result } = serializeAnalysis(oversized);

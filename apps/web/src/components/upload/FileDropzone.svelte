@@ -22,12 +22,13 @@
     MAX_UPLOAD_TOTAL_BYTES,
     admitUploadFiles,
   } from '../../lib/upload-admission.js';
+  import { PendingNavigation } from '../../lib/pending-navigation.js';
   import Icon from '../ui/Icon.svelte';
 
   const analysisRuns = new LatestFileParseRun();
-  let navigateTimeout: ReturnType<typeof setTimeout> | null = null;
+  const pendingNavigation = new PendingNavigation();
   onDestroy(() => {
-    if (navigateTimeout) clearTimeout(navigateTimeout);
+    pendingNavigation.cancel();
     analysisRuns.cancel();
     analysisStore.cancelAnalysis();
   });
@@ -159,13 +160,19 @@
     return 'document-text';
   }
 
-  function cancelActiveAnalysis(): void {
-    if (uploadStatus !== 'uploading') return;
+  function invalidateAnalysisOwnership(): void {
+    pendingNavigation.cancel();
     analysisRuns.cancel();
     analysisStore.cancelAnalysis();
     analysisProgress = { completed: 0, total: 0 };
-    uploadStatus = 'idle';
     isBlockingNavigation = false;
+    if (uploadStatus === 'uploading') {
+      uploadStatus = 'idle';
+    }
+  }
+
+  function beginAdmittedFileMutation(): void {
+    invalidateAnalysisOwnership();
   }
 
   /** Read the first uploaded file's text and run bank detection.
@@ -194,10 +201,12 @@
   }
 
   function addFiles(newFiles: File[]) {
-    cancelActiveAnalysis();
     const admission = admitUploadFiles(uploadedFiles, newFiles);
     // Add valid files first
     if (admission.accepted.length > 0) {
+      // Admission is the mutation boundary. It invalidates both the analysis
+      // run and any old success countdown before the selected files change.
+      beginAdmittedFileMutation();
       uploadedFiles = [...uploadedFiles, ...admission.accepted];
       uploadStatus = 'idle';
       errorMessages = [];
@@ -236,7 +245,7 @@
   }
 
   function removeFile(index: number) {
-    cancelActiveAnalysis();
+    beginAdmittedFileMutation();
     uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
     if (uploadedFiles.length === 0) {
       uploadStatus = 'idle';
@@ -253,7 +262,7 @@
   }
 
   function clearAllFiles() {
-    cancelActiveAnalysis();
+    beginAdmittedFileMutation();
     uploadedFiles = [];
     uploadStatus = 'idle';
     errorMessages = [];
@@ -286,6 +295,7 @@
     }
     previousSpendingError = null;
     const files = [...uploadedFiles];
+    pendingNavigation.cancel();
     const run = analysisRuns.begin();
     analysisProgress = { completed: 0, total: files.length };
     uploadStatus = 'uploading';
@@ -317,20 +327,29 @@
         uploadStatus = 'error';
       } else {
         uploadStatus = 'success';
-        // Defensive: clear any prior pending navigate timer before scheduling
-        // a new one. Under a rapid double-invocation race (physically blocked
-        // by the disabled button, but defense-in-depth), two timers could
-        // otherwise stack and both fire navigate() back-to-back (D7-M3 / C8-04).
-        if (navigateTimeout) { clearTimeout(navigateTimeout); navigateTimeout = null; }
-        navigateTimeout = setTimeout(async () => {
-          if (!run.isCurrent()) return;
+        pendingNavigation.schedule(async (owner) => {
+          if (
+            !pendingNavigation.isCurrent(owner) ||
+            !run.isCurrent() ||
+            uploadStatus !== 'success'
+          ) return;
           // Use Astro client-side navigation to preserve in-memory store
           // state instead of a full page reload (C62-15). Fall back to
           // full reload if View Transitions are not enabled.
           try {
             const { navigate } = await import('astro:transitions/client');
+            if (
+              !pendingNavigation.isCurrent(owner) ||
+              !run.isCurrent() ||
+              uploadStatus !== 'success'
+            ) return;
             navigate(buildPageUrl('dashboard'));
           } catch {
+            if (
+              !pendingNavigation.isCurrent(owner) ||
+              !run.isCurrent() ||
+              uploadStatus !== 'success'
+            ) return;
             if (typeof console !== 'undefined') console.debug('[cherrypicker] Astro View Transitions not available, falling back to full page reload');
             window.location.href = buildPageUrl('dashboard');
           }
@@ -361,10 +380,7 @@
   }
 
   function handleRetry() {
-    if (navigateTimeout) { clearTimeout(navigateTimeout); navigateTimeout = null; }
-    analysisRuns.cancel();
-    analysisStore.cancelAnalysis();
-    analysisProgress = { completed: 0, total: 0 };
+    invalidateAnalysisOwnership();
     uploadStatus = 'idle';
     errorMessages = [];
   }

@@ -2,6 +2,19 @@
 // Must be .svelte.ts so that $state runes are compiled properly
 
 import type { CategorizedTx } from './analyzer.js';
+import type {
+  CardAssignment,
+  CardRewardResult,
+  OptimizationResult,
+} from '@cherrypicker/core';
+export type {
+  CalculationIssue,
+  CapInfo,
+  CardAssignment,
+  CardRewardResult,
+  CategoryReward,
+  OptimizationResult,
+} from '@cherrypicker/core';
 import {
   buildAnalysisContext,
   type PreviousSpendingBasis,
@@ -22,6 +35,10 @@ import type {
   FileParseRun,
 } from './file-parse-queue.js';
 import { OperationEpoch } from './operation-epoch.js';
+import {
+  AnalysisReplacementRuntime,
+  type AnalysisReplacementState,
+} from './analysis-replacement-runtime.js';
 
 type AnalyzerModule = typeof import('./analyzer.js');
 let analyzerModulePromise: Promise<AnalyzerModule> | null = null;
@@ -31,74 +48,7 @@ function loadAnalyzerModule(): Promise<AnalyzerModule> {
   return analyzerModulePromise;
 }
 
-// --- Types matching the API response shape ---
-
-export interface CategoryReward {
-  category: string;
-  categoryNameKo: string;
-  spending: number;
-  reward: number;
-  rate: number;
-  rewardType: string;
-  capReached: boolean;
-  capAmount?: number;
-}
-
-export interface CapInfo {
-  category: string;
-  capType: 'monthly_category' | 'monthly_total' | 'per_transaction';
-  capAmount: number;
-  actualReward: number;
-  appliedReward: number;
-}
-
-export interface CardRewardResult {
-  cardId: string;
-  cardName: string;
-  totalReward: number;
-  totalSpending: number;
-  effectiveRate: number;
-  byCategory: CategoryReward[];
-  performanceTier: string;
-  capsHit: CapInfo[];
-  unsupportedRules?: CalculationIssue[];
-}
-
-export interface CalculationIssue {
-  cardId: string;
-  transactionId: string;
-  ruleId: string;
-  category: string;
-  reason: string;
-  detail?: string;
-}
-
-export interface CardAssignment {
-  category: string;
-  categoryNameKo: string;
-  assignedCardId: string;
-  assignedCardName: string;
-  spending: number;
-  reward: number;
-  rate: number;
-  alternatives: {
-    cardId: string;
-    cardName: string;
-    reward: number;
-    rate: number;
-  }[];
-}
-
-export interface OptimizationResult {
-  assignments: CardAssignment[];
-  totalReward: number;
-  totalSpending: number;
-  effectiveRate: number;
-  savingsVsSingleCard: number;
-  bestSingleCard: { cardId: string; cardName: string; totalReward: number };
-  cardResults: CardRewardResult[];
-  unsupportedRules?: CalculationIssue[];
-}
+// --- Web-owned analysis state built around core result contracts ---
 
 export interface AnalysisResult {
   success: boolean;
@@ -176,6 +126,17 @@ function persistToStorage(data: AnalysisResult): PersistResult {
     return { kind: 'error', truncatedTxCount: null };
   }
   return { kind: null, truncatedTxCount: null };
+}
+
+function clearPersistedAnalysis(): PersistResult {
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+    return { kind: null, truncatedTxCount: null };
+  } catch {
+    return { kind: 'error', truncatedTxCount: null };
+  }
 }
 
 /** Track the persist warning kind detected during loadFromStorage.
@@ -265,12 +226,16 @@ function createAnalysisStore() {
   // Cache category labels to avoid rebuilding the Map on every reoptimize call.
   let cachedCategoryLabels: Map<string, string> | undefined;
 
-  async function getCategoryLabels(): Promise<Map<string, string>> {
+  async function getCategoryLabels(
+    signal?: AbortSignal,
+  ): Promise<Map<string, string>> {
     if (cachedCategoryLabels) return cachedCategoryLabels;
-    const nodes = await loadCategories();
-    // Don't cache an empty Map — loadCategories() returns [] on AbortError,
-    // and caching the empty result would poison all subsequent reoptimize()
-    // calls to show raw English keys instead of Korean labels (C72-03).
+    const nodes = await loadCategories(signal);
+    if (signal?.aborted) {
+      throw new DOMException('재계산이 취소되었어요.', 'AbortError');
+    }
+    // Don't cache an empty Map: an unexpectedly empty artifact must not poison
+    // later reoptimization calls with raw English keys (C72-03).
     // Returning the empty Map for this call is acceptable because the caller
     // (reoptimize) will still function — labels are cosmetic, not structural.
     const labels = buildCategoryLabelMap(nodes);
@@ -279,6 +244,54 @@ function createAnalysisStore() {
     }
     return labels;
   }
+
+  const replacementState: AnalysisReplacementState = {
+    get result() {
+      return result;
+    },
+    set result(value) {
+      result = value;
+    },
+    get loading() {
+      return loading;
+    },
+    set loading(value) {
+      loading = value;
+    },
+    get error() {
+      return error;
+    },
+    set error(value) {
+      error = value;
+    },
+    get generation() {
+      return generation;
+    },
+    set generation(value) {
+      generation = value;
+    },
+    get persistWarningKind() {
+      return persistWarningKind;
+    },
+    set persistWarningKind(value) {
+      persistWarningKind = value;
+    },
+    get truncatedTxCount() {
+      return truncatedTxCount;
+    },
+    set truncatedTxCount(value) {
+      truncatedTxCount = value;
+    },
+  };
+  const replacementRuntime = new AnalysisReplacementRuntime(
+    replacementState,
+    {
+      loadAnalyzerModule,
+      persist: persistToStorage,
+      clearPersistedAnalysis,
+    },
+    operationEpoch,
+  );
 
   return {
     get result() {
@@ -337,57 +350,11 @@ function createAnalysisStore() {
       options: AnalyzeOptions | undefined,
       execution: AnalyzeExecution,
     ): Promise<void> {
-      const operation = operationEpoch.begin();
-      const isActiveRequest = () =>
-        operation.isCurrent() && execution.run.isCurrent();
-      loading = true;
-      error = null;
-
-      try {
-        const fileArray = Array.isArray(files) ? files : [files];
-        const { analyzeMultipleFiles } = await loadAnalyzerModule();
-        const analysisResult = await analyzeMultipleFiles(
-          fileArray,
-          options,
-          execution,
-        );
-        if (!isActiveRequest()) return;
-        // Preserve the user's explicit previousMonthSpending input so
-        // reoptimize() can forward it instead of silently dropping it (C44-01).
-        if (
-          options?.previousMonthSpending !== undefined &&
-          Number.isFinite(options.previousMonthSpending) &&
-          options.previousMonthSpending >= 0
-        ) {
-          analysisResult.previousMonthSpendingOption = options.previousMonthSpending;
-        }
-        // Preserve the user's explicit cardIds filter so reoptimize()
-        // can forward it instead of silently optimizing against all cards.
-        if (options?.cardIds && options.cardIds.length > 0) {
-          analysisResult.cardIdsOption = options.cardIds;
-        }
-        result = analysisResult;
-        generation++;
-        const persistResult = persistToStorage(analysisResult);
-        persistWarningKind = persistResult.kind;
-        truncatedTxCount = persistResult.truncatedTxCount;
-      } catch (e) {
-        if (!isActiveRequest() || (e instanceof Error && e.name === 'AbortError')) {
-          return;
-        }
-        error = e instanceof Error ? e.message : '분석 중 문제가 생겼어요';
-        result = null;
-      } finally {
-        if (operation.isCurrent()) {
-          loading = false;
-        }
-      }
+      await replacementRuntime.analyze(files, options, execution);
     },
 
     cancelAnalysis(): void {
-      operationEpoch.invalidate();
-      loading = false;
-      error = null;
+      replacementRuntime.cancel();
     },
 
     async reoptimize(editedTransactions: CategorizedTx[], options?: AnalyzeOptions): Promise<void> {
@@ -413,7 +380,7 @@ function createAnalysisStore() {
         // runs (C81-01).
         const snapshot = result;
 
-        const categoryLabels = await getCategoryLabels();
+        const categoryLabels = await getCategoryLabels(operation.signal);
         if (!operation.isCurrent() || result !== snapshot) return;
         const explicitPreviousMonthSpending =
           options?.previousMonthSpending ??
@@ -434,6 +401,17 @@ function createAnalysisStore() {
 
         const { optimizeFromTransactions } = await loadAnalyzerModule();
         if (!operation.isCurrent() || result !== snapshot) return;
+        const reoptimizationRun: FileParseRun = Object.freeze({
+          generation: operation.epoch,
+          signal: operation.signal,
+          isCurrent: () =>
+            operation.isCurrent() && result === snapshot,
+          commit(effect: () => void): boolean {
+            if (!operation.isCurrent() || result !== snapshot) return false;
+            effect();
+            return true;
+          },
+        });
         const optimization = await optimizeFromTransactions(context.latestTransactions, {
           ...options,
           previousMonthSpending: explicitPreviousMonthSpending,
@@ -442,7 +420,7 @@ function createAnalysisStore() {
           // Forward the user's cardIds selection from the initial analysis
           // so reoptimize doesn't silently switch to optimizing against all cards.
           cardIds: options?.cardIds ?? snapshot.cardIdsOption,
-        }, categoryLabels);
+        }, categoryLabels, { run: reoptimizationRun });
         if (!operation.isCurrent() || result !== snapshot) return;
         // result is guaranteed non-null here (early null guard at top of try block).
         // Keep all months in the transactions field for display/editing,
@@ -466,11 +444,15 @@ function createAnalysisStore() {
               : undefined,
         };
         generation++;
+        if (!operation.isCurrent()) return;
         const persistResult = persistToStorage(result);
         persistWarningKind = persistResult.kind;
         truncatedTxCount = persistResult.truncatedTxCount;
       } catch (e) {
-        if (!operation.isCurrent()) return;
+        if (
+          !operation.isCurrent() ||
+          (e instanceof Error && e.name === 'AbortError')
+        ) return;
         error = e instanceof Error ? e.message : '재계산 중 문제가 생겼어요';
       } finally {
         if (operation.isCurrent()) loading = false;
@@ -478,6 +460,8 @@ function createAnalysisStore() {
     },
 
     reset(): void {
+      // Reset aborts owned work and clears both state and storage. Unlike an
+      // idle cancel (which preserves a committed result), reset is destructive.
       operationEpoch.invalidate();
       result = null;
       error = null;

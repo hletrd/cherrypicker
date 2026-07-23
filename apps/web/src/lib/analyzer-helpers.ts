@@ -1,7 +1,3 @@
-import type {
-  CategoryNode as RulesCategoryNode,
-} from '@cherrypicker/rules';
-import type { CategoryNode } from './cards.js';
 import {
   buildAnalysisContext,
   isValidIsoDate,
@@ -20,20 +16,6 @@ export interface ParseWarning {
   message: string;
   raw?: string;
   count?: number;
-}
-
-export function toRulesCategoryNodes(
-  nodes: CategoryNode[],
-): RulesCategoryNode[] {
-  return nodes.map((node) => ({
-    id: node.id,
-    labelKo: node.labelKo,
-    labelEn: '',
-    keywords: node.keywords,
-    ...(node.subcategories
-      ? { subcategories: toRulesCategoryNodes(node.subcategories) }
-      : {}),
-  }));
 }
 
 export function getLatestMonth(

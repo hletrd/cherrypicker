@@ -256,9 +256,13 @@ describe('file parse queue', () => {
   });
 
   test('is wired through analyzer, store, and visible upload progress', async () => {
-    const [analyzer, store, dropzone] = await Promise.all([
+    const [analyzer, store, replacementRuntime, dropzone] = await Promise.all([
       readFile(resolve(webRoot, 'src/lib/analyzer.ts'), 'utf8'),
       readFile(resolve(webRoot, 'src/lib/store.svelte.ts'), 'utf8'),
+      readFile(
+        resolve(webRoot, 'src/lib/analysis-replacement-runtime.ts'),
+        'utf8',
+      ),
       readFile(
         resolve(webRoot, 'src/components/upload/FileDropzone.svelte'),
         'utf8',
@@ -268,7 +272,9 @@ describe('file parse queue', () => {
     expect(analyzer).toContain('runFileParseQueue(');
     expect(analyzer).not.toMatch(/Promise\.all\(\s*files\.map/);
     expect(store).toContain('OperationEpoch');
-    expect(store).toContain('execution.run.isCurrent()');
+    expect(store).toContain('AnalysisReplacementRuntime');
+    expect(replacementRuntime).toContain('callerRun.isCurrent()');
+    expect(replacementRuntime).toContain('operation.isCurrent()');
     expect(analyzer).toContain('async (file, index, signal)');
     expect(dropzone).toContain('LatestFileParseRun');
     expect(dropzone).toContain(

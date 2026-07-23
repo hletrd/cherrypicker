@@ -15,7 +15,9 @@ describe('OperationEpoch', () => {
     const first = owner.begin();
     expect(first.isCurrent()).toBe(true);
     const second = owner.begin();
+    expect(first.signal.aborted).toBe(true);
     expect(first.isCurrent()).toBe(false);
+    expect(second.signal.aborted).toBe(false);
     expect(second.isCurrent()).toBe(true);
   });
 
@@ -23,6 +25,7 @@ describe('OperationEpoch', () => {
     const owner = new OperationEpoch();
     const operation = owner.begin();
     owner.invalidate();
+    expect(operation.signal.aborted).toBe(true);
     expect(operation.isCurrent()).toBe(false);
   });
 

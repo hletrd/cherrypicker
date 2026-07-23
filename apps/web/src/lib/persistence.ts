@@ -428,7 +428,7 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
   if (Array.isArray(migrated.transactions)) {
     const validTransactions = migrated.transactions.filter(isOptimizableTx);
     transactions = validTransactions.length > 0 ? validTransactions : undefined;
-    if (migrated.transactions.length > 0 && validTransactions.length === 0) {
+    if (validTransactions.length !== migrated.transactions.length) {
       warningKind = 'corrupted';
     }
   } else if (

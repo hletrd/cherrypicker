@@ -78,6 +78,80 @@ test('browser flow classifies regression merchants and renders dashboard/results
   expect(pageErrors).toEqual([]);
 });
 
+test('a page-wide file drop owns the UI and cancels the old success countdown', async ({
+  page,
+}) => {
+  await page.goto(homeUrl);
+  await page.waitForFunction(() =>
+    Boolean(document.querySelector('astro-island:not([ssr])')),
+  );
+  await page.clock.install();
+  await page.evaluate(() => {
+    const nativeSetTimeout = globalThis.setTimeout.bind(globalThis);
+    const nativeClearTimeout = globalThis.clearTimeout.bind(globalThis);
+    const activeCountdowns = new Set();
+    globalThis.__countdownTimerProbe = {
+      scheduled: 0,
+      cleared: 0,
+      activeCountdowns,
+    };
+    globalThis.setTimeout = (handler, delay, ...args) => {
+      const handle = nativeSetTimeout(handler, delay, ...args);
+      if (delay === 1_200) {
+        globalThis.__countdownTimerProbe.scheduled++;
+        activeCountdowns.add(handle);
+      }
+      return handle;
+    };
+    globalThis.clearTimeout = (handle) => {
+      if (activeCountdowns.delete(handle)) {
+        globalThis.__countdownTimerProbe.cleared++;
+      }
+      nativeClearTimeout(handle);
+    };
+  });
+  await page.locator('input[type="file"]').first().setInputFiles(uploadFixture);
+  await page.getByRole('button', { name: /^분석 시작/ }).click();
+  await expect(page.getByText(/^분석 완료/)).toBeVisible({
+    timeout: 30_000,
+  });
+  expect(await page.evaluate(() => ({
+    scheduled: globalThis.__countdownTimerProbe.scheduled,
+    active: globalThis.__countdownTimerProbe.activeCountdowns.size,
+  }))).toEqual({ scheduled: 1, active: 1 });
+
+  await page.evaluate(() => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(
+      [
+        '날짜,가맹점,금액\n' +
+        '2026-05-01,카운트다운 뒤 새 파일,70000\n',
+      ],
+      'countdown-replacement.csv',
+      { type: 'text/csv' },
+    ));
+    document.dispatchEvent(new DragEvent('drop', {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: transfer,
+    }));
+  });
+
+  await expect(page.getByText('countdown-replacement.csv')).toBeVisible();
+  await expect(page.getByText(/^분석 완료/)).not.toBeVisible();
+  expect(await page.evaluate(() => ({
+    cleared: globalThis.__countdownTimerProbe.cleared,
+    active: globalThis.__countdownTimerProbe.activeCountdowns.size,
+  }))).toEqual({ cleared: 1, active: 0 });
+
+  // Cross the production 1.2-second deadline: the prior callback must remain
+  // inert and the newly admitted file must still own the upload screen.
+  await page.clock.fastForward(1_400);
+  expect(new URL(page.url()).pathname).toBe(new URL(homeUrl).pathname);
+  await expect(page.getByText('countdown-replacement.csv')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^분석 시작/ })).toBeVisible();
+});
+
 test('built app bounds persisted-state migration and recovers safely', async ({ page }) => {
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
