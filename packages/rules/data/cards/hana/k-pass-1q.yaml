@@ -54,7 +54,7 @@ rewards:
     support:
       status: supported
 
-  - category: offline_shopping
+  - category: '*'
     id: reward-002
     priority: 2
     combination: exclusive

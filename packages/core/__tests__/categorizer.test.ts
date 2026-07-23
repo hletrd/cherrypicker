@@ -8,7 +8,14 @@ import {
   getResolvedKeywordConflicts,
   MerchantMatcher,
 } from '../src/categorizer/matcher.js';
-import { loadCategories } from '@cherrypicker/rules';
+import { normalizeMerchantText } from '../src/categorizer/normalize.js';
+import { calculateRewards } from '../src/calculator/reward.js';
+import {
+  loadCategories,
+  type CardRuleSet,
+  type CategoryNode,
+} from '@cherrypicker/rules';
+import type { CategorizedTransaction } from '../src/models/transaction.js';
 
 const categoriesPath = join(
   import.meta.dir,
@@ -17,11 +24,12 @@ const categoriesPath = join(
 
 let taxonomy: CategoryTaxonomy;
 let matcher: MerchantMatcher;
+let categoryNodes: CategoryNode[];
 
 beforeAll(async () => {
-  const nodes = await loadCategories(categoriesPath);
-  taxonomy = new CategoryTaxonomy(nodes);
-  matcher = new MerchantMatcher(nodes);
+  categoryNodes = await loadCategories(categoriesPath);
+  taxonomy = new CategoryTaxonomy(categoryNodes);
+  matcher = new MerchantMatcher(categoryNodes);
 });
 
 describe('CategoryTaxonomy - getAllCategories', () => {
@@ -141,6 +149,38 @@ describe('CategoryTaxonomy - findCategory', () => {
     const result = taxonomy.findCategory('cgv');
     expect(result.category).toBe('entertainment');
   });
+
+  test('equal-length substring and fuzzy candidates use a stable lexical tie-break', () => {
+    const firstOrder: CategoryNode[] = [
+      {
+        id: 'second',
+        labelKo: '둘째',
+        labelEn: 'Second',
+        keywords: ['bcde'],
+      },
+      {
+        id: 'first',
+        labelKo: '첫째',
+        labelEn: 'First',
+        keywords: ['abcd'],
+      },
+    ];
+    const reverseOrder = [...firstOrder].reverse();
+
+    expect(
+      new CategoryTaxonomy(firstOrder).findCategory('abcde').category,
+    ).toBe('first');
+    expect(
+      new CategoryTaxonomy(reverseOrder).findCategory('abcde').category,
+    ).toBe('first');
+
+    expect(
+      new CategoryTaxonomy(firstOrder).findCategory('bcd').category,
+    ).toBe('first');
+    expect(
+      new CategoryTaxonomy(reverseOrder).findCategory('bcd').category,
+    ).toBe('first');
+  });
 });
 
 describe('CategoryTaxonomy - keyword conflict contract', () => {
@@ -180,9 +220,52 @@ describe('CategoryTaxonomy - keyword conflict contract', () => {
       }).findCategory('shared').category,
     ).toBe('second');
   });
+
+  test('every authored canonical keyword resolves to its audited parent and leaf', () => {
+    const definitions = new Map<string, {
+      authored: Set<string>;
+      candidates: Set<string>;
+    }>();
+
+    const collect = (node: CategoryNode, parentId?: string) => {
+      const canonicalKey = parentId ? `${parentId}.${node.id}` : node.id;
+      for (const authoredKeyword of node.keywords) {
+        const keyword = normalizeMerchantText(authoredKeyword);
+        if (!keyword) continue;
+        const definition = definitions.get(keyword) ?? {
+          authored: new Set<string>(),
+          candidates: new Set<string>(),
+        };
+        definition.authored.add(authoredKeyword);
+        definition.candidates.add(canonicalKey);
+        definitions.set(keyword, definition);
+      }
+      for (const child of node.subcategories ?? []) {
+        collect(child, parentId ?? node.id);
+      }
+    };
+    for (const root of categoryNodes) collect(root);
+
+    for (const [keyword, definition] of definitions) {
+      const candidates = [...definition.candidates].sort();
+      const expected =
+        TAXONOMY_KEYWORD_OVERRIDES[keyword] ?? candidates[0]!;
+      if (candidates.length > 1) {
+        expect(TAXONOMY_KEYWORD_OVERRIDES[keyword]).toBeDefined();
+      }
+      for (const authoredKeyword of definition.authored) {
+        const result = matcher.match(authoredKeyword);
+        const actual = result.subcategory
+          ? `${result.category}.${result.subcategory}`
+          : result.category;
+        expect(actual).toBe(expected);
+        expect(result.confidence).toBe(1);
+      }
+    }
+  });
 });
 
-describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
+describe('MerchantMatcher - canonical and legacy keyword precedence', () => {
   test('스타벅스 maps to dining.cafe', () => {
     const result = matcher.match('스타벅스');
     expect(result.category).toBe('dining');
@@ -196,10 +279,10 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     expect(result.subcategory).toBe('cafe');
   });
 
-  test('이마트 follows the current curated offline shopping override', () => {
+  test('이마트 follows the canonical grocery taxonomy', () => {
     const result = matcher.match('이마트');
-    expect(result.category).toBe('offline_shopping');
-    expect(result.subcategory).toBeUndefined();
+    expect(result.category).toBe('grocery');
+    expect(result.subcategory).toBe('supermarket');
     expect(result.confidence).toBe(1.0);
   });
 
@@ -215,10 +298,10 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     expect(result.category).toBe('convenience_store');
   });
 
-  test('카카오택시 follows the current transportation override', () => {
+  test('카카오택시 follows the canonical public-transit taxonomy', () => {
     const result = matcher.match('카카오택시');
-    expect(result.category).toBe('transportation');
-    expect(result.subcategory).toBeUndefined();
+    expect(result.category).toBe('public_transit');
+    expect(result.subcategory).toBe('taxi');
     expect(result.confidence).toBe(1.0);
   });
 
@@ -228,10 +311,10 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     expect(result.subcategory).toBe('delivery');
   });
 
-  test('쿠팡 maps to the top-level online shopping category', () => {
+  test('쿠팡 maps to the canonical general online-shopping leaf', () => {
     const result = matcher.match('쿠팡');
     expect(result.category).toBe('online_shopping');
-    expect(result.subcategory).toBeUndefined();
+    expect(result.subcategory).toBe('general');
   });
 
   test('맥도날드 maps to dining.fast_food', () => {
@@ -240,10 +323,10 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     expect(result.subcategory).toBe('fast_food');
   });
 
-  test('넷플릭스 follows the current subscription override', () => {
+  test('넷플릭스 follows the canonical streaming taxonomy', () => {
     const result = matcher.match('넷플릭스');
-    expect(result.category).toBe('subscription');
-    expect(result.subcategory).toBeUndefined();
+    expect(result.category).toBe('entertainment');
+    expect(result.subcategory).toBe('streaming');
   });
 
   test('SKT maps to telecom', () => {
@@ -257,11 +340,16 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     expect(result.category).toBe('dining');
   });
 
-  test('자동차세 maps to utilities after niche keyword dedupe', () => {
+  test('a specific legacy exact keyword beats a broad canonical substring', () => {
     const result = matcher.match('자동차세');
     expect(result.category).toBe('utilities');
     expect(result.subcategory).toBeUndefined();
-    expect(result.confidence).toBe(1.0);
+    expect(result.confidence).toBe(1);
+
+    const substring = matcher.match('자동차세 납부');
+    expect(substring.category).toBe('utilities');
+    expect(substring.subcategory).toBeUndefined();
+    expect(substring.confidence).toBe(0.8);
   });
 
   test('면세점 maps to offline_shopping after niche keyword dedupe', () => {
@@ -269,6 +357,91 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
     expect(result.category).toBe('offline_shopping');
     expect(result.subcategory).toBeUndefined();
     expect(result.confidence).toBe(1.0);
+  });
+});
+
+describe('MerchantMatcher - supported rule reachability', () => {
+  test('canonical convenience, transit, pharmacy, streaming, grocery, and fuel merchants award', () => {
+    const examples = [
+      ['세븐일레븐', 'convenience_store', undefined],
+      ['교통카드', 'public_transit', undefined],
+      ['약국', 'medical', 'pharmacy'],
+      ['넷플릭스', 'entertainment', 'streaming'],
+      ['이마트', 'grocery', 'supermarket'],
+      ['SK주유소', 'transportation', 'fuel'],
+    ] as const;
+    const cardRule: CardRuleSet = {
+      card: {
+        id: 'canonical-reachability',
+        issuer: 'fixture',
+        name: 'Canonical Reachability',
+        nameKo: '분류 도달성',
+        type: 'credit',
+        annualFee: { domestic: 0, international: 0 },
+        lastUpdated: '2026-07-24',
+        source: 'manual',
+      },
+      performanceTiers: [{
+        id: 'tier0',
+        label: '무실적',
+        minSpending: 0,
+        maxSpending: null,
+      }],
+      performanceExclusions: [],
+      rewards: examples.map(([, category, subcategory], index) => ({
+        id: `reward-${index + 1}`,
+        category,
+        subcategory,
+        priority: index + 1,
+        combination: 'exclusive',
+        stackingGroup: 'base',
+        capGroup: `reward-${index + 1}`,
+        type: 'discount',
+        tiers: [{
+          performanceTier: 'tier0',
+          rate: 1,
+          value: { kind: 'percentage', amount: 1 },
+          monthlyCap: null,
+          perTransactionCap: null,
+        }],
+        support: { status: 'supported' },
+      })),
+      globalConstraints: {
+        monthlyTotalDiscountCap: null,
+        minimumAnnualSpending: null,
+      },
+    };
+    const transactions: CategorizedTransaction[] = examples.map(
+      ([merchant], index) => {
+        const match = matcher.match(merchant);
+        return {
+          id: `transaction-${index + 1}`,
+          date: '2026-07-24',
+          merchant,
+          amount: 10_000,
+          currency: 'KRW',
+          paymentType: 'domestic',
+          factProvenance: { paymentType: 'statement' },
+          ...match,
+        };
+      },
+    );
+
+    const result = calculateRewards({
+      transactions,
+      previousMonthSpending: 0,
+      cardRule,
+    });
+
+    expect(result.totalReward).toBe(600);
+    expect(result.unsupportedRules).toHaveLength(0);
+    expect(result.rewards.map(({ category }) => category).sort()).toEqual(
+      examples
+        .map(([, category, subcategory]) =>
+          subcategory ? `${category}.${subcategory}` : category
+        )
+        .sort(),
+    );
   });
 });
 

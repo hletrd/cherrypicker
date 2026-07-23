@@ -51,7 +51,7 @@ rewards:
     support:
       status: supported
 
-  - category: "subscription"
+  - category: "*"
     id: reward-002
     priority: 2
     combination: exclusive

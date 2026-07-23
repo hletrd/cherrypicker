@@ -67,7 +67,7 @@
       "utilities.gas",
       "utilities.water"
     ],
-    "sourceHash": "5597a5360e663c6a3c8e77a4a47dd4e0c2eda7c0eae38ccf6279af20a6ccc0ee"
+    "sourceHash": "06fab718eb0637dd521af71864cc30e1dab991109108df57832ba051c9d57e6c"
   },
   "issuers": [
     {
@@ -970,29 +970,7 @@
           "nameKo": "욜로",
           "type": "credit",
           "annualFee": 15000,
-          "topRewards": [
-            {
-              "category": "dining.cafe",
-              "type": "discount",
-              "bestValue": 20,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "convenience_store",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "entertainment",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "shinhan-aliexpress",
@@ -2468,7 +2446,7 @@
               "unit": null
             },
             {
-              "category": "subscription",
+              "category": "*",
               "type": "discount",
               "bestValue": 20,
               "bestValueKind": "rate",
@@ -2717,15 +2695,7 @@
           "nameKo": "KB국민 골든라이프올림카드",
           "type": "credit",
           "annualFee": 15000,
-          "topRewards": [
-            {
-              "category": "medical",
-              "type": "discount",
-              "bestValue": 5,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "kb-mileage-gaon-asiana",
@@ -2818,23 +2788,9 @@
           "annualFee": 15000,
           "topRewards": [
             {
-              "category": "entertainment",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
               "category": "telecom",
               "type": "discount",
               "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "grocery",
-              "type": "discount",
-              "bestValue": 5,
               "bestValueKind": "rate",
               "unit": null
             }
@@ -3507,36 +3463,7 @@
           "nameKo": "KB YOU Prime 카드",
           "type": "credit",
           "annualFee": 97000,
-          "topRewards": [
-            {
-              "category": "transportation",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "dining",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "telecom",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "education",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "kb-bev-iii",
@@ -3832,29 +3759,7 @@
           "nameKo": "KB Youth Club 체크카드",
           "type": "check",
           "annualFee": 0,
-          "topRewards": [
-            {
-              "category": "subscription",
-              "type": "discount",
-              "bestValue": 50,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "online_shopping",
-              "type": "discount",
-              "bestValue": 50,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "telecom",
-              "type": "discount",
-              "bestValue": 50,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         }
       ]
     },
@@ -4186,7 +4091,7 @@
           "annualFee": 20000,
           "topRewards": [
             {
-              "category": "offline_shopping",
+              "category": "grocery.supermarket",
               "type": "points",
               "bestValue": 2,
               "bestValueKind": "rate",
@@ -4366,14 +4271,14 @@
               "unit": null
             },
             {
-              "category": "subscription",
+              "category": "*",
               "type": "points",
               "bestValue": 10,
               "bestValueKind": "rate",
               "unit": null
             },
             {
-              "category": "entertainment",
+              "category": "*",
               "type": "points",
               "bestValue": 10,
               "bestValueKind": "rate",
@@ -4979,7 +4884,7 @@
           "annualFee": 50000,
           "topRewards": [
             {
-              "category": "offline_shopping",
+              "category": "*",
               "type": "discount",
               "bestValue": 5,
               "bestValueKind": "rate",
@@ -5123,7 +5028,7 @@
           "annualFee": 80000,
           "topRewards": [
             {
-              "category": "offline_shopping",
+              "category": "*",
               "type": "points",
               "bestValue": 5,
               "bestValueKind": "rate",
@@ -5311,7 +5216,7 @@
               "unit": null
             },
             {
-              "category": "entertainment",
+              "category": "sports.golf",
               "type": "points",
               "bestValue": 5,
               "bestValueKind": "rate",
@@ -6263,7 +6168,7 @@
               "unit": null
             },
             {
-              "category": "offline_shopping",
+              "category": "*",
               "type": "discount",
               "bestValue": 10,
               "bestValueKind": "rate",
@@ -7505,13 +7410,6 @@
               "unit": null
             },
             {
-              "category": "dining",
-              "type": "discount",
-              "bestValue": 30,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
               "category": "public_transit",
               "type": "discount",
               "bestValue": 10,
@@ -7522,13 +7420,6 @@
               "category": "telecom",
               "type": "discount",
               "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "online_shopping",
-              "type": "discount",
-              "bestValue": 7,
               "bestValueKind": "rate",
               "unit": null
             }
@@ -8213,20 +8104,6 @@
               "category": "subscription",
               "type": "discount",
               "bestValue": 50,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "telecom",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "dining",
-              "type": "discount",
-              "bestValue": 7,
               "bestValueKind": "rate",
               "unit": null
             },
@@ -9473,7 +9350,7 @@
               "unit": null
             },
             {
-              "category": "subscription",
+              "category": "*",
               "type": "discount",
               "bestValue": 30,
               "bestValueKind": "rate",
@@ -10620,13 +10497,6 @@
               "bestValue": 0.2,
               "bestValueKind": "rate",
               "unit": null
-            },
-            {
-              "category": "*",
-              "type": "points",
-              "bestValue": 0.1,
-              "bestValueKind": "rate",
-              "unit": null
             }
           ]
         },
@@ -10829,15 +10699,7 @@
           "nameKo": "우리카드 ROYAL BLUE M (SKYPASS)",
           "type": "credit",
           "annualFee": 135000,
-          "topRewards": [
-            {
-              "category": "travel.airline",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "woori-opus-silver",
@@ -10879,7 +10741,7 @@
           "annualFee": 0,
           "topRewards": [
             {
-              "category": "offline_shopping",
+              "category": "medical.pharmacy",
               "type": "cashback",
               "bestValue": 5,
               "bestValueKind": "rate",
@@ -10968,7 +10830,7 @@
               "unit": null
             },
             {
-              "category": "offline_shopping",
+              "category": "*",
               "type": "points",
               "bestValue": 0.5,
               "bestValueKind": "rate",
@@ -11246,43 +11108,7 @@
           "nameKo": "NH농협 TAKE5(테이크5)카드",
           "type": "credit",
           "annualFee": 10000,
-          "topRewards": [
-            {
-              "category": "transportation.fuel",
-              "type": "discount",
-              "bestValue": 60,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "entertainment.movie",
-              "type": "discount",
-              "bestValue": 30,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "education.books",
-              "type": "discount",
-              "bestValue": 20,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "dining",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "public_transit",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "nh-byeoldajul",
@@ -11453,13 +11279,6 @@
               "category": "dining.fast_food",
               "type": "discount",
               "bestValue": 20,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "entertainment.streaming",
-              "type": "discount",
-              "bestValue": 10,
               "bestValueKind": "rate",
               "unit": null
             },
@@ -14661,13 +14480,6 @@
           "annualFee": 18000,
           "topRewards": [
             {
-              "category": "entertainment.movie",
-              "type": "discount",
-              "bestValue": 100,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
               "category": "dining",
               "type": "discount",
               "bestValue": 10,
@@ -14696,13 +14508,6 @@
               "bestValue": 70,
               "bestValueKind": "rate",
               "unit": null
-            },
-            {
-              "category": "travel.airline",
-              "type": "discount",
-              "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
             }
           ]
         },
@@ -14717,13 +14522,6 @@
               "category": "transportation.fuel",
               "type": "discount",
               "bestValue": 70,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "travel.airline",
-              "type": "discount",
-              "bestValue": 10,
               "bestValueKind": "rate",
               "unit": null
             },
@@ -14866,13 +14664,6 @@
           "type": "check",
           "annualFee": 0,
           "topRewards": [
-            {
-              "category": "dining",
-              "type": "cashback",
-              "bestValue": 5,
-              "bestValueKind": "rate",
-              "unit": null
-            },
             {
               "category": "online_shopping",
               "type": "cashback",
@@ -15486,29 +15277,7 @@
           "nameKo": "전북은행 1st Triple 신용카드",
           "type": "credit",
           "annualFee": 10000,
-          "topRewards": [
-            {
-              "category": "dining",
-              "type": "discount",
-              "bestValue": 5,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "online_shopping",
-              "type": "discount",
-              "bestValue": 5,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "transportation.fuel",
-              "type": "discount",
-              "bestValue": 5,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "jb-1st-platinum",
@@ -15933,7 +15702,7 @@
               "unit": null
             },
             {
-              "category": "dining.cafe",
+              "category": "dining",
               "type": "discount",
               "bestValue": 5,
               "bestValueKind": "rate",
@@ -16544,29 +16313,7 @@
           "nameKo": "모임카드",
           "type": "check",
           "annualFee": 0,
-          "topRewards": [
-            {
-              "category": "dining",
-              "type": "cashback",
-              "bestValue": 5,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "convenience_store",
-              "type": "cashback",
-              "bestValue": 5,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "online_shopping",
-              "type": "cashback",
-              "bestValue": 5,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "toss-tosim-check",
@@ -16705,6 +16452,33 @@
           "monthlyCap": 10000
         },
         {
+          "cardId": "lotte-lotte-dept-flex",
+          "issuer": "lotte",
+          "type": "discount",
+          "rewardValue": 30,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": null
+        },
+        {
+          "cardId": "kb-toktok-with",
+          "issuer": "kb",
+          "type": "discount",
+          "rewardValue": 20,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 5000
+        },
+        {
+          "cardId": "hana-k-pass-1q",
+          "issuer": "hana",
+          "type": "discount",
+          "rewardValue": 10,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 10000
+        },
+        {
           "cardId": "hyundai-mm",
           "issuer": "hyundai",
           "type": "points",
@@ -16712,6 +16486,24 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 20000
+        },
+        {
+          "cardId": "hyundai-nol",
+          "issuer": "hyundai",
+          "type": "points",
+          "rewardValue": 10,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 8000
+        },
+        {
+          "cardId": "hyundai-nol",
+          "issuer": "hyundai",
+          "type": "points",
+          "rewardValue": 10,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 8000
         },
         {
           "cardId": "dgb-im-seven-cashback",
@@ -16727,6 +16519,24 @@
           "issuer": "hyundai",
           "type": "points",
           "rewardValue": 7,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 30000
+        },
+        {
+          "cardId": "hyundai-boutique-velvet",
+          "issuer": "hyundai",
+          "type": "points",
+          "rewardValue": 5,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": null
+        },
+        {
+          "cardId": "hyundai-x-edition2",
+          "issuer": "hyundai",
+          "type": "discount",
+          "rewardValue": 5,
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 30000
@@ -18127,6 +17937,15 @@
           "monthlyCap": null
         },
         {
+          "cardId": "woori-point-check",
+          "issuer": "woori",
+          "type": "points",
+          "rewardValue": 0.5,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 10000
+        },
+        {
           "cardId": "woori-uniq-plus",
           "issuer": "woori",
           "type": "discount",
@@ -18568,15 +18387,6 @@
           "monthlyCap": null
         },
         {
-          "cardId": "woori-card-of-rules-every-mile",
-          "issuer": "woori",
-          "type": "points",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "woori-every-mile-skypass",
           "issuer": "woori",
           "type": "points",
@@ -18760,15 +18570,6 @@
         },
         {
           "cardId": "samsung-id-on",
-          "issuer": "samsung",
-          "type": "discount",
-          "rewardValue": 30,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000
-        },
-        {
-          "cardId": "samsung-taptap-o",
           "issuer": "samsung",
           "type": "discount",
           "rewardValue": 30,
@@ -19110,15 +18911,6 @@
           "monthlyCap": 5000
         },
         {
-          "cardId": "kb-you-prime",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000
-        },
-        {
           "cardId": "lotte-likit-fun-check",
           "issuer": "lotte",
           "type": "discount",
@@ -19153,15 +18945,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 3000
-        },
-        {
-          "cardId": "nh-take5",
-          "issuer": "nh",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000
         },
         {
           "cardId": "nh-zgm-play-plus",
@@ -19344,15 +19127,6 @@
           "monthlyCap": 10000
         },
         {
-          "cardId": "samsung-id-select-all",
-          "issuer": "samsung",
-          "type": "discount",
-          "rewardValue": 7,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 7000
-        },
-        {
           "cardId": "bc-kt-super-plus",
           "issuer": "bc",
           "type": "discount",
@@ -19381,15 +19155,6 @@
         },
         {
           "cardId": "bnk-daily1-check",
-          "issuer": "bnk",
-          "type": "cashback",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000
-        },
-        {
-          "cardId": "bnk-myzone-check",
           "issuer": "bnk",
           "type": "cashback",
           "rewardValue": 5,
@@ -19554,15 +19319,6 @@
           "cardId": "jb-1st-triple-check",
           "issuer": "jb",
           "type": "cashback",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000
-        },
-        {
-          "cardId": "jb-1st-triple",
-          "issuer": "jb",
-          "type": "discount",
           "rewardValue": 5,
           "rewardValueKind": "rate",
           "unit": null,
@@ -19839,6 +19595,15 @@
           "monthlyCap": 5000
         },
         {
+          "cardId": "sc-samsung-life",
+          "issuer": "sc",
+          "type": "discount",
+          "rewardValue": 5,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 5000
+        },
+        {
           "cardId": "shinhan-anniverse",
           "issuer": "shinhan",
           "type": "points",
@@ -19909,15 +19674,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 5000
-        },
-        {
-          "cardId": "toss-moim-check",
-          "issuer": "toss",
-          "type": "cashback",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 2500
         },
         {
           "cardId": "toss-tosim-check",
@@ -20370,16 +20126,6 @@
           "subcategory": "cafe"
         },
         {
-          "cardId": "shinhan-yolo",
-          "issuer": "shinhan",
-          "type": "discount",
-          "rewardValue": 20,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 7000,
-          "subcategory": "cafe"
-        },
-        {
           "cardId": "nh-solsol",
           "issuer": "nh",
           "type": "discount",
@@ -20680,16 +20426,6 @@
           "subcategory": "cafe"
         },
         {
-          "cardId": "sc-samsung-life",
-          "issuer": "sc",
-          "type": "discount",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000,
-          "subcategory": "cafe"
-        },
-        {
           "cardId": "shinhan-everywhere-ev",
           "issuer": "shinhan",
           "type": "discount",
@@ -20836,15 +20572,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 13000
-        },
-        {
-          "cardId": "kb-youth-club-check",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 50,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 20000
         },
         {
           "cardId": "lotte-loca-mobility",
@@ -21243,15 +20970,6 @@
           "monthlyCap": 6000
         },
         {
-          "cardId": "samsung-taptap-o",
-          "issuer": "samsung",
-          "type": "discount",
-          "rewardValue": 7,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000
-        },
-        {
           "cardId": "sc-digital-samsung",
           "issuer": "sc",
           "type": "discount",
@@ -21468,15 +21186,6 @@
           "monthlyCap": 10000
         },
         {
-          "cardId": "jb-1st-triple",
-          "issuer": "jb",
-          "type": "discount",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000
-        },
-        {
           "cardId": "jb-plus-young-check",
           "issuer": "jb",
           "type": "cashback",
@@ -21682,15 +21391,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 10000
-        },
-        {
-          "cardId": "toss-moim-check",
-          "issuer": "toss",
-          "type": "cashback",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 2500
         },
         {
           "cardId": "woori-cookie-check",
@@ -22433,15 +22133,6 @@
           "monthlyCap": 5000
         },
         {
-          "cardId": "shinhan-yolo",
-          "issuer": "shinhan",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 7000
-        },
-        {
           "cardId": "samsung-id-pocket",
           "issuer": "samsung",
           "type": "discount",
@@ -22937,15 +22628,6 @@
           "monthlyCap": 3000
         },
         {
-          "cardId": "toss-moim-check",
-          "issuer": "toss",
-          "type": "cashback",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 2500
-        },
-        {
           "cardId": "toss-tosim-check",
           "issuer": "toss",
           "type": "discount",
@@ -23209,15 +22891,6 @@
           "monthlyCap": 5000
         },
         {
-          "cardId": "kb-youth-club-check",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 50,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 20000
-        },
-        {
           "cardId": "nh-zgm-living",
           "issuer": "nh",
           "type": "points",
@@ -23344,15 +23017,6 @@
           "monthlyCap": 5000
         },
         {
-          "cardId": "kb-you-prime",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000
-        },
-        {
           "cardId": "lotte-lgu-plus-loca",
           "issuer": "lotte",
           "type": "discount",
@@ -23432,15 +23096,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 5000
-        },
-        {
-          "cardId": "samsung-id-select-all",
-          "issuer": "samsung",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 7000
         },
         {
           "cardId": "samsung-id-vita",
@@ -24026,16 +23681,6 @@
           "subcategory": "streaming"
         },
         {
-          "cardId": "nh-zgm-play",
-          "issuer": "nh",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000,
-          "subcategory": "streaming"
-        },
-        {
           "cardId": "jb-1st-link-on",
           "issuer": "jb",
           "type": "discount",
@@ -24545,15 +24190,6 @@
         },
         {
           "cardId": "nh-olbareun-check",
-          "issuer": "nh",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 3000
-        },
-        {
-          "cardId": "nh-take5",
           "issuer": "nh",
           "type": "discount",
           "rewardValue": 10,
@@ -26296,16 +25932,6 @@
           "subcategory": "fuel"
         },
         {
-          "cardId": "nh-take5",
-          "issuer": "nh",
-          "type": "discount",
-          "rewardValue": 60,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 6000,
-          "subcategory": "fuel"
-        },
-        {
           "cardId": "sc-samsung-drive",
           "issuer": "sc",
           "type": "discount",
@@ -26458,16 +26084,6 @@
         {
           "cardId": "dgb-im-apartment",
           "issuer": "dgb",
-          "type": "discount",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000,
-          "subcategory": "fuel"
-        },
-        {
-          "cardId": "jb-1st-triple",
-          "issuer": "jb",
           "type": "discount",
           "rewardValue": 5,
           "rewardValueKind": "rate",
@@ -26849,15 +26465,6 @@
           "monthlyCap": 3000
         },
         {
-          "cardId": "hyundai-nol",
-          "issuer": "hyundai",
-          "type": "points",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 8000
-        },
-        {
           "cardId": "hyundai-z-play-edition2",
           "issuer": "hyundai",
           "type": "discount",
@@ -26874,15 +26481,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
-        },
-        {
-          "cardId": "kb-our-wesh",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 7000
         },
         {
           "cardId": "kwangju-kia-champions",
@@ -26910,15 +26508,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 3000
-        },
-        {
-          "cardId": "shinhan-yolo",
-          "issuer": "shinhan",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 7000
         },
         {
           "cardId": "lotte-rolla",
@@ -26955,15 +26544,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 2000
-        },
-        {
-          "cardId": "hyundai-summit",
-          "issuer": "hyundai",
-          "type": "points",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
         },
         {
           "cardId": "kakao-kakaopay-shinhan",
@@ -27137,6 +26717,16 @@
           "subcategory": "supermarket"
         },
         {
+          "cardId": "hyundai-costco-reward-edition2",
+          "issuer": "hyundai",
+          "type": "points",
+          "rewardValue": 2,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": null,
+          "subcategory": "supermarket"
+        },
+        {
           "cardId": "bc-green-card",
           "issuer": "bc",
           "type": "points",
@@ -27276,15 +26866,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 5000
-        },
-        {
-          "cardId": "kb-you-prime",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000
         },
         {
           "cardId": "lotte-loca-365",
@@ -27496,16 +27077,6 @@
       ],
       "entertainment.movie": [
         {
-          "cardId": "bnk-2030-platinum-gold",
-          "issuer": "bnk",
-          "type": "discount",
-          "rewardValue": 100,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000,
-          "subcategory": "movie"
-        },
-        {
           "cardId": "ibk-chamjoheun-ktwiz-check",
           "issuer": "ibk",
           "type": "discount",
@@ -27553,16 +27124,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 3000,
-          "subcategory": "movie"
-        },
-        {
-          "cardId": "nh-take5",
-          "issuer": "nh",
-          "type": "discount",
-          "rewardValue": 30,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000,
           "subcategory": "movie"
         },
         {
@@ -27615,15 +27176,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 3000
-        },
-        {
-          "cardId": "hana-k-pass-1q",
-          "issuer": "hana",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000
         },
         {
           "cardId": "hyundai-alphabet-s",
@@ -27752,15 +27304,6 @@
           "monthlyCap": 5000
         },
         {
-          "cardId": "hyundai-boutique-velvet",
-          "issuer": "hyundai",
-          "type": "points",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "hyundai-the-pink-edition2",
           "issuer": "hyundai",
           "type": "points",
@@ -27786,15 +27329,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
-        },
-        {
-          "cardId": "hyundai-x-edition2",
-          "issuer": "hyundai",
-          "type": "discount",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 30000
         },
         {
           "cardId": "kb-easy-study-titanium",
@@ -27869,15 +27403,6 @@
           "monthlyCap": null
         },
         {
-          "cardId": "woori-cookie-check",
-          "issuer": "woori",
-          "type": "cashback",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000
-        },
-        {
           "cardId": "woori-new-woori-v",
           "issuer": "woori",
           "type": "discount",
@@ -27885,15 +27410,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 10000
-        },
-        {
-          "cardId": "hyundai-costco-reward-edition2",
-          "issuer": "hyundai",
-          "type": "points",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
         },
         {
           "cardId": "woori-won-members-plus",
@@ -27912,15 +27428,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
-        },
-        {
-          "cardId": "woori-point-check",
-          "issuer": "woori",
-          "type": "points",
-          "rewardValue": 0.5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000
         }
       ],
       "transportation.ev_charging": [
@@ -28014,6 +27521,16 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 10000,
+          "subcategory": "pharmacy"
+        },
+        {
+          "cardId": "woori-cookie-check",
+          "issuer": "woori",
+          "type": "cashback",
+          "rewardValue": 5,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 5000,
           "subcategory": "pharmacy"
         }
       ],
@@ -28413,26 +27930,6 @@
       ],
       "travel.airline": [
         {
-          "cardId": "bnk-rex2-kal",
-          "issuer": "bnk",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "airline"
-        },
-        {
-          "cardId": "bnk-rex2-point",
-          "issuer": "bnk",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "airline"
-        },
-        {
           "cardId": "dgb-im-great",
           "issuer": "dgb",
           "type": "discount",
@@ -28534,16 +28031,6 @@
         },
         {
           "cardId": "woori-blue-diamond2",
-          "issuer": "woori",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "airline"
-        },
-        {
-          "cardId": "woori-royal-blue-m",
           "issuer": "woori",
           "type": "discount",
           "rewardValue": 10,
@@ -28748,15 +28235,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 2000
-        },
-        {
-          "cardId": "kb-our-wesh",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 8000
         },
         {
           "cardId": "kb-petconomy",
@@ -29122,15 +28600,6 @@
         },
         {
           "cardId": "kb-need-auto-slim",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000
-        },
-        {
-          "cardId": "kb-you-prime",
           "issuer": "kb",
           "type": "discount",
           "rewardValue": 10,
@@ -29672,15 +29141,6 @@
           "monthlyCap": 5000
         },
         {
-          "cardId": "kb-golden-life-ollim",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "kb-k-pass",
           "issuer": "kb",
           "type": "discount",
@@ -30071,6 +29531,16 @@
           "subcategory": "golf"
         },
         {
+          "cardId": "hyundai-summit",
+          "issuer": "hyundai",
+          "type": "points",
+          "rewardValue": 5,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": null,
+          "subcategory": "golf"
+        },
+        {
           "cardId": "kwangju-1st-a-check",
           "issuer": "kwangju",
           "type": "cashback",
@@ -30090,15 +29560,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 13000
-        },
-        {
-          "cardId": "kb-youth-club-check",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 50,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 20000
         },
         {
           "cardId": "lotte-loca-mobility",
@@ -30164,24 +29625,6 @@
           "monthlyCap": 10000
         },
         {
-          "cardId": "lotte-lotte-dept-flex",
-          "issuer": "lotte",
-          "type": "discount",
-          "rewardValue": 30,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "kb-toktok-with",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 20,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 5000
-        },
-        {
           "cardId": "samsung-id-plug-in",
           "issuer": "samsung",
           "type": "discount",
@@ -30225,15 +29668,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 3000
-        },
-        {
-          "cardId": "hyundai-nol",
-          "issuer": "hyundai",
-          "type": "points",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 8000
         },
         {
           "cardId": "hyundai-z-play-edition2",
@@ -30432,18 +29866,6 @@
           "unit": null,
           "monthlyCap": 10000,
           "subcategory": "academy"
-        }
-      ],
-      "education.books": [
-        {
-          "cardId": "nh-take5",
-          "issuer": "nh",
-          "type": "discount",
-          "rewardValue": 20,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 6000,
-          "subcategory": "books"
         }
       ],
       "dining.fast_food": [
@@ -31320,7 +30742,6 @@
       "kb-travel-check",
       "kb-travelers-check",
       "kb-wesh-travel",
-      "kb-youth-club-check",
       "kbank-alpha-youth-check",
       "kbank-k-pass-check",
       "kbank-plus-check",
@@ -31424,7 +30845,6 @@
       "shinhan-the-premier-gold",
       "shinhan-way-check",
       "suhyup-k-pass-check",
-      "toss-moim-check",
       "toss-tosim-check",
       "woori-all-infinite",
       "woori-all-premium",
@@ -31441,7 +30861,6 @@
       "woori-point-plus",
       "woori-point",
       "woori-premium-mileage-plus",
-      "woori-royal-blue-m",
       "woori-travelwallet",
       "woori-two-chairs-w",
       "woori-uniq-plus",

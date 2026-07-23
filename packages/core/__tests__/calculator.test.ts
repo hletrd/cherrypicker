@@ -29,6 +29,7 @@ let wooriDiscount: CardRuleSet;
 let wooriPoint: CardRuleSet;
 let samsungPaycoTaptap: CardRuleSet;
 let loca365: CardRuleSet;
+let jbFirstTriple: CardRuleSet;
 
 beforeAll(async () => {
   simplePlan = await loadCardRule(join(rulesDir, 'shinhan/simple-plan.yaml'));
@@ -57,6 +58,9 @@ beforeAll(async () => {
     (card) => card.card.id === 'samsung-payco-taptap',
   )!;
   loca365 = catalogCards.find((card) => card.card.id === 'lotte-loca-365')!;
+  jbFirstTriple = catalogCards.find(
+    (card) => card.card.id === 'jb-1st-triple',
+  )!;
 });
 
 function makeTx(
@@ -280,6 +284,38 @@ describe('calculateRewards - simple-plan (tier0, 1% on uncategorized, no cap)', 
     expect(output.totalReward).toBe(0);
     expect(output.totalSpending).toBe(0);
     expect(output.rewards).toHaveLength(0);
+  });
+});
+
+describe('calculateRewards - unprovided user choice', () => {
+  test('jb-1st-triple does not award every mutually exclusive choice', () => {
+    const output = calculateRewards({
+      transactions: [
+        makeTx('choice-dining', 'dining', 100_000),
+        makeTx('choice-shopping', 'online_shopping', 100_000),
+        makeTx(
+          'choice-fuel',
+          'transportation',
+          100_000,
+          '주유소',
+          'fuel',
+        ),
+      ],
+      previousMonthSpending: 300_000,
+      cardRule: jbFirstTriple,
+    });
+
+    expect(output.totalReward).toBe(0);
+    expect(output.unsupportedRules.map(({ ruleId }) => ruleId).sort()).toEqual([
+      'reward-001',
+      'reward-002',
+      'reward-003',
+    ]);
+    expect(
+      output.unsupportedRules.every(
+        ({ detail }) => detail === 'unmodeled eligibility: user_choice',
+      ),
+    ).toBe(true);
   });
 });
 

@@ -53,7 +53,8 @@ rewards:
       status: unsupported
       reason: "merchant category is not reachable by the canonical matcher"
 
-  - category: offline_shopping
+  - category: grocery
+    subcategory: supermarket
     id: reward-002
     priority: 2
     combination: exclusive

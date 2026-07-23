@@ -87,7 +87,8 @@ rewards:
         monthlyCap: 10000
         perTransactionCap: null
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
   - category: "online_shopping"
     id: reward-005
     priority: 5
@@ -102,7 +103,8 @@ rewards:
         monthlyCap: 5000
         perTransactionCap: null
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

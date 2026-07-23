@@ -55,7 +55,8 @@ rewards:
     conditions:
       note: "선택 카테고리 5% 캐시백 (외식/카페 등)"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: online_shopping
     id: reward-002

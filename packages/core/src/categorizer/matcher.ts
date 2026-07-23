@@ -202,7 +202,22 @@ export class MerchantMatcher {
       return result;
     }
 
-    // 1. Exact match against static MERCHANT_KEYWORDS (confidence 1.0)
+    // 1. An exact canonical keyword is authoritative when both sources define
+    //    the same merchant.
+    const canonicalMatch =
+      this.taxonomy.findExactOrSubstringKeyword(merchantName);
+    if (canonicalMatch?.matchType === 'exact') {
+      const result: MatchResult = {
+        category: canonicalMatch.category,
+        subcategory: canonicalMatch.subcategory,
+        confidence: canonicalMatch.confidence,
+      };
+      this.setCache(cacheKey, result);
+      return result;
+    }
+
+    // 2. A more-specific exact legacy keyword beats a broad canonical
+    //    substring (for example 자동차세 over 자동차).
     const staticExact = this.exactKeywords.get(lower);
     if (staticExact !== undefined) {
       const result: MatchResult = { ...staticExact, confidence: 1.0 };
@@ -210,24 +225,48 @@ export class MerchantMatcher {
       return result;
     }
 
-    // 2. Substring match against MERCHANT_KEYWORDS keys (confidence 0.8)
-    //    Uses precomputed SUBSTRING_SAFE_ENTRIES to avoid per-call
-    //    Object.entries() allocation and filtering (C33-01).
-    let bestStaticKw: { category: string; subcategory?: string; kwLen: number } | undefined;
+    // 3. Compare substring candidates across both sources. Preserve the
+    //    legacy reverse-substring convenience match for names of at least
+    //    three characters; longest wins and canonical taxonomy wins ties.
+    let bestStaticKw:
+      | {
+          category: string;
+          subcategory?: string;
+          keyword: string;
+          kwLen: number;
+        }
+      | undefined;
     for (const [kw, categoryValue] of this.substringEntries) {
-      // lower.includes(kw): merchant name contains keyword — always meaningful
-      // kw.includes(lower): keyword contains merchant name — only meaningful when
-      // the merchant name is >= 3 chars to avoid false positives (e.g., "스타"
-      // matching "스타벅스" — "스타" could be short for many non-cafe words)
-      const merchantContainsKw = lower.includes(kw);
-      const kwContainsMerchant = kw.includes(lower) && lower.length >= 3;
-      if (merchantContainsKw || kwContainsMerchant) {
-        if (!bestStaticKw || kw.length > bestStaticKw.kwLen) {
-          bestStaticKw = { ...categoryValue, kwLen: kw.length };
+      const merchantContainsKeyword = lower.includes(kw);
+      const keywordContainsMerchant =
+        lower.length >= 3 && kw.includes(lower);
+      if (merchantContainsKeyword || keywordContainsMerchant) {
+        if (
+          !bestStaticKw ||
+          kw.length > bestStaticKw.kwLen ||
+          (kw.length === bestStaticKw.kwLen && kw < bestStaticKw.keyword)
+        ) {
+          bestStaticKw = {
+            ...categoryValue,
+            keyword: kw,
+            kwLen: kw.length,
+          };
         }
       }
     }
-    if (bestStaticKw) {
+    if (
+      canonicalMatch?.matchType === 'substring' &&
+      (!bestStaticKw || canonicalMatch.keyword.length >= bestStaticKw.kwLen)
+    ) {
+      const result: MatchResult = {
+        category: canonicalMatch.category,
+        subcategory: canonicalMatch.subcategory,
+        confidence: canonicalMatch.confidence,
+      };
+      this.setCache(cacheKey, result);
+      return result;
+    }
+    if (bestStaticKw !== undefined) {
       const result: MatchResult = {
         category: bestStaticKw.category,
         subcategory: bestStaticKw.subcategory,
@@ -237,14 +276,14 @@ export class MerchantMatcher {
       return result;
     }
 
-    // 3. Taxonomy-based keyword search
+    // 4. Taxonomy reverse-fuzzy keyword fallback
     const taxonomyMatch = this.taxonomy.findCategory(merchantName);
     if (taxonomyMatch.confidence > 0) {
       this.setCache(cacheKey, taxonomyMatch);
       return taxonomyMatch;
     }
 
-    // 4. Use rawCategory from bank as a weak signal (confidence 0.5)
+    // 5. Use rawCategory from bank as a weak signal (confidence 0.5)
     //    Validate that the normalized value matches a known taxonomy ID.
     //    Korean text labels (e.g., "온라인 쇼핑") would create phantom
     //    categories that match no reward rules — better to fall through
@@ -258,7 +297,7 @@ export class MerchantMatcher {
       }
     }
 
-    // 5. Fallback
+    // 6. Fallback
     const result: MatchResult = { category: 'uncategorized', confidence: 0.0 };
     this.setCache(cacheKey, result);
     return result;

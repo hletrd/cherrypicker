@@ -25,7 +25,7 @@ const PAYMENT_METHOD_RESTRICTION =
 const TIME_RESTRICTION =
   /(?:(?:오전|오후)?\s*\d{1,2}\s*(?:시\s*)?(?:~|-)\s*(?:오전|오후)?\s*\d{1,2}\s*시|(?:오전|오후)?\s*\d{1,2}\s*시\s*(?:부터|이전|이후)|점심시간|시간대)/;
 const USER_CHOICE_RESTRICTION =
-  /(?:택\s*\d|선택\s*(?:서비스|혜택|업종)|월별\s*선택)/;
+  /(?:(?<!선)택\s*\d+|(?<!자동)선택\s*(?:서비스|혜택|업종|카테고리|시|가능|한|형|[A-Z]\b|\d+)|(?:팩|패키지|pack(?:age)?|서비스\s*\d*)\s*선택|(?:중|또는)[^.!?\n]{0,80}\s선택|(?:바우처|기프트|상품권|마일리지(?:형)?|항공권)[^.!?\n]{0,80}\s선택|월별\s*선택|\b(?:choose|chosen|choice|selected|selection|option)\b|\bselect\s+(?:one|\d+|an?\s+option)\b)/iu;
 const COUNTRY_RESTRICTION =
   /(?:일본|미국|중국|유럽|동남아|베트남|태국)\s*(?:내|현지|가맹점|이용|결제)/;
 const ACCOUNT_RESTRICTION =

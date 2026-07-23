@@ -140,7 +140,8 @@ rewards:
     support:
       status: supported
 
-  - category: entertainment
+  - category: sports
+    subcategory: golf
     id: reward-005
     priority: 5
     combination: exclusive

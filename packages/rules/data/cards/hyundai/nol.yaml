@@ -97,7 +97,7 @@ rewards:
     support:
       status: supported
 
-  - category: subscription
+  - category: '*'
     id: reward-004
     priority: 4
     combination: exclusive
@@ -121,7 +121,7 @@ rewards:
     support:
       status: supported
 
-  - category: entertainment
+  - category: '*'
     id: reward-005
     priority: 5
     combination: exclusive

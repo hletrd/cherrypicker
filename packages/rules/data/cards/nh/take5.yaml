@@ -68,7 +68,8 @@ rewards:
     conditions:
       note: "Joy Pack 선택 시 - 음식점, 스타벅스"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: entertainment
     id: reward-002
@@ -98,7 +99,8 @@ rewards:
     conditions:
       note: "Joy Pack 선택 시"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: public_transit
     id: reward-003
@@ -127,7 +129,8 @@ rewards:
     conditions:
       note: "Joy Pack 선택 시"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: education
     id: reward-004
@@ -157,7 +160,8 @@ rewards:
     conditions:
       note: "Edu Pack 선택 시 - 국내/외 서점"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: transportation
     id: reward-005
@@ -187,7 +191,8 @@ rewards:
     conditions:
       note: "Oil Pack 선택 시"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: 40000

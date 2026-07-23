@@ -69,7 +69,8 @@ rewards:
     conditions:
       note: "공항 라운지 무료 이용, 연 1회 프리미엄 기프트 (아시아 동반 왕복항공권 등) 선택"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

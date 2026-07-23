@@ -47,7 +47,8 @@ rewards:
       specificMerchants:
         - 주유소
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
   - category: "dining"
     id: reward-002
     priority: 2
@@ -71,7 +72,8 @@ rewards:
         - 쿠팡이츠
         - 요기요
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
   - category: "telecom"
     id: reward-003
     priority: 3
@@ -90,7 +92,8 @@ rewards:
         monthlyCap: 10000
         perTransactionCap: null
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
   - category: "education"
     id: reward-004
     priority: 4
@@ -113,7 +116,8 @@ rewards:
         - 학원
         - 학습지
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: 60000

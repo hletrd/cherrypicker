@@ -97,7 +97,6 @@ rewards:
     combination: exclusive
     stackingGroup: base
     capGroup: reward-003
-    subcategory: cafe
     type: discount
     tiers:
       - performanceTier: tier0

@@ -10,6 +10,11 @@ interface CategoryMatch {
   confidence: number;
 }
 
+export interface TaxonomyKeywordMatch extends CategoryMatch {
+  keyword: string;
+  matchType: 'exact' | 'substring';
+}
+
 interface FlatEntry {
   category: string;
   subcategory?: string;
@@ -135,32 +140,63 @@ export class CategoryTaxonomy {
     return this.resolvedKeywordConflicts;
   }
 
-  findCategory(merchantName: string): CategoryMatch {
+  findExactOrSubstringKeyword(
+    merchantName: string,
+  ): TaxonomyKeywordMatch | undefined {
     const lower = normalizeMerchantText(merchantName);
 
-    // 1. Exact keyword match
     const exact = this.keywordMap.get(lower);
     if (exact) {
-      return { ...exact, confidence: 1.0 };
+      return {
+        ...exact,
+        confidence: 1,
+        keyword: lower,
+        matchType: 'exact',
+      };
     }
 
-    // 2. Substring match — keyword is contained in merchant name
-    //    Skip single-character keywords to avoid false positives (e.g., a
-    //    1-char Korean particle matching every merchant name containing it).
-    let bestSubstring: { category: string; subcategory?: string; kwLen: number } | undefined;
+    let bestSubstring:
+      | {
+          category: string;
+          subcategory?: string;
+          keyword: string;
+          kwLen: number;
+        }
+      | undefined;
     for (const [kw, mapping] of this.keywordMap) {
       if (kw.trim().length < 2) continue;
       if (lower.includes(kw)) {
-        if (!bestSubstring || kw.length > bestSubstring.kwLen) {
-          bestSubstring = { ...mapping, kwLen: kw.length };
+        if (
+          !bestSubstring ||
+          kw.length > bestSubstring.kwLen ||
+          (kw.length === bestSubstring.kwLen && kw < bestSubstring.keyword)
+        ) {
+          bestSubstring = {
+            ...mapping,
+            keyword: kw,
+            kwLen: kw.length,
+          };
         }
       }
     }
-    if (bestSubstring) {
+    if (!bestSubstring) return undefined;
+    return {
+      category: bestSubstring.category,
+      subcategory: bestSubstring.subcategory,
+      confidence: 0.8,
+      keyword: bestSubstring.keyword,
+      matchType: 'substring',
+    };
+  }
+
+  findCategory(merchantName: string): CategoryMatch {
+    const lower = normalizeMerchantText(merchantName);
+    const canonicalKeyword = this.findExactOrSubstringKeyword(merchantName);
+    if (canonicalKeyword) {
       return {
-        category: bestSubstring.category,
-        subcategory: bestSubstring.subcategory,
-        confidence: 0.8,
+        category: canonicalKeyword.category,
+        subcategory: canonicalKeyword.subcategory,
+        confidence: canonicalKeyword.confidence,
       };
     }
 
@@ -169,12 +205,27 @@ export class CategoryTaxonomy {
     // (shorter keyword = tighter fit, more likely correct)
     // Only apply when merchant name is >= 3 chars to avoid false positives
     // (e.g., "스타" matching "스타벅스" — too short to be meaningful)
-    let bestFuzzy: { category: string; subcategory?: string; kwLen: number } | undefined;
+    let bestFuzzy:
+      | {
+          category: string;
+          subcategory?: string;
+          keyword: string;
+          kwLen: number;
+        }
+      | undefined;
     if (lower.length >= 3) {
       for (const [kw, mapping] of this.keywordMap) {
         if (kw.includes(lower)) {
-          if (!bestFuzzy || kw.length < bestFuzzy.kwLen) {
-            bestFuzzy = { ...mapping, kwLen: kw.length };
+          if (
+            !bestFuzzy ||
+            kw.length < bestFuzzy.kwLen ||
+            (kw.length === bestFuzzy.kwLen && kw < bestFuzzy.keyword)
+          ) {
+            bestFuzzy = {
+              ...mapping,
+              keyword: kw,
+              kwLen: kw.length,
+            };
           }
         }
       }

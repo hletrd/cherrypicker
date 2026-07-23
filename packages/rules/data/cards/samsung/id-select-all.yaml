@@ -66,7 +66,8 @@ rewards:
         monthlyCap: 15000
         perTransactionCap: null
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: dining
     id: reward-002
@@ -94,7 +95,8 @@ rewards:
         monthlyCap: 15000
         perTransactionCap: null
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: travel
     id: reward-003

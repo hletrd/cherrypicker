@@ -48,7 +48,8 @@ rewards:
         - 병원
         - 약국
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
   - category: "uncategorized"
     id: reward-002
     priority: 2

@@ -58,7 +58,8 @@ rewards:
     conditions:
       note: "3개 선택 카테고리 중 하나 (외식)"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: online_shopping
     id: reward-002
@@ -83,7 +84,8 @@ rewards:
     conditions:
       note: "3개 선택 카테고리 중 하나 (온라인쇼핑)"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: transportation
     id: reward-003
@@ -109,7 +111,8 @@ rewards:
     conditions:
       note: "3개 선택 카테고리 중 하나 (주유)"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

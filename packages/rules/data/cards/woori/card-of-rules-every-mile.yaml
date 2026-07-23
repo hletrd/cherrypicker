@@ -39,7 +39,8 @@ rewards:
     conditions:
       paymentType: domestic
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: travel
     id: reward-002

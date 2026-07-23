@@ -62,7 +62,7 @@ rewards:
     support:
       status: unsupported
       reason: "merchant category is not reachable by the canonical matcher"
-  - category: "subscription"
+  - category: "*"
     id: reward-003
     priority: 3
     combination: exclusive

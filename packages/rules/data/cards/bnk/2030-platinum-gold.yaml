@@ -87,7 +87,8 @@ rewards:
     conditions:
       note: "MZ세대 특화 카드. 바우처 서비스: 신세계 이마트 5만원 상품권, 롯데시네마 1인 관람권 5매 등 선택"
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

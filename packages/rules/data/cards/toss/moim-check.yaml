@@ -34,7 +34,8 @@ rewards:
         monthlyCap: 2500
         perTransactionCap: null
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: convenience_store
     id: reward-002
@@ -50,7 +51,8 @@ rewards:
         monthlyCap: 2500
         perTransactionCap: null
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: online_shopping
     id: reward-003
@@ -66,7 +68,8 @@ rewards:
         monthlyCap: 2500
         perTransactionCap: null
     support:
-      status: supported
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: 7500

@@ -22,6 +22,44 @@ let cards: CardRuleSet[];
 let matcher: MerchantMatcher;
 let unverifiedScopeInventory: string[];
 
+const CHOICE_QUARANTINE_INVENTORY = [
+  'bnk-2030-platinum-gold:reward-003',
+  'bnk-myzone-check:reward-001',
+  'bnk-rex2-kal:reward-003',
+  'bnk-rex2-point:reward-005',
+  'jb-1st-triple:reward-001',
+  'jb-1st-triple:reward-002',
+  'jb-1st-triple:reward-003',
+  'kb-golden-life-ollim:reward-001',
+  'kb-our-wesh:reward-001',
+  'kb-our-wesh:reward-002',
+  'kb-you-prime:reward-001',
+  'kb-you-prime:reward-002',
+  'kb-you-prime:reward-003',
+  'kb-you-prime:reward-004',
+  'kb-youth-club-check:reward-001',
+  'kb-youth-club-check:reward-003',
+  'kb-youth-club-check:reward-004',
+  'nh-take5:reward-001',
+  'nh-take5:reward-002',
+  'nh-take5:reward-003',
+  'nh-take5:reward-004',
+  'nh-take5:reward-005',
+  'nh-zgm-play:reward-004',
+  'samsung-id-select-all:reward-001',
+  'samsung-id-select-all:reward-002',
+  'samsung-taptap-o:reward-004',
+  'samsung-taptap-o:reward-005',
+  'shinhan-yolo:reward-001',
+  'shinhan-yolo:reward-002',
+  'shinhan-yolo:reward-003',
+  'toss-moim-check:reward-001',
+  'toss-moim-check:reward-002',
+  'toss-moim-check:reward-003',
+  'woori-card-of-rules-every-mile:reward-001',
+  'woori-royal-blue-m:reward-002',
+] as const;
+
 beforeAll(async () => {
   const categories = await loadCategories(join(dataDir, 'categories.yaml'));
   registry = new CategoryRegistry(categories);
@@ -470,6 +508,80 @@ describe('catalog semantic validation', () => {
       reason: 'unmodeled_global_constraints',
     };
     expect(() => validateCardRuleSet(invalid, registry)).not.toThrow();
+  });
+
+  test.each([
+    '선택 카테고리 5% 캐시백',
+    '병원/약국 5% 할인 (선택 시)',
+    'A팩 선택 시 OTT 할인',
+    'Joy Pack 선택 시 외식 할인',
+    '영화/커피/학원 중 선택',
+    'SELECT 서비스1 선택A',
+    '커피전문점 패키지 선택 시',
+    '연간 기프트 중 택1',
+    '월별 선택 혜택',
+    '15만원 상당 바우처 선택',
+    '대한항공 또는 아시아나 선택',
+    'Choose one reward category',
+    'Use the selected option',
+    'Select one benefit pack',
+  ])('recognizes user-choice restriction wording: %s', (label) => {
+    const fixture = {
+      ...cards[0]!.rewards[0]!,
+      label,
+      conditions: undefined,
+    };
+    expect(collectUnmodeledRuleRestrictions(fixture)).toContain('user_choice');
+  });
+
+  test.each([
+    'SELECT 서비스: 음식점 (평일 5%, 금토일 10%)',
+    '최다이용 1개 자동선택 30% 할인',
+    '선택약정 통신요금 10% 할인',
+    '고객을 위해 엄선한 카페 할인',
+    '선택지가 많은 카드 디자인',
+  ])('does not treat near-miss prose as user choice: %s', (label) => {
+    const fixture = {
+      ...cards[0]!.rewards[0]!,
+      label,
+      conditions: undefined,
+    };
+    expect(collectUnmodeledRuleRestrictions(fixture)).not.toContain(
+      'user_choice',
+    );
+  });
+
+  test('all current choice-bearing rewards are quarantined with a stable reason', () => {
+    const byKey = new Map(
+      cards.flatMap((card) =>
+        card.rewards.map((rule) => [
+          `${card.card.id}:${rule.id}`,
+          rule,
+        ] as const)
+      ),
+    );
+
+    expect(new Set(CHOICE_QUARANTINE_INVENTORY).size).toBe(35);
+    for (const key of CHOICE_QUARANTINE_INVENTORY) {
+      const rule = byKey.get(key);
+      expect(rule).toBeDefined();
+      expect(collectUnmodeledRuleRestrictions(rule!)).toContain('user_choice');
+      expect(rule!.support).toEqual({
+        status: 'unsupported',
+        reason: 'unmodeled eligibility: user_choice',
+      });
+    }
+
+    const supportedChoiceRules = cards.flatMap((card) =>
+      card.rewards
+        .filter(
+          (rule) =>
+            rule.support.status === 'supported' &&
+            collectUnmodeledRuleRestrictions(rule).includes('user_choice'),
+        )
+        .map((rule) => `${card.card.id}:${rule.id}`)
+    );
+    expect(supportedChoiceRules).toEqual([]);
   });
 
   test('real catalog has zero supported false-exact domain cases', () => {
