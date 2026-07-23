@@ -59,34 +59,38 @@
 
 <!-- BEGIN GENERATED ISSUER COUNTS -->
 [![Cards](https://img.shields.io/badge/cards-683-2f81f7)](packages/rules/data/cards/)
+[![Optimizer executable](https://img.shields.io/badge/optimizer-566-2f81f7)](packages/rules/data/cards/)
 [![Issuers](https://img.shields.io/badge/issuers-24-2f81f7)](packages/rules/data/issuers.yaml)
 
-| 카드사 | ID | 카드 수 |
-|---|---:|---:|
-| 신한카드 | `shinhan` | 80 |
-| KB국민카드 | `kb` | 67 |
-| 현대카드 | `hyundai` | 63 |
-| 하나카드 | `hana` | 61 |
-| 삼성카드 | `samsung` | 58 |
-| 롯데카드 | `lotte` | 55 |
-| 우리카드 | `woori` | 52 |
-| NH농협카드 | `nh` | 49 |
-| IBK기업은행 | `ibk` | 43 |
-| BC카드 | `bc` | 22 |
-| iM뱅크(대구은행) | `dgb` | 21 |
-| BNK부산은행 | `bnk` | 19 |
-| 제주은행 | `jeju` | 19 |
-| 전북은행 | `jb` | 11 |
-| 광주은행 | `kwangju` | 10 |
-| SC제일은행 | `sc` | 10 |
-| 카카오뱅크 | `kakao` | 9 |
-| MG새마을금고 | `mg` | 8 |
-| Sh수협은행 | `suhyup` | 8 |
-| 케이뱅크 | `kbank` | 5 |
-| 토스뱅크 | `toss` | 5 |
-| 신협 | `cu` | 4 |
-| 우체국 | `epost` | 2 |
-| KDB산업은행 | `kdb` | 2 |
+카탈로그 카드 **683개** 중 **566개**는 현재 최적화 계산에 사용할 수 있습니다.
+`계산 가능`은 지원되는 혜택 규칙이 하나 이상 있는 발급 가능 카드를 뜻합니다. 나머지는 상세 정보는 볼 수 있지만 추천 점수에는 포함되지 않는 카탈로그 전용 카드입니다.
+
+| 카드사 | ID | 카탈로그 카드 | 최적화 계산 가능 |
+|---|---:|---:|---:|
+| 신한카드 | `shinhan` | 80 | 73 |
+| KB국민카드 | `kb` | 67 | 60 |
+| 현대카드 | `hyundai` | 63 | 57 |
+| 하나카드 | `hana` | 61 | 53 |
+| 삼성카드 | `samsung` | 58 | 52 |
+| 롯데카드 | `lotte` | 55 | 48 |
+| 우리카드 | `woori` | 52 | 39 |
+| NH농협카드 | `nh` | 49 | 45 |
+| IBK기업은행 | `ibk` | 43 | 32 |
+| BC카드 | `bc` | 22 | 19 |
+| iM뱅크(대구은행) | `dgb` | 21 | 18 |
+| BNK부산은행 | `bnk` | 19 | 15 |
+| 제주은행 | `jeju` | 19 | 19 |
+| 전북은행 | `jb` | 11 | 7 |
+| 광주은행 | `kwangju` | 10 | 8 |
+| SC제일은행 | `sc` | 10 | 10 |
+| 카카오뱅크 | `kakao` | 9 | 5 |
+| MG새마을금고 | `mg` | 8 | 0 |
+| Sh수협은행 | `suhyup` | 8 | 2 |
+| 케이뱅크 | `kbank` | 5 | 3 |
+| 토스뱅크 | `toss` | 5 | 1 |
+| 신협 | `cu` | 4 | 0 |
+| 우체국 | `epost` | 2 | 0 |
+| KDB산업은행 | `kdb` | 2 | 0 |
 <!-- END GENERATED ISSUER COUNTS -->
 
 ---
@@ -151,8 +155,12 @@ bun run data:build
 # 생성 데이터가 소스와 일치하는지 확인
 bun run data:check
 
-# CI와 같은 전체 검증
+# 정적 검사, 단위 테스트, 데이터와 빌드 검증
 bun run verify
+
+# CI의 추가 브라우저 회귀 검증 (Playwright Chromium 필요)
+bunx playwright install chromium
+bun run test:e2e
 
 # 웹 개발 서버
 bun run dev:web
@@ -193,9 +201,14 @@ bun run scrape -- --issuer hyundai
 
 기본 출력은 `packages/rules/data/cards`예요. 같은 이름의 일반 카드 파일은
 기본적으로 덮어쓰지 않으며, `--force`를 쓰면 기존 파일을 교체할 수 있으니
-대상을 먼저 확인하세요. 실행 후에는 다음 순서로 게시 데이터를 검증합니다.
+대상을 먼저 확인하세요. LLM이 `supported`로 추출한 혜택도
+`pending_source_review` 사유의 `unsupported` 상태로 저장되며, 이 상태에서는
+카탈로그에서만 볼 수 있고 최적화 계산에는 쓰이지 않습니다.
+실행 후에는 다음 순서로 게시 데이터를 검증합니다.
 
-1. 생성된 YAML의 출처, 카드명, 전월실적, 혜택, 한도를 직접 검토합니다.
+1. 생성된 YAML의 출처, 카드명, 전월실적, 혜택, 한도를 원문과 대조합니다.
+   확인한 각 혜택만 YAML에서 `support.status: supported`로 직접 승격합니다.
+   확인할 수 없는 혜택은 구체적인 `unsupported` 사유를 유지합니다.
 2. `bun run data:build`로 공개 JSON과 카드사 인덱스를 다시 만듭니다.
 3. `bun run data:check`로 YAML, 생성 데이터, 문서가 일치하는지 확인합니다.
 

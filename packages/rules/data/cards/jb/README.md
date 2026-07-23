@@ -18,19 +18,21 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **11개** · 최신 업데이트: `2026-03-25`
+> YAML 기준 **11개** · 최적화 계산 가능 **7개** · 카탈로그 전용 **4개** · 최신 업데이트: `2026-03-25`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| 1st Triple 체크카드 | 체크 | [1st-triple-check.yaml](./1st-triple-check.yaml) |
-| 1st 신용카드 | 신용 | [1st-credit.yaml](./1st-credit.yaml) |
-| 둘과넷 신용카드 | 신용 | [dulguanet.yaml](./dulguanet.yaml) |
-| 전북은행 1st Link On 신용카드 | 신용 | [1st-link-on.yaml](./1st-link-on.yaml) |
-| 전북은행 1st Platinum 신용카드 | 신용 | [1st-platinum.yaml](./1st-platinum.yaml) |
-| 전북은행 1st Triple 신용카드 | 신용 | [1st-triple.yaml](./1st-triple.yaml) |
-| 전북은행 K-패스 카드 | 신용 | [k-pass.yaml](./k-pass.yaml) |
-| 전북은행 PLUS Young 체크카드 | 체크 | [plus-young-check.yaml](./plus-young-check.yaml) |
-| 전북은행 SSG카드 | 신용 | [ssg-card.yaml](./ssg-card.yaml) |
-| 전북은행 Smart Cashback 체크카드 | 체크 | [smart-cashback-check.yaml](./smart-cashback-check.yaml) |
-| 전북은행 해피포인트 체크카드 | 체크 | [happy-point-check.yaml](./happy-point-check.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| 1st Triple 체크카드 | 체크 | 계산 가능 | [1st-triple-check.yaml](./1st-triple-check.yaml) |
+| 1st 신용카드 | 신용 | 카탈로그 전용 | [1st-credit.yaml](./1st-credit.yaml) |
+| 둘과넷 신용카드 | 신용 | 계산 가능 | [dulguanet.yaml](./dulguanet.yaml) |
+| 전북은행 1st Link On 신용카드 | 신용 | 계산 가능 | [1st-link-on.yaml](./1st-link-on.yaml) |
+| 전북은행 1st Platinum 신용카드 | 신용 | 계산 가능 | [1st-platinum.yaml](./1st-platinum.yaml) |
+| 전북은행 1st Triple 신용카드 | 신용 | 카탈로그 전용 | [1st-triple.yaml](./1st-triple.yaml) |
+| 전북은행 K-패스 카드 | 신용 | 계산 가능 | [k-pass.yaml](./k-pass.yaml) |
+| 전북은행 PLUS Young 체크카드 | 체크 | 계산 가능 | [plus-young-check.yaml](./plus-young-check.yaml) |
+| 전북은행 SSG카드 | 신용 | 카탈로그 전용 | [ssg-card.yaml](./ssg-card.yaml) |
+| 전북은행 Smart Cashback 체크카드 | 체크 | 카탈로그 전용 | [smart-cashback-check.yaml](./smart-cashback-check.yaml) |
+| 전북은행 해피포인트 체크카드 | 체크 | 계산 가능 | [happy-point-check.yaml](./happy-point-check.yaml) |
 <!-- END GENERATED CARD INDEX -->

@@ -52,51 +52,53 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **43개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **43개** · 최적화 계산 가능 **32개** · 카탈로그 전용 **11개** · 최신 업데이트: `2026-03-26`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| IBK I-ALL 체크카드 | 체크 | [i-all-check.yaml](./i-all-check.yaml) |
-| IBK I-Mileage 대한항공 | 신용 | [i-mileage-kal.yaml](./i-mileage-kal.yaml) |
-| IBK I-PET | 신용 | [i-pet.yaml](./i-pet.yaml) |
-| IBK I-Travel 신용카드 | 신용 | [i-travel-credit.yaml](./i-travel-credit.yaml) |
-| IBK I-Travel 체크 | 체크 | [i-travel-check.yaml](./i-travel-check.yaml) |
-| IBK I-기후동행 신용 | 신용 | [i-gihoo-donghaeng-credit.yaml](./i-gihoo-donghaeng-credit.yaml) |
-| IBK I-기후동행카드 | 신용 | [i-gihoo-donghaeng.yaml](./i-gihoo-donghaeng.yaml) |
-| IBK I-어디로든 그린 | 신용 | [i-green.yaml](./i-green.yaml) |
-| IBK IBK포인트 3.8 | 신용 | [ibk-point-3.8.yaml](./ibk-point-3.8.yaml) |
-| IBK IBK포인트 신용 | 신용 | [ibk-point.yaml](./ibk-point.yaml) |
-| IBK IBK포인트 체크 | 체크 | [ibk-point-check.yaml](./ibk-point-check.yaml) |
-| IBK K-22 Mileage | 신용 | [k22-mileage.yaml](./k22-mileage.yaml) |
-| IBK K-22 Point | 신용 | [k22-point.yaml](./k22-point.yaml) |
-| IBK K-패스카드 | 신용 | [k-pass.yaml](./k-pass.yaml) |
-| IBK 나라사랑카드 3기 | 신용 | [narasarang.yaml](./narasarang.yaml) |
-| IBK 데일리위드카드 | 신용 | [daily-with.yaml](./daily-with.yaml) |
-| IBK 마일앤조이카드 | 신용 | [mile-and-joy.yaml](./mile-and-joy.yaml) |
-| IBK 소상공인 비즈플러스카드 | 신용 | [biz-plus.yaml](./biz-plus.yaml) |
-| IBK 스폰지밥 체크 | 체크 | [spongebob-check.yaml](./spongebob-check.yaml) |
-| IBK 알토스 체크 | 체크 | [altos-check.yaml](./altos-check.yaml) |
-| IBK 일년의 설렘 | 신용 | [ilnyeon-seollem.yaml](./ilnyeon-seollem.yaml) |
-| IBK 일상의 기쁨 | 신용 | [ilsang-gippeum.yaml](./ilsang-gippeum.yaml) |
-| IBK 일상의 기쁨카드 | 신용 | [daily-joy.yaml](./daily-joy.yaml) |
-| IBK 일상의 기쁨카드(체크) | 체크 | [daily-joy-check.yaml](./daily-joy-check.yaml) |
-| IBK 참! 좋은 글로벌 체크카드 | 체크 | [chamjoheun-global-check.yaml](./chamjoheun-global-check.yaml) |
-| IBK 참! 좋은 라이프카드 | 신용 | [chamjoheun-life.yaml](./chamjoheun-life.yaml) |
-| IBK 참! 좋은 친구 신용카드 | 신용 | [chamjoheun-chingu.yaml](./chamjoheun-chingu.yaml) |
-| IBK 참! 좋은 친구 체크카드 | 체크 | [chamjoheun-chingu-check.yaml](./chamjoheun-chingu-check.yaml) |
-| IBK 참좋은 kt wiz 체크 | 체크 | [chamjoheun-ktwiz-check.yaml](./chamjoheun-ktwiz-check.yaml) |
-| IBK 카픽카드 | 신용 | [kapick.yaml](./kapick.yaml) |
-| IBK 포인트 체크카드 | 체크 | [i-point-check.yaml](./i-point-check.yaml) |
-| IBK 하이브리드카드 | 신용 | [hybrid.yaml](./hybrid.yaml) |
-| IBK기업은행 BLISS.5카드 | 신용 | [bliss5.yaml](./bliss5.yaml) |
-| IBK기업은행 BLISS.7카드 | 신용 | [bliss7.yaml](./bliss7.yaml) |
-| IBK기업은행 CEO카드 | 신용 | [ceo.yaml](./ceo.yaml) |
-| IBK기업은행 I-ALL 신용카드 | 신용 | [i-all.yaml](./i-all.yaml) |
-| IBK기업은행 I-HEROES 체크카드 | 체크 | [i-heroes-check.yaml](./i-heroes-check.yaml) |
-| IBK기업은행 K-패스 체크카드 | 체크 | [k-pass-check.yaml](./k-pass-check.yaml) |
-| IBK기업은행 Oil &amp; Life카드 | 신용 | [oil-and-life.yaml](./oil-and-life.yaml) |
-| IBK기업은행 POKO 체크카드 | 체크 | [poko-check.yaml](./poko-check.yaml) |
-| IBK기업은행 이지캐시백 체크카드 | 체크 | [easy-cashback-check.yaml](./easy-cashback-check.yaml) |
-| IBK기업은행 인피니트카드 | 신용 | [infinite.yaml](./infinite.yaml) |
-| IBK기업은행 참! 좋은 다이소카드 | 신용 | [daiso-chamjoheun.yaml](./daiso-chamjoheun.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| IBK I-ALL 체크카드 | 체크 | 계산 가능 | [i-all-check.yaml](./i-all-check.yaml) |
+| IBK I-Mileage 대한항공 | 신용 | 계산 가능 | [i-mileage-kal.yaml](./i-mileage-kal.yaml) |
+| IBK I-PET | 신용 | 계산 가능 | [i-pet.yaml](./i-pet.yaml) |
+| IBK I-Travel 신용카드 | 신용 | 계산 가능 | [i-travel-credit.yaml](./i-travel-credit.yaml) |
+| IBK I-Travel 체크 | 체크 | 카탈로그 전용 | [i-travel-check.yaml](./i-travel-check.yaml) |
+| IBK I-기후동행 신용 | 신용 | 계산 가능 | [i-gihoo-donghaeng-credit.yaml](./i-gihoo-donghaeng-credit.yaml) |
+| IBK I-기후동행카드 | 신용 | 계산 가능 | [i-gihoo-donghaeng.yaml](./i-gihoo-donghaeng.yaml) |
+| IBK I-어디로든 그린 | 신용 | 계산 가능 | [i-green.yaml](./i-green.yaml) |
+| IBK IBK포인트 3.8 | 신용 | 계산 가능 | [ibk-point-3.8.yaml](./ibk-point-3.8.yaml) |
+| IBK IBK포인트 신용 | 신용 | 카탈로그 전용 | [ibk-point.yaml](./ibk-point.yaml) |
+| IBK IBK포인트 체크 | 체크 | 계산 가능 | [ibk-point-check.yaml](./ibk-point-check.yaml) |
+| IBK K-22 Mileage | 신용 | 카탈로그 전용 | [k22-mileage.yaml](./k22-mileage.yaml) |
+| IBK K-22 Point | 신용 | 카탈로그 전용 | [k22-point.yaml](./k22-point.yaml) |
+| IBK K-패스카드 | 신용 | 카탈로그 전용 | [k-pass.yaml](./k-pass.yaml) |
+| IBK 나라사랑카드 3기 | 신용 | 계산 가능 | [narasarang.yaml](./narasarang.yaml) |
+| IBK 데일리위드카드 | 신용 | 계산 가능 | [daily-with.yaml](./daily-with.yaml) |
+| IBK 마일앤조이카드 | 신용 | 계산 가능 | [mile-and-joy.yaml](./mile-and-joy.yaml) |
+| IBK 소상공인 비즈플러스카드 | 신용 | 계산 가능 | [biz-plus.yaml](./biz-plus.yaml) |
+| IBK 스폰지밥 체크 | 체크 | 카탈로그 전용 | [spongebob-check.yaml](./spongebob-check.yaml) |
+| IBK 알토스 체크 | 체크 | 계산 가능 | [altos-check.yaml](./altos-check.yaml) |
+| IBK 일년의 설렘 | 신용 | 계산 가능 | [ilnyeon-seollem.yaml](./ilnyeon-seollem.yaml) |
+| IBK 일상의 기쁨 | 신용 | 계산 가능 | [ilsang-gippeum.yaml](./ilsang-gippeum.yaml) |
+| IBK 일상의 기쁨카드 | 신용 | 계산 가능 | [daily-joy.yaml](./daily-joy.yaml) |
+| IBK 일상의 기쁨카드(체크) | 체크 | 계산 가능 | [daily-joy-check.yaml](./daily-joy-check.yaml) |
+| IBK 참! 좋은 글로벌 체크카드 | 체크 | 카탈로그 전용 | [chamjoheun-global-check.yaml](./chamjoheun-global-check.yaml) |
+| IBK 참! 좋은 라이프카드 | 신용 | 계산 가능 | [chamjoheun-life.yaml](./chamjoheun-life.yaml) |
+| IBK 참! 좋은 친구 신용카드 | 신용 | 계산 가능 | [chamjoheun-chingu.yaml](./chamjoheun-chingu.yaml) |
+| IBK 참! 좋은 친구 체크카드 | 체크 | 계산 가능 | [chamjoheun-chingu-check.yaml](./chamjoheun-chingu-check.yaml) |
+| IBK 참좋은 kt wiz 체크 | 체크 | 계산 가능 | [chamjoheun-ktwiz-check.yaml](./chamjoheun-ktwiz-check.yaml) |
+| IBK 카픽카드 | 신용 | 카탈로그 전용 | [kapick.yaml](./kapick.yaml) |
+| IBK 포인트 체크카드 | 체크 | 계산 가능 | [i-point-check.yaml](./i-point-check.yaml) |
+| IBK 하이브리드카드 | 신용 | 카탈로그 전용 | [hybrid.yaml](./hybrid.yaml) |
+| IBK기업은행 BLISS.5카드 | 신용 | 계산 가능 | [bliss5.yaml](./bliss5.yaml) |
+| IBK기업은행 BLISS.7카드 | 신용 | 카탈로그 전용 | [bliss7.yaml](./bliss7.yaml) |
+| IBK기업은행 CEO카드 | 신용 | 카탈로그 전용 | [ceo.yaml](./ceo.yaml) |
+| IBK기업은행 I-ALL 신용카드 | 신용 | 계산 가능 | [i-all.yaml](./i-all.yaml) |
+| IBK기업은행 I-HEROES 체크카드 | 체크 | 계산 가능 | [i-heroes-check.yaml](./i-heroes-check.yaml) |
+| IBK기업은행 K-패스 체크카드 | 체크 | 계산 가능 | [k-pass-check.yaml](./k-pass-check.yaml) |
+| IBK기업은행 Oil &amp; Life카드 | 신용 | 계산 가능 | [oil-and-life.yaml](./oil-and-life.yaml) |
+| IBK기업은행 POKO 체크카드 | 체크 | 계산 가능 | [poko-check.yaml](./poko-check.yaml) |
+| IBK기업은행 이지캐시백 체크카드 | 체크 | 계산 가능 | [easy-cashback-check.yaml](./easy-cashback-check.yaml) |
+| IBK기업은행 인피니트카드 | 신용 | 계산 가능 | [infinite.yaml](./infinite.yaml) |
+| IBK기업은행 참! 좋은 다이소카드 | 신용 | 계산 가능 | [daiso-chamjoheun.yaml](./daiso-chamjoheun.yaml) |
 <!-- END GENERATED CARD INDEX -->

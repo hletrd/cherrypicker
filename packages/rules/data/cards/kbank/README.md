@@ -21,13 +21,15 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **5개** · 최신 업데이트: `2026-03-25`
+> YAML 기준 **5개** · 최적화 계산 가능 **3개** · 카탈로그 전용 **2개** · 최신 업데이트: `2026-03-25`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| 케이뱅크 ALPHA 청소년 체크카드 | 체크 | [alpha-youth-check.yaml](./alpha-youth-check.yaml) |
-| 케이뱅크 MY 체크카드 (K-패스) | 체크 | [my-check.yaml](./my-check.yaml) |
-| 케이뱅크 ONE K-패스 체크카드 | 체크 | [k-pass-check.yaml](./k-pass-check.yaml) |
-| 케이뱅크 ONE 체크카드 | 체크 | [one-check.yaml](./one-check.yaml) |
-| 플러스 체크카드 | 체크 | [plus-check.yaml](./plus-check.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| 케이뱅크 ALPHA 청소년 체크카드 | 체크 | 계산 가능 | [alpha-youth-check.yaml](./alpha-youth-check.yaml) |
+| 케이뱅크 MY 체크카드 (K-패스) | 체크 | 카탈로그 전용 | [my-check.yaml](./my-check.yaml) |
+| 케이뱅크 ONE K-패스 체크카드 | 체크 | 계산 가능 | [k-pass-check.yaml](./k-pass-check.yaml) |
+| 케이뱅크 ONE 체크카드 | 체크 | 카탈로그 전용 | [one-check.yaml](./one-check.yaml) |
+| 플러스 체크카드 | 체크 | 계산 가능 | [plus-check.yaml](./plus-check.yaml) |
 <!-- END GENERATED CARD INDEX -->

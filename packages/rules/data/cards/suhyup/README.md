@@ -17,16 +17,18 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **8개** · 최신 업데이트: `2026-03-25`
+> YAML 기준 **8개** · 최적화 계산 가능 **2개** · 카탈로그 전용 **6개** · 최신 업데이트: `2026-03-25`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| S1 카드 | 신용 | [s1-credit.yaml](./s1-credit.yaml) |
-| S2 체크카드 | 체크 | [s2-check.yaml](./s2-check.yaml) |
-| Sh수협은행 Real! Wide 체크카드 | 체크 | [real-wide-check.yaml](./real-wide-check.yaml) |
-| Sh수협은행 Real? Real! 2 카드 | 신용 | [realreal2.yaml](./realreal2.yaml) |
-| Sh수협은행 쏠쏠해 체크카드 | 체크 | [solsolhae-check.yaml](./solsolhae-check.yaml) |
-| Sh수협은행 찐카드 | 신용 | [zzin.yaml](./zzin.yaml) |
-| 樂SEA 락시 카드 | 신용 | [raksea.yaml](./raksea.yaml) |
-| 수협은행 K-패스 체크카드 | 체크 | [k-pass-check.yaml](./k-pass-check.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| S1 카드 | 신용 | 카탈로그 전용 | [s1-credit.yaml](./s1-credit.yaml) |
+| S2 체크카드 | 체크 | 카탈로그 전용 | [s2-check.yaml](./s2-check.yaml) |
+| Sh수협은행 Real! Wide 체크카드 | 체크 | 카탈로그 전용 | [real-wide-check.yaml](./real-wide-check.yaml) |
+| Sh수협은행 Real? Real! 2 카드 | 신용 | 카탈로그 전용 | [realreal2.yaml](./realreal2.yaml) |
+| Sh수협은행 쏠쏠해 체크카드 | 체크 | 카탈로그 전용 | [solsolhae-check.yaml](./solsolhae-check.yaml) |
+| Sh수협은행 찐카드 | 신용 | 카탈로그 전용 | [zzin.yaml](./zzin.yaml) |
+| 樂SEA 락시 카드 | 신용 | 계산 가능 | [raksea.yaml](./raksea.yaml) |
+| 수협은행 K-패스 체크카드 | 체크 | 계산 가능 | [k-pass-check.yaml](./k-pass-check.yaml) |
 <!-- END GENERATED CARD INDEX -->

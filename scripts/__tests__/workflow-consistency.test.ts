@@ -139,6 +139,9 @@ describe('deployment workflow consistency', () => {
       /(?:^|&&)\s*(?:node|npm|npx)\b/,
     );
     expect(readme).toContain('bun run verify');
+    expect(readme).toContain('bun run test:e2e');
+    expect(readme).toContain('bunx playwright install chromium');
+    expect(readme).not.toContain('CI와 같은 전체 검증');
 
     const verificationSteps = workflowDefinition.jobs.build?.steps?.filter(
       ({ run }) => run?.includes('verify'),
@@ -156,6 +159,9 @@ describe('deployment workflow consistency', () => {
       'bun scripts/run-e2e.ts regression',
     );
     expect(workflow).toContain('run: bun run test:e2e');
+    expect(readme.indexOf('bun run verify')).toBeLessThan(
+      readme.indexOf('bun run test:e2e'),
+    );
     expect(workflow).not.toContain('test:e2e:screenshots');
     expect(workflow.indexOf('run: bun run test:e2e')).toBeLessThan(
       workflow.indexOf('actions/upload-pages-artifact'),

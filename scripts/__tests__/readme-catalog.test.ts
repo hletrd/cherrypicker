@@ -39,6 +39,7 @@ function issuerFixture(
         nameKo: '나 카드',
         type: 'check',
         lastUpdated: '2026-07-22',
+        optimizationExecutable: false,
       },
       {
         fileName: 'first.yaml',
@@ -47,6 +48,7 @@ function issuerFixture(
         nameKo: '가 카드',
         type: 'credit',
         lastUpdated: '2026-07-23',
+        optimizationExecutable: true,
       },
     ],
     ...overrides,
@@ -84,10 +86,16 @@ describe('README catalog rendering', () => {
   test('orders issuer cards deterministically and reports canonical metadata', () => {
     const section = renderIssuerIndexSection(issuerFixture());
 
-    expect(section).toContain('YAML 기준 **2개** · 최신 업데이트: `2026-07-23`');
+    expect(section).toContain(
+      'YAML 기준 **2개** · 최적화 계산 가능 **1개** · 카탈로그 전용 **1개** · 최신 업데이트: `2026-07-23`',
+    );
     expect(section.indexOf('가 카드')).toBeLessThan(section.indexOf('나 카드'));
-    expect(section).toContain('| 가 카드 | 신용 | [first.yaml](./first.yaml) |');
-    expect(section).toContain('| 나 카드 | 체크 | [second.yaml](./second.yaml) |');
+    expect(section).toContain(
+      '| 가 카드 | 신용 | 계산 가능 | [first.yaml](./first.yaml) |',
+    );
+    expect(section).toContain(
+      '| 나 카드 | 체크 | 카탈로그 전용 | [second.yaml](./second.yaml) |',
+    );
   });
 
   test('replaces only the generated marker range', () => {
@@ -143,6 +151,18 @@ describe('README catalog rendering', () => {
     expect(() => validateRootReadmeClaims(readme, '^8.0.0')).toThrow(
       /only Astro 8/,
     );
+    expect(() =>
+      validateRootReadmeClaims(
+        readme.replace('pending_source_review', 'review pending'),
+        '^7.1.3',
+      ),
+    ).toThrow(/missing scraper operating claim/);
+    expect(() =>
+      validateRootReadmeClaims(
+        readme.replace('bun run test:e2e', 'bun run test'),
+        '^7.1.3',
+      ),
+    ).toThrow(/local verification claim/);
   });
 
   test('locks every active agent guide to the manifest Astro major', async () => {
@@ -230,12 +250,16 @@ describe('README catalog rendering', () => {
         }),
       ],
       totalCards: 3,
+      totalExecutableCards: 1,
     };
     const section = renderRootCatalogSection(catalog);
 
     expect(section.match(/\| `fixture` \|/g)).toHaveLength(1);
     expect(section.match(/\| `small` \|/g)).toHaveLength(1);
-    const counts = [...section.matchAll(/\| `(?:fixture|small)` \| (\d+) \|/g)]
+    expect(section).toContain('카탈로그 카드 **3개** 중 **1개**');
+    const counts = [
+      ...section.matchAll(/\| `(?:fixture|small)` \| (\d+) \| \d+ \|/g),
+    ]
       .map((match) => Number(match[1]));
     expect(counts.reduce((sum, count) => sum + count, 0)).toBe(3);
   });
@@ -252,7 +276,7 @@ describe('README catalog rendering', () => {
 
     const rootRows = [
       ...(updates[0]!.current ?? '').matchAll(
-        /^\| [^|]+ \| `([^`]+)` \| (\d+) \|$/gm,
+        /^\| [^|]+ \| `([^`]+)` \| (\d+) \| (\d+) \|$/gm,
       ),
     ];
     expect(rootRows.map((match) => match[1]).sort()).toEqual(
@@ -261,6 +285,9 @@ describe('README catalog rendering', () => {
     expect(
       rootRows.reduce((total, match) => total + Number(match[2]), 0),
     ).toBe(catalog.totalCards);
+    expect(
+      rootRows.reduce((total, match) => total + Number(match[3]), 0),
+    ).toBe(catalog.totalExecutableCards);
 
     for (const [index, update] of updates.slice(1).entries()) {
       const issuer = catalog.issuers[index]!;
@@ -275,6 +302,16 @@ describe('README catalog rendering', () => {
       expect(indexedFiles).toEqual(
         issuer.cards.map(({ fileName }) => fileName).sort(),
       );
+      for (const card of issuer.cards) {
+        const escapedName = escapeMarkdownTableCell(card.nameKo)
+          .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        expect(section).toMatch(
+          new RegExp(
+            `\\| ${escapedName} \\| [^|]+ \\| ` +
+              `${card.optimizationExecutable ? '계산 가능' : '카탈로그 전용'} \\|`,
+          ),
+        );
+      }
     }
   });
 
@@ -303,6 +340,11 @@ describe('README catalog rendering', () => {
       /ANTHROPIC_API_KEY[\s\S]*비밀 관리자[\s\S]*로그, 저장소에 넣지 말고/,
     );
     expect(commands).toContain('bun run verify');
+    expect(commands).toContain('bunx playwright install chromium');
+    expect(commands).toContain('bun run test:e2e');
+    expect(localDevelopment).toContain('정적 검사');
+    expect(localDevelopment).toContain('추가 브라우저 회귀 검증');
+    expect(localDevelopment).not.toContain('CI와 같은 전체 검증');
   });
 
   test('binds the scraper README sequence to canonical configuration and publication', async () => {
@@ -319,6 +361,9 @@ describe('README catalog rendering', () => {
     expect(section).toContain('packages/rules/data/cards');
     expect(section).toContain('--allow-host');
     expect(section).toContain('--force');
+    expect(section).toContain('pending_source_review');
+    expect(section).toContain('원문과 대조');
+    expect(section).toContain('supported');
 
     const reviewIndex = section!.indexOf('생성된 YAML');
     const buildIndex = section!.indexOf('bun run data:build');
@@ -326,6 +371,31 @@ describe('README catalog rendering', () => {
     expect(reviewIndex).toBeGreaterThanOrEqual(0);
     expect(buildIndex).toBeGreaterThan(reviewIndex);
     expect(checkIndex).toBeGreaterThan(buildIndex);
+  });
+
+  test('marks highlighted unsupported-only Hyundai cards as catalog-only', async () => {
+    const [catalog, readme] = await Promise.all([
+      loadReadmeCatalog(repositoryRoot),
+      readFile(
+        `${repositoryRoot}/packages/rules/data/cards/hyundai/README.md`,
+        'utf8',
+      ),
+    ]);
+    const hyundai = catalog.issuers.find(({ meta }) => meta.id === 'hyundai');
+    const highlightedIds = [
+      'hyundai-zero-edition3-discount',
+      'hyundai-zero-edition3-points',
+    ];
+    for (const id of highlightedIds) {
+      expect(
+        hyundai?.cards.find((card) => card.id === id)?.optimizationExecutable,
+      ).toBe(false);
+    }
+    const handWritten = readme.slice(0, readme.indexOf(ISSUER_INDEX_BEGIN));
+    expect(handWritten.match(/ZERO Edition3 \([^)]*카탈로그 전용\)/g))
+      .toHaveLength(2);
+    expect(handWritten).toContain('현재 추천 계산 제외');
+    expect(handWritten).toContain('추천 계산에서는 제외');
   });
 
   test('keeps README and agent-guide YAML examples canonical', async () => {

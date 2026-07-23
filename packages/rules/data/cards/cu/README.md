@@ -9,12 +9,14 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **4개** · 최신 업데이트: `2026-03-25`
+> YAML 기준 **4개** · 최적화 계산 가능 **0개** · 카탈로그 전용 **4개** · 최신 업데이트: `2026-03-25`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| CUbig CLASSIC 체크카드 | 체크 | [cubig-classic-check.yaml](./cubig-classic-check.yaml) |
-| CUbig SIMPLE 체크카드 | 체크 | [cubig-simple-check.yaml](./cubig-simple-check.yaml) |
-| K-패스 체크카드 | 체크 | [kpass-check.yaml](./kpass-check.yaml) |
-| 어부바 체크카드 | 체크 | [eobuba-check.yaml](./eobuba-check.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| CUbig CLASSIC 체크카드 | 체크 | 카탈로그 전용 | [cubig-classic-check.yaml](./cubig-classic-check.yaml) |
+| CUbig SIMPLE 체크카드 | 체크 | 카탈로그 전용 | [cubig-simple-check.yaml](./cubig-simple-check.yaml) |
+| K-패스 체크카드 | 체크 | 카탈로그 전용 | [kpass-check.yaml](./kpass-check.yaml) |
+| 어부바 체크카드 | 체크 | 카탈로그 전용 | [eobuba-check.yaml](./eobuba-check.yaml) |
 <!-- END GENERATED CARD INDEX -->

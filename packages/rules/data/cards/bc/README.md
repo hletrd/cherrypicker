@@ -51,30 +51,32 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **22개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **22개** · 최적화 계산 가능 **19개** · 카탈로그 전용 **3개** · 최신 업데이트: `2026-03-26`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| BC 바로 BabBara 체크 | 체크 | [baro-barbara-check.yaml](./baro-barbara-check.yaml) |
-| BC 바로 K-패스 카드 | 신용 | [baro-k-pass.yaml](./baro-k-pass.yaml) |
-| BC 바로 KT My Budget Phone | 신용 | [baro-kt-budget.yaml](./baro-kt-budget.yaml) |
-| BC 바로 On&amp;Off 카드 | 신용 | [baro-on-off.yaml](./baro-on-off.yaml) |
-| BC 바로 Paybook Money 체크 | 체크 | [baro-paybook-check.yaml](./baro-paybook-check.yaml) |
-| BC 바로 리워드 플러스 | 신용 | [baro-reward-plus.yaml](./baro-reward-plus.yaml) |
-| BC 바로 마카오카드 | 신용 | [baro-macao.yaml](./baro-macao.yaml) |
-| BC 바로 에어 플러스 스카이패스 | 신용 | [baro-air-plus-skypass.yaml](./baro-air-plus-skypass.yaml) |
-| BC 바로 에어 플러스 아시아나 | 신용 | [baro-air-plus-asiana.yaml](./baro-air-plus-asiana.yaml) |
-| BC 바로 카픽플러스 | 신용 | [baro-kapick-plus.yaml](./baro-kapick-plus.yaml) |
-| BC 바로 클리어 플러스 | 신용 | [baro-clear-plus.yaml](./baro-clear-plus.yaml) |
-| BC 바로 페이백 플러스 | 신용 | [baro-payback-plus.yaml](./baro-payback-plus.yaml) |
-| BC 바로카드 KaPick | 신용 | [baro-kapick.yaml](./baro-kapick.yaml) |
-| BC 바로카드 Lost Ark | 신용 | [baro-lost-ark.yaml](./baro-lost-ark.yaml) |
-| BC 어디로든 그린 EV | 신용 | [bc-green-ev.yaml](./bc-green-ev.yaml) |
-| BC카드 KT SUPER+ | 신용 | [kt-super-plus.yaml](./kt-super-plus.yaml) |
-| BC카드 그린카드 | 신용 | [green-card.yaml](./green-card.yaml) |
-| BC카드 컬리카드 | 신용 | [curly.yaml](./curly.yaml) |
-| GOAT BC 바로카드 | 신용 | [goat.yaml](./goat.yaml) |
-| 신세계 BC 바로 세븐 플렉스 | 신용 | [shinsegae-seven-flex.yaml](./shinsegae-seven-flex.yaml) |
-| 신세계 BC 바로 콰트로 플러스 | 신용 | [baro-quattro-plus.yaml](./baro-quattro-plus.yaml) |
-| 신세계 푸빌라 BC 바로카드 | 신용 | [shinsegae-fubilla.yaml](./shinsegae-fubilla.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| BC 바로 BabBara 체크 | 체크 | 계산 가능 | [baro-barbara-check.yaml](./baro-barbara-check.yaml) |
+| BC 바로 K-패스 카드 | 신용 | 계산 가능 | [baro-k-pass.yaml](./baro-k-pass.yaml) |
+| BC 바로 KT My Budget Phone | 신용 | 계산 가능 | [baro-kt-budget.yaml](./baro-kt-budget.yaml) |
+| BC 바로 On&amp;Off 카드 | 신용 | 계산 가능 | [baro-on-off.yaml](./baro-on-off.yaml) |
+| BC 바로 Paybook Money 체크 | 체크 | 계산 가능 | [baro-paybook-check.yaml](./baro-paybook-check.yaml) |
+| BC 바로 리워드 플러스 | 신용 | 계산 가능 | [baro-reward-plus.yaml](./baro-reward-plus.yaml) |
+| BC 바로 마카오카드 | 신용 | 계산 가능 | [baro-macao.yaml](./baro-macao.yaml) |
+| BC 바로 에어 플러스 스카이패스 | 신용 | 계산 가능 | [baro-air-plus-skypass.yaml](./baro-air-plus-skypass.yaml) |
+| BC 바로 에어 플러스 아시아나 | 신용 | 카탈로그 전용 | [baro-air-plus-asiana.yaml](./baro-air-plus-asiana.yaml) |
+| BC 바로 카픽플러스 | 신용 | 계산 가능 | [baro-kapick-plus.yaml](./baro-kapick-plus.yaml) |
+| BC 바로 클리어 플러스 | 신용 | 계산 가능 | [baro-clear-plus.yaml](./baro-clear-plus.yaml) |
+| BC 바로 페이백 플러스 | 신용 | 계산 가능 | [baro-payback-plus.yaml](./baro-payback-plus.yaml) |
+| BC 바로카드 KaPick | 신용 | 카탈로그 전용 | [baro-kapick.yaml](./baro-kapick.yaml) |
+| BC 바로카드 Lost Ark | 신용 | 계산 가능 | [baro-lost-ark.yaml](./baro-lost-ark.yaml) |
+| BC 어디로든 그린 EV | 신용 | 계산 가능 | [bc-green-ev.yaml](./bc-green-ev.yaml) |
+| BC카드 KT SUPER+ | 신용 | 계산 가능 | [kt-super-plus.yaml](./kt-super-plus.yaml) |
+| BC카드 그린카드 | 신용 | 계산 가능 | [green-card.yaml](./green-card.yaml) |
+| BC카드 컬리카드 | 신용 | 계산 가능 | [curly.yaml](./curly.yaml) |
+| GOAT BC 바로카드 | 신용 | 카탈로그 전용 | [goat.yaml](./goat.yaml) |
+| 신세계 BC 바로 세븐 플렉스 | 신용 | 계산 가능 | [shinsegae-seven-flex.yaml](./shinsegae-seven-flex.yaml) |
+| 신세계 BC 바로 콰트로 플러스 | 신용 | 계산 가능 | [baro-quattro-plus.yaml](./baro-quattro-plus.yaml) |
+| 신세계 푸빌라 BC 바로카드 | 신용 | 계산 가능 | [shinsegae-fubilla.yaml](./shinsegae-fubilla.yaml) |
 <!-- END GENERATED CARD INDEX -->

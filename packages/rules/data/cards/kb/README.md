@@ -34,75 +34,77 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **67개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **67개** · 최적화 계산 가능 **60개** · 카탈로그 전용 **7개** · 최신 업데이트: `2026-03-26`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| KB YOU Prime 카드 | 신용 | [you-prime.yaml](./you-prime.yaml) |
-| KB Youth Club 체크카드 | 체크 | [youth-club-check.yaml](./youth-club-check.yaml) |
-| KB 틴업 체크카드 | 체크 | [nori-teen-check.yaml](./nori-teen-check.yaml) |
-| KB국민 ALL 카드 | 신용 | [kb-all.yaml](./kb-all.yaml) |
-| KB국민 ALL 카드 | 신용 | [all-you-need.yaml](./all-you-need.yaml) |
-| KB국민 CJ ONE 카드 | 신용 | [cj-one.yaml](./cj-one.yaml) |
-| KB국민 EVO 티타늄카드 | 신용 | [evo-titanium.yaml](./evo-titanium.yaml) |
-| KB국민 Easy All 티타늄카드 | 신용 | [easy-all.yaml](./easy-all.yaml) |
-| KB국민 Easy On 카드 | 신용 | [easy-on.yaml](./easy-on.yaml) |
-| KB국민 Easy Pick 카드 | 신용 | [easy-pick.yaml](./easy-pick.yaml) |
-| KB국민 Easy Study 티타늄카드 | 신용 | [easy-study.yaml](./easy-study.yaml) |
-| KB국민 Easy Study 티타늄카드 | 신용 | [easy-study-titanium.yaml](./easy-study-titanium.yaml) |
-| KB국민 Easy all 티타늄카드 | 신용 | [easy-all-titanium.yaml](./easy-all-titanium.yaml) |
-| KB국민 Easy auto 티타늄카드 | 신용 | [easy-auto-titanium.yaml](./easy-auto-titanium.yaml) |
-| KB국민 Easy fly 티타늄카드 | 신용 | [easy-fly-titanium.yaml](./easy-fly-titanium.yaml) |
-| KB국민 Easy ring 티타늄카드 | 신용 | [easy-ring-titanium.yaml](./easy-ring-titanium.yaml) |
-| KB국민 FINETECH카드(대한항공) | 신용 | [finetech-kal.yaml](./finetech-kal.yaml) |
-| KB국민 Get100 카드 | 신용 | [get100.yaml](./get100.yaml) |
-| KB국민 K패스 카드 | 신용 | [k-pass.yaml](./k-pass.yaml) |
-| KB국민 NEED AutoSlim 카드 | 신용 | [need-auto-slim.yaml](./need-auto-slim.yaml) |
-| KB국민 NEED Edu 카드 | 신용 | [need-edu.yaml](./need-edu.yaml) |
-| KB국민 Our WE:SH 카드 | 신용 | [our-wesh.yaml](./our-wesh.yaml) |
-| KB국민 가온글로벌카드 | 신용 | [gaon-global.yaml](./gaon-global.yaml) |
-| KB국민 가온올림카드(실속형) | 신용 | [gaon-ollim.yaml](./gaon-ollim.yaml) |
-| KB국민 골든라이프올림카드 | 신용 | [golden-life-ollim.yaml](./golden-life-ollim.yaml) |
-| KB국민 굿데이카드 | 신용 | [goodday.yaml](./goodday.yaml) |
-| KB국민 노리2 체크카드 (KB Pay) | 체크 | [nori2-check.yaml](./nori2-check.yaml) |
-| KB국민 다담카드 | 신용 | [dadam.yaml](./dadam.yaml) |
-| KB국민 마이위시 카드 | 신용 | [my-wesh.yaml](./my-wesh.yaml) |
-| KB국민 마이핏카드 적립형 | 신용 | [my-fit-points.yaml](./my-fit-points.yaml) |
-| KB국민 마이핏카드 할인형 | 신용 | [my-fit-discount.yaml](./my-fit-discount.yaml) |
-| KB국민 마일리지 가온카드 (아시아나) | 신용 | [mileage-gaon-asiana.yaml](./mileage-gaon-asiana.yaml) |
-| KB국민 민 체크카드 | 체크 | [min-check.yaml](./min-check.yaml) |
-| KB국민 반려愛카드 | 신용 | [petlove-kb.yaml](./petlove-kb.yaml) |
-| KB국민 베브 V 카드 | 신용 | [bev-v.yaml](./bev-v.yaml) |
-| KB국민 베브3 카드 | 신용 | [bev-iii.yaml](./bev-iii.yaml) |
-| KB국민 스카이패스 골드 카드 | 신용 | [skypass-gold.yaml](./skypass-gold.yaml) |
-| KB국민 스카이패스 티타늄카드 | 신용 | [skypass-titanium.yaml](./skypass-titanium.yaml) |
-| KB국민 아시아나 올림카드 | 신용 | [asiana-ollim.yaml](./asiana-ollim.yaml) |
-| KB국민 알뜰폰Hub 카드 | 신용 | [alddulpon-hub.yaml](./alddulpon-hub.yaml) |
-| KB국민 에버랜드 판다카드 | 신용 | [everland-panda.yaml](./everland-panda.yaml) |
-| KB국민 위시 트래블 카드 | 신용 | [wesh-travel.yaml](./wesh-travel.yaml) |
-| KB국민 위시올 카드 | 신용 | [wesh-all.yaml](./wesh-all.yaml) |
-| KB국민 이지링크 티타늄카드 | 신용 | [easy-link.yaml](./easy-link.yaml) |
-| KB국민 이지오토 카드 | 신용 | [easy-auto.yaml](./easy-auto.yaml) |
-| KB국민 이지플라이 티타늄카드 | 신용 | [easy-fly.yaml](./easy-fly.yaml) |
-| KB국민 청춘대로 1코노미 카드 | 신용 | [cheongchun-1cono.yaml](./cheongchun-1cono.yaml) |
-| KB국민 청춘대로 매니아i 카드 | 신용 | [cheongchun-mania.yaml](./cheongchun-mania.yaml) |
-| KB국민 청춘대로 톡톡 with 카드 | 신용 | [toktok-with.yaml](./toktok-with.yaml) |
-| KB국민 청춘대로 톡톡카드 | 신용 | [cheongchun-toktok.yaml](./cheongchun-toktok.yaml) |
-| KB국민 쿠팡 와우 체크카드 | 체크 | [coupang-rocket-check.yaml](./coupang-rocket-check.yaml) |
-| KB국민 쿠팡 와우 카드 | 신용 | [coupang-wow.yaml](./coupang-wow.yaml) |
-| KB국민 탄탄대로 Biz카드 | 신용 | [tantandaero-biz.yaml](./tantandaero-biz.yaml) |
-| KB국민 톡톡 Pay카드 | 신용 | [toktok-pay.yaml](./toktok-pay.yaml) |
-| KB국민 톡톡M 카드 | 신용 | [toktok-m.yaml](./toktok-m.yaml) |
-| KB국민 톡톡O 카드 | 신용 | [toktok-o.yaml](./toktok-o.yaml) |
-| KB국민 트래블러스 체크카드 | 체크 | [travel-check.yaml](./travel-check.yaml) |
-| KB국민 트래블러스 체크카드 | 체크 | [travelers-check.yaml](./travelers-check.yaml) |
-| KB국민 펫코노미 카드 | 신용 | [petconomy.yaml](./petconomy.yaml) |
-| KB국민 헤리티지 리저브 | 신용 | [heritage-reserve.yaml](./heritage-reserve.yaml) |
-| KB국민 헤리티지 스마트 | 신용 | [heritage-smart.yaml](./heritage-smart.yaml) |
-| The CJ KB국민카드 | 신용 | [the-cj.yaml](./the-cj.yaml) |
-| 골프존 KB국민카드 | 신용 | [golfzon-kb.yaml](./golfzon-kb.yaml) |
-| 모두투어 투어마일리지 KB국민카드 | 신용 | [modutour.yaml](./modutour.yaml) |
-| 제주항공 Refresh Point KB국민카드 | 신용 | [jejuair-refresh-kb.yaml](./jejuair-refresh-kb.yaml) |
-| 카카오페이 KB국민 체크카드 | 체크 | [kakaopay-check.yaml](./kakaopay-check.yaml) |
-| 하나투어 KB국민카드 | 신용 | [hanatour-kb.yaml](./hanatour-kb.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| KB YOU Prime 카드 | 신용 | 카탈로그 전용 | [you-prime.yaml](./you-prime.yaml) |
+| KB Youth Club 체크카드 | 체크 | 카탈로그 전용 | [youth-club-check.yaml](./youth-club-check.yaml) |
+| KB 틴업 체크카드 | 체크 | 계산 가능 | [nori-teen-check.yaml](./nori-teen-check.yaml) |
+| KB국민 ALL 카드 | 신용 | 계산 가능 | [kb-all.yaml](./kb-all.yaml) |
+| KB국민 ALL 카드 | 신용 | 계산 가능 | [all-you-need.yaml](./all-you-need.yaml) |
+| KB국민 CJ ONE 카드 | 신용 | 계산 가능 | [cj-one.yaml](./cj-one.yaml) |
+| KB국민 EVO 티타늄카드 | 신용 | 계산 가능 | [evo-titanium.yaml](./evo-titanium.yaml) |
+| KB국민 Easy All 티타늄카드 | 신용 | 계산 가능 | [easy-all.yaml](./easy-all.yaml) |
+| KB국민 Easy On 카드 | 신용 | 계산 가능 | [easy-on.yaml](./easy-on.yaml) |
+| KB국민 Easy Pick 카드 | 신용 | 계산 가능 | [easy-pick.yaml](./easy-pick.yaml) |
+| KB국민 Easy Study 티타늄카드 | 신용 | 계산 가능 | [easy-study.yaml](./easy-study.yaml) |
+| KB국민 Easy Study 티타늄카드 | 신용 | 계산 가능 | [easy-study-titanium.yaml](./easy-study-titanium.yaml) |
+| KB국민 Easy all 티타늄카드 | 신용 | 계산 가능 | [easy-all-titanium.yaml](./easy-all-titanium.yaml) |
+| KB국민 Easy auto 티타늄카드 | 신용 | 계산 가능 | [easy-auto-titanium.yaml](./easy-auto-titanium.yaml) |
+| KB국민 Easy fly 티타늄카드 | 신용 | 계산 가능 | [easy-fly-titanium.yaml](./easy-fly-titanium.yaml) |
+| KB국민 Easy ring 티타늄카드 | 신용 | 카탈로그 전용 | [easy-ring-titanium.yaml](./easy-ring-titanium.yaml) |
+| KB국민 FINETECH카드(대한항공) | 신용 | 계산 가능 | [finetech-kal.yaml](./finetech-kal.yaml) |
+| KB국민 Get100 카드 | 신용 | 계산 가능 | [get100.yaml](./get100.yaml) |
+| KB국민 K패스 카드 | 신용 | 계산 가능 | [k-pass.yaml](./k-pass.yaml) |
+| KB국민 NEED AutoSlim 카드 | 신용 | 계산 가능 | [need-auto-slim.yaml](./need-auto-slim.yaml) |
+| KB국민 NEED Edu 카드 | 신용 | 카탈로그 전용 | [need-edu.yaml](./need-edu.yaml) |
+| KB국민 Our WE:SH 카드 | 신용 | 계산 가능 | [our-wesh.yaml](./our-wesh.yaml) |
+| KB국민 가온글로벌카드 | 신용 | 계산 가능 | [gaon-global.yaml](./gaon-global.yaml) |
+| KB국민 가온올림카드(실속형) | 신용 | 계산 가능 | [gaon-ollim.yaml](./gaon-ollim.yaml) |
+| KB국민 골든라이프올림카드 | 신용 | 카탈로그 전용 | [golden-life-ollim.yaml](./golden-life-ollim.yaml) |
+| KB국민 굿데이카드 | 신용 | 계산 가능 | [goodday.yaml](./goodday.yaml) |
+| KB국민 노리2 체크카드 (KB Pay) | 체크 | 계산 가능 | [nori2-check.yaml](./nori2-check.yaml) |
+| KB국민 다담카드 | 신용 | 계산 가능 | [dadam.yaml](./dadam.yaml) |
+| KB국민 마이위시 카드 | 신용 | 계산 가능 | [my-wesh.yaml](./my-wesh.yaml) |
+| KB국민 마이핏카드 적립형 | 신용 | 계산 가능 | [my-fit-points.yaml](./my-fit-points.yaml) |
+| KB국민 마이핏카드 할인형 | 신용 | 계산 가능 | [my-fit-discount.yaml](./my-fit-discount.yaml) |
+| KB국민 마일리지 가온카드 (아시아나) | 신용 | 계산 가능 | [mileage-gaon-asiana.yaml](./mileage-gaon-asiana.yaml) |
+| KB국민 민 체크카드 | 체크 | 계산 가능 | [min-check.yaml](./min-check.yaml) |
+| KB국민 반려愛카드 | 신용 | 계산 가능 | [petlove-kb.yaml](./petlove-kb.yaml) |
+| KB국민 베브 V 카드 | 신용 | 계산 가능 | [bev-v.yaml](./bev-v.yaml) |
+| KB국민 베브3 카드 | 신용 | 계산 가능 | [bev-iii.yaml](./bev-iii.yaml) |
+| KB국민 스카이패스 골드 카드 | 신용 | 계산 가능 | [skypass-gold.yaml](./skypass-gold.yaml) |
+| KB국민 스카이패스 티타늄카드 | 신용 | 카탈로그 전용 | [skypass-titanium.yaml](./skypass-titanium.yaml) |
+| KB국민 아시아나 올림카드 | 신용 | 계산 가능 | [asiana-ollim.yaml](./asiana-ollim.yaml) |
+| KB국민 알뜰폰Hub 카드 | 신용 | 카탈로그 전용 | [alddulpon-hub.yaml](./alddulpon-hub.yaml) |
+| KB국민 에버랜드 판다카드 | 신용 | 계산 가능 | [everland-panda.yaml](./everland-panda.yaml) |
+| KB국민 위시 트래블 카드 | 신용 | 계산 가능 | [wesh-travel.yaml](./wesh-travel.yaml) |
+| KB국민 위시올 카드 | 신용 | 계산 가능 | [wesh-all.yaml](./wesh-all.yaml) |
+| KB국민 이지링크 티타늄카드 | 신용 | 계산 가능 | [easy-link.yaml](./easy-link.yaml) |
+| KB국민 이지오토 카드 | 신용 | 계산 가능 | [easy-auto.yaml](./easy-auto.yaml) |
+| KB국민 이지플라이 티타늄카드 | 신용 | 계산 가능 | [easy-fly.yaml](./easy-fly.yaml) |
+| KB국민 청춘대로 1코노미 카드 | 신용 | 계산 가능 | [cheongchun-1cono.yaml](./cheongchun-1cono.yaml) |
+| KB국민 청춘대로 매니아i 카드 | 신용 | 계산 가능 | [cheongchun-mania.yaml](./cheongchun-mania.yaml) |
+| KB국민 청춘대로 톡톡 with 카드 | 신용 | 계산 가능 | [toktok-with.yaml](./toktok-with.yaml) |
+| KB국민 청춘대로 톡톡카드 | 신용 | 계산 가능 | [cheongchun-toktok.yaml](./cheongchun-toktok.yaml) |
+| KB국민 쿠팡 와우 체크카드 | 체크 | 계산 가능 | [coupang-rocket-check.yaml](./coupang-rocket-check.yaml) |
+| KB국민 쿠팡 와우 카드 | 신용 | 계산 가능 | [coupang-wow.yaml](./coupang-wow.yaml) |
+| KB국민 탄탄대로 Biz카드 | 신용 | 계산 가능 | [tantandaero-biz.yaml](./tantandaero-biz.yaml) |
+| KB국민 톡톡 Pay카드 | 신용 | 계산 가능 | [toktok-pay.yaml](./toktok-pay.yaml) |
+| KB국민 톡톡M 카드 | 신용 | 계산 가능 | [toktok-m.yaml](./toktok-m.yaml) |
+| KB국민 톡톡O 카드 | 신용 | 계산 가능 | [toktok-o.yaml](./toktok-o.yaml) |
+| KB국민 트래블러스 체크카드 | 체크 | 계산 가능 | [travel-check.yaml](./travel-check.yaml) |
+| KB국민 트래블러스 체크카드 | 체크 | 계산 가능 | [travelers-check.yaml](./travelers-check.yaml) |
+| KB국민 펫코노미 카드 | 신용 | 계산 가능 | [petconomy.yaml](./petconomy.yaml) |
+| KB국민 헤리티지 리저브 | 신용 | 계산 가능 | [heritage-reserve.yaml](./heritage-reserve.yaml) |
+| KB국민 헤리티지 스마트 | 신용 | 계산 가능 | [heritage-smart.yaml](./heritage-smart.yaml) |
+| The CJ KB국민카드 | 신용 | 계산 가능 | [the-cj.yaml](./the-cj.yaml) |
+| 골프존 KB국민카드 | 신용 | 계산 가능 | [golfzon-kb.yaml](./golfzon-kb.yaml) |
+| 모두투어 투어마일리지 KB국민카드 | 신용 | 계산 가능 | [modutour.yaml](./modutour.yaml) |
+| 제주항공 Refresh Point KB국민카드 | 신용 | 계산 가능 | [jejuair-refresh-kb.yaml](./jejuair-refresh-kb.yaml) |
+| 카카오페이 KB국민 체크카드 | 체크 | 계산 가능 | [kakaopay-check.yaml](./kakaopay-check.yaml) |
+| 하나투어 KB국민카드 | 신용 | 계산 가능 | [hanatour-kb.yaml](./hanatour-kb.yaml) |
 <!-- END GENERATED CARD INDEX -->

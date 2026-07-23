@@ -18,18 +18,20 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **10개** · 최신 업데이트: `2026-03-25`
+> YAML 기준 **10개** · 최적화 계산 가능 **8개** · 카탈로그 전용 **2개** · 최신 업데이트: `2026-03-25`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| 1st Y-check 체크카드 | 체크 | [1st-y-check.yaml](./1st-y-check.yaml) |
-| 1st 신용카드 | 신용 | [1st-credit.yaml](./1st-credit.yaml) |
-| 광주은행 1st A-check 체크카드 | 체크 | [1st-a-check.yaml](./1st-a-check.yaml) |
-| 광주은행 K-체크카드 | 체크 | [k-check.yaml](./k-check.yaml) |
-| 광주은행 K-패스그린카드 V2 | 신용 | [kpass-green-v2.yaml](./kpass-green-v2.yaml) |
-| 광주은행 메가박스 체크카드 | 체크 | [megabox-check.yaml](./megabox-check.yaml) |
-| 광주은행 여행스케치 아시아나 체크카드 | 체크 | [travel-sketch-check.yaml](./travel-sketch-check.yaml) |
-| 광주은행 오일모아 신용카드 | 신용 | [oil-moa.yaml](./oil-moa.yaml) |
-| 기아 챔피언스카드 | 신용 | [kia-champions.yaml](./kia-champions.yaml) |
-| 에듀플러스카드 | 신용 | [edu-plus.yaml](./edu-plus.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| 1st Y-check 체크카드 | 체크 | 계산 가능 | [1st-y-check.yaml](./1st-y-check.yaml) |
+| 1st 신용카드 | 신용 | 계산 가능 | [1st-credit.yaml](./1st-credit.yaml) |
+| 광주은행 1st A-check 체크카드 | 체크 | 계산 가능 | [1st-a-check.yaml](./1st-a-check.yaml) |
+| 광주은행 K-체크카드 | 체크 | 카탈로그 전용 | [k-check.yaml](./k-check.yaml) |
+| 광주은행 K-패스그린카드 V2 | 신용 | 카탈로그 전용 | [kpass-green-v2.yaml](./kpass-green-v2.yaml) |
+| 광주은행 메가박스 체크카드 | 체크 | 계산 가능 | [megabox-check.yaml](./megabox-check.yaml) |
+| 광주은행 여행스케치 아시아나 체크카드 | 체크 | 계산 가능 | [travel-sketch-check.yaml](./travel-sketch-check.yaml) |
+| 광주은행 오일모아 신용카드 | 신용 | 계산 가능 | [oil-moa.yaml](./oil-moa.yaml) |
+| 기아 챔피언스카드 | 신용 | 계산 가능 | [kia-champions.yaml](./kia-champions.yaml) |
+| 에듀플러스카드 | 신용 | 계산 가능 | [edu-plus.yaml](./edu-plus.yaml) |
 <!-- END GENERATED CARD INDEX -->

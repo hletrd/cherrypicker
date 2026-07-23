@@ -9,10 +9,12 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **2개** · 최신 업데이트: `2026-03-25`
+> YAML 기준 **2개** · 최적화 계산 가능 **0개** · 카탈로그 전용 **2개** · 최신 업데이트: `2026-03-25`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| 우체국 BC 체크카드 | 체크 | [bc-check.yaml](./bc-check.yaml) |
-| 우체국 아시아나 체크카드 | 체크 | [asiana-check.yaml](./asiana-check.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| 우체국 BC 체크카드 | 체크 | 카탈로그 전용 | [bc-check.yaml](./bc-check.yaml) |
+| 우체국 아시아나 체크카드 | 체크 | 카탈로그 전용 | [asiana-check.yaml](./asiana-check.yaml) |
 <!-- END GENERATED CARD INDEX -->

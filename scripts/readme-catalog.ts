@@ -13,6 +13,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import {
+  isOptimizationExecutableCard,
   issuersFileSchema,
   SCRAPER_ISSUERS,
   type CardType,
@@ -41,6 +42,7 @@ export interface ReadmeCatalogCard {
   nameKo: string;
   type: CardType;
   lastUpdated: string;
+  optimizationExecutable: boolean;
 }
 
 export interface ReadmeCatalogIssuer {
@@ -51,6 +53,7 @@ export interface ReadmeCatalogIssuer {
 export interface ReadmeCatalog {
   issuers: ReadmeCatalogIssuer[];
   totalCards: number;
+  totalExecutableCards: number;
 }
 
 export interface ReadmeUpdate {
@@ -127,6 +130,31 @@ export function validateRootReadmeClaims(
     }
   }
 
+  const localDevelopmentSection = markdown.match(
+    /### 로컬 개발\n(?<section>[\s\S]*?)\n---/,
+  )?.groups?.section;
+  if (!localDevelopmentSection) {
+    throw new Error('README.md: missing local development section');
+  }
+  for (const requiredVerificationClaim of [
+    '정적 검사, 단위 테스트, 데이터와 빌드 검증',
+    'bun run verify',
+    '추가 브라우저 회귀 검증',
+    'bunx playwright install chromium',
+    'bun run test:e2e',
+  ]) {
+    if (!localDevelopmentSection.includes(requiredVerificationClaim)) {
+      throw new Error(
+        `README.md: missing local verification claim "${requiredVerificationClaim}"`,
+      );
+    }
+  }
+  if (localDevelopmentSection.includes('CI와 같은 전체 검증')) {
+    throw new Error(
+      'README.md: bun run verify must not be described as the complete CI gate',
+    );
+  }
+
   const scraperSection = markdown.match(
     /### 카드 규칙 스크래퍼\n(?<section>[\s\S]*?)\n---/,
   )?.groups?.section;
@@ -142,6 +170,10 @@ export function validateRootReadmeClaims(
     '--allow-host',
     '--force',
     '생성된 YAML',
+    'pending_source_review',
+    '원문과 대조',
+    'support.status: supported',
+    '최적화 계산에는 쓰이지 않습니다',
     'bun run data:build',
     'bun run data:check',
   ]) {
@@ -355,19 +387,44 @@ export function renderRootCatalogSection(catalog: ReadmeCatalog): string {
       `Issuer row total ${rowTotal} does not match catalog total ${catalog.totalCards}`,
     );
   }
+  const executableTotal = issuers.reduce(
+    (total, issuer) =>
+      total +
+      issuer.cards.filter(({ optimizationExecutable }) =>
+        optimizationExecutable
+      ).length,
+    0,
+  );
+  if (executableTotal !== catalog.totalExecutableCards) {
+    throw new Error(
+      `Issuer executable total ${executableTotal} does not match catalog executable total ${catalog.totalExecutableCards}`,
+    );
+  }
 
   const rows = issuers.map(
-    ({ meta, cards }) =>
-      `| ${escapeMarkdownTableCell(meta.nameKo)} | \`${escapeMarkdownTableCell(meta.id)}\` | ${cards.length} |`,
+    ({ meta, cards }) => {
+      const executableCards = cards.filter(
+        ({ optimizationExecutable }) => optimizationExecutable,
+      ).length;
+      return (
+        `| ${escapeMarkdownTableCell(meta.nameKo)} | ` +
+        `\`${escapeMarkdownTableCell(meta.id)}\` | ${cards.length} | ` +
+        `${executableCards} |`
+      );
+    },
   );
 
   return [
     ROOT_CATALOG_BEGIN,
     `[![Cards](https://img.shields.io/badge/cards-${catalog.totalCards}-2f81f7)](packages/rules/data/cards/)`,
+    `[![Optimizer executable](https://img.shields.io/badge/optimizer-${catalog.totalExecutableCards}-2f81f7)](packages/rules/data/cards/)`,
     `[![Issuers](https://img.shields.io/badge/issuers-${issuers.length}-2f81f7)](packages/rules/data/issuers.yaml)`,
     '',
-    '| 카드사 | ID | 카드 수 |',
-    '|---|---:|---:|',
+    `카탈로그 카드 **${catalog.totalCards}개** 중 **${catalog.totalExecutableCards}개**는 현재 최적화 계산에 사용할 수 있습니다.`,
+    '`계산 가능`은 지원되는 혜택 규칙이 하나 이상 있는 발급 가능 카드를 뜻합니다. 나머지는 상세 정보는 볼 수 있지만 추천 점수에는 포함되지 않는 카탈로그 전용 카드입니다.',
+    '',
+    '| 카드사 | ID | 카탈로그 카드 | 최적화 계산 가능 |',
+    '|---|---:|---:|---:|',
     ...rows,
     ROOT_CATALOG_END,
   ].join('\n');
@@ -380,9 +437,13 @@ export function renderIssuerIndexSection(
   const latestUpdated =
     cards.map(({ lastUpdated }) => lastUpdated).sort(compareText).at(-1) ??
     '없음';
+  const executableCards = cards.filter(
+    ({ optimizationExecutable }) => optimizationExecutable,
+  ).length;
   const rows = cards.map(
     (card) =>
-      `| ${escapeMarkdownTableCell(card.nameKo)} | ${displayCardType(card.type)} | [` +
+      `| ${escapeMarkdownTableCell(card.nameKo)} | ${displayCardType(card.type)} | ` +
+      `${card.optimizationExecutable ? '계산 가능' : '카탈로그 전용'} | [` +
       `${escapeMarkdownTableCell(card.fileName)}](${encodeRelativeLink(card.fileName)}) |`,
   );
 
@@ -390,10 +451,13 @@ export function renderIssuerIndexSection(
     ISSUER_INDEX_BEGIN,
     '## 전체 카드 인덱스',
     '',
-    `> YAML 기준 **${cards.length}개** · 최신 업데이트: \`${latestUpdated}\``,
+    `> YAML 기준 **${cards.length}개** · 최적화 계산 가능 **${executableCards}개** · ` +
+      `카탈로그 전용 **${cards.length - executableCards}개** · 최신 업데이트: \`${latestUpdated}\``,
     '',
-    '| 카드명 | 유형 | YAML |',
-    '|---|---:|---|',
+    '`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.',
+    '',
+    '| 카드명 | 유형 | 추천 계산 상태 | YAML |',
+    '|---|---:|---:|---|',
     ...rows,
     ISSUER_INDEX_END,
   ].join('\n');
@@ -500,18 +564,29 @@ export async function loadReadmeCatalog(
         nameKo: rule.card.nameKo,
         type: rule.card.type,
         lastUpdated: rule.card.lastUpdated,
+        optimizationExecutable: isOptimizationExecutableCard(rule),
       });
     }
 
     issuers.push({ meta: issuer, cards });
   }
 
+  const totalCards = issuers.reduce(
+    (total, issuer) => total + issuer.cards.length,
+    0,
+  );
+  const totalExecutableCards = issuers.reduce(
+    (total, issuer) =>
+      total +
+      issuer.cards.filter(({ optimizationExecutable }) =>
+        optimizationExecutable
+      ).length,
+    0,
+  );
   return {
     issuers,
-    totalCards: issuers.reduce(
-      (total, issuer) => total + issuer.cards.length,
-      0,
-    ),
+    totalCards,
+    totalExecutableCards,
   };
 }
 
@@ -657,7 +732,9 @@ async function main(): Promise<void> {
 
   const action = check ? 'Verified' : 'Generated';
   console.log(
-    `${action} README catalog: ${catalog.totalCards} cards across ${catalog.issuers.length} issuers.`,
+    `${action} README catalog: ${catalog.totalCards} cards ` +
+      `(${catalog.totalExecutableCards} optimizer-executable) across ` +
+      `${catalog.issuers.length} issuers.`,
   );
   if (!check && driftedPaths.length > 0) {
     for (const path of driftedPaths) console.log(`  ${path}`);

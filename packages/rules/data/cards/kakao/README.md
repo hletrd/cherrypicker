@@ -17,17 +17,19 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **9개** · 최신 업데이트: `2026-03-25`
+> YAML 기준 **9개** · 최적화 계산 가능 **5개** · 카탈로그 전용 **4개** · 최신 업데이트: `2026-03-25`
 
-| 카드명 | 유형 | YAML |
-|---|---:|---|
-| 줍줍 신한카드 | 신용 | [jjupjjup-shinhan.yaml](./jjupjjup-shinhan.yaml) |
-| 카카오뱅크 K-패스 프렌즈 체크카드 | 체크 | [kpass-friends-check.yaml](./kpass-friends-check.yaml) |
-| 카카오뱅크 K-패스 프렌즈 체크카드 | 체크 | [kpass-friends-check-v2.yaml](./kpass-friends-check-v2.yaml) |
-| 카카오뱅크 KB국민카드 | 신용 | [kakaopay-kb.yaml](./kakaopay-kb.yaml) |
-| 카카오뱅크 개인사업자 체크카드 | 체크 | [soho-check.yaml](./soho-check.yaml) |
-| 카카오뱅크 모임 체크카드 | 체크 | [moim-check.yaml](./moim-check.yaml) |
-| 카카오뱅크 삼성카드 | 신용 | [kakaopay-samsung.yaml](./kakaopay-samsung.yaml) |
-| 카카오뱅크 신한카드 Time | 신용 | [kakaopay-shinhan.yaml](./kakaopay-shinhan.yaml) |
-| 카카오뱅크 프렌즈 체크카드 | 체크 | [friends-check.yaml](./friends-check.yaml) |
+`계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
+
+| 카드명 | 유형 | 추천 계산 상태 | YAML |
+|---|---:|---:|---|
+| 줍줍 신한카드 | 신용 | 계산 가능 | [jjupjjup-shinhan.yaml](./jjupjjup-shinhan.yaml) |
+| 카카오뱅크 K-패스 프렌즈 체크카드 | 체크 | 카탈로그 전용 | [kpass-friends-check.yaml](./kpass-friends-check.yaml) |
+| 카카오뱅크 K-패스 프렌즈 체크카드 | 체크 | 계산 가능 | [kpass-friends-check-v2.yaml](./kpass-friends-check-v2.yaml) |
+| 카카오뱅크 KB국민카드 | 신용 | 계산 가능 | [kakaopay-kb.yaml](./kakaopay-kb.yaml) |
+| 카카오뱅크 개인사업자 체크카드 | 체크 | 카탈로그 전용 | [soho-check.yaml](./soho-check.yaml) |
+| 카카오뱅크 모임 체크카드 | 체크 | 카탈로그 전용 | [moim-check.yaml](./moim-check.yaml) |
+| 카카오뱅크 삼성카드 | 신용 | 계산 가능 | [kakaopay-samsung.yaml](./kakaopay-samsung.yaml) |
+| 카카오뱅크 신한카드 Time | 신용 | 계산 가능 | [kakaopay-shinhan.yaml](./kakaopay-shinhan.yaml) |
+| 카카오뱅크 프렌즈 체크카드 | 체크 | 카탈로그 전용 | [friends-check.yaml](./friends-check.yaml) |
 <!-- END GENERATED CARD INDEX -->
