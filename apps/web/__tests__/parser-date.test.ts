@@ -172,6 +172,26 @@ describe('parseDateToISO — edge cases', () => {
     expect(parseDateStringToISO('  2024-01-15  ')).toBe('2024-01-15');
   });
 
+  test.each([
+    '2024-01-15oops',
+    '2024-01-15승인취소',
+    '2024-01-151234',
+    '2024-01-15!',
+    'x2024년 1월 15일z',
+    '2024년 1월 15일승인',
+    'x1월 15일z',
+    '1월 15일?',
+  ])('matches the shared rejection boundary for adjacent junk: %s', (raw) => {
+    expect(parseDateStringToISO(raw)).toBe(raw);
+  });
+
+  test('matches the shared explicit datetime grammar', () => {
+    expect(parseDateStringToISO('2024-01-15T10:30:00')).toBe('2024-01-15');
+    expect(parseDateStringToISO('2024-01-15T10:30:00Z')).toBe(
+      '2024-01-15T10:30:00Z',
+    );
+  });
+
   test('unrecognized format passes through unchanged', () => {
     expect(parseDateStringToISO('not-a-date')).toBe('not-a-date');
   });

@@ -214,10 +214,14 @@ describe('parseDateStringToISO', () => {
     expect(parseDateStringToISO('2024．01.15')).toBe('2024-01-15');
   });
 
-  // Datetime strings — the non-anchored fullMatch regex extracts just the date
-  // portion, which is correct behavior for CSV/XLSX cells containing times.
+  // Datetime strings use an explicit, fully anchored time suffix so CSV/XLSX
+  // cells can retain their supported timestamp forms without accepting junk.
   test('parses datetime YYYY-MM-DD HH:MM:SS by extracting date portion', () => {
     expect(parseDateStringToISO('2024-01-15 10:30:00')).toBe('2024-01-15');
+  });
+
+  test('parses datetime YYYY-MM-DDTHH:MM:SS by extracting date portion', () => {
+    expect(parseDateStringToISO('2024-01-15T10:30:00')).toBe('2024-01-15');
   });
 
   test('parses datetime YYYY.MM.DD HH:MM by extracting date portion', () => {
@@ -266,6 +270,29 @@ describe('parseDateStringToISO', () => {
 
   test('parses full-width dot date with trailing full-width dot', () => {
     expect(parseDateStringToISO('2024．01．15．')).toBe('2024-01-15');
+  });
+
+  test.each([
+    '2024-01-15oops',
+    '2024-01-15승인취소',
+    '2024-01-151234',
+    '2024-01-15!',
+    'x2024년 1월 15일z',
+    '2024년 1월 15일승인',
+    'x1월 15일z',
+    '1월 15일?',
+  ])('rejects arbitrary text adjacent to a date: %s', (raw) => {
+    expect(parseDateStringToISO(raw)).toBe(raw);
+  });
+
+  test.each([
+    '2024-01-15 10:30 승인',
+    '2024-01-15T10:30:00Z',
+    '2024-01-15 10',
+    '2024-01-15 24:00',
+    '2024-01-15 10:60',
+  ])('rejects unsupported datetime suffixes: %s', (raw) => {
+    expect(parseDateStringToISO(raw)).toBe(raw);
   });
 });
 

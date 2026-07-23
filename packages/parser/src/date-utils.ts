@@ -96,15 +96,18 @@ export function parseDateStringToISO(raw: string): string {
   // Strip trailing delimiter characters (. - / ． 。) that Korean bank exports
   // commonly append to dates (e.g., "2024. 1. 15." → "2024. 1. 15"). These
   // trailing delimiters are formatting punctuation, not part of the date value.
-  // Without stripping, the fullMatch regex's implicit end-match would still
-  // succeed (it's not $-anchored), but detection patterns in isDateLike() and
-  // isValidDateCell() use $-anchored regexes and would fail (C57-01).
+  // Strip this documented formatting punctuation before applying the anchored
+  // grammars below. Other adjacent punctuation or payload text must remain so
+  // it cannot be silently discarded as if it were part of a valid date.
   const cleaned = raw.trim().replace(/[.\-\/．。]\s*$/, '');
 
   // YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD (with optional spaces around delimiters).
   // Also accepts full-width dot (U+FF0E) and ideographic full stop (U+3002) which
-  // Korean bank exports occasionally use (C22-01).
-  const fullMatch = cleaned.match(/^(\d{4})[\s]*[.\-\/．。][\s]*(\d{1,2})[\s]*[.\-\/．。][\s]*(\d{1,2})/);
+  // Korean bank exports occasionally use (C22-01). A supported datetime may
+  // append either "T" or whitespace plus HH:MM[:SS], with valid clock ranges.
+  const fullMatch = cleaned.match(
+    /^(\d{4})\s*[.\-\/．。]\s*(\d{1,2})\s*[.\-\/．。]\s*(\d{1,2})(?:(?:T|\s+)(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?)?$/,
+  );
   if (fullMatch) {
     const year = parseInt(fullMatch[1]!, 10);
     const month = parseInt(fullMatch[2]!, 10);
@@ -163,7 +166,9 @@ export function parseDateStringToISO(raw: string): string {
   }
 
   // Korean full date: 2024년 1월 15일
-  const koreanFull = cleaned.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/);
+  const koreanFull = cleaned.match(
+    /^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일$/,
+  );
   if (koreanFull) {
     const year = parseInt(koreanFull[1]!, 10);
     const month = parseInt(koreanFull[2]!, 10);
@@ -180,7 +185,7 @@ export function parseDateStringToISO(raw: string): string {
   }
 
   // Korean short date: 1월 15일
-  const koreanShort = cleaned.match(/(\d{1,2})월\s*(\d{1,2})일/);
+  const koreanShort = cleaned.match(/^(\d{1,2})월\s*(\d{1,2})일$/);
   if (koreanShort) {
     const month = parseInt(koreanShort[1]!, 10);
     const day = parseInt(koreanShort[2]!, 10);

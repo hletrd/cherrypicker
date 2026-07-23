@@ -66,7 +66,12 @@ const SHORT_YEAR_DATE_PATTERN = /(\d{2})[.\-\/．。](\d{2})[.\-\/．。](\d{2})
 const KOREAN_FULL_DATE_PATTERN = /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/;
 const KOREAN_SHORT_DATE_PATTERN = /\d{1,2}월\s*\d{1,2}일/;
 const SHORT_MD_DATE_PATTERN = /^\d{1,2}[.\-\/．。]\d{1,2}$/;
-const FALLBACK_DATE_PATTERN = /(\d{4}[.\-\/．。]\d{1,2}[.\-\/．。]\d{1,2}|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}(?![.\-\/\d．。])|(?<!\d)\d{8}(?!\d)|(?<!\d)\d{6}(?!\d))/;
+// Fallback lines contain merchant and amount text around the date, so anchor
+// the complete date token to whitespace/line boundaries rather than anchoring
+// the whole line. This prevents a valid-looking prefix in a damaged token such
+// as "2024-01-15oops" from being accepted while retaining documented trailing
+// delimiters and explicit HH:MM[:SS] timestamp suffixes.
+const FALLBACK_DATE_PATTERN = /(?<!\S)(?:\d{4}[ \t]*[.\-\/．。][ \t]*\d{1,2}[ \t]*[.\-\/．。][ \t]*\d{1,2}(?:(?:T|[ \t]+)(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?)?|\d{2}[.\-\/．。]\d{2}[.\-\/．。]\d{2}|\d{4}년\s*\d{1,2}월\s*\d{1,2}일|\d{1,2}월\s*\d{1,2}일|\d{1,2}[.\-\/．。]\d{1,2}|\d{8}|\d{6})[.\-\/．。]?(?=\s|$)/;
 const STRICT_AMOUNT_PATTERN = /^마이너스[\d,]+\s*원?$|^KRW[\d,]+\s*원?$|^\+[\d,]+\s*원?$|^[₩￦]?[－-]?(?:[\d,]*,|\d{5,})[\d,]*\s*원?$|^\([\d,]+\)$|(?:[\d,]*,|\d{5,})[\d,]*-$/i;
 
 function findPDFDateCell(row: string[]): PDFCellMatch | null {
