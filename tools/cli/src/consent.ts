@@ -3,15 +3,18 @@ import { createInterface } from 'node:readline';
 export interface RemoteLLMConsentOptions {
   allowRemoteLLM: boolean;
   yes: boolean;
+  documentIdentity?: string;
 }
 
 export interface RemoteLLMConsentDependencies {
-  prompt?: () => Promise<boolean>;
+  prompt?: (options: RemoteLLMConsentOptions) => Promise<boolean>;
   isCI?: () => boolean;
 }
 
 /** Prompt for consent after local parsing has confirmed that remote fallback is needed. */
-async function promptRemoteLLMConsent(): Promise<boolean> {
+async function promptRemoteLLMConsent(
+  options: RemoteLLMConsentOptions,
+): Promise<boolean> {
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -28,8 +31,11 @@ async function promptRemoteLLMConsent(): Promise<boolean> {
       );
     }, 30000);
 
+    const identity = options.documentIdentity
+      ? ` 대상 문서: ${options.documentIdentity}.`
+      : '';
     rl.question(
-      'PDF 파싱을 위해 최대 8000자의 데이터가 Anthropic API로 전송됩니다. 계속하시겠습니까? (y/N) ',
+      `PDF 파싱을 위해 최대 8000자의 데이터가 Anthropic API로 전송됩니다.${identity} 계속하시겠습니까? (y/N) `,
       (answer) => {
         clearTimeout(timer);
         rl.close();
@@ -69,7 +75,7 @@ export async function authorizeRemoteLLMFallback(
   }
 
   const prompt = dependencies.prompt ?? promptRemoteLLMConsent;
-  const confirmed = await prompt();
+  const confirmed = await prompt(options);
   if (!confirmed) {
     throw new Error('사용자가 원격 LLM 폴백을 거부했습니다.');
   }

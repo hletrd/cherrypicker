@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
   access,
+  chmod,
   mkdir,
   mkdtemp,
   readdir,
   readFile,
   realpath,
+  rename,
   rm,
   symlink,
   writeFile,
@@ -111,6 +113,31 @@ describe('writeCardRule', () => {
     expect(await readFile(join(outside, 'sentinel'), 'utf-8').catch(() => 'missing')).toBe('missing');
   });
 
+  test('rejects an issuer-directory replacement before temporary creation', async () => {
+    const root = await temporaryRoot();
+    const issuerDir = join(root, 'shinhan');
+    const movedIssuerDir = join(root, 'shinhan-original');
+    const outside = join(root, 'outside');
+    await mkdir(issuerDir);
+    await mkdir(outside);
+
+    await expect(
+      writeCardRule(
+        makeCardRule(),
+        { outputDir: root, expectedIssuer: 'shinhan' },
+        {
+          beforeTemporaryOpen: async () => {
+            await rename(issuerDir, movedIssuerDir);
+            await symlink(outside, issuerDir);
+          },
+        },
+      ),
+    ).rejects.toThrow('실제 디렉토리');
+
+    expect(await readdir(outside)).toEqual([]);
+    expect(await readdir(movedIssuerDir)).toEqual([]);
+  });
+
   test('rejects a destination symlink even with overwrite enabled', async () => {
     const root = await temporaryRoot();
     const issuerDir = join(root, 'shinhan');
@@ -150,6 +177,74 @@ describe('writeCardRule', () => {
       overwrite: true,
     });
     expect(await readFile(destination, 'utf-8')).toContain('id: shinhan-security-test');
+  });
+
+  test('rejects an issuer-directory replacement before overwrite commit', async () => {
+    const root = await temporaryRoot();
+    const issuerDir = join(root, 'shinhan');
+    const movedIssuerDir = join(root, 'shinhan-original');
+    const outside = join(root, 'outside');
+    const destination = join(issuerDir, 'shinhan-security-test.yaml');
+    await mkdir(issuerDir);
+    await mkdir(outside);
+    await writeFile(destination, 'original');
+    await writeFile(
+      join(outside, 'shinhan-security-test.yaml'),
+      'outside',
+    );
+
+    await expect(
+      writeCardRule(
+        makeCardRule(),
+        {
+          outputDir: root,
+          expectedIssuer: 'shinhan',
+          overwrite: true,
+        },
+        {
+          beforeCommit: async () => {
+            await rename(issuerDir, movedIssuerDir);
+            await symlink(outside, issuerDir);
+          },
+        },
+      ),
+    ).rejects.toThrow('실제 디렉토리');
+
+    expect(
+      await readFile(
+        join(movedIssuerDir, 'shinhan-security-test.yaml'),
+        'utf8',
+      ),
+    ).toBe('original');
+    expect(
+      await readFile(join(outside, 'shinhan-security-test.yaml'), 'utf8'),
+    ).toBe('outside');
+    const detachedTemporaryFiles = (await readdir(movedIssuerDir)).filter(
+      (name) => name.includes('.tmp-'),
+    );
+    expect(detachedTemporaryFiles).toHaveLength(1);
+    expect(
+      await readFile(
+        join(movedIssuerDir, detachedTemporaryFiles[0]!),
+        'utf8',
+      ),
+    ).toBe('');
+    expect(
+      (await readdir(outside)).filter((name) => name.includes('.tmp-')),
+    ).toEqual([]);
+  });
+
+  test('rejects a group-writable output root before creating an issuer directory', async () => {
+    const root = await temporaryRoot();
+    await chmod(root, 0o770);
+
+    await expect(
+      writeCardRule(makeCardRule(), {
+        outputDir: root,
+        expectedIssuer: 'shinhan',
+      }),
+    ).rejects.toThrow('그룹이나 다른 사용자');
+    expect(await readdir(root)).toEqual([]);
   });
 
   async function expectFailureAtomicOverwrite(

@@ -151,4 +151,27 @@ describe('statement read orchestration', () => {
     expect(FILE_FORMAT_SNIFF_BYTES).toBeLessThan(bytes.length);
     expect(completeReads).toBe(1);
   });
+
+  test('PDF dispatch parses the injected complete bytes without reopening the path', async () => {
+    const bytes = Buffer.from('%PDF-1.4\ncaptured-invalid-pdf');
+    let completeReads = 0;
+
+    const result = await parseStatement(
+      '/definitely/replaced-or-missing/statement.pdf',
+      undefined,
+      {
+        readFile: async () => {
+          completeReads++;
+          return bytes;
+        },
+      },
+    );
+
+    expect(completeReads).toBe(1);
+    expect(result.format).toBe('pdf');
+    expect(result.transactions).toEqual([]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.message).toContain('PDF 텍스트 추출 실패');
+    expect(result.errors[0]?.message).not.toContain('ENOENT');
+  });
 });

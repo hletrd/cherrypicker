@@ -30,7 +30,13 @@ function renderPageText(items: Array<{ str: string; transform: number[] }>): str
 }
 
 export async function extractText(filePath: string): Promise<string> {
-  const buffer = await readFile(filePath);
+  return extractTextFromBuffer(await readFile(filePath));
+}
+
+export async function extractTextFromBuffer(
+  bytes: Uint8Array,
+): Promise<string> {
+  const buffer = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
   const pages = await extractPagesFromBuffer(buffer);
   return pages.join('\n');
 }
@@ -54,4 +60,3 @@ async function extractPagesFromBuffer(buffer: Buffer): Promise<string[]> {
 
   return pages;
 }
-

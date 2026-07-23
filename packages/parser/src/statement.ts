@@ -98,9 +98,9 @@ export async function parseStatement(
     }
 
     case 'pdf': {
-      const { parsePDF } = await import('./pdf/index.js');
+      const { parsePDFBuffer } = await import('./pdf/index.js');
       return enrichErrors(
-        await parsePDF(filePath, bank, {
+        await parsePDFBuffer(await readComplete(), bank, {
           allowRemoteLLM: options?.allowRemoteLLM ?? false,
         }),
         filePath,

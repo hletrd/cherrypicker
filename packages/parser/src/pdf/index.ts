@@ -2,7 +2,7 @@ import type { BankId, ParseResult } from '../types.js';
 import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { parsePDFText } from '../shared/pdf-text.js';
-import { extractText } from './extractor.js';
+import { extractText, extractTextFromBuffer } from './extractor.js';
 import { parsePDFWithLLM } from './llm-fallback.js';
 
 export interface PDFParseOptions {
@@ -30,6 +30,37 @@ export async function parsePDF(
     };
   }
 
+  return parseExtractedPDFText(text, bank, options);
+}
+
+export async function parsePDFBuffer(
+  buffer: Uint8Array,
+  bank?: BankId,
+  options: PDFParseOptions = {},
+): Promise<ParseResult> {
+  let text: string;
+  try {
+    text = await extractTextFromBuffer(buffer);
+  } catch (error) {
+    return {
+      bank: bank ?? null,
+      format: 'pdf',
+      transactions: [],
+      errors: [
+        new ParseError(
+          `PDF 텍스트 추출 실패: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      ],
+    };
+  }
+  return parseExtractedPDFText(text, bank, options);
+}
+
+async function parseExtractedPDFText(
+  text: string,
+  bank: BankId | undefined,
+  options: PDFParseOptions,
+): Promise<ParseResult> {
   const resolvedBank = bank ?? detectBank(text).bank;
   const local = parsePDFText(text);
   if (local.transactions.length > 0) {

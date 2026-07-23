@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { parseStatement } from '@cherrypicker/parser/statement';
 import type { BankId, ParseResult } from '@cherrypicker/parser/types';
 import {
@@ -20,6 +22,7 @@ export type RemoteFallbackAuthorizer = (options: RemoteLLMConsentOptions) => Pro
 export interface LocalFirstParseDependencies {
   parseStatement?: StatementParser;
   authorizeRemoteFallback?: RemoteFallbackAuthorizer;
+  readFile?: (filePath: string) => Promise<Uint8Array>;
 }
 
 function requiresRemoteLLM(result: ParseResult): boolean {
@@ -44,11 +47,23 @@ export async function parseStatementLocalFirst(
   const parse = dependencies.parseStatement ?? parseStatement;
   const authorize = dependencies.authorizeRemoteFallback ?? authorizeRemoteLLMFallback;
   const parserOptions = options.bank ? { bank: options.bank } : {};
+  const readStatementBytes = dependencies.readFile ??
+    (dependencies.parseStatement === undefined ? readFile : undefined);
+  const capturedBytes = readStatementBytes
+    ? Buffer.from(await readStatementBytes(options.filePath))
+    : undefined;
+  const statementReadDependencies = capturedBytes
+    ? {
+        readFile: async () => Buffer.from(capturedBytes),
+        readPrefix: async (_filePath: string, maxBytes: number) =>
+          Buffer.from(capturedBytes.subarray(0, maxBytes)),
+      }
+    : undefined;
 
   const localResult = await parse(options.filePath, {
     ...parserOptions,
     allowRemoteLLM: false,
-  });
+  }, statementReadDependencies);
 
   if (!requiresRemoteLLM(localResult)) {
     return localResult;
@@ -57,10 +72,13 @@ export async function parseStatementLocalFirst(
   await authorize({
     allowRemoteLLM: options.allowRemoteLLM,
     yes: options.yes,
+    documentIdentity: capturedBytes
+      ? `sha256:${createHash('sha256').update(capturedBytes).digest('hex')} (${capturedBytes.length} bytes)`
+      : undefined,
   });
 
   return parse(options.filePath, {
     ...parserOptions,
     allowRemoteLLM: true,
-  });
+  }, statementReadDependencies);
 }

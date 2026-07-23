@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
+  chmod,
   lstat,
   mkdtemp,
   mkdir,
   readFile,
   readlink,
   readdir,
+  rename,
   rm,
   symlink,
   unlink,
@@ -76,6 +78,30 @@ describe('writeReportOutput', () => {
     expect(await readlink(output)).toBe(target);
   });
 
+  test('rejects an intermediate output-directory replacement before exclusive creation', async () => {
+    const root = await temporaryDirectory();
+    const directory = join(root, 'reports');
+    const movedDirectory = join(root, 'reports-original');
+    const outside = join(root, 'outside');
+    const output = join(directory, 'report.html');
+    await mkdir(directory);
+    await mkdir(outside);
+
+    await expect(
+      writeReportOutput(output, 'replacement', {
+        testingHooks: {
+          afterInitialDestinationCheck: async () => {
+            await rename(directory, movedDirectory);
+            await symlink(outside, directory);
+          },
+        },
+      }),
+    ).rejects.toThrow('실제 디렉토리');
+
+    expect(await readdir(outside)).toEqual([]);
+    expect(await readdir(movedDirectory)).toEqual([]);
+  });
+
   test('rejects an existing regular file unless overwrite is explicit', async () => {
     const directory = await temporaryDirectory();
     const output = join(directory, 'report.html');
@@ -118,6 +144,62 @@ describe('writeReportOutput', () => {
     expect(await readFile(target, 'utf8')).toBe('target-content');
     expect(await readFile(output, 'utf8')).toBe('replacement');
     expect((await lstat(output)).isFile()).toBe(true);
+  });
+
+  test('rejects an intermediate output-directory replacement before atomic commit', async () => {
+    const root = await temporaryDirectory();
+    const directory = join(root, 'reports');
+    const movedDirectory = join(root, 'reports-original');
+    const outside = join(root, 'outside');
+    const output = join(directory, 'report.html');
+    await mkdir(directory);
+    await mkdir(outside);
+    await writeFile(output, 'original');
+    await writeFile(join(outside, 'report.html'), 'outside');
+
+    await expect(
+      writeReportOutput(output, 'replacement', {
+        overwrite: true,
+        testingHooks: {
+          beforeAtomicRename: async () => {
+            await rename(directory, movedDirectory);
+            await symlink(outside, directory);
+          },
+        },
+      }),
+    ).rejects.toThrow('실제 디렉토리');
+
+    expect(await readFile(join(movedDirectory, 'report.html'), 'utf8')).toBe(
+      'original',
+    );
+    expect(await readFile(join(outside, 'report.html'), 'utf8')).toBe(
+      'outside',
+    );
+    const detachedTemporaryFiles = (await readdir(movedDirectory)).filter(
+      (name) => name.includes('.tmp'),
+    );
+    expect(detachedTemporaryFiles).toHaveLength(1);
+    expect(
+      await readFile(
+        join(movedDirectory, detachedTemporaryFiles[0]!),
+        'utf8',
+      ),
+    ).toBe('');
+    expect(
+      (await readdir(outside)).filter((name) => name.includes('.tmp')),
+    ).toEqual([]);
+  });
+
+  test('rejects a group-writable output directory', async () => {
+    const root = await temporaryDirectory();
+    const directory = join(root, 'shared-reports');
+    await mkdir(directory);
+    await chmod(directory, 0o770);
+
+    await expect(
+      writeReportOutput(join(directory, 'report.html'), 'content'),
+    ).rejects.toThrow('그룹이나 다른 사용자');
+    expect(await readdir(directory)).toEqual([]);
   });
 
   test.each([false, true])(
