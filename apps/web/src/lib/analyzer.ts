@@ -71,6 +71,15 @@ export interface CategorizedTx {
   factProvenance?: RawTransaction['factProvenance'];
 }
 
+export function appendCategorizedTransactions(
+  target: CategorizedTx[],
+  source: readonly CategorizedTx[],
+): void {
+  for (const transaction of source) {
+    target.push(transaction);
+  }
+}
+
 interface CategoryMatcher {
   match(
     merchantName: string,
@@ -369,14 +378,13 @@ export async function analyzeMultipleFiles(
     }
 
     const parsed = outcome.value;
-    allTransactions.push(...parsed.transactions);
-    allErrors.push(
-      ...attachParseWarningIdentity(
-        parsed.parseErrors,
-        parsed.fileName,
-        parsed.format,
-      ),
+    appendCategorizedTransactions(allTransactions, parsed.transactions);
+    const identifiedErrors = attachParseWarningIdentity(
+      parsed.parseErrors,
+      parsed.fileName,
+      parsed.format,
     );
+    for (const error of identifiedErrors) allErrors.push(error);
     if (parsed.bank) bank = parsed.bank;
     format = parsed.format;
     // Build labels from the first parsed result (all results use the same taxonomy)

@@ -94,7 +94,7 @@ describe('detectFormatFromFile (C21-TEST04)', () => {
     expect(await detectFormatFromFile(file)).toBe('json');
   });
 
-  test.each(['statement.txt', 'statement.csv'])(
+  test.each(['statement.txt', 'statement.csv', 'statement.tsv'])(
     'detects a JSON statement larger than 2 KiB under %s',
     async (fileName) => {
       const content = JSON.stringify([{
@@ -114,6 +114,18 @@ describe('detectFormatFromFile (C21-TEST04)', () => {
         await detectFormatFromFile(new File([content], 'statement.dat')),
       ).toBe('json');
       expect(parseJSON(content).errors[0]?.code).toBe('json_syntax');
+    },
+  );
+
+  test.each(['statement.csv', 'statement.tsv'])(
+    'falls back to delimited parsing for invalid JSON-looking %s content',
+    async (fileName) => {
+      const content = `{statement metadata
+이용일,이용처,이용금액
+2026-07-23,테스트 식당,10000`;
+      expect(await detectFormatFromFile(new File([content], fileName))).toBe(
+        'csv',
+      );
     },
   );
 

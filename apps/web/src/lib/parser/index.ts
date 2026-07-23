@@ -1,5 +1,7 @@
-import type { ParseResult, BankId } from './types.js';
-import { detectFormatFromFile } from './detect.js';
+import { finalizeStatementFormatHint } from '@cherrypicker/parser/browser';
+import type { ParseResult, BankId, FileFormat } from './types.js';
+import { detectFormatHintFromFile } from './detect.js';
+import { decodeParserTextPayload } from './worker-protocol.js';
 import {
   browserParserWorkersAvailable,
   parseWithWorker,
@@ -7,7 +9,12 @@ import {
 
 export type { FileFormat, BankId, DetectionResult, RawTransaction, ParseResult, BankAdapter } from './types.js';
 export { ParseError } from './types.js';
-export { detectFormatFromFile, detectBank, detectBankFromText, detectCSVDelimiter } from './detect.js';
+export {
+  detectFormatFromFile,
+  detectBank,
+  detectBankFromText,
+  detectCSVDelimiter,
+} from './detect.js';
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
@@ -21,12 +28,39 @@ export async function parseFile(
   signal?: AbortSignal,
 ): Promise<ParseResult> {
   throwIfAborted(signal);
-  const format = await detectFormatFromFile(file);
+  const hint = await detectFormatHintFromFile(file);
   throwIfAborted(signal);
+  let format: FileFormat = hint.format;
+  let bufferedPayload: ArrayBuffer | undefined;
+
+  if (hint.requiresCompleteJsonValidation) {
+    bufferedPayload = await file.arrayBuffer();
+    throwIfAborted(signal);
+    if (browserParserWorkersAvailable()) {
+      const jsonResult = await parseWithWorker(
+        { format: 'json', payload: bufferedPayload, bank },
+        signal,
+      );
+      if (!jsonResult.errors.some((error) => error.code === 'json_syntax')) {
+        return jsonResult;
+      }
+
+      const csvPayload = await file.arrayBuffer();
+      throwIfAborted(signal);
+      return parseWithWorker(
+        { format: 'csv', payload: csvPayload, bank },
+        signal,
+      );
+    }
+    format = finalizeStatementFormatHint(
+      hint,
+      new Uint8Array(bufferedPayload),
+    );
+  }
 
   switch (format) {
     case 'csv': {
-      const buffer = await file.arrayBuffer();
+      const buffer = bufferedPayload ?? await file.arrayBuffer();
       throwIfAborted(signal);
       if (browserParserWorkersAvailable()) {
         return parseWithWorker(
@@ -63,43 +97,43 @@ export async function parseFile(
       return parsePDF(buffer, bank, signal);
     }
     case 'json': {
-      const content = await file.text();
+      const buffer = bufferedPayload ?? await file.arrayBuffer();
       throwIfAborted(signal);
       if (browserParserWorkersAvailable()) {
         return parseWithWorker(
-          { format: 'json', payload: content, bank },
+          { format: 'json', payload: buffer, bank },
           signal,
         );
       }
       const { parseJSON } = await import('./json.js');
       throwIfAborted(signal);
-      return parseJSON(content, bank);
+      return parseJSON(decodeParserTextPayload(buffer), bank);
     }
     case 'ofx': {
-      const content = await file.text();
+      const buffer = await file.arrayBuffer();
       throwIfAborted(signal);
       if (browserParserWorkersAvailable()) {
         return parseWithWorker(
-          { format: 'ofx', payload: content, bank },
+          { format: 'ofx', payload: buffer, bank },
           signal,
         );
       }
       const { parseOFX } = await import('./ofx.js');
       throwIfAborted(signal);
-      return parseOFX(content, bank);
+      return parseOFX(decodeParserTextPayload(buffer), bank);
     }
     case 'html': {
-      const content = await file.text();
+      const buffer = await file.arrayBuffer();
       throwIfAborted(signal);
       if (browserParserWorkersAvailable()) {
         return parseWithWorker(
-          { format: 'html', payload: content, bank },
+          { format: 'html', payload: buffer, bank },
           signal,
         );
       }
       const { parseHTML } = await import('./html.js');
       throwIfAborted(signal);
-      return parseHTML(content, bank);
+      return parseHTML(decodeParserTextPayload(buffer), bank);
     }
     default: {
       const _exhaustive: never = format;

@@ -1,6 +1,8 @@
 import { describe, test, expect } from 'bun:test';
 import { join } from 'path';
 import { detectBank, detectCSVDelimiter, detectFormat, detectEncoding, decodeBuffer } from '../src/detect.js';
+import { sampleNonEmptyDelimitedLines } from '../src/shared/delimiter.js';
+import { detectCSVDelimiter as detectBrowserCSVDelimiter } from '../../../apps/web/src/lib/parser/detect.js';
 
 describe('detectBank', () => {
   test('detects KB from content', () => {
@@ -128,6 +130,23 @@ describe('detectCSVDelimiter', () => {
     // tab count >= comma count → tab wins
     const delimiter = detectCSVDelimiter('a\tb\tc,d');
     expect(delimiter).toBe('\t');
+  });
+
+  test('browser and package sampling stops after 30 non-empty lines', () => {
+    const sampledPrefix = Array.from(
+      { length: 30 },
+      (_, index) => `2026-07-${String(index + 1).padStart(2, '0')},merchant,10000\n`,
+    ).join('');
+    const multiMegabyteSuffix = 'a\tb\tc\n'.repeat(500_000);
+    const content = `${sampledPrefix}${multiMegabyteSuffix}`;
+
+    const sample = sampleNonEmptyDelimitedLines(content);
+
+    expect(sample.lines).toHaveLength(30);
+    expect(sample.consumedLength).toBe(sampledPrefix.length);
+    expect(sample.consumedLength).toBeLessThan(content.length / 100);
+    expect(detectCSVDelimiter(content)).toBe(',');
+    expect(detectBrowserCSVDelimiter(content)).toBe(',');
   });
 });
 

@@ -9,6 +9,7 @@ import type {
   ParserWorkerRequest,
   ParserWorkerResponse,
 } from '../src/lib/parser/worker-protocol.js';
+import { MAX_UPLOAD_FILE_BYTES } from '../src/lib/upload-admission.js';
 
 class FakeWorker implements ParserWorkerLike {
   messages: ParserWorkerRequest[] = [];
@@ -68,10 +69,23 @@ class FakeWorker implements ParserWorkerLike {
   }
 }
 
+class TransferringFakeWorker extends FakeWorker {
+  override postMessage(
+    message: ParserWorkerRequest,
+    transfer?: Transferable[],
+  ): void {
+    this.messages.push(structuredClone(message, { transfer: transfer ?? [] }));
+    this.transfers.push(transfer);
+  }
+}
+
 describe('browser parser worker ownership', () => {
   test.each([
     ['csv', new ArrayBuffer(8)],
     ['xlsx', new ArrayBuffer(8)],
+    ['json', new ArrayBuffer(8)],
+    ['ofx', new ArrayBuffer(8)],
+    ['html', new ArrayBuffer(8)],
   ] as const)('aborting active %s parsing terminates its worker', async (
     format,
     payload,
@@ -96,42 +110,97 @@ describe('browser parser worker ownership', () => {
     expect(worker.errorListeners.size).toBe(0);
   });
 
-  test.each(['csv', 'xlsx'] as const)(
+  test.each(['csv', 'xlsx', 'json', 'ofx', 'html'] as const)(
     'rehydrates parser errors and transfers original %s buffers',
     async (format) => {
-    const worker = new FakeWorker();
-    const buffer = new ArrayBuffer(8);
-    const parsing = parseWithWorker(
-      { format, payload: buffer },
-      undefined,
-      () => worker,
-    );
-    const result: ParseResult = {
-      bank: null,
-      format,
-      transactions: [],
-      errors: [],
-    };
-    worker.respond({
-      ok: true,
-      result: {
-        ...result,
-        errors: [{ message: '날짜 오류', line: 3 }],
-      },
-    });
+      const worker = new FakeWorker();
+      const buffer = new ArrayBuffer(8);
+      const parsing = parseWithWorker(
+        { format, payload: buffer },
+        undefined,
+        () => worker,
+      );
+      const result: ParseResult = {
+        bank: null,
+        format,
+        transactions: [],
+        errors: [],
+      };
+      worker.respond({
+        ok: true,
+        result: {
+          ...result,
+          errors: [{ message: '날짜 오류', line: 3 }],
+        },
+      });
 
-    const parsed = await parsing;
-    expect(parsed.errors[0]).toMatchObject({
-      name: 'ParseError',
-      message: '날짜 오류',
-      line: 3,
-    });
-    expect(worker.transfers[0]).toEqual([buffer]);
-    expect(worker.messages[0]?.payload).toBe(buffer);
-    expect(typeof worker.messages[0]?.payload).not.toBe('string');
-    expect(worker.terminations).toBe(1);
+      const parsed = await parsing;
+      expect(parsed.errors[0]).toMatchObject({
+        name: 'ParseError',
+        message: '날짜 오류',
+        line: 3,
+      });
+      expect(worker.transfers[0]).toEqual([buffer]);
+      expect(worker.messages[0]?.payload).toBe(buffer);
+      expect(typeof worker.messages[0]?.payload).not.toBe('string');
+      expect(worker.terminations).toBe(1);
     },
   );
+
+  test('transfers two concurrent maximum-size text inputs before yielding', async () => {
+    const jsonWorker = new TransferringFakeWorker();
+    const htmlWorker = new TransferringFakeWorker();
+    const jsonBuffer = new ArrayBuffer(MAX_UPLOAD_FILE_BYTES);
+    const htmlBuffer = new ArrayBuffer(MAX_UPLOAD_FILE_BYTES);
+    let heartbeat = false;
+    queueMicrotask(() => {
+      heartbeat = true;
+    });
+
+    const jsonParsing = parseWithWorker(
+      { format: 'json', payload: jsonBuffer },
+      undefined,
+      () => jsonWorker,
+    );
+    const htmlParsing = parseWithWorker(
+      { format: 'html', payload: htmlBuffer },
+      undefined,
+      () => htmlWorker,
+    );
+
+    expect(jsonBuffer.byteLength).toBe(0);
+    expect(htmlBuffer.byteLength).toBe(0);
+    expect(jsonWorker.messages[0]?.payload.byteLength).toBe(
+      MAX_UPLOAD_FILE_BYTES,
+    );
+    expect(htmlWorker.messages[0]?.payload.byteLength).toBe(
+      MAX_UPLOAD_FILE_BYTES,
+    );
+    await Promise.resolve();
+    expect(heartbeat).toBe(true);
+
+    jsonWorker.respond({
+      ok: true,
+      result: {
+        bank: null,
+        format: 'json',
+        transactions: [],
+        errors: [],
+      },
+    });
+    htmlWorker.respond({
+      ok: true,
+      result: {
+        bank: null,
+        format: 'html',
+        transactions: [],
+        errors: [],
+      },
+    });
+    await Promise.all([jsonParsing, htmlParsing]);
+    expect(jsonWorker.terminations).toBe(1);
+    expect(htmlWorker.terminations).toBe(1);
+  });
 
   test('terminates the worker when startup fails', async () => {
     const worker = new FakeWorker();

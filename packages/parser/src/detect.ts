@@ -1,8 +1,19 @@
 import { open, readFile } from 'fs/promises';
-import { extname } from 'path';
-import type { BankId, DetectionResult, FileFormat } from './types.js';
-import { ParseError } from './types.js';
+import type {
+  BankId,
+  DetectionResult,
+  FileFormat,
+  ParseError,
+} from './types.js';
 import { decodeTextBytes, detectTextEncoding } from './shared/encoding.js';
+import { detectDelimitedTextDelimiter } from './shared/delimiter.js';
+import {
+  STATEMENT_FORMAT_SNIFF_BYTES,
+  detectStatementFormatFromExtension,
+  detectStatementFormatHint,
+  finalizeStatementFormatHint,
+  type StatementFormatHint,
+} from './shared/format-detection.js';
 
 /** Detect text encoding from raw bytes using BOM and byte-pattern heuristics.
  *  Returns the detected encoding string suitable for TextDecoder.
@@ -170,35 +181,12 @@ export function detectBank(content: string): { bank: BankId | null; confidence: 
 }
 
 export function detectCSVDelimiter(content: string): string {
-  // Limit to first 30 lines — delimiter patterns are always visible at the top
-  // and scanning the entire file is O(n) for no benefit (C1-02, matches web-side C83-05).
-  const lines = content.split('\n').map((l) => l.trim()).filter((l) => l.length > 0).slice(0, 30);
-
-  let totalComma = 0;
-  let totalTab = 0;
-  let totalPipe = 0;
-  let totalSemicolon = 0;
-
-  for (const line of lines) {
-    totalComma += (line.match(/,/g) ?? []).length;
-    totalTab += (line.match(/\t/g) ?? []).length;
-    totalPipe += (line.match(/\|/g) ?? []).length;
-    totalSemicolon += (line.match(/;/g) ?? []).length;
-  }
-
-  if (totalComma === 0 && totalTab === 0 && totalPipe === 0 && totalSemicolon === 0) return ',';
-  if (totalTab > totalComma && totalTab >= totalPipe && totalTab >= totalSemicolon) return '\t';
-  if (totalPipe > totalComma && totalPipe >= totalSemicolon) return '|';
-  if (totalSemicolon > totalComma) return ';';
-  return ',';
+  return detectDelimitedTextDelimiter(content);
 }
 
-export const FILE_FORMAT_SNIFF_BYTES = 1024;
+export const FILE_FORMAT_SNIFF_BYTES = STATEMENT_FORMAT_SNIFF_BYTES;
 
-export interface FileFormatHint {
-  format: FileFormat;
-  requiresCompleteJsonValidation: boolean;
-}
+export type FileFormatHint = StatementFormatHint;
 
 export interface FinalizedFileFormat {
   format: FileFormat;
@@ -206,98 +194,34 @@ export interface FinalizedFileFormat {
 }
 
 export function detectFormatFromExtension(filePath: string): FileFormat | null {
-  const ext = extname(filePath).toLowerCase();
-  if (ext === '.csv' || ext === '.tsv') return 'csv';
-  if (ext === '.xlsx' || ext === '.xls') return 'xlsx';
-  if (ext === '.pdf') return 'pdf';
-  if (ext === '.json') return 'json';
-  if (ext === '.ofx' || ext === '.qfx') return 'ofx';
-  if (ext === '.html' || ext === '.htm') return 'html';
-  return null;
+  return detectStatementFormatFromExtension(filePath);
 }
 
 /**
  * Determine a format from an extension and a bounded prefix. JSON-looking
- * unknown extensions require one later validation against the already-loaded
- * complete bytes so malformed JSON keeps the existing CSV fallback contract.
+ * CSV/TSV files require one later validation against the already-loaded
+ * complete bytes; malformed unknown-extension JSON remains on the JSON parser
+ * path so its syntax diagnostic is preserved.
  */
 export function detectFileFormatHint(
   filePath: string,
   prefix: Uint8Array,
 ): FileFormatHint {
-  const extensionFormat = detectFormatFromExtension(filePath);
-  if (extensionFormat) {
-    return {
-      format: extensionFormat,
-      requiresCompleteJsonValidation: false,
-    };
-  }
-
-  const header = prefix.subarray(0, 8);
-  if (
-    header[0] === 0x25
-    && header[1] === 0x50
-    && header[2] === 0x44
-    && header[3] === 0x46
-  ) {
-    return { format: 'pdf', requiresCompleteJsonValidation: false };
-  }
-  if (header[0] === 0x50 && header[1] === 0x4b) {
-    return { format: 'xlsx', requiresCompleteJsonValidation: false };
-  }
-  if (header[0] === 0xd0 && header[1] === 0xcf) {
-    return { format: 'xlsx', requiresCompleteJsonValidation: false };
-  }
-
-  const head = Buffer.from(prefix.subarray(0, FILE_FORMAT_SNIFF_BYTES))
-    .toString('utf-8')
-    .replace(/^﻿/, '')
-    .trimStart();
-  if (/^<\?OFX/i.test(head)) {
-    return { format: 'ofx', requiresCompleteJsonValidation: false };
-  }
-  if (
-    /^<!doctype\s+html/i.test(head)
-    || /^<html/i.test(head)
-    || /<table[\s>]/i.test(head)
-  ) {
-    return { format: 'html', requiresCompleteJsonValidation: false };
-  }
-  if (head.startsWith('[') || head.startsWith('{')) {
-    return { format: 'json', requiresCompleteJsonValidation: true };
-  }
-  if (/^<\?xml/i.test(head) && /<OFX|<BANKTRANLIST|<STMTTRN/i.test(head)) {
-    return { format: 'ofx', requiresCompleteJsonValidation: false };
-  }
-  return { format: 'csv', requiresCompleteJsonValidation: false };
+  return detectStatementFormatHint(filePath, prefix);
 }
 
 export function finalizeFileFormatHint(
-  filePath: string,
+  _filePath: string,
   hint: FileFormatHint,
   completeBytes?: Uint8Array,
 ): FinalizedFileFormat {
   if (!hint.requiresCompleteJsonValidation) {
     return { format: hint.format, errors: [] };
   }
-  if (!completeBytes) {
-    throw new Error('Complete bytes are required to validate a JSON format hint');
-  }
-
-  try {
-    JSON.parse(Buffer.from(completeBytes).toString('utf-8').replace(/^﻿/, ''));
-    return { format: 'json', errors: [] };
-  } catch (error) {
-    return {
-      format: 'csv',
-      errors: [
-        new ParseError(
-          `JSON 형식이 아닙니다: ${error instanceof Error ? error.message : String(error)}`,
-          { file: filePath, format: 'json' },
-        ),
-      ],
-    };
-  }
+  return {
+    format: finalizeStatementFormatHint(hint, completeBytes),
+    errors: [],
+  };
 }
 
 export async function readFilePrefix(
@@ -316,13 +240,18 @@ export async function readFilePrefix(
 
 export async function detectFormat(filePath: string): Promise<DetectionResult> {
   const extensionFormat = detectFormatFromExtension(filePath);
-  const prefix = extensionFormat
-    ? Buffer.alloc(0)
-    : await readFilePrefix(filePath);
-  const hint = detectFileFormatHint(filePath, prefix);
   let completeBuffer: Buffer | null = null;
+  const prefix = extensionFormat === 'csv'
+    ? (completeBuffer = await readFile(filePath)).subarray(
+        0,
+        FILE_FORMAT_SNIFF_BYTES,
+      )
+    : extensionFormat
+      ? Buffer.alloc(0)
+      : await readFilePrefix(filePath);
+  const hint = detectFileFormatHint(filePath, prefix);
   if (hint.requiresCompleteJsonValidation) {
-    completeBuffer = await readFile(filePath);
+    completeBuffer ??= await readFile(filePath);
   }
   const { format, errors } = finalizeFileFormatHint(
     filePath,

@@ -109,10 +109,8 @@ export function parseWithWorker(
     signal?.addEventListener('abort', onAbort, { once: true });
     worker.addEventListener('message', onMessage);
     worker.addEventListener('error', onError);
-    const transfer =
-      request.payload instanceof ArrayBuffer ? [request.payload] : undefined;
     try {
-      worker.postMessage(request, transfer);
+      worker.postMessage(request, [request.payload]);
     } catch (error) {
       fail(error instanceof Error ? error : new Error(String(error)));
     }

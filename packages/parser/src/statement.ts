@@ -60,9 +60,12 @@ export async function parseStatement(
     return completeBufferPromise;
   };
 
-  const prefix = detectFormatFromExtension(filePath)
-    ? Buffer.alloc(0)
-    : await readPrefix(filePath, FILE_FORMAT_SNIFF_BYTES);
+  const extensionFormat = detectFormatFromExtension(filePath);
+  const prefix = extensionFormat === 'csv'
+    ? (await readComplete()).subarray(0, FILE_FORMAT_SNIFF_BYTES)
+    : extensionFormat
+      ? Buffer.alloc(0)
+      : await readPrefix(filePath, FILE_FORMAT_SNIFF_BYTES);
   const hint = detectFileFormatHint(filePath, prefix);
   const validationBytes = hint.requiresCompleteJsonValidation
     ? await readComplete()

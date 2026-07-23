@@ -135,6 +135,7 @@ export function parseOFX(content: string, bank?: BankId): ParseResult {
     const date = parseOFXDate(dtPosted);
     if (!isValidISODate(date) && dtPosted) {
       errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dtPosted}`, { line: i + 1 }));
+      continue;
     }
 
     // NOTE(C32-V10): parseOFXAmount delegates to parseAmountString, which

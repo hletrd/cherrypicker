@@ -2,8 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 
 import { parseHTML as parseServerHTML } from '../../src/html/index.js';
+import { parseOFX as parseServerOFX } from '../../src/ofx/index.js';
 import { parseXLSX as parseServerXLSX } from '../../src/xlsx/index.js';
 import { parseHTML as parseBrowserHTML } from '../../../../apps/web/src/lib/parser/html.js';
+import { parseOFX as parseBrowserOFX } from '../../../../apps/web/src/lib/parser/ofx.js';
 import { parseXLSX as parseBrowserXLSX } from '../../../../apps/web/src/lib/parser/xlsx.js';
 
 import { asArrayBuffer, createWorkbookFixture } from './workbook.js';
@@ -66,5 +68,26 @@ describe('server/browser parser conformance', () => {
     expect(normalize(browser)).toEqual(normalize(server));
     expect(server.transactions).toEqual([]);
     expect(server.errors[0]?.message).toContain('금액');
+  });
+
+  test('OFX invalid DTPOSTED rows are rejected with identical diagnostics', () => {
+    const content = `<OFX>
+<BANKTRANLIST>
+<STMTTRN>
+<TRNTYPE>DEBIT
+<DTPOSTED>20241340
+<TRNAMT>-10000
+<NAME>INVALID DATE
+</STMTTRN>
+</BANKTRANLIST>
+</OFX>`;
+
+    const server = parseServerOFX(content, 'kb');
+    const browser = parseBrowserOFX(content, 'kb');
+
+    expect(normalize(browser)).toEqual(normalize(server));
+    expect(server.transactions).toEqual([]);
+    expect(server.errors).toHaveLength(1);
+    expect(server.errors[0]?.message).toContain('날짜를 해석할 수 없습니다');
   });
 });

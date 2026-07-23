@@ -8,6 +8,20 @@ export {
   detectTextEncoding,
   type SupportedTextEncoding,
 } from './shared/encoding.js';
+export {
+  DELIMITER_SAMPLE_LINE_LIMIT,
+  detectDelimitedTextDelimiter,
+  sampleNonEmptyDelimitedLines,
+  type DelimiterLineSample,
+} from './shared/delimiter.js';
+export {
+  STATEMENT_FORMAT_SNIFF_BYTES,
+  detectStatementFormatFromExtension,
+  detectStatementFormatHint,
+  finalizeStatementFormatHint,
+  type BrowserSafeStatementFormat,
+  type StatementFormatHint,
+} from './shared/format-detection.js';
 export { parseDateCell, type DateCellResult } from './shared/date-cell.js';
 export {
   createSheetMergeIndex,

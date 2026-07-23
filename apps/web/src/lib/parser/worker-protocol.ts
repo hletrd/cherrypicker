@@ -3,17 +3,11 @@ import { ParseError } from './types.js';
 
 export type ParserWorkerFormat = 'csv' | 'xlsx' | 'json' | 'ofx' | 'html';
 
-export type ParserWorkerRequest =
-  | {
-      format: 'csv' | 'xlsx';
-      bank?: BankId;
-      payload: ArrayBuffer;
-    }
-  | {
-      format: 'json' | 'ofx' | 'html';
-      bank?: BankId;
-      payload: string;
-    };
+export interface ParserWorkerRequest {
+  format: ParserWorkerFormat;
+  bank?: BankId;
+  payload: ArrayBuffer;
+}
 
 interface SerializedParseError {
   message: string;
@@ -74,7 +68,7 @@ export function deserializeParserWorkerResult(
 
 export function installParserWorker(
   parse: (
-    payload: string | ArrayBuffer,
+    payload: ArrayBuffer,
     bank?: BankId,
   ) => ParseResult | Promise<ParseResult>,
 ): void {
@@ -92,4 +86,8 @@ export function installParserWorker(
       },
     );
   });
+}
+
+export function decodeParserTextPayload(payload: ArrayBuffer): string {
+  return new TextDecoder('utf-8').decode(new Uint8Array(payload));
 }

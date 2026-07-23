@@ -1,4 +1,12 @@
-import type { BankId } from './types.js';
+import type { BankId, FileFormat } from './types.js';
+import {
+  STATEMENT_FORMAT_SNIFF_BYTES,
+  detectDelimitedTextDelimiter,
+  detectStatementFormatFromExtension,
+  detectStatementFormatHint,
+  finalizeStatementFormatHint,
+  type StatementFormatHint,
+} from '@cherrypicker/parser/browser';
 
 interface BankSignature {
   bankId: BankId;
@@ -104,38 +112,39 @@ const BANK_SIGNATURES: BankSignature[] = [
   },
 ];
 
-export async function detectFormatFromFile(file: File): Promise<'csv' | 'xlsx' | 'pdf' | 'json' | 'ofx' | 'html'> {
-  const ext = file.name.split('.').pop()?.toLowerCase();
-  if (ext === 'xlsx' || ext === 'xls') return 'xlsx';
-  if (ext === 'pdf') return 'pdf';
-  if (ext === 'json') return 'json';
-  if (ext === 'ofx' || ext === 'qfx') return 'ofx';
-  if (ext === 'html' || ext === 'htm') return 'html';
+export async function detectFormatHintFromFile(
+  file: File,
+): Promise<StatementFormatHint> {
+  const extensionFormat = detectStatementFormatFromExtension(file.name);
+  if (extensionFormat && extensionFormat !== 'csv') {
+    return detectStatementFormatHint(file.name, new Uint8Array());
+  }
 
-  // Content sniffing for unknown/mismatched extensions (C21-02)
   try {
-    const buffer = await file.slice(0, 2048).arrayBuffer();
-    const head = new TextDecoder('utf-8').decode(buffer).replace(/^﻿/, '').trimStart();
+    const prefix = new Uint8Array(
+      await file.slice(0, STATEMENT_FORMAT_SNIFF_BYTES).arrayBuffer(),
+    );
+    return detectStatementFormatHint(file.name, prefix);
+  } catch {
+    return {
+      format: extensionFormat ?? 'csv',
+      requiresCompleteJsonValidation: false,
+    };
+  }
+}
 
-    // PDF magic: %PDF
-    if (head.startsWith('%PDF')) return 'pdf';
-    // OFX header
-    if (/^<\?OFX/i.test(head) || /<OFX/i.test(head)) return 'ofx';
-    // HTML
-    if (/^<!doctype\s+html/i.test(head) || /^<html/i.test(head) || /<table[\s>]/i.test(head)) return 'html';
-    // A fixed-size prefix cannot prove that a JSON document is complete.
-    // Classify by the container token and let the full JSON parser own syntax.
-    if (head.startsWith('[') || head.startsWith('{')) {
-      return 'json';
-    }
-    // XML with OFX content
-    if (/^<\?xml/i.test(head) && /<OFX|<BANKTRANLIST|<STMTTRN/i.test(head)) return 'ofx';
-  } catch { /* fall through */ }
+export async function detectFormatFromFile(file: File): Promise<FileFormat> {
+  const hint = await detectFormatHintFromFile(file);
+  if (!hint.requiresCompleteJsonValidation) return hint.format;
 
-  // Both .csv and .tsv are handled by the CSV parser — delimiter detection
-  // in detectCSVDelimiter() auto-detects tabs vs commas (parity with server-side
-  // packages/parser/src/detect.ts which handles .tsv explicitly).
-  return 'csv';
+  try {
+    return finalizeStatementFormatHint(
+      hint,
+      new Uint8Array(await file.arrayBuffer()),
+    );
+  } catch {
+    return hint.invalidJsonFallback ?? hint.format;
+  }
 }
 
 /**
@@ -196,26 +205,5 @@ export function detectBankFromText(content: string): BankId | null {
 }
 
 export function detectCSVDelimiter(content: string): string {
-  // Sample first 30 lines for delimiter detection -- the delimiter pattern
-  // is consistent throughout a file, so scanning all lines is unnecessary
-  // and slow for large files (C83-05). Matches the 30-line header scan limit.
-  const lines = content.split('\n').map((l) => l.trim()).filter((l) => l.length > 0).slice(0, 30);
-
-  let totalComma = 0;
-  let totalTab = 0;
-  let totalPipe = 0;
-  let totalSemicolon = 0;
-
-  for (const line of lines) {
-    totalComma += (line.match(/,/g) ?? []).length;
-    totalTab += (line.match(/\t/g) ?? []).length;
-    totalPipe += (line.match(/\|/g) ?? []).length;
-    totalSemicolon += (line.match(/;/g) ?? []).length;
-  }
-
-  if (totalComma === 0 && totalTab === 0 && totalPipe === 0 && totalSemicolon === 0) return ',';
-  if (totalTab > totalComma && totalTab >= totalPipe && totalTab >= totalSemicolon) return '\t';
-  if (totalPipe > totalComma && totalPipe >= totalSemicolon) return '|';
-  if (totalSemicolon > totalComma) return ';';
-  return ',';
+  return detectDelimitedTextDelimiter(content);
 }
