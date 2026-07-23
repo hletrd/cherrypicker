@@ -420,6 +420,7 @@ function validCurrentPayloadShape(value: Record<string, unknown>): boolean {
     value.parseErrors.every(validPersistedParseWarning) &&
     Array.isArray(value.categoryBreakdown) &&
     value.categoryBreakdown.every(validCategorySpendingSummary) &&
+    previousSpendingBasis(value.previousSpendingBasis) !== undefined &&
     (
       value.monthlyBreakdown === undefined ||
       Array.isArray(value.monthlyBreakdown)
@@ -749,10 +750,7 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
   const restoredPreviousSpendingBasis = previousSpendingBasis(
     migrated.previousSpendingBasis,
   );
-  if (
-    migrated.previousSpendingBasis !== undefined &&
-    restoredPreviousSpendingBasis === undefined
-  ) {
+  if (restoredPreviousSpendingBasis === undefined) {
     return invalidResult();
   }
 

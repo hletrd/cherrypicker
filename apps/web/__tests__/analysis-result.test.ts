@@ -173,6 +173,54 @@ describe('analysis result coherence', () => {
     expect(isAnalysisResultCoherent(coherentResult())).toBe(true);
   });
 
+  test('requires previous-spending provenance for full and truncated results', () => {
+    const full = cloneResult() as AnalysisResult & {
+      previousSpendingBasis?: AnalysisResult['previousSpendingBasis'];
+    };
+    Reflect.deleteProperty(full, 'previousSpendingBasis');
+    expect(isAnalysisResultCoherent(full)).toBe(false);
+
+    const truncated = cloneResult() as AnalysisResult & {
+      previousSpendingBasis?: AnalysisResult['previousSpendingBasis'];
+    };
+    truncated.transactions = undefined;
+    Reflect.deleteProperty(truncated, 'previousSpendingBasis');
+    expect(
+      isAnalysisResultCoherent(truncated, { truncatedTransactionCount: 2 }),
+    ).toBe(false);
+  });
+
+  test('requires exact basis-dependent presence of the redundant user option', () => {
+    const missingUserOption = cloneResult();
+    missingUserOption.previousSpendingBasis = {
+      kind: 'user-total',
+      amount: 300_000,
+    };
+    expect(isAnalysisResultCoherent(missingUserOption)).toBe(false);
+
+    const exactUserOption = cloneResult();
+    exactUserOption.previousSpendingBasis = {
+      kind: 'user-total',
+      amount: 300_000,
+    };
+    exactUserOption.previousMonthSpendingOption = 300_000;
+    expect(isAnalysisResultCoherent(exactUserOption)).toBe(true);
+
+    exactUserOption.previousMonthSpendingOption = 299_999;
+    expect(isAnalysisResultCoherent(exactUserOption)).toBe(false);
+
+    const statementWithUserOption = cloneResult();
+    statementWithUserOption.previousMonthSpendingOption = 300_000;
+    expect(isAnalysisResultCoherent(statementWithUserOption)).toBe(false);
+
+    const truncated = cloneResult();
+    truncated.transactions = undefined;
+    truncated.previousMonthSpendingOption = 300_000;
+    expect(
+      isAnalysisResultCoherent(truncated, { truncatedTransactionCount: 2 }),
+    ).toBe(false);
+  });
+
   test('accepts an explicit no-benefit result with all spending unassigned', () => {
     const result = coherentResult();
     result.transactions = [result.transactions![1]!];
@@ -216,6 +264,70 @@ describe('analysis result coherence', () => {
     expect(
       isAnalysisResultCoherent(result, { truncatedTransactionCount: 2 }),
     ).toBe(false);
+  });
+
+  test('does not sort transaction-sized arrays during coherence validation', () => {
+    const transactionCount = 2_000;
+    const result = coherentResult();
+    result.transactions = Array.from(
+      { length: transactionCount },
+      (_, index) => ({
+        id: `tx-${index}`,
+        date: `2026-07-${String((index % 28) + 1).padStart(2, '0')}`,
+        merchant: `가맹점 ${index}`,
+        amount: 1,
+        category: 'dining',
+        subcategory: undefined,
+        confidence: 1,
+      }),
+    );
+    result.statementPeriod = {
+      start: '2026-07-01',
+      end: '2026-07-28',
+    };
+    result.fullStatementPeriod = result.statementPeriod;
+    result.transactionCount = transactionCount;
+    result.totalTransactionCount = transactionCount;
+    result.categoryBreakdown = [{
+      category: 'dining',
+      categoryNameKo: '외식',
+      spending: transactionCount,
+      transactionCount,
+    }];
+    result.optimization = {
+      assignments: [],
+      cardResults: [],
+      totalReward: 0,
+      totalSpending: transactionCount,
+      unassignedSpending: transactionCount,
+      unassignedTransactionCount: transactionCount,
+      effectiveRate: 0,
+      savingsVsSingleCard: 0,
+      bestSingleCard: null,
+    };
+    result.monthlyBreakdown = [{
+      month: '2026-07',
+      spending: transactionCount,
+      transactionCount,
+    }];
+    result.previousSpendingBasis = {
+      kind: 'missing-calendar-month',
+      month: '2026-06',
+      assumedAmount: 0,
+    };
+
+    const originalSort = Array.prototype.sort;
+    let transactionSizedSorts = 0;
+    Array.prototype.sort = function (...args) {
+      if (this.length >= transactionCount) transactionSizedSorts++;
+      return originalSort.apply(this, args as [compareFn?: (a: unknown, b: unknown) => number]);
+    };
+    try {
+      expect(isAnalysisResultCoherent(result)).toBe(true);
+    } finally {
+      Array.prototype.sort = originalSort;
+    }
+    expect(transactionSizedSorts).toBe(0);
   });
 
   test('normalizes an explicit replacement card selection before validation', () => {

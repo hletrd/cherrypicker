@@ -21,10 +21,12 @@ import type {
   AnalyzeExecution,
   AnalyzeOptions,
   CategorizedTx,
+  ValidatedAnalysisResult,
 } from './analysis-result.js';
 import {
   buildCategorySpendingSummary,
-  isAnalysisResultCoherent,
+  normalizeCardIdsOption,
+  validateAnalysisResult,
 } from './analysis-result.js';
 export type { CategorizedTx } from './analysis-result.js';
 import {
@@ -285,7 +287,7 @@ export async function analyzeMultipleFiles(
   files: File[],
   options?: AnalyzeOptions,
   execution?: AnalyzeExecution,
-): Promise<AnalysisResult> {
+): Promise<ValidatedAnalysisResult> {
   assertExecutionCurrent(execution);
   // 1. Construct MerchantMatcher once (shared across all files) to avoid
   // redundant loadCategories() fetches and matcher construction per file.
@@ -444,19 +446,25 @@ export async function analyzeMultipleFiles(
     optimization,
     monthlyBreakdown: context.monthlyBreakdown,
     previousSpendingBasis: context.previousSpendingBasis,
+    previousMonthSpendingOption:
+      context.previousSpendingBasis.kind === 'user-total'
+        ? context.previousSpendingBasis.amount
+        : undefined,
+    cardIdsOption: normalizeCardIdsOption(options?.cardIds),
   };
-  if (!isAnalysisResultCoherent(result)) {
+  const validatedResult = validateAnalysisResult(result);
+  if (!validatedResult) {
     throw new Error(
       '분석 결과의 합계가 거래 내역과 일치하지 않아요. 다시 시도해 주세요.',
     );
   }
-  return result;
+  return validatedResult;
 }
 
 // Keep the original combined function for backward compatibility
 export async function analyzeFile(
   file: File,
   options?: AnalyzeOptions,
-): Promise<AnalysisResult> {
+): Promise<ValidatedAnalysisResult> {
   return analyzeMultipleFiles([file], options);
 }

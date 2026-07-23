@@ -1,9 +1,10 @@
 import type { OptimizationResult } from '@cherrypicker/core';
 import {
-  isValidIsoDate,
+  isYearMonth,
   previousCalendarMonth,
   yearMonthOfDate,
   type PreviousSpendingBasis,
+  type YearMonth,
 } from '@cherrypicker/core/analysis/context';
 import type { PerformanceExclusionId } from '@cherrypicker/rules/browser';
 import type {
@@ -78,8 +79,19 @@ export interface AnalysisResult {
   /** The user's explicit card selection, when provided. */
   cardIdsOption?: string[];
   /** Inspectable provenance for the performance-spending input. */
-  previousSpendingBasis?: PreviousSpendingBasis;
+  previousSpendingBasis: PreviousSpendingBasis;
 }
+
+const VALIDATED_ANALYSIS_RESULT = Symbol('validated-analysis-result');
+
+/**
+ * Fresh producer result that already passed exhaustive coherence validation.
+ * The symbol is intentionally non-serializable and only bridges the immediate
+ * analyzer-to-replacement boundary.
+ */
+export type ValidatedAnalysisResult = AnalysisResult & {
+  readonly [VALIDATED_ANALYSIS_RESULT]: true;
+};
 
 export interface AnalyzeOptions {
   bank?: string;
@@ -108,6 +120,24 @@ export function normalizeCardIdsOption(
   const source = requested === undefined ? fallback : requested;
   if (!source || source.length === 0) return undefined;
   return [...new Set(source)];
+}
+
+export function resolveReoptimizationPreviousSpending(
+  options: AnalyzeOptions | undefined,
+  snapshot: Pick<
+    AnalysisResult,
+    'previousSpendingBasis' | 'previousMonthSpendingOption'
+  >,
+): number | undefined {
+  if (options?.previousMonthSpending !== undefined) {
+    return options.previousMonthSpending;
+  }
+  if (options?.previousSpendingBasis?.kind === 'user-total') {
+    return options.previousSpendingBasis.amount;
+  }
+  return snapshot.previousSpendingBasis.kind === 'user-total'
+    ? snapshot.previousSpendingBasis.amount
+    : undefined;
 }
 
 function compareAscii(left: string, right: string): number {
@@ -379,44 +409,32 @@ function isOptimizationCoherent(optimization: OptimizationResult): boolean {
 function categorySummaryTotals(
   categoryBreakdown: readonly CategorySpendingSummary[],
 ): { spending: number; transactionCount: number } | null {
-  if (
-    !unique(categoryBreakdown.map(({ category }) => category)) ||
-    categoryBreakdown.some(
-      ({ category, categoryNameKo, spending, transactionCount }) =>
-        category.length === 0 ||
-        categoryNameKo.length === 0 ||
-        !Number.isSafeInteger(spending) ||
-        spending <= 0 ||
-        !Number.isSafeInteger(transactionCount) ||
-        transactionCount <= 0,
-    )
-  ) {
-    return null;
-  }
-  const spending = sumSafe(categoryBreakdown.map((summary) => summary.spending));
-  const transactionCount = sumSafe(
-    categoryBreakdown.map((summary) => summary.transactionCount),
-  );
-  return spending === null || transactionCount === null
-    ? null
-    : { spending, transactionCount };
-}
-
-function hasSameCategoryFacts(
-  actual: readonly CategorySpendingSummary[],
-  expected: readonly CategorySpendingSummary[],
-): boolean {
-  if (actual.length !== expected.length) return false;
-  const actualByCategory = new Map(
-    actual.map((summary) => [summary.category, summary]),
-  );
-  return expected.every((summary) => {
-    const candidate = actualByCategory.get(summary.category);
-    return (
-      candidate?.spending === summary.spending &&
-      candidate.transactionCount === summary.transactionCount
+  const categories = new Set<string>();
+  let spending = 0;
+  let transactionCount = 0;
+  for (const summary of categoryBreakdown) {
+    if (
+      categories.has(summary.category) ||
+      summary.category.length === 0 ||
+      summary.categoryNameKo.length === 0 ||
+      !Number.isSafeInteger(summary.spending) ||
+      summary.spending <= 0 ||
+      !Number.isSafeInteger(summary.transactionCount) ||
+      summary.transactionCount <= 0
+    ) {
+      return null;
+    }
+    categories.add(summary.category);
+    const nextSpending = addSafe(spending, summary.spending);
+    const nextTransactionCount = addSafe(
+      transactionCount,
+      summary.transactionCount,
     );
-  });
+    if (nextSpending === null || nextTransactionCount === null) return null;
+    spending = nextSpending;
+    transactionCount = nextTransactionCount;
+  }
+  return { spending, transactionCount };
 }
 
 function hasCoherentCategoryAllocation(result: AnalysisResult): boolean {
@@ -487,11 +505,217 @@ function hasCoherentCategoryAllocation(result: AnalysisResult): boolean {
   );
 }
 
-function expectedPeriod(
+interface TransactionFacts {
+  validTransactionCount: number;
+  latestMonth: YearMonth;
+  latestTransactionCount: number;
+  latestSpending: number;
+  latestPeriod: { start: string; end: string };
+  fullPeriod: { start: string; end: string };
+  months: Map<YearMonth, { spending: number; transactionCount: number }>;
+  latestCategories: Map<
+    string,
+    { spending: number; transactionCount: number }
+  >;
+}
+
+function collectTransactionFacts(
   transactions: readonly CategorizedTx[],
-): { start: string; end: string } {
-  const dates = transactions.map(({ date }) => date).sort();
-  return { start: dates[0]!, end: dates.at(-1)! };
+): TransactionFacts | null {
+  const ids = new Set<string>();
+  const months = new Map<
+    YearMonth,
+    { spending: number; transactionCount: number }
+  >();
+  let validTransactionCount = 0;
+  let latestMonth: YearMonth | undefined;
+  let fullStart: string | undefined;
+  let fullEnd: string | undefined;
+
+  for (const transaction of transactions) {
+    if (ids.has(transaction.id)) return null;
+    ids.add(transaction.id);
+
+    const month = yearMonthOfDate(transaction.date);
+    if (month === null) continue;
+    validTransactionCount += 1;
+    if (!Number.isSafeInteger(validTransactionCount)) return null;
+    if (latestMonth === undefined || month > latestMonth) latestMonth = month;
+    if (fullStart === undefined || transaction.date < fullStart) {
+      fullStart = transaction.date;
+    }
+    if (fullEnd === undefined || transaction.date > fullEnd) {
+      fullEnd = transaction.date;
+    }
+
+    const current = months.get(month) ?? {
+      spending: 0,
+      transactionCount: 0,
+    };
+    const transactionCount = addSafe(current.transactionCount, 1);
+    if (transactionCount === null) return null;
+    current.transactionCount = transactionCount;
+    if (transaction.amount > 0) {
+      const spending = addSafe(current.spending, transaction.amount);
+      if (spending === null) return null;
+      current.spending = spending;
+    }
+    months.set(month, current);
+  }
+
+  if (
+    latestMonth === undefined ||
+    fullStart === undefined ||
+    fullEnd === undefined
+  ) {
+    return null;
+  }
+
+  const latestCategories = new Map<
+    string,
+    { spending: number; transactionCount: number }
+  >();
+  let latestTransactionCount = 0;
+  let latestSpending = 0;
+  let latestStart: string | undefined;
+  let latestEnd: string | undefined;
+  for (const transaction of transactions) {
+    if (yearMonthOfDate(transaction.date) !== latestMonth) continue;
+    const transactionCount = addSafe(latestTransactionCount, 1);
+    if (transactionCount === null) return null;
+    latestTransactionCount = transactionCount;
+    if (latestStart === undefined || transaction.date < latestStart) {
+      latestStart = transaction.date;
+    }
+    if (latestEnd === undefined || transaction.date > latestEnd) {
+      latestEnd = transaction.date;
+    }
+    if (transaction.amount <= 0) continue;
+
+    const spending = addSafe(latestSpending, transaction.amount);
+    if (spending === null) return null;
+    latestSpending = spending;
+
+    const category = categoryKeyOf(transaction);
+    const current = latestCategories.get(category) ?? {
+      spending: 0,
+      transactionCount: 0,
+    };
+    const categorySpending = addSafe(current.spending, transaction.amount);
+    const categoryTransactionCount = addSafe(current.transactionCount, 1);
+    if (
+      categorySpending === null ||
+      categoryTransactionCount === null
+    ) {
+      return null;
+    }
+    current.spending = categorySpending;
+    current.transactionCount = categoryTransactionCount;
+    latestCategories.set(category, current);
+  }
+
+  if (latestStart === undefined || latestEnd === undefined) return null;
+  return {
+    validTransactionCount,
+    latestMonth,
+    latestTransactionCount,
+    latestSpending,
+    latestPeriod: { start: latestStart, end: latestEnd },
+    fullPeriod: { start: fullStart, end: fullEnd },
+    months,
+    latestCategories,
+  };
+}
+
+function hasExactPreviousSpendingBasis(
+  result: AnalysisResult,
+  latestMonth: YearMonth,
+  hasPreviousStatementMonth: boolean,
+): boolean {
+  const basis = result.previousSpendingBasis;
+  const option = result.previousMonthSpendingOption;
+  if (!basis) return false;
+  if (basis.kind === 'user-total') {
+    return (
+      Number.isSafeInteger(basis.amount) &&
+      basis.amount >= 0 &&
+      option === basis.amount
+    );
+  }
+  if (option !== undefined) return false;
+
+  const previousMonth = previousCalendarMonth(latestMonth);
+  if (basis.kind === 'statement-month') {
+    return basis.month === previousMonth && hasPreviousStatementMonth;
+  }
+  return (
+    basis.kind === 'missing-calendar-month' &&
+    basis.month === previousMonth &&
+    basis.assumedAmount === 0 &&
+    !hasPreviousStatementMonth
+  );
+}
+
+function hasCoherentTruncatedFacts(
+  result: AnalysisResult,
+  truncatedTransactionCount: number | undefined,
+): boolean {
+  if (!result.monthlyBreakdown || result.monthlyBreakdown.length === 0) {
+    return false;
+  }
+
+  const months = new Map<YearMonth, number>();
+  let representedTransactionCount = 0;
+  let latest:
+    | { month: YearMonth; spending: number; transactionCount: number }
+    | undefined;
+  for (const entry of result.monthlyBreakdown) {
+    if (
+      !isYearMonth(entry.month) ||
+      months.has(entry.month) ||
+      !Number.isSafeInteger(entry.spending) ||
+      entry.spending < 0 ||
+      !Number.isSafeInteger(entry.transactionCount) ||
+      entry.transactionCount < 0
+    ) {
+      return false;
+    }
+    months.set(entry.month, entry.transactionCount);
+    const count = addSafe(
+      representedTransactionCount,
+      entry.transactionCount,
+    );
+    if (count === null) return false;
+    representedTransactionCount = count;
+    if (!latest || entry.month > latest.month) {
+      latest = {
+        month: entry.month,
+        spending: entry.spending,
+        transactionCount: entry.transactionCount,
+      };
+    }
+  }
+  if (!latest) return false;
+
+  const categoryTotals = categorySummaryTotals(result.categoryBreakdown);
+  const previousMonth = previousCalendarMonth(latest.month);
+  return (
+    Number.isSafeInteger(truncatedTransactionCount) &&
+    (truncatedTransactionCount ?? 0) > 0 &&
+    representedTransactionCount > 0 &&
+    (truncatedTransactionCount ?? 0) >= representedTransactionCount &&
+    result.transactionCount === latest.transactionCount &&
+    result.totalTransactionCount === representedTransactionCount &&
+    categoryTotals !== null &&
+    latest.transactionCount >= categoryTotals.transactionCount &&
+    latest.spending === categoryTotals.spending &&
+    latest.spending === result.optimization.totalSpending &&
+    hasExactPreviousSpendingBasis(
+      result,
+      latest.month,
+      (months.get(previousMonth) ?? 0) > 0,
+    )
+  );
 }
 
 /**
@@ -534,109 +758,43 @@ export function isAnalysisResultCoherent(
   }
 
   if (!result.transactions) {
-    const truncatedCount = context?.truncatedTransactionCount;
-    if (
-      !result.monthlyBreakdown ||
-      result.monthlyBreakdown.length === 0 ||
-      !unique(result.monthlyBreakdown.map(({ month }) => month))
-    ) {
-      return false;
-    }
-    const representedTransactionCount = sumSafe(
-      result.monthlyBreakdown.map(({ transactionCount }) => transactionCount),
-    );
-    const latest = [...result.monthlyBreakdown]
-      .sort((left, right) => compareAscii(left.month, right.month))
-      .at(-1)!;
-    const categoryTotals = categorySummaryTotals(result.categoryBreakdown);
-    return (
-      Number.isSafeInteger(truncatedCount) &&
-      (truncatedCount ?? 0) > 0 &&
-      representedTransactionCount !== null &&
-      representedTransactionCount > 0 &&
-      (truncatedCount ?? 0) >= representedTransactionCount &&
-      result.transactionCount === latest.transactionCount &&
-      result.totalTransactionCount === representedTransactionCount &&
-      categoryTotals !== null &&
-      latest.transactionCount >= categoryTotals.transactionCount &&
-      latest.spending === categoryTotals.spending &&
-      latest.spending === result.optimization.totalSpending
+    return hasCoherentTruncatedFacts(
+      result,
+      context?.truncatedTransactionCount,
     );
   }
-  if (!unique(result.transactions.map(({ id }) => id))) return false;
 
-  const validTransactions = result.transactions.filter(({ date }) =>
-    isValidIsoDate(date),
-  );
-  if (validTransactions.length === 0) return false;
-  const latestMonth = validTransactions
-    .map(({ date }) => yearMonthOfDate(date)!)
-    .sort()
-    .at(-1)!;
-  const latestTransactions = validTransactions.filter(
-    ({ date }) => yearMonthOfDate(date) === latestMonth,
-  );
-  const positiveLatest = latestTransactions.filter(({ amount }) => amount > 0);
-  const latestSpending = sumSafe(positiveLatest.map(({ amount }) => amount));
-  let expectedCategoryBreakdown: CategorySpendingSummary[];
-  try {
-    expectedCategoryBreakdown = buildCategorySpendingSummary(
-      latestTransactions,
-      new Map(
-        result.categoryBreakdown.map(({ category, categoryNameKo }) => [
-          category,
-          categoryNameKo,
-        ]),
-      ),
-    );
-  } catch {
-    return false;
-  }
+  const facts = collectTransactionFacts(result.transactions);
+  if (facts === null) return false;
   if (
-    latestSpending === null ||
-    !hasSameCategoryFacts(result.categoryBreakdown, expectedCategoryBreakdown) ||
-    result.transactionCount !== latestTransactions.length ||
+    result.categoryBreakdown.length !== facts.latestCategories.size ||
+    result.categoryBreakdown.some((summary) => {
+      const expected = facts.latestCategories.get(summary.category);
+      return (
+        expected?.spending !== summary.spending ||
+        expected.transactionCount !== summary.transactionCount
+      );
+    }) ||
+    result.transactionCount !== facts.latestTransactionCount ||
     (
       result.totalTransactionCount !== undefined &&
-      result.totalTransactionCount !== validTransactions.length
+      result.totalTransactionCount !== facts.validTransactionCount
     ) ||
-    result.optimization.totalSpending !== latestSpending ||
-    !samePeriod(
-      result.statementPeriod,
-      expectedPeriod(latestTransactions),
-    ) ||
-    !samePeriod(
-      result.fullStatementPeriod,
-      expectedPeriod(validTransactions),
-    )
+    result.optimization.totalSpending !== facts.latestSpending ||
+    !samePeriod(result.statementPeriod, facts.latestPeriod) ||
+    !samePeriod(result.fullStatementPeriod, facts.fullPeriod)
   ) {
     return false;
   }
 
   if (!result.monthlyBreakdown) return false;
-  const expectedMonths = new Map<
-    string,
-    { spending: number; transactionCount: number }
-  >();
-  for (const transaction of validTransactions) {
-    const month = yearMonthOfDate(transaction.date)!;
-    const current = expectedMonths.get(month) ?? {
-      spending: 0,
-      transactionCount: 0,
-    };
-    current.transactionCount += 1;
-    if (transaction.amount > 0) {
-      const spending = addSafe(current.spending, transaction.amount);
-      if (spending === null) return false;
-      current.spending = spending;
-    }
-    expectedMonths.set(month, current);
-  }
+  const seenMonths = new Set<YearMonth>();
   if (
-    result.monthlyBreakdown.length !== expectedMonths.size ||
-    !unique(result.monthlyBreakdown.map(({ month }) => month)) ||
+    result.monthlyBreakdown.length !== facts.months.size ||
     result.monthlyBreakdown.some((entry) => {
-      const expected = expectedMonths.get(entry.month);
+      if (!isYearMonth(entry.month) || seenMonths.has(entry.month)) return true;
+      seenMonths.add(entry.month);
+      const expected = facts.months.get(entry.month);
       return (
         !expected ||
         entry.spending !== expected.spending ||
@@ -647,39 +805,32 @@ export function isAnalysisResultCoherent(
     return false;
   }
 
-  const previousMonth = previousCalendarMonth(latestMonth);
-  const basis = result.previousSpendingBasis;
-  if (
-    result.previousMonthSpendingOption !== undefined &&
-    (
-      basis?.kind !== 'user-total' ||
-      basis.amount !== result.previousMonthSpendingOption
-    )
-  ) {
-    return false;
-  }
-  if (
-    basis?.kind === 'statement-month' &&
-    (
-      basis.month !== previousMonth ||
-      !validTransactions.some(
-        ({ date }) => yearMonthOfDate(date) === previousMonth,
-      )
-    )
-  ) {
-    return false;
-  }
-  if (
-    basis?.kind === 'missing-calendar-month' &&
-    (
-      basis.month !== previousMonth ||
-      validTransactions.some(
-        ({ date }) => yearMonthOfDate(date) === previousMonth,
-      )
-    )
-  ) {
-    return false;
-  }
+  const previousMonth = previousCalendarMonth(facts.latestMonth);
+  return hasExactPreviousSpendingBasis(
+    result,
+    facts.latestMonth,
+    facts.months.has(previousMonth),
+  );
+}
 
-  return true;
+export function validateAnalysisResult(
+  result: AnalysisResult,
+  context?: AnalysisCoherenceContext,
+): ValidatedAnalysisResult | null {
+  if (!isAnalysisResultCoherent(result, context)) return null;
+  Object.defineProperty(result, VALIDATED_ANALYSIS_RESULT, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+  return result as ValidatedAnalysisResult;
+}
+
+export function isValidatedAnalysisResult(
+  result: AnalysisResult,
+): result is ValidatedAnalysisResult {
+  return (
+    result as Partial<ValidatedAnalysisResult>
+  )[VALIDATED_ANALYSIS_RESULT] === true;
 }

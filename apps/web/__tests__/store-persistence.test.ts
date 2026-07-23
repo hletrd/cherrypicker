@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { AnalysisResult } from '../src/lib/analysis-result.js';
+import { resolveReoptimizationPreviousSpending } from '../src/lib/analysis-result.js';
+import { describePreviousSpendingBasis } from '../src/lib/analysis-disclosures.js';
 import {
   MAX_PERSISTED_WARNINGS,
   deserializeAnalysis,
@@ -133,6 +135,11 @@ function persistedFixture(overrides: Record<string, unknown> = {}): string {
         transactionCount: 1,
       },
     ],
+    previousSpendingBasis: {
+      kind: 'missing-calendar-month',
+      month: '2026-06',
+      assumedAmount: 0,
+    },
     optimization: optimizationFixture(),
     ...overrides,
   });
@@ -367,6 +374,97 @@ describe('production persistence parser', () => {
     zeroCount.totalTransactionCount = 0;
     zeroCount._truncatedTxCount = 0;
     expect(deserializeAnalysis(JSON.stringify(zeroCount)).data).toBeNull();
+  });
+
+  test('rejects isolated and coordinated current-version basis deletion', () => {
+    const isolated = JSON.parse(persistedFixture()) as Record<string, unknown>;
+    delete isolated.previousSpendingBasis;
+    expect(deserializeAnalysis(JSON.stringify(isolated))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+
+    const coordinated = JSON.parse(
+      persistedFixture({
+        previousSpendingBasis: {
+          kind: 'user-total',
+          amount: 300_000,
+        },
+        previousMonthSpendingOption: 300_000,
+      }),
+    ) as Record<string, unknown>;
+    delete coordinated.previousSpendingBasis;
+    delete coordinated.previousMonthSpendingOption;
+    expect(deserializeAnalysis(JSON.stringify(coordinated))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
+  test('rejects missing or contradictory provenance in a truncated payload', () => {
+    const oversized = analysisFixture('x'.repeat(MAX_PERSIST_SIZE));
+    const payload = JSON.parse(
+      serializeAnalysis(oversized).serialized,
+    ) as Record<string, unknown>;
+    expect(payload.transactions).toBeUndefined();
+    delete payload.previousSpendingBasis;
+    expect(deserializeAnalysis(JSON.stringify(payload))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+
+    const contradictory = JSON.parse(
+      serializeAnalysis(oversized).serialized,
+    ) as Record<string, unknown>;
+    contradictory.previousMonthSpendingOption = 300_000;
+    expect(deserializeAnalysis(JSON.stringify(contradictory))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
+  test.each([
+    [
+      'missing user option',
+      {
+        previousSpendingBasis: {
+          kind: 'user-total',
+          amount: 300_000,
+        },
+        previousMonthSpendingOption: undefined,
+      },
+    ],
+    [
+      'mismatched user option',
+      {
+        previousSpendingBasis: {
+          kind: 'user-total',
+          amount: 300_000,
+        },
+        previousMonthSpendingOption: 299_999,
+      },
+    ],
+    [
+      'statement basis with user option',
+      {
+        previousSpendingBasis: {
+          kind: 'missing-calendar-month',
+          month: '2026-06',
+          assumedAmount: 0,
+        },
+        previousMonthSpendingOption: 300_000,
+      },
+    ],
+  ])('rejects %s', (_name, overrides) => {
+    expect(deserializeAnalysis(persistedFixture(overrides)).data).toBeNull();
   });
 
   test('rejects malformed or future versions and requests storage cleanup', () => {
@@ -610,6 +708,10 @@ describe('production persistence parser', () => {
             transactionCount: 2,
           },
         ],
+        previousSpendingBasis: {
+          kind: 'statement-month',
+          month: '2026-06',
+        },
         optimization: optimizationFixture({
           assignments: [assignmentFixture({ transactionCount: 2 })],
         }),
@@ -1111,6 +1213,29 @@ describe('production persistence parser', () => {
 });
 
 describe('production persistence serializer', () => {
+  test('reload preserves the disclosed user basis used by reoptimization', () => {
+    const analysis = analysisFixture();
+    analysis.previousSpendingBasis = {
+      kind: 'user-total',
+      amount: 300_000,
+    };
+    analysis.previousMonthSpendingOption = 300_000;
+
+    const restored = deserializeAnalysis(
+      serializeAnalysis(analysis).serialized,
+    ).data;
+    if (!restored) throw new Error('expected restored analysis');
+
+    expect(describePreviousSpendingBasis(restored.previousSpendingBasis)).toEqual({
+      kind: 'user-total',
+      tone: 'neutral',
+      text: '직접 입력한 전월실적 300,000원을 기준으로 계산했어요.',
+    });
+    expect(
+      resolveReoptimizationPreviousSpending(undefined, restored),
+    ).toBe(300_000);
+  });
+
   test('round-trips a normal analysis payload with its schema version', () => {
     const { serialized, result } = serializeAnalysis(analysisFixture());
     expect(result).toEqual({ kind: null, truncatedTxCount: null });

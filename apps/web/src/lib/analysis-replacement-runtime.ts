@@ -1,9 +1,9 @@
 import {
-  isAnalysisResultCoherent,
-  normalizeCardIdsOption,
+  isValidatedAnalysisResult,
   type AnalysisResult,
   type AnalyzeExecution,
   type AnalyzeOptions,
+  type ValidatedAnalysisResult,
 } from './analysis-result.js';
 import type {
   PersistResult,
@@ -29,7 +29,7 @@ interface AnalyzerModuleLike {
     files: File[],
     options?: AnalyzeOptions,
     execution?: AnalyzeExecution,
-  ): Promise<AnalysisResult>;
+  ): Promise<ValidatedAnalysisResult>;
 }
 
 export interface AnalysisReplacementDependencies {
@@ -172,21 +172,9 @@ export class AnalysisReplacementRuntime {
       );
       if (!owned.run.isCurrent()) return;
 
-      if (
-        options?.previousMonthSpending !== undefined &&
-        Number.isFinite(options.previousMonthSpending) &&
-        options.previousMonthSpending >= 0
-      ) {
-        analysisResult.previousMonthSpendingOption =
-          options.previousMonthSpending;
-      }
-      const selectedCardIds = normalizeCardIdsOption(options?.cardIds);
-      if (selectedCardIds) {
-        analysisResult.cardIdsOption = selectedCardIds;
-      }
-      if (!isAnalysisResultCoherent(analysisResult)) {
+      if (!isValidatedAnalysisResult(analysisResult)) {
         throw new Error(
-          '분석 결과의 합계가 거래 내역과 일치하지 않아요. 다시 시도해 주세요.',
+          '분석 결과가 검증 경계를 통과하지 못했어요. 다시 시도해 주세요.',
         );
       }
 

@@ -15,11 +15,29 @@ import {
 } from '../src/lib/persistence.js';
 import {
   isAnalysisResultCoherent,
+  normalizeCardIdsOption,
+  validateAnalysisResult,
   type AnalysisResult,
+  type AnalyzeOptions,
+  type ValidatedAnalysisResult,
 } from '../src/lib/analysis-result.js';
 
-function analysisFixture(merchant: string): AnalysisResult {
-  return {
+function analysisFixture(
+  merchant: string,
+  options?: AnalyzeOptions,
+): ValidatedAnalysisResult {
+  const previousSpendingBasis: AnalysisResult['previousSpendingBasis'] =
+    options?.previousMonthSpending === undefined
+      ? {
+          kind: 'missing-calendar-month',
+          month: '2026-06',
+          assumedAmount: 0,
+        }
+      : {
+          kind: 'user-total',
+          amount: options.previousMonthSpending,
+        };
+  const result: AnalysisResult = {
     success: true,
     bank: 'shinhan',
     format: 'csv',
@@ -59,12 +77,13 @@ function analysisFixture(merchant: string): AnalysisResult {
     monthlyBreakdown: [
       { month: '2026-07', spending: 10_000, transactionCount: 1 },
     ],
-    previousSpendingBasis: {
-      kind: 'missing-calendar-month',
-      month: '2026-06',
-      assumedAmount: 0,
-    },
+    previousSpendingBasis,
+    previousMonthSpendingOption: options?.previousMonthSpending,
+    cardIdsOption: normalizeCardIdsOption(options?.cardIds),
   };
+  const validated = validateAnalysisResult(result);
+  if (!validated) throw new Error('invalid analysis fixture');
+  return validated;
 }
 
 function emptyState(): AnalysisReplacementState {
@@ -170,14 +189,21 @@ async function expectRejectedEntryDoesNotDisturbCurrent(
 }
 
 describe('replacement analysis runtime', () => {
-  test('deduplicates and revalidates card selection before commit and persistence', async () => {
+  test('commits producer-validated normalized options without rescanning', async () => {
     const state = emptyState();
     const persisted: AnalysisResult[] = [];
+    let transactionReads = 0;
     const runtime = new AnalysisReplacementRuntime(state, {
       async loadAnalyzerModule() {
         return {
-          async analyzeMultipleFiles() {
-            return analysisFixture('deduplicated');
+          async analyzeMultipleFiles(_files, options) {
+            const validated = analysisFixture('deduplicated', options);
+            return new Proxy(validated, {
+              get(target, property, receiver) {
+                if (property === 'transactions') transactionReads++;
+                return Reflect.get(target, property, receiver);
+              },
+            });
           },
         };
       },
@@ -198,10 +224,47 @@ describe('replacement analysis runtime', () => {
 
     const committed = state.result;
     if (!committed) throw new Error('expected a committed analysis result');
+    expect(transactionReads).toBe(0);
     expect(committed.cardIdsOption).toEqual(['card-1']);
     expect(isAnalysisResultCoherent(committed)).toBe(true);
     expect(persisted).toEqual([committed]);
     expect(state.error).toBeNull();
+  });
+
+  test('rejects a structurally coherent result that lacks the producer validation mark', async () => {
+    const state = emptyState();
+    let persistCalls = 0;
+    const unvalidated = structuredClone(
+      analysisFixture('unvalidated'),
+    ) as ValidatedAnalysisResult;
+    const runtime = new AnalysisReplacementRuntime(state, {
+      async loadAnalyzerModule() {
+        return {
+          async analyzeMultipleFiles() {
+            return unvalidated;
+          },
+        };
+      },
+      persist() {
+        persistCalls++;
+        return { kind: null, truncatedTxCount: null };
+      },
+      clearPersistedAnalysis() {
+        return { kind: null, truncatedTxCount: null };
+      },
+    });
+
+    await runtime.analyze(
+      new File(['row'], 'statement.csv'),
+      undefined,
+      { run: new LatestFileParseRun().begin() },
+    );
+
+    expect(state.result).toBeNull();
+    expect(state.error).toBe(
+      '분석 결과가 검증 경계를 통과하지 못했어요. 다시 시도해 주세요.',
+    );
+    expect(persistCalls).toBe(0);
   });
 
   test('already-stale entry is a complete no-op and does not abort current owned analysis', async () => {
@@ -347,7 +410,7 @@ describe('replacement analysis runtime', () => {
             _files,
             _options,
             execution,
-          ): Promise<AnalysisResult> {
+          ): Promise<ValidatedAnalysisResult> {
             return new Promise((_resolve, reject) => {
               execution?.run.signal.addEventListener(
                 'abort',

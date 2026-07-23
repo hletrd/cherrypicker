@@ -19,6 +19,7 @@ import {
   buildCategorySpendingSummary,
   isAnalysisResultCoherent,
   normalizeCardIdsOption,
+  resolveReoptimizationPreviousSpending,
   type AnalysisResult,
   type AnalyzeExecution,
   type AnalyzeOptions,
@@ -354,12 +355,7 @@ function createAnalysisStore() {
         const categoryLabels = await getCategoryLabels(operation.signal);
         if (!operation.isCurrent() || result !== snapshot) return;
         const explicitPreviousMonthSpending =
-          options?.previousMonthSpending ??
-          (options?.previousSpendingBasis?.kind === 'user-total'
-            ? options.previousSpendingBasis.amount
-            : snapshot.previousSpendingBasis?.kind === 'user-total'
-              ? snapshot.previousSpendingBasis.amount
-              : snapshot.previousMonthSpendingOption);
+          resolveReoptimizationPreviousSpending(options, snapshot);
         const context = buildAnalysisContext(
           editedTransactions,
           explicitPreviousMonthSpending,
