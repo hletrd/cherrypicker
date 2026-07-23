@@ -52,6 +52,13 @@ export {
 } from './loader.js';
 
 export {
+  optimizerCatalogArtifactSchema,
+  parseOptimizerCatalogArtifact,
+} from './optimizer-artifact.js';
+export type { OptimizerCatalogArtifact } from './optimizer-artifact.js';
+export { loadOptimizerCatalogArtifact } from './optimizer-artifact-loader.js';
+
+export {
   buildCategoryNamesKo,
   buildCategoryLabelMap,
 } from './category-names.js';

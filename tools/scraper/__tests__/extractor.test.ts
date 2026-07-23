@@ -2,8 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import type Anthropic from '@anthropic-ai/sdk';
 import {
   buildCardExtractionRequest,
+  CARD_EXTRACTION_MAX_INPUT_CHARS,
   CARD_EXTRACTION_MAX_OUTPUT_TOKENS,
+  CardExtractionInputTooLargeError,
+  extractCardRules,
+  inspectCardExtractionInput,
   parseCardExtractionResponse,
+  type CardExtractionClient,
 } from '../src/extractor.js';
 import { CARD_RULE_EXTRACTION_TOOL } from '../src/prompts/schemas.js';
 import { SYSTEM_PROMPT } from '../src/prompts/system.js';
@@ -59,6 +64,78 @@ describe('card extraction Sonnet contract', () => {
     expect(request.thinking).toEqual({ type: 'disabled' });
     expect(request.max_tokens).toBe(CARD_EXTRACTION_MAX_OUTPUT_TOKENS);
     expect(request.max_tokens).toBe(8192);
+  });
+
+  test.each([39_999, 40_000])(
+    'sends a complete %i-character source without truncation',
+    (size) => {
+      const source = `TAIL-${'a'.repeat(size - 5)}`;
+      const request = buildCardExtractionRequest(
+        source,
+        'shinhan',
+        'claude-sonnet-5',
+      );
+      const content = request.messages[0]?.content;
+
+      expect(inspectCardExtractionInput(source)).toEqual({
+        originalChars: size,
+        sentChars: size,
+        maxChars: CARD_EXTRACTION_MAX_INPUT_CHARS,
+      });
+      expect(content).toContain(source);
+      expect(content).toContain('TAIL-');
+      expect(content).not.toContain('내용이 너무 길어 잘렸습니다');
+    },
+  );
+
+  test('rejects 40,001 characters with machine-readable original and sent sizes', () => {
+    const source = `${'a'.repeat(40_000)}Z`;
+    let error: unknown;
+    try {
+      buildCardExtractionRequest(source, 'shinhan', 'claude-sonnet-5');
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(CardExtractionInputTooLargeError);
+    expect(error).toMatchObject({
+      code: 'CARD_EXTRACTION_INPUT_TOO_LARGE',
+      originalChars: 40_001,
+      sentChars: 0,
+      maxChars: 40_000,
+    });
+    expect((error as Error).message).toContain('originalChars=40001');
+    expect((error as Error).message).toContain('sentChars=0');
+  });
+
+  test('fails before the model call when source completeness cannot be preserved', async () => {
+    let modelCalls = 0;
+    const client: CardExtractionClient = {
+      messages: {
+        create: async () => {
+          modelCalls++;
+          return message([]);
+        },
+      },
+    };
+
+    await expect(
+      extractCardRules('a'.repeat(40_001), 'shinhan', client),
+    ).rejects.toBeInstanceOf(CardExtractionInputTooLargeError);
+    expect(modelCalls).toBe(0);
+  });
+
+  test('counts Unicode input in the same UTF-16 units used by the request boundary', () => {
+    const exact = '😀'.repeat(20_000);
+    expect(exact.length).toBe(40_000);
+    expect(inspectCardExtractionInput(exact)).toEqual({
+      originalChars: 40_000,
+      sentChars: 40_000,
+      maxChars: 40_000,
+    });
+    expect(() => inspectCardExtractionInput(`${exact}가`)).toThrow(
+      CardExtractionInputTooLargeError,
+    );
   });
 
   test('reports output truncation before tool parsing', () => {

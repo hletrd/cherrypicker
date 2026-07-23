@@ -37,6 +37,12 @@ export {
 } from './schema.js';
 
 export {
+  optimizerCatalogArtifactSchema,
+  parseOptimizerCatalogArtifact,
+} from './optimizer-artifact.js';
+export type { OptimizerCatalogArtifact } from './optimizer-artifact.js';
+
+export {
   SCRAPER_ISSUERS,
   CARD_ID_PATTERN,
   CARD_ID_MAX_LENGTH,

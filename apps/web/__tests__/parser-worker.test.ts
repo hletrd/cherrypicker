@@ -70,7 +70,7 @@ class FakeWorker implements ParserWorkerLike {
 
 describe('browser parser worker ownership', () => {
   test.each([
-    ['csv', 'date,merchant,amount'],
+    ['csv', new ArrayBuffer(8)],
     ['xlsx', new ArrayBuffer(8)],
   ] as const)('aborting active %s parsing terminates its worker', async (
     format,
@@ -96,17 +96,19 @@ describe('browser parser worker ownership', () => {
     expect(worker.errorListeners.size).toBe(0);
   });
 
-  test('rehydrates parser errors and transfers workbook buffers', async () => {
+  test.each(['csv', 'xlsx'] as const)(
+    'rehydrates parser errors and transfers original %s buffers',
+    async (format) => {
     const worker = new FakeWorker();
     const buffer = new ArrayBuffer(8);
     const parsing = parseWithWorker(
-      { format: 'xlsx', payload: buffer },
+      { format, payload: buffer },
       undefined,
       () => worker,
     );
     const result: ParseResult = {
       bank: null,
-      format: 'xlsx',
+      format,
       transactions: [],
       errors: [],
     };
@@ -125,8 +127,11 @@ describe('browser parser worker ownership', () => {
       line: 3,
     });
     expect(worker.transfers[0]).toEqual([buffer]);
+    expect(worker.messages[0]?.payload).toBe(buffer);
+    expect(typeof worker.messages[0]?.payload).not.toBe('string');
     expect(worker.terminations).toBe(1);
-  });
+    },
+  );
 
   test('terminates the worker when startup fails', async () => {
     const worker = new FakeWorker();
@@ -135,7 +140,7 @@ describe('browser parser worker ownership', () => {
     };
 
     const error = await parseWithWorker(
-      { format: 'csv', payload: 'date,merchant,amount' },
+      { format: 'csv', payload: new ArrayBuffer(8) },
       undefined,
       () => worker,
     ).then(

@@ -1,6 +1,15 @@
 // Load one generation of split catalog artifacts served by GitHub Pages.
-import type { CardRuleSet } from '@cherrypicker/rules/browser';
-import type { CardDetailShardArtifact } from './card-catalog-reader.js';
+import type {
+  CardRuleSet,
+  CategoryNode,
+} from '@cherrypicker/rules/browser';
+import {
+  readCardDetailShard,
+  readCategoriesArtifact,
+  readOptimizerCatalog,
+  type CardDetailShardArtifact,
+  type CategoriesArtifact,
+} from './card-catalog-reader.js';
 import { readCatalogSourceHash } from './catalog-publication-identity.js';
 
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -66,13 +75,7 @@ export interface CardsSummaryArtifact {
   cards: CardSummaryArtifactEntry[];
 }
 
-export interface CategoryNode {
-  id: string;
-  label: string;
-  labelKo: string;
-  keywords: string[];
-  subcategories?: CategoryNode[];
-}
+export type { CategoryNode } from '@cherrypicker/rules/browser';
 
 interface LoadedSummary {
   artifact: CardsSummaryArtifact;
@@ -83,11 +86,6 @@ interface LoadedSummary {
 interface LoadedDetailShard {
   artifact: CardDetailShardArtifact;
   byId: Map<string, CardRuleSet>;
-}
-
-interface CategoriesArtifact {
-  sourceHash: string;
-  categories: CategoryNode[];
 }
 
 // Each artifact owns its request lifecycle. A caller's AbortSignal races only
@@ -339,8 +337,7 @@ function startOptimizerRequest(): Promise<CardRuleSet[]> {
     response: '카드 혜택 데이터를 불러올 수 없어요. 다시 시도해 주세요.',
     timeout: '카드 혜택 데이터 요청 시간이 초과됐어요. 다시 시도해 주세요.',
     malformed: '카드 혜택 데이터를 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
-  }).then(async (value) => {
-    const { readOptimizerCatalog } = await import('./card-catalog-reader.js');
+  }).then((value) => {
     const artifact = readOptimizerCatalog(value);
     acceptSourceHash(artifact.sourceHash);
     return artifact.cards;
@@ -370,8 +367,7 @@ function startDetailRequest(issuerId: string): Promise<LoadedDetailShard> {
       timeout: '카드 상세 데이터 요청 시간이 초과됐어요. 다시 시도해 주세요.',
       malformed: '카드 상세 데이터를 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
     },
-  ).then(async (value) => {
-    const { readCardDetailShard } = await import('./card-catalog-reader.js');
+  ).then((value) => {
     const artifact = readCardDetailShard(value, issuerId);
     acceptSourceHash(artifact.sourceHash);
     return {
@@ -407,19 +403,9 @@ function startCategoriesRequest(): Promise<CategoriesArtifact> {
     timeout: '카테고리 데이터 요청 시간이 초과됐어요. 다시 시도해 주세요.',
     malformed: '카테고리 데이터를 읽지 못했어요. 잠시 후 다시 시도해 주세요.',
   }).then((value) => {
-    if (
-      !isRecord(value) ||
-      !Array.isArray(value.categories) ||
-      value.categories.length === 0
-    ) {
-      throw new Error('카테고리 데이터가 비어 있어 분석을 시작할 수 없어요');
-    }
-    const sourceHash = readCatalogSourceHash(value, '카테고리 데이터');
-    acceptSourceHash(sourceHash);
-    return {
-      sourceHash,
-      categories: value.categories as CategoryNode[],
-    };
+    const artifact = readCategoriesArtifact(value);
+    acceptSourceHash(artifact.sourceHash);
+    return artifact;
   });
 
   categoriesPromise = request;

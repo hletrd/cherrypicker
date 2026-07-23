@@ -14,9 +14,9 @@ function setCategoryFetch(): void {
       sourceHash: 'a'.repeat(64),
       categories: [{
         id: 'uncategorized',
-        label: '미분류',
         labelKo: '미분류',
-        keywords: [],
+        labelEn: 'Uncategorized',
+        keywords: ['기타'],
       }],
     });
   };

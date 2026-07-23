@@ -1,4 +1,7 @@
-import type { ParsedTransactionFacts } from '@cherrypicker/parser/browser';
+import type {
+  ParsedTransactionFacts,
+  SupportedTextEncoding,
+} from '@cherrypicker/parser/browser';
 
 export type FileFormat = 'csv' | 'xlsx' | 'pdf' | 'json' | 'ofx' | 'html';
 export type BankId = 'hyundai' | 'kb' | 'ibk' | 'woori' | 'samsung' | 'shinhan' | 'lotte' | 'hana' | 'nh' | 'bc' | 'kakao' | 'toss' | 'kbank' | 'bnk' | 'dgb' | 'suhyup' | 'jb' | 'kwangju' | 'jeju' | 'sc' | 'mg' | 'cu' | 'kdb' | 'epost';
@@ -25,6 +28,11 @@ export interface ParseResult {
   transactions: RawTransaction[];
   statementPeriod?: { start: string; end: string };
   cardNumber?: string;  // Masked: **** **** **** 1234
+  textMetadata?: {
+    encoding: SupportedTextEncoding;
+    replacementCount: number;
+    detectedBank: BankId | null;
+  };
   errors: ParseError[];
 }
 

@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  buildIdentityFreeWebCatalogArtifacts,
   buildWebCatalogArtifacts,
   computePublicationSourceHash,
+  injectPublicationIdentity,
   isIndexableReward,
   parsePublicationCard,
   staleGeneratedShardNames,
 } from '../catalog-publication.js';
-
-const SOURCE_HASH = 'a'.repeat(64);
 
 function cardWithUrl(url: string) {
   return {
@@ -114,7 +114,6 @@ describe('catalog publication boundary', () => {
         totalIssuers: 1,
         totalCards: 1,
         categories: ['travel', 'uncategorized'],
-        sourceHash: SOURCE_HASH,
       },
       [
         {
@@ -126,14 +125,19 @@ describe('catalog publication boundary', () => {
           cards: [card],
         },
       ],
+      [{ id: 'uncategorized' }, { id: 'travel' }],
     );
 
     expect(artifacts.summary.cards[0]?.rewardCategories).toEqual(['*']);
     expect(artifacts.summary.cards[0]?.rewardCategories).not.toContain('travel');
-    expect(artifacts.summary.meta.sourceHash).toBe(SOURCE_HASH);
-    expect(artifacts.optimizer.sourceHash).toBe(SOURCE_HASH);
+    expect(artifacts.sourceHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(artifacts.summary.meta.sourceHash).toBe(artifacts.sourceHash);
+    expect(artifacts.optimizer.sourceHash).toBe(artifacts.sourceHash);
+    expect(artifacts.categories.sourceHash).toBe(artifacts.sourceHash);
     expect(artifacts.optimizer.cards[0]?.rewards).toHaveLength(2);
-    expect(artifacts.detailShards.get('fixture')?.sourceHash).toBe(SOURCE_HASH);
+    expect(artifacts.detailShards.get('fixture')?.sourceHash).toBe(
+      artifacts.sourceHash,
+    );
     expect(artifacts.detailShards.get('fixture')?.cards[0]?.rewards).toHaveLength(
       2,
     );
@@ -161,7 +165,6 @@ describe('catalog publication boundary', () => {
         totalIssuers: 1,
         totalCards: 1,
         categories: ['*'],
-        sourceHash: SOURCE_HASH,
       },
       [{
         id: 'fixture',
@@ -171,6 +174,7 @@ describe('catalog publication boundary', () => {
         cardCount: 1,
         cards: [card],
       }],
+      [{ id: '*' }],
     );
 
     expect(artifacts.summary.cards[0]?.rewardCategories).toEqual([]);
@@ -207,8 +211,8 @@ describe('catalog publication boundary', () => {
       totalIssuers: 1,
       totalCards: 2,
       categories: ['uncategorized'],
-      sourceHash: SOURCE_HASH,
     };
+    const categoryPayload = [{ id: 'uncategorized', keywords: [] }];
     const issuer = {
       id: 'fixture',
       nameKo: '픽스처',
@@ -218,11 +222,12 @@ describe('catalog publication boundary', () => {
       cards: [first, second],
     };
 
-    const forward = buildWebCatalogArtifacts(meta, [issuer]);
+    const forward = buildWebCatalogArtifacts(meta, [issuer], categoryPayload);
     const reverse = buildWebCatalogArtifacts(meta, [
       { ...issuer, cards: [...issuer.cards].reverse() },
-    ]);
+    ], categoryPayload);
 
+    expect(forward.sourceHash).toBe(reverse.sourceHash);
     expect(JSON.stringify(forward.summary)).toBe(JSON.stringify(reverse.summary));
     expect(JSON.stringify(forward.optimizer)).toBe(
       JSON.stringify(reverse.optimizer),
@@ -232,7 +237,7 @@ describe('catalog publication boundary', () => {
     ).toBe(JSON.stringify([...reverse.detailShards]));
   });
 
-  test('computes a deterministic identity from normalized publication content', () => {
+  test('changes identity when projection bytes change while source inputs stay stable', () => {
     const first = parsePublicationCard(
       cardWithUrl('https://example.com/first'),
       'fixture-first.yaml',
@@ -255,31 +260,106 @@ describe('catalog publication boundary', () => {
       cardCount: 2,
       cards: [first, second],
     };
-    const input = {
+    const meta = {
       version: '1.0.0',
-      categories: [{ id: 'uncategorized', keywords: [] }],
-      issuers: [issuer],
+      generatedAt: '2026-07-23T00:00:00.000Z',
+      totalIssuers: 1,
+      totalCards: 2,
+      categories: ['uncategorized'],
+    };
+    const categories = [{ id: 'uncategorized', keywords: [] }];
+    const identityFree = buildIdentityFreeWebCatalogArtifacts(
+      meta,
+      [issuer],
+      categories,
+    );
+    const reordered = buildIdentityFreeWebCatalogArtifacts(
+      meta,
+      [{ ...issuer, cards: [...issuer.cards].reverse() }],
+      categories,
+    );
+    const projectionChanged = {
+      ...identityFree,
+      summary: {
+        ...identityFree.summary,
+        cards: identityFree.summary.cards.map((card, index) =>
+          index === 0 ? { ...card, nameKo: '변경된 요약 투영' } : card
+        ),
+      },
+    };
+    const optimizerChanged = {
+      ...identityFree,
+      optimizer: {
+        cards: identityFree.optimizer.cards.map((card, index) =>
+          index === 0
+            ? { ...card, card: { ...card.card, nameKo: '변경된 최적화 투영' } }
+            : card
+        ),
+      },
+    };
+    const detailChanged = {
+      ...identityFree,
+      detailShards: new Map(
+        [...identityFree.detailShards].map(([issuerId, shard]) => [
+          issuerId,
+          {
+            ...shard,
+            cards: shard.cards.map((card, index) =>
+              index === 0
+                ? { ...card, card: { ...card.card, nameKo: '변경된 상세 투영' } }
+                : card
+            ),
+          },
+        ]),
+      ),
+    };
+    const categoriesChanged = {
+      ...identityFree,
+      categories: {
+        categories: [
+          ...identityFree.categories.categories,
+          { id: 'projection-only-category' },
+        ],
+      },
     };
 
-    const forward = computePublicationSourceHash(input);
-    const reordered = computePublicationSourceHash({
-      ...input,
-      issuers: [{ ...issuer, cards: [...issuer.cards].reverse() }],
-    });
-    const changed = computePublicationSourceHash({
-      ...input,
-      issuers: [{
-        ...issuer,
-        cards: [
-          { ...first, card: { ...first.card, nameKo: '변경된 카드' } },
-          second,
-        ],
-      }],
-    });
+    const originalHash = computePublicationSourceHash(identityFree);
+    const reorderedHash = computePublicationSourceHash(reordered);
+    const changedHash = computePublicationSourceHash(projectionChanged);
 
-    expect(forward).toMatch(/^[a-f0-9]{64}$/);
-    expect(reordered).toBe(forward);
-    expect(changed).not.toBe(forward);
+    expect(originalHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(reorderedHash).toBe(originalHash);
+    for (const changedProjection of [
+      projectionChanged,
+      optimizerChanged,
+      detailChanged,
+      categoriesChanged,
+    ]) {
+      expect(computePublicationSourceHash(changedProjection)).not.toBe(
+        originalHash,
+      );
+    }
+
+    const original = injectPublicationIdentity(identityFree, originalHash);
+    const changed = injectPublicationIdentity(projectionChanged, changedHash);
+    const originalHashes = [
+      original.summary.meta.sourceHash,
+      original.optimizer.sourceHash,
+      original.categories.sourceHash,
+      ...[...original.detailShards.values()].map((shard) => shard.sourceHash),
+    ];
+    const changedHashes = [
+      changed.summary.meta.sourceHash,
+      changed.optimizer.sourceHash,
+      changed.categories.sourceHash,
+      ...[...changed.detailShards.values()].map((shard) => shard.sourceHash),
+    ];
+
+    expect(new Set(originalHashes)).toEqual(new Set([originalHash]));
+    expect(new Set(changedHashes)).toEqual(new Set([changedHash]));
+    expect(original.summary.meta.sourceHash).not.toBe(
+      changed.optimizer.sourceHash,
+    );
   });
 
   test('finds only stale generated JSON shards in stable order', () => {

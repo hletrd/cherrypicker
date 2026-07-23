@@ -1,5 +1,12 @@
-import { cardRuleSetSchema } from '@cherrypicker/rules/browser';
-import type { CardRuleSet } from '@cherrypicker/rules/browser';
+import {
+  cardRuleSetSchema,
+  categoriesFileSchema,
+  CategoryRegistry,
+} from '@cherrypicker/rules/browser';
+import type {
+  CardRuleSet,
+  CategoryNode,
+} from '@cherrypicker/rules/browser';
 import {
   readCatalogSourceHash,
   type CatalogPublicationIdentity,
@@ -24,6 +31,11 @@ export interface CardDetailShardArtifact
   cards: CardRuleSet[];
 }
 
+export interface CategoriesArtifact
+  extends CatalogPublicationIdentity {
+  categories: CategoryNode[];
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -36,6 +48,43 @@ function validationMessage(
   const issue = error.issues[0];
   const path = issue?.path.length ? `.${issue.path.join('.')}` : '';
   return `${label}[${index}]${path}: ${issue?.message ?? '형식이 올바르지 않아요'}`;
+}
+
+function normalizeCategoryNodes(
+  nodes: readonly CategoryNode[],
+  seenIds = new Set<string>(),
+): CategoryNode[] {
+  return nodes.map((node) => {
+    const id = node.id.trim();
+    const labelKo = node.labelKo.trim();
+    const labelEn = node.labelEn.trim();
+    const keywords = node.keywords.map((keyword) => keyword.trim());
+    if (
+      !id ||
+      !labelKo ||
+      !labelEn ||
+      keywords.length === 0 ||
+      keywords.some((keyword) => keyword.length === 0)
+    ) {
+      throw new Error(
+        `카테고리 "${id || node.id}"의 ID, 라벨 또는 키워드가 올바르지 않아요`,
+      );
+    }
+    if (seenIds.has(id)) {
+      throw new Error(`카테고리 데이터에 중복 ID가 있어요: ${id}`);
+    }
+    seenIds.add(id);
+
+    return {
+      id,
+      labelKo,
+      labelEn,
+      keywords,
+      ...(node.subcategories
+        ? { subcategories: normalizeCategoryNodes(node.subcategories, seenIds) }
+        : {}),
+    };
+  });
 }
 
 /** Canonically validate and normalize a generated rule array. */
@@ -112,5 +161,36 @@ export function readCardDetailShard(
       cardCount: issuer.cardCount as number,
     },
     cards,
+  };
+}
+
+/** Canonically validate and normalize the recursive category artifact. */
+export function readCategoriesArtifact(value: unknown): CategoriesArtifact {
+  if (!isRecord(value)) {
+    throw new Error('카테고리 데이터 형식이 올바르지 않아요');
+  }
+
+  const parsed = categoriesFileSchema.safeParse(value);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const path = issue?.path.length ? `.${issue.path.join('.')}` : '';
+    throw new Error(
+      `카테고리 데이터${path}: ${issue?.message ?? '형식이 올바르지 않아요'}`,
+    );
+  }
+  if (parsed.data.categories.length === 0) {
+    throw new Error('카테고리 데이터가 비어 있어 분석을 시작할 수 없어요');
+  }
+
+  const categories = normalizeCategoryNodes(
+    parsed.data.categories as unknown as CategoryNode[],
+  );
+  // The schema is recursive; the registry additionally enforces the runtime
+  // parent/leaf contract and rejects unsupported deeper trees.
+  new CategoryRegistry(categories);
+
+  return {
+    sourceHash: readCatalogSourceHash(value, '카테고리 데이터'),
+    categories,
   };
 }

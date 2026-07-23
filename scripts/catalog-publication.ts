@@ -11,6 +11,8 @@ export interface PublicationMeta {
   sourceHash: string;
 }
 
+export type PublicationMetaWithoutIdentity = Omit<PublicationMeta, 'sourceHash'>;
+
 export interface PublicationIssuer {
   id: string;
   nameKo: string;
@@ -21,6 +23,7 @@ export interface PublicationIssuer {
 }
 
 export interface WebCatalogArtifacts {
+  sourceHash: string;
   summary: {
     meta: PublicationMeta;
     issuers: Array<Omit<PublicationIssuer, 'cards'>>;
@@ -46,6 +49,39 @@ export interface WebCatalogArtifacts {
       cards: CardRuleSet[];
     }
   >;
+  categories: {
+    sourceHash: string;
+    categories: unknown[];
+  };
+}
+
+export interface IdentityFreeWebCatalogArtifacts {
+  summary: {
+    meta: PublicationMetaWithoutIdentity;
+    issuers: Array<Omit<PublicationIssuer, 'cards'>>;
+    cards: Array<{
+      id: string;
+      issuer: string;
+      name: string;
+      nameKo: string;
+      type: CardRuleSet['card']['type'];
+      annualFee: CardRuleSet['card']['annualFee'];
+      rewardCategories: string[];
+    }>;
+  };
+  optimizer: {
+    cards: CardRuleSet[];
+  };
+  detailShards: Map<
+    string,
+    {
+      issuer: Omit<PublicationIssuer, 'cards'>;
+      cards: CardRuleSet[];
+    }
+  >;
+  categories: {
+    categories: unknown[];
+  };
 }
 
 function compareAscii(a: string, b: string): number {
@@ -68,26 +104,25 @@ function canonicalize(value: unknown): unknown {
   return result;
 }
 
-export function computePublicationSourceHash(input: {
-  version: string;
-  categories: readonly unknown[];
-  issuers: readonly PublicationIssuer[];
-}): string {
-  const issuers = [...input.issuers]
-    .sort((a, b) => compareAscii(a.id, b.id))
-    .map((issuer) => ({
-      ...issuer,
-      cards: [...issuer.cards].sort((a, b) =>
-        compareAscii(a.card.id, b.card.id)
-      ),
-    }));
-  const canonicalSource = canonicalize({
-    version: input.version,
-    categories: input.categories,
-    issuers,
+/**
+ * Derive identity from the complete normalized runtime payload set, before
+ * any identity field is injected. Keying every projection (including each
+ * detail shard) prevents a generator-only projection change from reusing an
+ * older publication identity while source YAML stays unchanged.
+ */
+export function computePublicationSourceHash(
+  artifacts: IdentityFreeWebCatalogArtifacts,
+): string {
+  const canonicalPayloadSet = canonicalize({
+    categories: artifacts.categories,
+    detailShards: [...artifacts.detailShards.entries()]
+      .sort(([a], [b]) => compareAscii(a, b))
+      .map(([issuerId, payload]) => ({ issuerId, payload })),
+    optimizer: artifacts.optimizer,
+    summary: artifacts.summary,
   });
   return createHash('sha256')
-    .update(JSON.stringify(canonicalSource))
+    .update(JSON.stringify(canonicalPayloadSet))
     .digest('hex');
 }
 
@@ -130,16 +165,16 @@ export function isIndexableReward(
  * All collections have explicit stable ordering and runtime JSON stays flat
  * and minified when the caller serializes it.
  */
-export function buildWebCatalogArtifacts(
-  meta: PublicationMeta,
+export function buildIdentityFreeWebCatalogArtifacts(
+  meta: PublicationMetaWithoutIdentity,
   issuers: readonly PublicationIssuer[],
-): WebCatalogArtifacts {
+  categories: readonly unknown[],
+): IdentityFreeWebCatalogArtifacts {
   const sortedIssuers = [...issuers].sort((a, b) => compareAscii(a.id, b.id));
   const issuerMetadata = sortedIssuers.map(({ cards: _cards, ...issuer }) => issuer);
   const detailShards = new Map<
     string,
     {
-      sourceHash: string;
       issuer: Omit<PublicationIssuer, 'cards'>;
       cards: CardRuleSet[];
     }
@@ -152,7 +187,6 @@ export function buildWebCatalogArtifacts(
     );
     const { cards: _cards, ...metadata } = issuer;
     detailShards.set(issuer.id, {
-      sourceHash: meta.sourceHash,
       issuer: metadata,
       cards,
     });
@@ -162,7 +196,13 @@ export function buildWebCatalogArtifacts(
 
   return {
     summary: {
-      meta: { ...meta },
+      meta: {
+        version: meta.version,
+        generatedAt: meta.generatedAt,
+        totalIssuers: meta.totalIssuers,
+        totalCards: meta.totalCards,
+        categories: [...meta.categories],
+      },
       issuers: issuerMetadata,
       cards: optimizer.map((rule) => ({
         id: rule.card.id,
@@ -185,9 +225,73 @@ export function buildWebCatalogArtifacts(
       })),
     },
     optimizer: {
-      sourceHash: meta.sourceHash,
       cards: optimizer,
     },
     detailShards,
+    categories: {
+      categories: [...categories],
+    },
   };
+}
+
+export function injectPublicationIdentity(
+  artifacts: IdentityFreeWebCatalogArtifacts,
+  sourceHash: string,
+): WebCatalogArtifacts {
+  const detailShards = new Map<
+    string,
+    {
+      sourceHash: string;
+      issuer: Omit<PublicationIssuer, 'cards'>;
+      cards: CardRuleSet[];
+    }
+  >();
+  for (const [issuerId, shard] of artifacts.detailShards) {
+    detailShards.set(issuerId, {
+      sourceHash,
+      issuer: shard.issuer,
+      cards: shard.cards,
+    });
+  }
+
+  return {
+    sourceHash,
+    summary: {
+      ...artifacts.summary,
+      meta: {
+        ...artifacts.summary.meta,
+        sourceHash,
+      },
+    },
+    optimizer: {
+      sourceHash,
+      cards: artifacts.optimizer.cards,
+    },
+    detailShards,
+    categories: {
+      sourceHash,
+      categories: artifacts.categories.categories,
+    },
+  };
+}
+
+/**
+ * Side-effect-free two-phase publication builder:
+ * 1. normalize every identity-free runtime projection;
+ * 2. hash the keyed projection set and inject that identity everywhere.
+ */
+export function buildWebCatalogArtifacts(
+  meta: PublicationMetaWithoutIdentity,
+  issuers: readonly PublicationIssuer[],
+  categories: readonly unknown[],
+): WebCatalogArtifacts {
+  const identityFree = buildIdentityFreeWebCatalogArtifacts(
+    meta,
+    issuers,
+    categories,
+  );
+  return injectPublicationIdentity(
+    identityFree,
+    computePublicationSourceHash(identityFree),
+  );
 }

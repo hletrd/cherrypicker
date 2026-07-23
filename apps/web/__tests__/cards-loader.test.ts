@@ -19,9 +19,9 @@ import {
 import type { CardsSummaryArtifact } from '../src/lib/cards.js';
 import {
   readCardDetailShard,
+  readCategoriesArtifact,
   readOptimizerCatalog,
 } from '../src/lib/card-catalog-reader.js';
-import { readCatalogSourceHash } from '../src/lib/catalog-publication-identity.js';
 
 const originalFetch = globalThis.fetch;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -149,8 +149,8 @@ function categoriesArtifact(sourceHash = SOURCE_HASH_A) {
     categories: [
       {
         id: 'dining',
-        label: '외식',
         labelKo: '외식',
+        labelEn: 'Dining',
         keywords: ['식당'],
       },
     ],
@@ -214,6 +214,36 @@ async function getRejection(promise: Promise<unknown>): Promise<Error> {
   throw new Error('Expected promise to reject');
 }
 
+async function expectIsolatedCallerCancellation(
+  load: (signal?: AbortSignal) => Promise<readonly unknown[]>,
+  artifact: unknown,
+  expectedLength: number,
+): Promise<void> {
+  let resolveFetch!: (response: Response) => void;
+  let fetchCalls = 0;
+  let sharedSignal: AbortSignal | undefined;
+  setFetchMock((_: RequestInfo | URL, init?: RequestInit) => {
+    fetchCalls += 1;
+    sharedSignal = init?.signal ?? undefined;
+    return new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+  });
+
+  const callerController = new AbortController();
+  const cancelledCaller = load(callerController.signal);
+  const survivingCaller = load();
+  callerController.abort();
+
+  const cancellation = await getRejection(cancelledCaller);
+  expect(cancellation.name).toBe('AbortError');
+  expect(sharedSignal?.aborted).toBe(false);
+
+  resolveFetch(jsonResponse(artifact));
+  expect(await survivingCaller).toHaveLength(expectedLength);
+  expect(fetchCalls).toBe(1);
+}
+
 beforeEach(() => {
   resetCardArtifactCachesForTests();
 });
@@ -232,9 +262,9 @@ describe('generated catalog readers', () => {
     const optimizer = readOptimizerCatalog(
       JSON.parse(await readFile(resolve(dataDir, 'cards-optimizer.json'), 'utf8')),
     );
-    const categories = JSON.parse(
+    const categories = readCategoriesArtifact(JSON.parse(
       await readFile(resolve(dataDir, 'categories.json'), 'utf8'),
-    ) as unknown;
+    ));
     const shardNames = (await readdir(resolve(dataDir, 'card-details')))
       .filter((name) => name.endsWith('.json'))
       .sort();
@@ -258,9 +288,8 @@ describe('generated catalog readers', () => {
 
     expect(shardNames).toHaveLength(summary.meta.totalIssuers);
     expect(optimizer.sourceHash).toBe(summary.meta.sourceHash);
-    expect(readCatalogSourceHash(categories, '카테고리 데이터')).toBe(
-      summary.meta.sourceHash,
-    );
+    expect(categories.sourceHash).toBe(summary.meta.sourceHash);
+    expect(categories.categories.length).toBeGreaterThan(0);
     expect(optimizer.cards).toHaveLength(summary.meta.totalCards);
     expect(detailCount).toBe(summary.meta.totalCards);
     expect(detailIds).toEqual(
@@ -341,6 +370,97 @@ describe('generated catalog readers', () => {
     ).toThrow('카드사 정보가 일치');
   });
 
+  test('normalizes categories and rejects malformed recursive taxonomy data', () => {
+    const normalized = readCategoriesArtifact({
+      sourceHash: SOURCE_HASH_A,
+      categories: [{
+        id: ' dining ',
+        labelKo: ' 외식 ',
+        labelEn: ' Dining ',
+        keywords: [' 식당 '],
+        subcategories: [{
+          id: ' cafe ',
+          labelKo: ' 카페 ',
+          labelEn: ' Cafe ',
+          keywords: [' 커피 '],
+        }],
+      }],
+    });
+    expect(normalized.categories).toEqual([{
+      id: 'dining',
+      labelKo: '외식',
+      labelEn: 'Dining',
+      keywords: ['식당'],
+      subcategories: [{
+        id: 'cafe',
+        labelKo: '카페',
+        labelEn: 'Cafe',
+        keywords: ['커피'],
+      }],
+    }]);
+
+    const invalidNodes = [
+      [{ id: 'dining', labelKo: '외식', keywords: ['식당'] }],
+      [{
+        id: 'dining',
+        labelKo: '외식',
+        labelEn: 'Dining',
+        keywords: ['식당'],
+        subcategories: [{
+          id: 'cafe',
+          labelKo: '',
+          labelEn: 'Cafe',
+          keywords: ['커피'],
+        }],
+      }],
+      [{
+        id: 'dining',
+        labelKo: '외식',
+        labelEn: 'Dining',
+        keywords: [],
+      }],
+      [
+        {
+          id: 'dining',
+          labelKo: '외식',
+          labelEn: 'Dining',
+          keywords: ['식당'],
+        },
+        {
+          id: 'dining',
+          labelKo: '중복',
+          labelEn: 'Duplicate',
+          keywords: ['중복'],
+        },
+      ],
+      [{
+        id: 'dining',
+        labelKo: '외식',
+        labelEn: 'Dining',
+        keywords: ['식당'],
+        subcategories: [{
+          id: 'cafe',
+          labelKo: '카페',
+          labelEn: 'Cafe',
+          keywords: ['커피'],
+          subcategories: [{
+            id: 'deep',
+            labelKo: '깊은 카테고리',
+            labelEn: 'Deep',
+            keywords: ['깊음'],
+          }],
+        }],
+      }],
+    ];
+
+    for (const categories of invalidNodes) {
+      expect(() => readCategoriesArtifact({
+        sourceHash: SOURCE_HASH_A,
+        categories,
+      })).toThrow();
+    }
+  });
+
   test('requires a valid publication identity on every split artifact', () => {
     expect(() => readCardsSummaryArtifact({
       ...summaryArtifact(),
@@ -360,6 +480,29 @@ describe('generated catalog readers', () => {
 });
 
 describe('independent catalog loaders', () => {
+  test('does not pin or cache a malformed category artifact and retries', async () => {
+    let calls = 0;
+    setFetchMock(async () => {
+      calls += 1;
+      return calls === 1
+        ? jsonResponse({
+            sourceHash: SOURCE_HASH_B,
+            categories: [{
+              id: 'dining',
+              labelKo: '외식',
+              keywords: ['식당'],
+            }],
+          })
+        : jsonResponse(categoriesArtifact(SOURCE_HASH_A));
+    });
+
+    expect((await getRejection(loadCategories())).message).toContain(
+      '카테고리 데이터',
+    );
+    expect(await loadCategories()).toEqual(categoriesArtifact().categories);
+    expect(calls).toBe(2);
+  });
+
   test('rejects mixed generations and retries each mismatched artifact cache', async () => {
     const fetchCounts = new Map<string, number>();
     setFetchMock(async (input: RequestInfo | URL) => {
@@ -533,6 +676,22 @@ describe('independent catalog loaders', () => {
     resolveFetch(jsonResponse(summaryArtifact()));
     expect(await survivingCaller).toHaveLength(2);
     expect(fetchCalls).toBe(1);
+  });
+
+  test('isolates one category caller cancellation from the shared taxonomy fill', async () => {
+    await expectIsolatedCallerCancellation(
+      loadCategories,
+      categoriesArtifact(),
+      1,
+    );
+  });
+
+  test('isolates one optimizer caller cancellation from the shared catalog fill', async () => {
+    await expectIsolatedCallerCancellation(
+      loadOptimizerCatalog,
+      optimizerArtifact(),
+      2,
+    );
   });
 
   test('retries only the failed optimizer cache and retains other artifacts', async () => {

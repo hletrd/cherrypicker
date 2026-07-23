@@ -1,5 +1,9 @@
 import type { BankAdapter, BankId, ParseResult, RawTransaction } from './types.js';
 import { ParseError } from './types.js';
+import {
+  decodeTextBytes,
+  detectTextEncoding,
+} from '@cherrypicker/parser/browser';
 import { detectBank, detectCSVDelimiter } from './detect.js';
 import {
   findColumn,
@@ -869,4 +873,47 @@ export function parseCSV(content: string, bank?: BankId): ParseResult {
       ],
     };
   }
+}
+
+const ENCODING_REPLACEMENT_WARNING_THRESHOLD = 50;
+
+function countReplacementCharacters(content: string): number {
+  let count = 0;
+  for (let index = 0; index < content.length; index++) {
+    if (content.charCodeAt(index) === 0xFFFD) count++;
+  }
+  return count;
+}
+
+/**
+ * Own the complete full-file CSV preprocessing path. In supported browsers
+ * this runs only inside csv-worker.ts after the original buffer is
+ * transferred; the dispatcher imports it solely as the no-worker fallback.
+ */
+export function parseCSVBuffer(
+  payload: ArrayBuffer,
+  bank?: BankId,
+): ParseResult {
+  const bytes = new Uint8Array(payload);
+  const encoding = detectTextEncoding(bytes);
+  const content = decodeTextBytes(bytes, encoding);
+  const detectedBank = bank ?? detectBank(content).bank;
+  const replacementCount = countReplacementCharacters(content);
+  const result = parseCSV(content, detectedBank ?? undefined);
+
+  if (replacementCount > ENCODING_REPLACEMENT_WARNING_THRESHOLD) {
+    result.errors.unshift(new ParseError(
+      '파일 인코딩을 정확히 감지하지 못했어요. 일부 가맹점명이 깨질 수 있습니다.',
+      { code: 'TEXT_ENCODING_REPLACEMENTS' },
+    ));
+  }
+
+  return {
+    ...result,
+    textMetadata: {
+      encoding,
+      replacementCount,
+      detectedBank,
+    },
+  };
 }

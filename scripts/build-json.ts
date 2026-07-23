@@ -28,7 +28,6 @@ import type {
 } from '../packages/rules/src/index.js';
 import {
   buildWebCatalogArtifacts,
-  computePublicationSourceHash,
   isIndexableReward,
   parsePublicationCard,
   staleGeneratedShardNames,
@@ -282,22 +281,26 @@ const noMinSpend = cards.filter((c) => {
 }).map((c) => c.card.id);
 
 const publicationVersion = '1.0.0';
-const sourceHash = computePublicationSourceHash({
+const publicationMeta = {
   version: publicationVersion,
-  categories: categoriesRaw.categories,
-  issuers: issuersOutput,
-});
+  generatedAt: `${cards
+    .map((entry) => entry.card.lastUpdated)
+    .sort()
+    .at(-1) ?? '1970-01-01'}T00:00:00.000Z`,
+  totalIssuers: issuersOutput.length,
+  totalCards: cards.length,
+  categories: categoryRegistry.canonicalKeys().sort(),
+};
+const webCatalog = buildWebCatalogArtifacts(
+  publicationMeta,
+  issuersOutput,
+  categoriesRaw.categories,
+);
+const { sourceHash } = webCatalog;
 
 const output: OrganizedOutput = {
   meta: {
-    version: publicationVersion,
-    generatedAt: `${cards
-      .map((entry) => entry.card.lastUpdated)
-      .sort()
-      .at(-1) ?? '1970-01-01'}T00:00:00.000Z`,
-    totalIssuers: issuersOutput.length,
-    totalCards: cards.length,
-    categories: categoryRegistry.canonicalKeys().sort(),
+    ...publicationMeta,
     sourceHash,
   },
   issuers: issuersOutput,
@@ -407,10 +410,7 @@ await publish(join(webPublicDir, 'cards.json'), JSON.stringify(output, null, 2))
 const categoriesJsonPath = join(webPublicDir, 'categories.json');
 await publish(
   categoriesJsonPath,
-  JSON.stringify({
-    sourceHash,
-    categories: categoriesRaw.categories,
-  }, null, 2),
+  JSON.stringify(webCatalog.categories, null, 2),
 );
 console.log(`   ${join(webPublicDir, 'cards.json')} (web public)`);
 console.log(`   ${categoriesJsonPath} (web public)`);
@@ -419,7 +419,6 @@ console.log(`   ${categoriesJsonPath} (web public)`);
 // identity-wrapped optimizer-ready rule array. Unsupported rewards remain in
 // detail and optimizer payloads for disclosure, but never enter summary
 // reward counts.
-const webCatalog = buildWebCatalogArtifacts(output.meta, issuersOutput);
 const summaryPath = join(webPublicDir, 'cards-summary.json');
 const optimizerPath = join(webPublicDir, 'cards-optimizer.json');
 const detailDir = join(webPublicDir, 'card-details');

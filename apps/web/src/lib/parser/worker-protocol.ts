@@ -3,11 +3,17 @@ import { ParseError } from './types.js';
 
 export type ParserWorkerFormat = 'csv' | 'xlsx' | 'json' | 'ofx' | 'html';
 
-export interface ParserWorkerRequest {
-  format: ParserWorkerFormat;
-  bank?: BankId;
-  payload: string | ArrayBuffer;
-}
+export type ParserWorkerRequest =
+  | {
+      format: 'csv' | 'xlsx';
+      bank?: BankId;
+      payload: ArrayBuffer;
+    }
+  | {
+      format: 'json' | 'ofx' | 'html';
+      bank?: BankId;
+      payload: string;
+    };
 
 interface SerializedParseError {
   message: string;

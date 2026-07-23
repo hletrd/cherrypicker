@@ -1,7 +1,5 @@
 import type { ParseResult, BankId } from './types.js';
-import { ParseError } from './types.js';
-import { detectFormatFromFile, detectBankFromText } from './detect.js';
-import { decodeTextBytes, detectTextEncoding } from '@cherrypicker/parser/browser';
+import { detectFormatFromFile } from './detect.js';
 import {
   browserParserWorkersAvailable,
   parseWithWorker,
@@ -30,33 +28,19 @@ export async function parseFile(
     case 'csv': {
       const buffer = await file.arrayBuffer();
       throwIfAborted(signal);
-      const arr = new Uint8Array(buffer);
-      const encoding = detectTextEncoding(arr);
-      const content = decodeTextBytes(arr, encoding);
-      // Auto-detect bank from content if not specified
-      const detectedBank = bank ?? detectBankFromText(content);
-      let result: ParseResult;
       if (browserParserWorkersAvailable()) {
-        result = await parseWithWorker(
+        return parseWithWorker(
           {
             format: 'csv',
-            payload: content,
-            bank: detectedBank ?? undefined,
+            payload: buffer,
+            bank,
           },
           signal,
         );
-      } else {
-        const { parseCSV } = await import('./csv.js');
-        throwIfAborted(signal);
-        result = parseCSV(content, detectedBank ?? undefined);
       }
-      const replacementCount = (content.match(/\uFFFD/g) ?? []).length;
-      if (replacementCount > 50) {
-        result.errors.unshift(new ParseError(
-          `파일 인코딩을 정확히 감지하지 못했어요. 일부 가맹점명이 깨질 수 있습니다.`,
-        ));
-      }
-      return result;
+      const { parseCSVBuffer } = await import('./csv.js');
+      throwIfAborted(signal);
+      return parseCSVBuffer(buffer, bank);
     }
     case 'xlsx': {
       const buffer = await file.arrayBuffer();
