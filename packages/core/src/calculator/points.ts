@@ -7,7 +7,7 @@ export type { RewardCalcResult } from './types.js';
  * Delegates to the shared `calculatePercentageReward`.
  *
  * @param amount        - Transaction amount in Won
- * @param rate          - Points rate (0–1, e.g. 0.01 for 1%)
+ * @param percentagePoints - Points rate in percentage points (e.g. 1 for 1%)
  * @param monthlyCap    - Maximum total points this calendar month in Won-equivalent (null = unlimited)
  * @param currentMonthUsed - Points already accumulated this month in Won-equivalent
  */

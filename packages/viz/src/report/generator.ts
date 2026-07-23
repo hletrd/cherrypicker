@@ -13,6 +13,7 @@ import {
   GROSS_MONTHLY_REWARD_DISCLOSURE_KO,
   GROSS_MONTHLY_REWARD_LABEL_KO,
 } from '../reward-disclosure.js';
+import { formatCapOutcomeKo } from '../cap-disclosure.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -397,7 +398,7 @@ function buildAssignments(result: OptimizationResult): string {
           ${allCaps
             .map(
               (cap) =>
-                `<p>[${esc(cap.cardName)}] ${esc(cap.category)}: 월 한도 ${formatWon(cap.capAmount)} 도달 — ${formatWon(cap.actualReward - cap.appliedReward)} 혜택 손실</p>`,
+                `<p>[${esc(cap.cardName)}] ${esc(cap.category)}: 월 한도 ${formatWon(cap.capAmount)} 도달 — ${formatCapOutcomeKo(cap, formatWon)}</p>`,
             )
             .join('')}
         </div>`

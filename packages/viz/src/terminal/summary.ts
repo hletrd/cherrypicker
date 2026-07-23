@@ -3,6 +3,7 @@ import type { CategorizedTransaction } from '@cherrypicker/core';
 import type { CardRewardResult } from '@cherrypicker/core';
 import { sanitizeTerminalText } from './sanitize.js';
 import { aggregatePositiveSpending } from '../spending-aggregation.js';
+import { formatCapOutcomeKo } from '../cap-disclosure.js';
 
 function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
@@ -88,9 +89,8 @@ export function printCardComparison(results: CardRewardResult[]): void {
     console.log('\n한도 도달 경고:');
     for (const r of capped) {
       for (const cap of r.capsHit) {
-        const lost = cap.actualReward - cap.appliedReward;
         console.log(
-          `  [${sanitizeTerminalText(r.cardName)}] ${sanitizeTerminalText(cap.category)}: 한도 ${formatWon(cap.capAmount)} 도달 (${formatWon(lost)} 손실)`,
+          `  [${sanitizeTerminalText(r.cardName)}] ${sanitizeTerminalText(cap.category)}: 한도 ${formatWon(cap.capAmount)} 도달 (${formatCapOutcomeKo(cap, formatWon)})`,
         );
       }
     }

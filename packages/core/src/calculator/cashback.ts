@@ -7,7 +7,7 @@ export type { RewardCalcResult } from './types.js';
  * Delegates to the shared `calculatePercentageReward`.
  *
  * @param amount        - Transaction amount in Won
- * @param rate          - Cashback rate (0–1, e.g. 0.03 for 3%)
+ * @param percentagePoints - Cashback rate in percentage points (e.g. 3 for 3%)
  * @param monthlyCap    - Maximum total cashback this calendar month in Won (null = unlimited)
  * @param currentMonthUsed - Cashback already accumulated this month in Won
  */

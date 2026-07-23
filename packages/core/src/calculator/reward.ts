@@ -17,6 +17,7 @@ import { normalizeMerchantText } from '../categorizer/normalize.js';
 import {
   addSafeNonnegativeIntegers,
   assertSafeNonnegativeInteger,
+  floorSafeIntegerDecimalProduct,
 } from '../numeric.js';
 
 // Defense-in-depth for direct core callers that bypass the parser-owned
@@ -535,49 +536,6 @@ function rewardValueForTier(tier: RewardTierRate): RewardValue {
   return tier.value ?? legacyRewardValue(tier);
 }
 
-function floorSafeIntegerDecimalProduct(
-  integer: number,
-  decimal: number,
-  divisor = 1,
-): number | null {
-  if (
-    !Number.isSafeInteger(integer) ||
-    integer < 0 ||
-    !Number.isFinite(decimal) ||
-    decimal < 0 ||
-    !Number.isSafeInteger(divisor) ||
-    divisor <= 0
-  ) {
-    return null;
-  }
-
-  const [coefficient, exponentText] = decimal.toString().toLowerCase().split('e');
-  if (coefficient === undefined) return null;
-
-  const exponent = exponentText === undefined ? 0 : Number(exponentText);
-  if (!Number.isSafeInteger(exponent)) return null;
-
-  const decimalPoint = coefficient.indexOf('.');
-  const fractionalDigits =
-    decimalPoint === -1 ? 0 : coefficient.length - decimalPoint - 1;
-  const digits = coefficient.replace('.', '');
-  if (!/^\d+$/.test(digits)) return null;
-
-  let numerator = BigInt(digits);
-  let denominator = 1n;
-  const scale = fractionalDigits - exponent;
-  if (scale > 0) {
-    denominator = 10n ** BigInt(scale);
-  } else if (scale < 0) {
-    numerator *= 10n ** BigInt(-scale);
-  }
-
-  denominator *= BigInt(divisor);
-  const result = (BigInt(integer) * numerator) / denominator;
-  const maximum = BigInt(Number.MAX_SAFE_INTEGER);
-  return result <= maximum ? Number(result) : null;
-}
-
 function applyMonthlyCap(
   rawReward: number,
   monthlyCap: number | null,
@@ -934,7 +892,16 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     if (globalCap !== null) {
       const globalRemaining = Math.max(0, globalCap - globalMonthUsed);
       appliedReward = Math.min(rewardAfterMonthlyCap, globalRemaining);
-      if (rewardAfterMonthlyCap > globalRemaining) {
+      const wasClipped = rewardAfterMonthlyCap > appliedReward;
+      const nextGlobalMonthUsed = addSafeNonnegativeIntegers(
+        globalMonthUsed,
+        appliedReward,
+        'global monthly reward total',
+      );
+      const reachedGlobalCap =
+        rewardAfterMonthlyCap > 0 &&
+        (wasClipped || nextGlobalMonthUsed === globalCap);
+      if (reachedGlobalCap) {
         capsHit.push({
           category: categoryKey,
           capType: 'monthly_total',
@@ -942,6 +909,9 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
           actualReward: rewardAfterMonthlyCap,
           appliedReward,
         });
+        bucket.capReached = true;
+      }
+      if (wasClipped) {
         // When the global cap clips a reward, the rule-level tracker was
         // advanced by the full pre-clip amount (rewardAfterMonthlyCap).
         // We must roll it back to reflect only what was actually applied,
@@ -949,13 +919,8 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         // cap relative to the global constraint.
         const overcount = rewardAfterMonthlyCap - appliedReward;
         ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed - overcount);
-        bucket.capReached = true;
       }
-      globalMonthUsed = addSafeNonnegativeIntegers(
-        globalMonthUsed,
-        appliedReward,
-        'global monthly reward total',
-      );
+      globalMonthUsed = nextGlobalMonthUsed;
     }
 
     bucket.reward = addSafeNonnegativeIntegers(

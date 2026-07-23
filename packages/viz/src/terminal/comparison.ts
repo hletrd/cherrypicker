@@ -5,6 +5,7 @@ import {
   GROSS_MONTHLY_REWARD_DISCLOSURE_KO,
   GROSS_MONTHLY_REWARD_LABEL_KO,
 } from '../reward-disclosure.js';
+import { formatCapOutcomeKo } from '../cap-disclosure.js';
 
 function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
@@ -67,9 +68,8 @@ export function printOptimizationResult(result: OptimizationResult): void {
   if (allCaps.length > 0) {
     console.log('\n한도 도달 경고:');
     for (const cap of allCaps) {
-      const lost = cap.actualReward - cap.appliedReward;
       console.log(
-        `  [${sanitizeTerminalText(cap.cardName)}] ${sanitizeTerminalText(cap.category)}: 한도 ${formatWon(cap.capAmount)} 도달 — ${formatWon(lost)} 혜택 손실`,
+        `  [${sanitizeTerminalText(cap.cardName)}] ${sanitizeTerminalText(cap.category)}: 한도 ${formatWon(cap.capAmount)} 도달 — ${formatCapOutcomeKo(cap, formatWon)}`,
       );
     }
   }

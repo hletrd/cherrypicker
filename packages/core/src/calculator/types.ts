@@ -1,6 +1,10 @@
 import type { CategorizedTransaction } from '../models/transaction.js';
 import type { CardRuleSet } from '@cherrypicker/rules';
 import type { CategoryReward, CapInfo } from '../models/result.js';
+import {
+  addSafeNonnegativeIntegers,
+  floorSafeIntegerDecimalProduct,
+} from '../numeric.js';
 
 export type { CategorizedTransaction };
 
@@ -62,26 +66,29 @@ export interface RewardCalcResult {
  * Calculate a percentage-based reward for a single transaction.
  *
  * All reward types (discount, points, cashback, mileage) use the same
- * math: `floor(amount * rate)` clamped by a monthly cap. This shared
- * function eliminates the previous duplication across discount.ts,
- * points.ts, and cashback.ts.
+ * checked decimal-to-rational math as the main card-rule calculator:
+ * `floor(amount * percentagePoints / 100)`, followed by the monthly cap.
+ * Callers pass the authored percentage-point value directly; for example,
+ * pass `0.7` for 0.7%, never the pre-divided binary fraction `0.7 / 100`.
  *
  * @param amount           - Transaction amount in Won
- * @param rate             - Reward rate (0–1, e.g. 0.05 for 5%)
+ * @param percentagePoints - Reward rate in percentage points (e.g. 5 for 5%)
  * @param monthlyCap       - Maximum total reward this calendar month in Won (null = unlimited)
  * @param currentMonthUsed - Reward already accumulated this month in Won
  */
 export function calculatePercentageReward(
   amount: number,
-  rate: number,
+  percentagePoints: number,
   monthlyCap: number | null,
   currentMonthUsed: number,
 ): RewardCalcResult {
   if (!Number.isSafeInteger(amount) || amount < 0) {
     throw new Error(`amount must be a non-negative safe integer, got ${amount}`);
   }
-  if (!Number.isFinite(rate) || rate < 0) {
-    throw new Error(`rate must be a non-negative finite number, got ${rate}`);
+  if (!Number.isFinite(percentagePoints) || percentagePoints < 0) {
+    throw new Error(
+      `percentagePoints must be a non-negative finite number, got ${percentagePoints}`,
+    );
   }
   if (!Number.isSafeInteger(currentMonthUsed) || currentMonthUsed < 0) {
     throw new Error(
@@ -97,31 +104,35 @@ export function calculatePercentageReward(
     );
   }
 
-  const raw = Math.floor(amount * rate);
-  if (!Number.isSafeInteger(raw) || raw < 0) {
-    throw new Error(`calculated reward is not safely representable: ${raw}`);
+  const raw = floorSafeIntegerDecimalProduct(
+    amount,
+    percentagePoints,
+    100,
+  );
+  if (raw === null) {
+    throw new Error(
+      `calculated reward is not safely representable for percentage-point rate ${percentagePoints}`,
+    );
   }
 
   if (monthlyCap === null) {
-    const newMonthUsed = currentMonthUsed + raw;
-    if (!Number.isSafeInteger(newMonthUsed)) {
-      throw new Error(
-        `monthly reward total is not safely representable: ${newMonthUsed}`,
-      );
-    }
+    const newMonthUsed = addSafeNonnegativeIntegers(
+      currentMonthUsed,
+      raw,
+      'monthly reward total',
+    );
     return { reward: raw, newMonthUsed, capReached: false };
   }
 
   const remaining = Math.max(0, monthlyCap - currentMonthUsed);
   const reward = Math.min(raw, remaining);
-  const capReached = raw > remaining;
+  const newMonthUsed = addSafeNonnegativeIntegers(
+    currentMonthUsed,
+    reward,
+    'monthly reward total',
+  );
+  const capReached = raw > 0 && newMonthUsed >= monthlyCap;
 
-  const newMonthUsed = currentMonthUsed + reward;
-  if (!Number.isSafeInteger(newMonthUsed)) {
-    throw new Error(
-      `monthly reward total is not safely representable: ${newMonthUsed}`,
-    );
-  }
   return {
     reward,
     newMonthUsed,
