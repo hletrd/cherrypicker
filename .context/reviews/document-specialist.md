@@ -1,29 +1,110 @@
-# Cycle 3 — Document Specialist
+# Cycle 5 document-specialist review
 
-**Review target:** `614ce5c`
-**Lens:** public help, user-facing report prose, inline contracts, and their agreement with executable behavior.
+Date: 2026-07-23
+Baseline: `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715`
 
-## Coverage
+## Scope
 
-Reviewed root README/policy material, CLI help and error usage, web upload/report text, standalone HTML template, public package comments, generated-data notices, all issuer READMEs, and the Cycle 1/2 documentation closure records. The durable-report disclosure gap is already recorded as `C3-CT-001` and is not duplicated here.
+I read the current root README, both live `.claude` guides, the vendored
+archive README, all 24 issuer READMEs, package scripts/manifests, CLI-generated
+help for every command, the card/schema examples, and the documentation
+generator/checker. I compared claims against the canonical YAML, generated
+catalog artifacts, current source, and command output. Historical `.context`
+documents were used only to avoid repeating already-fixed Cycle 4
+documentation defects.
 
-## Findings
+The root feature/format list, current dependency stack, remote-LLM consent
+description, CLI examples, keyword-conflict semantics, static-host security
+caveat, issuer/card counts, generated indexes, and validated YAML examples all
+match current behavior.
 
-### C3-DOC-001 — CLI subcommand help is unavailable and report usage omits correctness-critical options
+## Finding
 
-- **Severity:** Medium
+### C5-DOC-001 — `docs:check` certifies issuer READMEs whose hand-written metadata and catalog claims are stale
+
+- **Severity:** Low
 - **Confidence:** High
-- **Status:** confirmed
-- **Location:** `tools/cli/src/index.ts:8-33,40-65`; `tools/cli/src/commands/report.ts:31-79`; comparison `tools/cli/src/commands/optimize.ts:30-73`
-- **Concrete failure scenario:** A report user needs to provide actual previous-month spending or a custom card/category catalog. They try `cherrypicker report --help`, but the CLI treats `--help` as the statement filename and returns a file-not-found error. The only report usage line lists `--output`, remote-LLM consent, and `--yes`, so the user cannot discover `--prev-spending`, `--cards`, `--bank`, or `--categories` from report help and may unknowingly accept the 0-won previous-spending assumption.
-- **Evidence:** Top-level help handles `--help` only before a command and lists merely global `--help`/`--version`. `report` parses six value-bearing/behavior options plus consent flags, but its missing-file usage text omits four of those options. Executing both `report --help` and `optimize --help` produced `명세서 파일을 찾을 수 없습니다: --help ...`. There is no command-level help branch or complete option reference elsewhere in the root README.
-- **Suggested fix:** Give every subcommand a side-effect-free `--help` path and generate usage from one option specification shared with argument parsing. For `report`, document output, cards, categories, bank, previous spending, remote fallback/consent, defaults, and the exact-calendar-month/0-won assumption. Add stdout/exit-code snapshot tests so parsed options and help cannot drift.
+- **Status:** Confirmed
+- **Location:** generator/check boundary at
+  `scripts/readme-catalog.ts:385-425,428-455`;
+  preservation test at
+  `scripts/__tests__/readme-catalog.test.ts:79-106,133-169`;
+  stale metadata at line 3 of
+  `packages/rules/data/cards/{bc,bnk,dgb,hana,hyundai,ibk,jb,kakao,kb,kbank,kwangju,lotte,nh,samsung,shinhan,suhyup,toss,woori}/README.md`;
+  concrete stale prose at
+  `packages/rules/data/cards/dgb/README.md:13-22`;
+  canonical card data at
+  `packages/rules/data/cards/dgb/im-i.yaml:1-169`
 
-## Documentation consistency notes
+All 18 listed issuer documents say `마지막 업데이트: 2026-03-24` at line 3,
+while the YAML-derived generated section in the same file reports a later
+date:
 
-- Web report prose correctly matches current previous-spending and unsupported-rule behavior.
-- The root format list agrees with current upload support.
-- Generated-data “do not edit” notices and issuer/catalog counts agree with `data:check`.
-- The standalone report's generic disclaimer is factually harmless but insufficient for its actual exclusions; remediation belongs to `C3-CT-001` rather than a second documentation ID.
+| Issuer README | Generated line | Canonical latest date |
+|---|---:|---:|
+| `bc` | 56 | 2026-03-26 |
+| `bnk` | 23 | 2026-03-25 |
+| `dgb` | 22 | 2026-03-25 |
+| `hana` | 65 | 2026-03-26 |
+| `hyundai` | 43 | 2026-03-26 |
+| `ibk` | 57 | 2026-03-26 |
+| `jb` | 23 | 2026-03-25 |
+| `kakao` | 22 | 2026-03-25 |
+| `kb` | 39 | 2026-03-26 |
+| `kbank` | 26 | 2026-03-25 |
+| `kwangju` | 23 | 2026-03-25 |
+| `lotte` | 56 | 2026-03-26 |
+| `nh` | 55 | 2026-03-26 |
+| `samsung` | 51 | 2026-03-26 |
+| `shinhan` | 58 | 2026-03-26 |
+| `suhyup` | 22 | 2026-03-25 |
+| `toss` | 24 | 2026-03-25 |
+| `woori` | 62 | 2026-03-26 |
 
-No other documentation mismatch met the finding threshold.
+The mismatch is not limited to dates. The DGB guide says at line 17 that
+credit products such as the iM i card exist but detailed benefit data is
+unavailable. The canonical `im-i.yaml` already contains its annual fee,
+performance tiers, five supported reward groups, merchant scopes, caps, and
+global constraint, and the generated index links it from the same README.
+
+Why the gate stays green:
+
+- `planReadmeUpdates` replaces only the generated marker range.
+- The test at `readme-catalog.test.ts:88-106` explicitly guarantees that
+  hand-written headers, introductions, and footers remain untouched.
+- The all-YAML comparison at lines 133-169 checks generated issuer indexes,
+  not statements outside those markers.
+- Therefore `bun run docs:check` passes despite direct contradictions in a
+  checked document.
+
+Failure scenario:
+
+A contributor or user reads the header/summary before the generated index and
+believes the catalog was last updated on March 24 or that a card lacks
+machine-readable benefits. The canonical data and UI contain newer/more
+complete information, so the documentation presents two incompatible sources
+of truth while the advertised documentation check reports success.
+
+Suggested fix:
+
+- Move the issuer-level `lastUpdated` line inside the generated region (or
+  remove the hand-written duplicate) and derive it from the maximum canonical
+  `card.lastUpdated`.
+- Remove the DGB “data unavailable” statement now. Review the other
+  hand-written representative tables/feature prose whenever issuer YAML
+  changes, or replace data-like prose with generated fields that can be
+  checked.
+- Extend `docs:check` with an invariant that rejects any recognized
+  hand-written update header that differs from the generated maximum.
+- If narrative summaries remain intentionally manual, document that they are
+  not covered by `docs:check` and add an owner/review step to the card-data
+  update procedure.
+
+## Validation and final sweep
+
+`bun run docs:check` and all eight README-catalog tests pass on the current
+tree, which confirms the checker blind spot rather than invalid generated
+indexes. A read-only YAML/README comparison reproduced all 18 date
+contradictions and found no issuer-count mismatch. The final sweep also
+compared every CLI help screen and live architecture/dependency claim; no
+additional current documentation mismatch met the reporting threshold.

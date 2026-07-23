@@ -1,58 +1,267 @@
-# Cycle 3 — Designer / UI-UX Reviewer
+# Cycle 5 — Designer / UI-UX Reviewer
 
-**Review target:** `614ce5c`
-**Mode:** live, read-only browser review plus DOM/accessibility/computed-style inspection.
+**Date:** 2026-07-23
+**Review target:** `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715`
+**Mode:** complete static UI/accessibility audit plus a partial isolated live-browser pass
 
-## Live audit setup and coverage
+## Coverage and reviewer recovery
 
-I built and served the production app from the repository on isolated port `43217`, using only `AGENT_BROWSER_SESSION=c3-cherrypicker-designer`. Before launch, listener/PID working directories were attributed: no stale Cherrypicker preview/browser existed; the then-present agent-browser tree at PID 91551 belonged to `xylolabs-panel-demo` and was never signalled, and the previously recorded Travelback PID 63260 was not running. After capture, the exact browser session and preview were closed. Final checks showed port 43217 clear and `agent-browser session list` reported no active sessions.
+The review inventoried `apps/web/src/app.css`, the shared layout, all five page
+entries, all 14 Svelte components under `components/cards`,
+`components/dashboard`, `components/report`, `components/ui`, and
+`components/upload`, the public scripts, relevant store/card helpers, and
+shipped card-detail data.
 
-The live pass covered:
-
-- Home/upload at 1440×900 and 375×812, including keyboard/mobile navigation and drag/file controls.
-- A rejected CSV error (`role=alert`), a valid Hyundai CSV through dashboard/results/report, processing completion, persistent-result and no-result states.
-- Card catalog search, sort/filter state, zero-result reset, pagination, card detail, and keyboard activation.
-- Dashboard, results, report, and card-detail layouts at mobile width; no horizontal overflow was found on those screens.
-- Accessibility snapshots, landmark/heading/table names, `aria-pressed`/`aria-expanded`, focus visibility, live regions, touch target sizes, and computed styles.
-- Light/dark themes, reduced-motion CSS, Korean language declaration, print/report structure, and RTL-readiness inspection.
-
-Sampled computed foreground/background pairs in both themes met normal-text contrast, mobile theme/menu controls measured 44×44 px, cards retained a visible 3 px keyboard outline, dynamic card counts use `aria-live`, and reduced-motion rules collapse animations/transitions. The product currently declares only `lang="ko"`; omission of `dir` correctly defaults that locale to LTR. Directional icons/physical left-right utilities would need a deliberate mirroring pass before adding an RTL locale, but this is not a current advertised-language defect.
+The primary designer launched the production build on isolated port `43173`
+with the sole agent-browser session `c5-designer-e3aa-20260723`. That agent
+stalled during report finalization, then stalled again on the one permitted
+retry. The coordinator therefore recovered the completed static subreview
+below rather than inventing missing live evidence. The exact browser session
+and attributable preview PID were closed; port `43173`, the session list, and
+the repository E2E ownership check were clean afterward. Findings that still
+need live or assistive-technology confirmation say so explicitly.
 
 ## Findings
 
-### C3-DES-001 — Keyboard focus is discarded when the card grid swaps to detail view
+### D5-01 — Parent category choices are indistinguishable after selection
+
+- **Severity:** High
+- **Confidence:** High
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/components/dashboard/TransactionReview.svelte:26-41,89-104,298-314`
+
+Every parent option is labeled `전체`. A native select shows only the selected
+option text when closed, not its surrounding optgroup label, so selecting
+외식, 식료품, or 대중교통 leaves the control displaying the same `전체` value.
+Users cannot verify the classification they assigned. Label parent options
+with their group, such as `외식 전체`.
+
+### D5-02 — Fallback category editing writes a malformed hierarchy
+
+- **Severity:** High
+- **Confidence:** High
+- **Status:** confirmed statically; duplicates C5-CT-002
+- **Location:** `apps/web/src/components/dashboard/TransactionReview.svelte:26-58,71-117,177-200`
+
+The fallback options contain qualified subcategory IDs, but both fallback
+branches omit the subcategory-to-parent map. Selecting `dining.cafe` can
+therefore persist it as a top-level category. Build all fallback taxonomy
+state through one helper.
+
+### D5-03 — Analysis options remain editable after the running analysis snapshots them
+
+- **Severity:** High
+- **Confidence:** High
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/components/upload/FileDropzone.svelte:301-319,528-637`
+
+`analyze()` snapshots bank and previous-spending values at start, while the
+bank buttons and amount input remain enabled throughout the upload state.
+Changing either control then shows a value that the running result did not
+use. Disable the option fieldset while busy or cancel and restart analysis
+when those values change.
+
+### D5-04 — Correcting a filtered transaction can discard keyboard focus
 
 - **Severity:** Medium
 - **Confidence:** High
-- **Status:** confirmed in live browser
-- **Location:** `apps/web/src/components/cards/CardGrid.svelte:330-365`; `apps/web/src/components/cards/CardPage.svelte:33-38,63-104`
-- **Concrete failure scenario:** A keyboard or screen-reader user focuses a card and presses Enter. The grid is removed and a card-detail document fragment appears, but focus falls to `<body>`. The user receives no focus transition to the new `h1`, breadcrumb, or “목록으로” control and must restart navigation from the top of the page. Returning to the list likewise has no origin-focus restoration.
-- **Evidence:** With the first `data-testid="card-grid-card"` focused, pressing Enter changed the URL to `cards#shinhan-11st` and the visible `h1` to “11번가 신한카드”; immediately afterward `document.activeElement` was `BODY`. The accessibility snapshot showed the entirely new detail hierarchy, while the document title remained “카드 목록 | CherryPicker”. `selectCard()` only mutates state/hash and scrolls; neither branch manages focus.
-- **WCAG/UX impact:** WCAG 2.4.3 Focus Order and predictable SPA navigation; screen-reader context and keyboard efficiency.
-- **Suggested fix:** On detail mount/hash navigation, update the document title and focus the detail `h1` (temporarily `tabindex="-1"`). Save the originating card ID/element and restore focus to it when returning to the grid, including browser back/forward. Add a keyboard E2E assertion for Enter → detail heading focus → Back → originating card focus.
+- **Status:** confirmed statically; live focus restoration should be tested
+- **Location:** `apps/web/src/components/dashboard/TransactionReview.svelte:149-200,298-314`
 
-### C3-DES-002 — The home hero creates horizontal page overflow at 375 px
+With `미분류만 보기` enabled, changing a row to a normal category and
+confidence `1.0` immediately removes the keyed row and its focused select from
+the DOM. Retain the edited row until focus leaves or move focus deliberately
+to the next row or apply control.
+
+### D5-05 — The horizontally scrollable transaction table is not keyboard-operable as a region
 
 - **Severity:** Medium
 - **Confidence:** High
-- **Status:** confirmed in live browser
-- **Location:** `apps/web/src/layouts/Layout.astro:186-188`; `apps/web/src/pages/index.astro:12-34`
-- **Concrete failure scenario:** On a 375 px phone, the page can shift horizontally by 8 px, clipping the intended viewport alignment and making vertical scrolling feel unstable.
-- **Evidence:** At a 375×812 viewport, `document.documentElement.scrollWidth` was **383** while `clientWidth` was **375**. The offender scan isolated the hero: bounding box `left=-8`, `right=383`, width `391`. The shared main uses `px-4` at mobile width, but the hero uses `-mx-6`; the negative margin exceeds its containing padding by 8 px on each side. Cards, dashboard, results, and report measured 375/375.
-- **WCAG/UX impact:** Responsive layout and reflow quality related to WCAG 1.4.10.
-- **Suggested fix:** Match the hero breakout to the container at each breakpoint (`-mx-4 px-4 sm:-mx-6 sm:px-6`) or use a full-bleed wrapper that cannot widen the root scroll box. Add 320/375/400 px assertions that `scrollWidth === clientWidth`.
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/components/dashboard/TransactionReview.svelte:272-275`
 
-### C3-DES-003 — The Korean card-detail landmark exposes an untranslated English accessible name
+The narrow-screen table uses `overflow-x-auto` and `min-w-max` but has no
+focusability, accessible region name, focus indicator, or scroll hint. The
+card-detail table already demonstrates the expected labeled-region pattern.
+Add a labeled `role="region"`, `tabindex="0"`, visible focus treatment, and a
+narrow-screen hint.
+
+### D5-06 — Category selects are temporarily empty while taxonomy data loads
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/components/dashboard/TransactionReview.svelte:10-22,71-119,298-314`
+
+Category groups start empty and populate only after mount, while selects remain
+enabled. Expanding the review immediately can expose blank controls. Seed the
+state synchronously from fallback groups or expose a disabled loading state.
+
+### D5-07 — Card-detail exclusions expose raw internal identifiers
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed against shipped data
+- **Location:** `apps/web/src/components/cards/CardDetail.svelte:374-383`; `apps/web/src/lib/cards.ts:494-503`
+
+Exclusions such as `tax_payment`, `utility_bills`, `apartment_mgmt`, and
+`gift_card` are rendered verbatim in an otherwise Korean interface. Map known
+identifiers to localized labels and provide a readable fallback.
+
+### D5-08 — Summary-tile text fails normal-text contrast in light mode
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed against the installed Tailwind palette
+- **Location:** `apps/web/src/components/dashboard/SpendingSummary.svelte:103,119,149,193-195`
+
+Blue-400 on blue-50/100 is about 2.42/2.16:1, amber-400 on amber-50/100 about
+1.66/1.54:1, purple-500 on purple-50/100 about 3.84/3.48:1, and the 12 px
+amber-500 dismiss action on amber-50 about 2.07:1. These are below WCAG 1.4.3's
+4.5:1 normal-text threshold. Use verified 700-level foregrounds or semantic
+tokens.
+
+### D5-09 — Inactive upload-step numbers fail text contrast in both themes
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/components/upload/FileDropzone.svelte:403-408`; `apps/web/src/app.css:23-24,58-59`
+
+Inactive 12 px numbers use `--color-text-muted` on `--color-border`, producing
+about 3.86:1 in light mode and 4.04:1 in dark mode. Use a dedicated foreground
+or higher-contrast circle background.
+
+### D5-10 — The upload retry action has insufficient dark-mode contrast
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/components/upload/FileDropzone.svelte:656-661`; `apps/web/src/app.css:56`
+
+The retry button fixes `text-red-700` on the dark surface `#1e293b`, about
+2.26:1. Add a dark-mode foreground and verify hover/focus states.
+
+### D5-11 — Upload workflow transitions lose focus and announce status unreliably
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed statically; announcement timing should be AT-tested
+- **Location:** `apps/web/src/components/upload/FileDropzone.svelte:247-275,330-356,382-386,455-523,615-631,656-661`
+
+The focused file input and remove, clear, or retry controls can delete
+themselves without a focus destination. Progress live markup is conditional
+inside a disabled submit button, and the success branch has no status role
+before automatic navigation 1.2 seconds later. Keep a persistent external live
+region, restore focus after branch changes, and provide a deliberate dashboard
+transition.
+
+### D5-12 — Persisted-result pages initially render a false empty state
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed statically; layout shift should be measured live
+- **Location:** `apps/web/src/pages/dashboard.astro:37-52`; `apps/web/src/pages/results.astro:35-50`; `apps/web/src/pages/report.astro:47-62`; `apps/web/src/components/ui/VisibilityToggle.svelte:64-84`
+
+The server output shows the empty state and hides data until hydration reverses
+the branches. Returning users can briefly see `아직 분석 결과가 없어요` before
+the result replaces it, and errors collapse into the same binary state. Render
+a stable readiness shell and distinguish loading, error, no-data, and data.
+
+### D5-13 — Printed results retain navigation and interactive-only controls
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/pages/results.astro:16-25,90-131`; `apps/web/src/components/dashboard/OptimalCardMap.svelte:62-79`; `apps/web/src/components/dashboard/SavingsComparison.svelte:263-276`; `apps/web/src/app.css:166-175`
+
+The results print action leaves back/action links, sorting pills, and a details
+toggle in the PDF. Mark the interactive controls print-hidden and decide
+whether useful collapsed content expands for print.
+
+### D5-14 — The previous-spending field advertises a format the control does not accept reliably
+
+- **Severity:** Medium
+- **Confidence:** High
+- **Status:** confirmed statically; comma behavior varies by browser
+- **Location:** `apps/web/src/components/upload/FileDropzone.svelte:582-599`
+
+A native `type="number"` field shows the example `500,000`, although localized
+separators are not valid number input in common browsers. Any keystroke also
+clears an existing validation message without revalidating. Use an ungrouped
+example or normalized text input and keep touched-field validation current.
+
+### D5-15 — Bottom pagination leaves users below the replaced result page
+
+- **Severity:** Medium
+- **Confidence:** Medium-high
+- **Status:** confirmed statically; viewport behavior should be tested live
+- **Location:** `apps/web/src/components/cards/CardGrid.svelte:172-174,434,481`
+
+Both pagers only change state. Activating the bottom `다음` control replaces
+cards above the viewport without moving scroll or focus to the new results.
+Focus a results landmark or first card and scroll with reduced-motion
+preferences respected.
+
+### D5-16 — Dark mode does not declare a native-control color scheme
+
+- **Severity:** Medium
+- **Confidence:** Medium-high
+- **Status:** confirmed omission; rendering impact is browser-dependent
+- **Location:** `apps/web/src/app.css:54-74`; `apps/web/public/layout.js:21-29`
+
+Dark tokens and the `.dark` class change custom styling, but no
+`color-scheme: dark` is declared. Native selects, checkboxes, option popups,
+and autofill affordances can remain light. Declare root light and dark color
+schemes and verify forced-colors behavior.
+
+### D5-17 — Theme toggles expose neither current state nor resulting action
 
 - **Severity:** Low
 - **Confidence:** High
-- **Status:** confirmed
-- **Location:** `apps/web/src/components/cards/CardPage.svelte:63-83`
-- **Concrete failure scenario:** A Korean screen-reader user reaches the detail navigation landmark and hears the English word “breadcrumb” under the document’s Korean voice/language context, while all visible labels are Korean.
-- **Evidence:** The live accessibility tree exposed `navigation "breadcrumb"`. Source hard-codes `aria-label="breadcrumb"` inside an otherwise Korean page and does not mark that label as an English language part.
-- **WCAG/UX impact:** Language consistency and WCAG 3.1.2 Language of Parts.
-- **Suggested fix:** Use a Korean accessible name such as `aria-label="이동 경로"` (or a localized message key if more locales are planned).
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/layouts/Layout.astro:110-137`; `apps/web/public/layout.js:13-29`
 
-## Final missed-issue sweep
+Both controls retain the fixed accessible name `테마 전환`; script changes
+only icons and classes. Synchronize `aria-pressed` and action-specific Korean
+labels for light and dark state.
 
-The last pass rechecked loading/empty/error affordances, form labels and validation announcements, toggle state semantics, mobile menu inert/escape behavior, pagination current state, table scroll instructions, theme persistence, print disclosure visibility, touch targets, contrast tokens, and console/page errors. The upload error was announced, empty analysis screens provided a clear upload CTA, filter/result counts were live, mobile menu state/focus restoration worked, and no uncaught browser errors were observed. No additional UI/UX issue met the reporting threshold.
+### D5-18 — Results-page savings content has no navigable section heading
+
+- **Severity:** Low
+- **Confidence:** High
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/pages/results.astro:71-77`; `apps/web/src/components/dashboard/SavingsComparison.svelte:142-341`
+
+The results page embeds the savings comparison without a heading, so heading
+navigation skips the entire section. Add an outer `h2` or an optional component
+heading.
+
+### D5-19 — Noninteractive panels animate like clickable cards
+
+- **Severity:** Low
+- **Confidence:** High
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/app.css:129-136`; `apps/web/src/pages/index.astro:93,104,115`; `apps/web/src/pages/dashboard.astro:57,71,87,106`
+
+`card-transition` lifts and shadows noninteractive feature and dashboard
+panels on hover, suggesting activation where none exists. Reserve the lift for
+interactive elements or use a neutral panel treatment.
+
+### D5-20 — “Same issuer” navigation discards the issuer context
+
+- **Severity:** Low
+- **Confidence:** High
+- **Status:** confirmed statically
+- **Location:** `apps/web/src/components/cards/CardDetail.svelte:388-410`
+
+The section says `같은 카드사의 다른 카드` but links to the unfiltered card
+catalog. Encode the current issuer in the existing card-grid query state or
+change the copy.
+
+## Final status
+
+Twenty raw findings survived the completed static sweep. D5-02 independently
+duplicates the critic's fallback-taxonomy defect; the other 19 are distinct.
+No source, plan, generated artifact, git state, or protected Cycle 42 artifact
+was changed by the reviewer.

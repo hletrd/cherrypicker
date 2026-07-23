@@ -2,6 +2,7 @@
 
 **Findings:** C4-014, C4-015, C4-016, C4-017
 **Status:** completed
+**Archived:** 2026-07-23 during Cycle 5 planning
 **Deploy mode:** none
 
 ## Outcome

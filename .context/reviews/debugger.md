@@ -1,159 +1,34 @@
-# Debugger — Cycle 3
+# Cycle 5 — Debugger
 
-**Reviewer:** debugger
-**Date:** 2026-07-23
-**Baseline:** `614ce5c`
-**Result:** 3 confirmed Medium findings and 1 confirmed Low finding.
+**Review target:** `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715`
+**Result:** two confirmed Medium defects
 
 ## Method
 
-I audited error paths, state transitions, timers, cancellation, malformed
-inputs, numeric/string conversion, persistence, and filesystem behavior across
-all current production source and their tests. Each candidate was challenged
-with an alternative explanation and, where a pure boundary allowed it, a safe
-local minimal reproduction.
+I audited current error paths, malformed input handling, date/number normalization, state transitions, cancellation, persistence, async cleanup, and filesystem/process ownership across all production packages and their tests. Candidates were challenged against downstream validation and reproduced through both server and browser implementations where applicable. Historical fixed findings and documented deferred work were removed before the final sweep.
 
 ## Findings
 
-### C3-DBG-001 — A failed replacement analysis clears memory but leaves the prior persisted result
+### C5-DBG-001 — Timezone-bearing OFX timestamps normalize invalid components into a different valid date
 
 - **Severity:** Medium
 - **Confidence:** High
-- **Status:** Confirmed
-- **Locations:** `apps/web/src/lib/store.svelte.ts:160-228,232-263,335-384,
-  480-492`; `apps/web/__tests__/store-persistence.test.ts:84-297`
+- **Status:** confirmed
+- **Location:** `packages/parser/src/ofx/index.ts:86-118,178-184`; mirrored browser implementation `apps/web/src/lib/parser/ofx.ts:55-87,135-139`
+- **Concrete failure scenario:** An OFX transaction contains `DTPOSTED=20241340120000[0:GMT]` (month 13, day 40). Both parsers return the transaction dated `2025-02-09` with no parse error. The malformed statement row can therefore select the wrong analysis month and receive rewards as if that invented date were authoritative.
+- **Evidence:** The regex captures numeric components but validates neither their ranges nor a calendar round-trip. The timezone branch passes them to `Date.UTC()`, whose overflow normalization turns month 13/day 40 into a later year/month; the formatted result then passes `isValidISODate()`. The executable server/browser probe produced identical `{date:"2025-02-09", merchant:"INVALID", amount:1000}` rows and empty error arrays. Existing conformance coverage rejects the bare date `20241340`, but that path uses `parseDateStringToISO()` and never exercises `Date.UTC()`. The [OFX 2.2 specification](https://financialdataexchange.org/common/Uploaded%20files/OFX%20files/OFX%202.2.pdf) defines bounded date/time components rather than overflow normalization.
+- **Suggested fix:** Require a full-string match, validate month/day against the actual calendar and hour/minute/second/offset ranges before constructing a timestamp, then verify the constructed UTC components round-trip. Reject the row with a line-scoped parse error. Add mirrored server/browser tests plus a conformance table for invalid month, day, leap day, hour, minute, second, offset, and trailing junk.
 
-On a successful analysis, the store assigns `result` and writes it to
-`sessionStorage`. On a later current (non-abort) failure, the catch block sets
-`error` and `result = null`, but does not clear or replace the storage entry.
-The singleton now says no result exists while the same tab's storage still
-contains the previous analysis. A reload constructs the store with
-`loadFromStorage()` and resurrects that older result as though it were current.
-
-**Failure scenario:** Analysis A succeeds. The user tries to replace it with
-malformed statement B. B fails and the upload page shows an error. A refresh or
-direct results/dashboard navigation restores A, which can be mistaken for B's
-result.
-
-**Competing hypotheses:** Preserving the last good result can be a valid product
-policy, but the catch explicitly clears only the in-memory result and the UI
-presents the new attempt as failed. Preserving A would require preserving it in
-both state and storage with clear “last successful” labeling. Clearing B's
-failed replacement would require clearing both. The current split is not a
-coherent policy.
-
-**Suggested fix:** Make the transition atomic. Either retain the prior result
-in memory and storage on failure, or clear both result and storage before/when
-beginning a replacement. Add a runtime store test and built-app test for
-success A -> failure B -> reload/direct navigation.
-
-### C3-DBG-002 — Invalid numeric character entities crash HTML report generation
+### C5-DBG-002 — The OFX required-field guard reports neither independently missing date nor missing amount
 
 - **Severity:** Medium
 - **Confidence:** High
-- **Status:** Confirmed
-- **Location:** `packages/viz/src/report/generator.ts:46-63,65-267`;
-  `packages/viz/__tests__/report.test.ts:56-119`
-
-The HTML escape helper first decodes decimal/hex numeric entities with
-`String.fromCodePoint(parseInt(...))`. Values outside the Unicode scalar range
-throw `RangeError`. A safe local call to `generateHTMLReport` with a card name
-containing `&#1114112;` reproduced:
-`RangeError: Arguments contain a value that is out of range of code points`.
-Card names, tier labels, taxonomy labels, cap categories, and alternatives can
-all reach this helper.
-
-**Failure scenario:** A malformed but schema-valid display string in a
-developer-supplied/scraped catalog causes `cherrypicker report` to abort before
-writing its report. The main CLI catches and prints the error, but the requested
-artifact is unavailable.
-
-**Competing hypothesis:** The predecode comment says double-encoded numeric
-entities become executable HTML. HTML entity parsing is not recursive:
-escaping `&` to `&amp;` renders the original entity text, not a second-stage
-tag. Predecoding is unnecessary for injection prevention; the subsequent
-standard escaping is the relevant defense.
-
-**Suggested fix:** Remove entity predecoding and escape the original string
-directly. If normalization is retained, accept only valid scalar values and
-replace invalid entities without throwing. Test maximum valid code point,
-maximum+1, huge decimal/hex strings, surrogates, incomplete entities, and
-literal `&#x3C;script...` output.
-
-### C3-DBG-003 — A second drop during the success countdown does not invalidate the old navigation
-
-- **Severity:** Medium
-- **Confidence:** High
-- **Status:** Confirmed
-- **Location:** `apps/web/src/components/upload/FileDropzone.svelte:27-33,
-  52-92,162-169,196-236,278-351,439-509`
-
-After an analysis succeeds, the component sets `uploadStatus = "success"` and
-schedules dashboard navigation after 1,200 ms. Page-wide drop handling remains
-active. `addFiles()` calls `cancelActiveAnalysis()`, but that function returns
-unless status is exactly `"uploading"`; it neither invalidates
-`analysisRuns` nor clears `navigateTimeout` in the success state. Adding a file
-then changes the visible list/status to idle, while the old run remains current.
-The timer subsequently navigates to the dashboard with the old analysis.
-
-**Failure scenario:** During the “analysis complete” countdown, the user drops
-another statement intending to analyze it. The form briefly returns for the new
-selection, then the old timer takes the user to A's dashboard. The new file was
-never analyzed.
-
-**Competing hypothesis:** The success UI hides local file inputs, but the
-document-level drop listener at lines 55-92 stays active and calls the same
-`addFiles` path, so the overlap is reachable.
-
-**Suggested fix:** Centralize transition cancellation: any mutation after
-success should clear the pending timer and invalidate the old run, or disable
-drop admission until navigation completes. Add a fake-timer component test and
-an E2E drop test inside the 1.2-second success window.
-
-### C3-DBG-004 — Three main CLI parsers silently ignore unknown or incomplete options
-
-- **Severity:** Low
-- **Confidence:** High
-- **Status:** Confirmed
-- **Locations:** `tools/cli/src/commands/analyze.ts:17-48`;
-  `tools/cli/src/commands/optimize.ts:30-74`;
-  `tools/cli/src/commands/report.ts:31-80`;
-  contrast `tools/cli/src/commands/scrape.ts:19-73`
-
-Analyze, optimize, and report have no final `else` in their option loops.
-Unknown flags, stray values, and known options with a missing value are simply
-skipped. The scraper parser correctly rejects both classes.
-
-**Failure scenario:** A typo in `--prev-spending`, `--cards`, `--categories`,
-or `--output` silently selects a default. Recommendations may use the wrong
-performance basis/catalog, or a report may be written to the default filename
-instead of the requested one. Some downstream disclosures help, but argument
-acceptance itself incorrectly signals success.
-
-**Suggested fix:** Use one strict shared option parser or make every loop reject
-unknown arguments and require the next token for valued options. Add a table of
-unknown, missing-value, duplicate, and stray-positional tests for all four
-commands.
-
-## Error paths verified as sound
-
-- Operation epochs block stale analyze/reoptimize/reset/cancel commits.
-- Parse queues preserve settled order, stop dequeueing after cancellation, and
-  pass abort to active workers.
-- Browser PDF cleanup/destroy executes exactly once on success, failure, and
-  abort.
-- Empty/partial multi-file parses retain actionable parser diagnostics and file
-  identity.
-- Invalid calendar rows are quarantined from month selection and optimization.
-- Calculator boundaries reject non-finite/unsafe transaction amounts, and
-  catalog publication rejects unsupported executable reward shapes.
-- Generated artifacts fail closed when empty, malformed, duplicate, or from a
-  mismatched publication generation.
+- **Status:** confirmed
+- **Location:** `packages/parser/src/ofx/index.ts:168-203`; mirrored browser implementation `apps/web/src/lib/parser/ofx.ts:127-150`; downstream calendar handling `packages/core/src/analysis/context.ts:100-118`
+- **Concrete failure scenario:** A transaction has `TRNAMT=-1000` and `NAME=MISSING` but no `DTPOSTED`. Both parsers emit `{date:"", amount:1000}` without an error. In a mixed statement the row is later excluded from optimization as an invalid-date transaction; if it is the only row, analysis fails with a generic no-valid-date error instead of identifying the malformed OFX record. Conversely, a row with a date but no `TRNAMT` silently disappears with no transaction and no error.
+- **Evidence:** `if (!dtPosted && !trnAmt) continue` handles only the case where both required values are absent. With only the date absent, `parseOFXDate("")` returns `""`, and `if (!isValidISODate(date) && dateRaw)` is bypassed because `dateRaw` is falsy. With only the amount absent, parsing returns `null`, but the error is conditional on `trnAmt.trim()` being nonempty. Executable probes reproduced both behaviors; server and browser copies agree.
+- **Suggested fix:** Validate `DTPOSTED` and `TRNAMT` independently before parsing. Emit a line-scoped missing-required-field error and skip the row when either is absent; do not use a truthiness guard to suppress diagnostics for empty required values. Add server/browser and conformance tests for each missing field, both missing fields, and a mixed valid/invalid statement so partial-import diagnostics remain visible.
 
 ## Final missed-issue sweep
 
-The final sweep inspected every `catch`, timer, mutable module cache,
-`JSON.parse`, numeric parse/code-point conversion, filesystem write, abort
-boundary, and result-reset path. I also compared the Cycle 1/2 closed findings
-against current source to avoid reopening fixed bugs. No additional
-well-evidenced Critical/High debugger finding remained.
+The closing pass covered every parser format's required-field behavior, `Date`/numeric normalization, swallowed catches, worker and navigation ownership, stale persistence, timer/listener cleanup, and CLI/report failure surfaces. The OFX implementations are duplicated under a known deferred parser-consolidation item, so this review reports the current behavioral defects and calls for mirrored fixes rather than re-reporting duplication itself. No additional debugger issue met the evidence threshold.

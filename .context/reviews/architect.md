@@ -1,41 +1,31 @@
-# Cycle 3 — Architect
+# Cycle 5 — Architect
 
-**Review target:** `614ce5c`
-**Lens:** ownership boundaries, canonical data paths, publication atomicity, runtime/build parity, cache identity, and failure containment.
+**Review target:** `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715`
+**Lens:** canonical contracts, capability ownership, runtime/build parity, authoring boundaries, and failure containment
 
 ## Inventory and boundary map
 
-The shared Cycle 3 inventory covered 1,067 current non-historical artifacts across the Astro/Svelte web app, core/parser/rules/viz packages, CLI and scraper tools, build/publication scripts, workflows, and E2E/tests. I traced these cross-package paths:
+The review began with all 2,133 tracked paths and traced these current cross-package contracts:
 
-1. Statement file → browser/server parser → transaction facts → categorizer → optimizer → session persistence → dashboard/results/report.
-2. Rule YAML + taxonomy + issuers → validation → generated summary/optimizer/detail/category artifacts → browser readers and caches.
-3. CLI command → parser → raw source catalog → core analysis/report output.
-4. Workspace manifests/exports → root task graph → CI/deploy gates.
+1. Statement input → server/browser parser → facts and calendar scope → calculator/optimizer → persistence and reports.
+2. Rule YAML/scraper output → canonical schema → semantic validation → generated runtime artifacts → web and CLI consumers.
+3. UI events → parse/analysis workers → operation ownership → result replacement and navigation.
+4. Workspace manifests/exports → root gates → build/E2E/deploy workflow.
 
-Cycle 2’s canonical transformed-catalog return, unified operation epoch, statement-only parser entry, and first-artifact publication pin are present. The findings below are residual boundaries not closed by those changes.
+All current source and test files in the web, core, parser, rules, CLI, scraper, visualization, scripts, and workflow surfaces were inspected or content-scanned. The 683 card YAML files were covered through schema/publication validation and complete-field queries. Cycle 4 fixes and the documented deferred optimizer/matcher/parser-consolidation work were excluded before evaluating new candidates.
 
-## Findings
+## Finding
 
-### C3-ARCH-001 — Publication identity does not identify the bytes or generator contract being published
-
-- **Severity:** High
-- **Confidence:** High
-- **Status:** confirmed residual defect
-- **Location:** `scripts/catalog-publication.ts:71-91`; `scripts/build-json.ts:284-289,418-435`; `apps/web/src/lib/cards.ts:100-105,131-141`
-- **Concrete failure scenario:** A deployment changes summary/optimizer/detail projection logic or its validation/schema without changing YAML, categories, issuer data, or the hard-coded `1.0.0` version. The new artifacts receive the same `sourceHash` as the old deployment. An already-open page or intermediary cache can therefore combine old and new shards; `acceptSourceHash()` accepts all of them as one atomic publication even when their shapes or semantics no longer agree.
-- **Evidence:** `computePublicationSourceHash()` hashes only `{version, categories, issuers}`. Generator code, schema revision, and the normalized serialized summary/optimizer/detail/category payloads are not inputs. `build-json.ts` computes that hash before projecting and writing the runtime artifacts. The browser pins the first accepted hash and tests only equality for later artifacts, so it cannot distinguish two builds with identical source data but different output code. This leaves the central guarantee introduced in Cycle 2 incomplete.
-- **Suggested fix:** Derive a publication ID from the actual normalized artifact payload set (excluding the identity field to avoid a cycle), or from source data plus an automatically generated schema/generator revision. Embed the resulting content/build ID in every artifact and shard. Add a test that changes projection output while holding source data constant and requires a different publication ID, plus a mixed-old/new artifact rejection test.
-
-### C3-ARCH-002 — The default CLI bypasses the canonical compiled runtime catalog
+### C5-ARCH-001 — `annualCap` is a canonical supported field without either runtime semantics or a capability gate
 
 - **Severity:** Medium
 - **Confidence:** High
 - **Status:** confirmed
-- **Location:** `tools/cli/src/commands/optimize.ts:97-127`; `tools/cli/src/commands/report.ts:104-133`; `packages/rules/src/loader.ts:17-52`; `scripts/build-json.ts:418-435`; browser consumer `apps/web/src/lib/cards.ts:338,449-473`
-- **Concrete failure scenario:** A publication rule, projection normalization, or artifact-level validation changes. The web analyzer consumes `cards-optimizer.json`, while the default CLI continues to reconstruct its catalog directly from 683 authoring files. Both surfaces can then claim to analyze the same repository release through different runtime contracts, and only one exercises publication identity and artifact validation.
-- **Evidence:** The build has an explicit “optimizer-ready” generated artifact and the web analyzer loads it. `optimize` and `report`, however, default to `DEFAULT_CARDS_DIR` and call `loadAllCardRules()`; only an explicit custom directory is needed for source-authoring workflows. This also creates the measured startup/RSS cost documented as `C3-PERF-002`, but the architectural defect is the duplicated canonical runtime path.
-- **Suggested fix:** Define one versioned optimizer-catalog reader owned by the rules/publication boundary and use it in both web and default CLI flows. Preserve `--cards` as an explicit development/source override with a clear diagnostic. Add parity tests that run one fixture through generated-artifact web/CLI inputs and compare normalized results.
+- **Location:** `packages/rules/src/types.ts:14-23`; `packages/rules/src/schema.ts:89-175`; `packages/rules/src/catalog-validation.ts:229-256,293-309`; `packages/core/src/calculator/reward.ts:632-783`; `packages/rules/src/loader.ts:32-53`; `tools/cli/src/card-catalog.ts:27-52`; `tools/scraper/src/rule-contract.ts:53-100`; `tools/scraper/src/validators.ts:23-63`
+- **Concrete failure scenario:** A custom `--cards` catalog or newly scraped card marks a 10% tier as supported with `annualCap: 1000`. Two eligible 10,000-won transactions produce 2,000 won in reported reward, with no cap hit and no unsupported-rule disclosure, even though the canonical rule says the reward stops at 1,000 won.
+- **Evidence:** The canonical type/schema accepts and preserves `annualCap`, while semantic validation checks tier references and executable units but never rejects a positive annual cap on a supported rule. The calculator reads `perTransactionCap` and `monthlyCap` only. An executable probe cloned the tracked Simple Plan rule, set a supported tier to 10% plus `annualCap: 1000`, and passed both `cardRuleSetSchema.parse()` and `validateCardRuleSet()`. `calculateRewards()` then returned `{"totalReward":2000,"capsHit":[],"unsupportedRules":[]}` for two 10,000-won domestic transactions. The CLI authoring path calls schema-only `loadAllCardRules()`, and the scraper derives this field from the canonical schema before calling the same semantic validator, so both entry points can admit the shape. A complete catalog query found one current positive annual cap, `packages/rules/data/cards/hyundai/three-body-a.yaml:43-57`; it is safe only because that individual rule is manually marked unsupported.
+- **Suggested fix:** Until the runtime owns year-to-date reward usage, make canonical semantic validation reject every positive `annualCap` on a supported rule and ensure the CLI authoring path runs that validation. The scraper should receive the same diagnostic and emit `support.status: unsupported`. If annual caps are implemented instead, extend the analysis contract with year-to-date facts or explicit accrued usage—accumulating only the current latest-month transaction slice is insufficient—then enforce/report the cap in the calculator. Add schema → semantic validation → scraper/CLI → calculator contract tests, including a regression that the tracked explicitly unsupported rule remains publishable.
 
-## Missed-issue sweep
+## Final boundary sweep
 
-The final sweep rechecked cache singletons and abort ownership, page-session publication pinning, parser exports, generated shard reconciliation, task-graph dependencies, CLI/web result preparation, and package directionality. I did not re-report the category artifact validation defect found independently by the Cycle 3 code reviewer, nor the known deferred optimizer/matcher redesigns. No further architecture issue met the evidence threshold.
+Publication identity, compiled CLI/web catalog parity, parser-worker ownership, result replacement atomicity, package exports, cache identity, and deploy gate directionality retain the Cycle 4 closures. The final sweep also checked every canonical rule field against schema, semantic validation, runtime consumption, UI/report disclosure, scraper generation, and custom authoring. No additional non-deferred architecture defect met the evidence threshold.

@@ -1,205 +1,212 @@
-# Aggregate Review - CherryPicker Review/Plan/Fix Cycle 4
+# Aggregate Review — CherryPicker Review/Plan/Fix Cycle 5
 
 **Date:** 2026-07-23
-**Cycle:** 4 / 100
-**Baseline:** `555c56a633f988254854f4110ddf3e3a612c4eb9`
+**Cycle:** 5 / 100
+**Baseline:** `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715`
 **Branch:** `codex/review-plan-fix-no-deploy-20260723`
-**Reviewers:** code-reviewer, critic, architect, perf-reviewer,
-security-reviewer, tracer, debugger, verifier, test-engineer,
-document-specialist, designer, implementation auditor, final diff auditor
 **Deploy mode:** none
 
 ## Executive summary
 
-The five initial review bundles cover all 11 requested roles and contain 24
-raw findings. Cross-role deduplication initially produced 22 unique findings.
-The first read-only implementation audit found two additional contract
-defects, and the final diff audit found three more. Cycle 4 therefore contains
-**27 unique findings**: 1 High, 21 Medium, and 5 Low. The two
-analysis-replacement defects were each reproduced by two independent reviewer
-bundles; those four raw reports map to two unique findings.
+The Cycle 5 fanout covered code quality, criticism, architecture, performance,
+security, causal tracing, debugging, verification, tests, documentation, and
+UI/UX. The reports contain **39 raw findings**. Two pairs overlap:
 
-The highest-severity defect is a dashboard breakpoint collision that clips
-spending and category values and creates up to 117 px of root horizontal
-overflow at tablet widths. The remaining findings cover exact-money
-boundaries, optimizer and calculator consistency, schema-valid fractional
-mileage execution and decimal precision, persisted optimization integrity,
-parser parity and browser worker ownership, atomic analysis replacement,
-strict CLI and terminal boundaries, deterministic browser coverage, mobile
-focus ownership, and catalog/report usability.
+- C5-TRACE-001 and C5-TEST-001 describe the same unchecked visualization
+  money aggregation.
+- C5-CT-002 and D5-02 describe the same malformed fallback taxonomy edit.
 
-The implementation audits reconciled each new defect with its schema, runtime,
-consumer, and browser-test paths before final gates. The six pre-existing
-untracked Cycle 42 artifacts stayed outside this review and were neither edited
-nor included.
+After cross-role deduplication, Cycle 5 has **37 unique findings**: 4 High, 26
+Medium, and 7 Low. The largest correctness risks are unknown previous-month
+transactions unlocking excluded performance tiers, optimization claims based
+on a cost-free all-card portfolio, indistinguishable parent-category edits,
+and bank/performance options that remain editable after a running analysis has
+snapshotted them.
+
+The remaining findings span parser encoding and malformed OFX handling,
+persisted-state validation and durable reset semantics, deterministic
+authoring, atomic scraper writes and trusted freshness dates, unsupported
+annual-cap semantics, dependency advisories, checked financial
+visualizations, stale issuer documentation, and a broad set of concrete
+accessibility and interaction defects.
+
+The six pre-existing untracked Cycle 42 artifacts remained byte-for-byte
+unchanged and outside this review.
 
 | Severity | Unique findings |
 |---|---:|
-| High | 1 |
-| Medium | 21 |
-| Low | 5 |
-| **Total** | **27** |
+| High | 4 |
+| Medium | 26 |
+| Low | 7 |
+| **Total** | **37** |
 
 ## Unique findings
 
-### Domain and optimizer correctness
+### Domain, optimizer, and catalog truth
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C4-001 | Medium | High | Individually safe transaction amounts can overflow monthly and performance aggregates, while direct reward and persisted aggregate boundaries accept unsafe integers. | C4-VTD-001 |
-| C4-002 | Medium | High | Reward schema, calculator, and generated projections disagree when a positive fixed reward coexists with a zero rate, publishing the LOCA 365 rule as zero percent despite its fixed reward. | C4-CCA-004 |
-| C4-003 | Medium | High | A valid reward that floors to zero consumes `maxUses` and can suppress a later positive reward. | C4-DBG-001 |
-| C4-004 | Medium | High | All-zero optimization leaves `bestSingleCard` with empty identity fields even though real cards were evaluated and assigned. | C4-DBG-002 |
-| C4-005 | Medium | High | The optimizer assigns and totals positive non-KRW transactions that the calculator explicitly skips, producing contradictory spending totals. | C4-DBG-003 |
-| C4-023 | Medium | High | The reward schema accepts fractional mileage rates, but the calculator rejects them before its mileage branch and returns zero for a schema-valid rule. | C4-IA-001 |
-| C4-024 | Medium | High | Persisted optimization validation accepts malformed containers and partial nested entries, allowing crashable or internally inconsistent state to restore. | C4-IA-002 |
-| C4-025 | Medium | High | Binary floating-point multiplication can floor a schema-valid decimal mileage rate below its exact value, such as 0.29 times 100 blocks yielding 28 instead of 29 miles. | C4-FA-001 |
+| C5-001 | High | High | Unknown or confidence-zero previous-month categories are treated as definitely included by category exclusions and can unlock higher performance tiers. | C5-CR-001 |
+| C5-007 | Low | High | Custom authoring catalogs and equal-reward optimizer choices inherit unstable filesystem/input order. | C5-CR-007 |
+| C5-008 | High | High | Default “savings” optimize a cost-free 683-card portfolio, ignore annual fees and ownership, and can recommend an unlabeled discontinued card. | C5-CT-001 |
+| C5-013 | Medium | High | A positive `annualCap` is accepted on supported rules even though the runtime has no annual usage facts and never enforces it. | C5-ARCH-001 |
 
-### Parser and performance boundaries
+### Parser and input integrity
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C4-006 | Medium | High | Multi-file analysis spreads an entire parsed transaction array into `push`, which can exceed the engine argument limit for a valid statement above roughly 125,000 rows. | C4-PERF-001 |
-| C4-007 | Medium | High | JSON, OFX, and HTML worker paths materialize and structured-clone full strings on the window side instead of transferring the admitted file buffer. | C4-PERF-002 |
-| C4-008 | Low | High | The nominal 30-line delimiter sample splits, trims, and filters the entire CSV in both browser and package implementations. | C4-PERF-003 |
-| C4-009 | Medium | High | Browser JSON-prefix sniffing misclassifies valid brace- or bracket-prefixed CSV and diverges from the server path. | C4-CCA-003 |
-| C4-010 | Low | High | The browser OFX parser retains a transaction after reporting its invalid date, while the server parser rejects that row. | C4-CCA-005 |
+| C5-002 | Medium | High | OFX, HTML, HTML-as-XLS, and related text routes force UTF-8 and silently corrupt legacy Korean merchant text. | C5-CR-002 |
+| C5-004 | Medium | High | Delimiter detection counts punctuation inside quoted fields and can reject a valid statement. | C5-CR-004 |
+| C5-005 | Medium | High | Bank-specific CSV/XLSX adapters accept missing merchant headers or cells without a diagnostic. | C5-CR-005 |
+| C5-014 | Medium | High | Timezone-bearing OFX timestamps normalize invalid components into a different valid date. | C5-DBG-001 |
+| C5-015 | Medium | High | OFX required-field guards fail to diagnose independently missing date or amount values. | C5-DBG-002 |
 
-### Web replacement and regression integrity
-
-| ID | Severity | Confidence | Finding | Raw sources |
-|---|---|---|---|---|
-| C4-011 | Medium | High | An already-stale caller can begin a replacement and erase committed in-memory and persisted analysis before its ownership is checked. | C4-VTD-002, C4-CCA-001 |
-| C4-012 | Medium | High | A failed persisted-analysis clear is treated as a warning, allowing old persisted A to survive failed replacement B and return after reload. | C4-VTD-003, C4-CCA-002 |
-| C4-013 | Medium | High | Card search and detail E2E cases can pass without proving their named behavior and depend on fixed two-second waits for readiness and error observation. | C4-VTD-004 |
-
-### CLI, scraper, and documentation boundaries
+### Persistence and financial-output boundaries
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C4-014 | Medium | High | LLM-controlled scraper text reaches inherited terminal sinks without the repository's control-sequence and bidi sanitizer. | C4-SEC-001 |
-| C4-015 | Medium | High | The `scrape` command remains outside the strict generated-help option contract and silently accepts last-wins duplicate singleton options. | C4-CLI-001 |
-| C4-016 | Low | High | `validateFilePath` documents null-byte rejection but removes the byte only for validation and lets callers continue with the original path. | C4-VTD-006 |
-| C4-017 | Low | High | Live user and maintainer documentation names removed parser/chart dependencies and obsolete keyword conflict behavior. | C4-VTD-005 |
+| C5-003 | Medium | High | Persisted optional transaction facts and statement periods are only partially validated, allowing malformed state to crash reoptimization. | C5-CR-003 |
+| C5-006 | Medium | High | Reset presents success after durable deletion fails, allowing explicitly cleared analysis to return after reload. | C5-CR-006 |
+| C5-017 | Medium | High | CLI `analyze` and public terminal/report APIs recompute totals with unchecked addition and silently round an unsafe aggregate. | C5-TRACE-001, C5-TEST-001 |
 
-### UI and interaction correctness
+### Scraper, dependency, performance, and documentation controls
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C4-018 | High | High | Dashboard children switch to desktop-density layouts inside half-width tablet containers, clipping key values and widening the 768 px document to 885 px. | D4-01 |
-| C4-019 | Medium | High | Focusing a category disclosure opens it, so the user's first Enter or pointer activation closes it instead of opening it. | D4-02 |
-| C4-020 | Medium | High | Credit and prepaid type badges fall below 4.5:1 small-text contrast in dark mode, with the same failing blue pair reused for transaction confidence. | D4-03 |
-| C4-021 | Medium | High | Mobile pagination is available only after 24 issuer filters and 36 cards, placing it more than 7,100 px down a 320 px catalog page. | D4-04 |
-| C4-022 | Low | High | A direct report visit without analysis still exposes and executes the print/PDF action for the empty-state prompt. | D4-05 |
-| C4-026 | Medium | High | Selecting a mobile issuer collapses the options panel while focus remains on its newly hidden child button instead of returning to the visible toggle. | C4-FA-002 |
-| C4-027 | Medium | High | Runtime-error browser tests assert immediately after readiness, so a next-frame error can occur after the assertion and still false-pass. | C4-FA-003 |
+| C5-010 | Medium | High | Scraper `--force` truncates the canonical rule before its replacement is durable. | C5-CT-003 |
+| C5-011 | Medium | High | Impossible or future model-authored freshness dates can become catalog generation metadata. | C5-CT-004 |
+| C5-012 | Low | High | Every `Icon` instance reconstructs the same 27-entry immutable SVG path table. | C5-PERF-001 |
+| C5-016 | Medium | High | The locked graph contains 40 known advisories while the blocking dependency gate performs no advisory scan. | C5-SEC-001 |
+| C5-018 | Low | High | Issuer READMEs contain stale manual dates and DGB catalog prose that `docs:check` certifies without checking. | C5-DOC-001 |
+
+### Taxonomy and upload interaction
+
+| ID | Severity | Confidence | Finding | Raw sources |
+|---|---|---|---|---|
+| C5-009 | Medium | High | The transaction editor fallback writes qualified subcategory IDs as phantom top-level categories. | C5-CT-002, D5-02 |
+| C5-019 | High | High | Every parent category option closes to the same `전체` label, so users cannot verify which parent they selected. | D5-01 |
+| C5-020 | High | High | Bank and previous-spending controls remain editable after analysis snapshots them, so displayed values can differ from the result's inputs. | D5-03 |
+| C5-021 | Medium | High | Correcting a row while `미분류만 보기` is active removes the focused select without a deliberate focus destination. | D5-04 |
+| C5-022 | Medium | High | The horizontally scrollable transaction table lacks a named, focusable keyboard scroll region. | D5-05 |
+| C5-023 | Medium | High | Transaction category selects are enabled but empty before asynchronous taxonomy loading completes. | D5-06 |
+| C5-026 | Medium | High | Inactive upload-step numbers fail normal-text contrast in both themes. | D5-09 |
+| C5-027 | Medium | High | The upload retry action fails dark-mode text contrast. | D5-10 |
+| C5-028 | Medium | High | Upload branch transitions can remove focused controls and use an unreliable, short-lived status announcement before navigation. | D5-11 |
+| C5-031 | Medium | High | The previous-spending number input advertises a comma-grouped format it cannot accept reliably and clears errors before revalidation. | D5-14 |
+
+### Page, report, and card-catalog UX
+
+| ID | Severity | Confidence | Finding | Raw sources |
+|---|---|---|---|---|
+| C5-024 | Medium | High | Card details expose raw exclusion identifiers such as `tax_payment` in the Korean interface. | D5-07 |
+| C5-025 | Medium | High | Multiple summary-tile labels and actions fail 4.5:1 light-mode contrast. | D5-08 |
+| C5-029 | Medium | High | Persisted-result pages server-render a false empty state, then replace it after hydration without distinct readiness/error states. | D5-12 |
+| C5-030 | Medium | High | Printed results retain navigation, sorting, and interactive-only controls. | D5-13 |
+| C5-032 | Medium | Medium-high | Bottom pagination replaces cards above the viewport without transferring focus or scroll context. | D5-15 |
+| C5-033 | Medium | Medium-high | Dark mode changes custom tokens but does not declare the native-control color scheme. | D5-16 |
+| C5-034 | Low | High | Theme toggles expose neither current state nor the resulting light/dark action. | D5-17 |
+| C5-035 | Low | High | Results-page savings content has no navigable section heading. | D5-18 |
+| C5-036 | Low | High | Noninteractive feature and dashboard panels lift like clickable cards on hover. | D5-19 |
+| C5-037 | Low | High | “Same issuer” navigation opens the unfiltered catalog and discards the promised issuer context. | D5-20 |
 
 ## Raw-finding coverage matrix
 
-Every raw finding maps to one unique aggregate finding.
+Every raw finding maps to exactly one unique aggregate finding.
 
-| Review bundle | Raw IDs to aggregate IDs |
+| Review report | Raw IDs to aggregate IDs |
 |---|---|
-| perf-reviewer | C4-PERF-001 to C4-006; C4-PERF-002 to C4-007; C4-PERF-003 to C4-008 |
-| verifier, test-engineer, document-specialist | C4-VTD-001 to C4-001; C4-VTD-002 to C4-011; C4-VTD-003 to C4-012; C4-VTD-004 to C4-013; C4-VTD-005 to C4-017; C4-VTD-006 to C4-016 |
-| code-reviewer, critic, architect | C4-CCA-001 to C4-011; C4-CCA-002 to C4-012; C4-CCA-003 to C4-009; C4-CCA-004 to C4-002; C4-CCA-005 to C4-010 |
-| security-reviewer, tracer, debugger | C4-SEC-001 to C4-014; C4-CLI-001 to C4-015; C4-DBG-001 to C4-003; C4-DBG-002 to C4-004; C4-DBG-003 to C4-005 |
-| designer | D4-01 to C4-018; D4-02 to C4-019; D4-03 to C4-020; D4-04 to C4-021; D4-05 to C4-022 |
-| implementation auditor | C4-IA-001 to C4-023; C4-IA-002 to C4-024 |
-| final diff auditor | C4-FA-001 to C4-025; C4-FA-002 to C4-026; C4-FA-003 to C4-027 |
+| code-reviewer | C5-CR-001 → C5-001; C5-CR-002 → C5-002; C5-CR-003 → C5-003; C5-CR-004 → C5-004; C5-CR-005 → C5-005; C5-CR-006 → C5-006; C5-CR-007 → C5-007 |
+| critic | C5-CT-001 → C5-008; C5-CT-002 → C5-009; C5-CT-003 → C5-010; C5-CT-004 → C5-011 |
+| perf-reviewer | C5-PERF-001 → C5-012 |
+| architect | C5-ARCH-001 → C5-013 |
+| debugger | C5-DBG-001 → C5-014; C5-DBG-002 → C5-015 |
+| security-reviewer | C5-SEC-001 → C5-016 |
+| tracer | C5-TRACE-001 → C5-017 |
+| test-engineer | C5-TEST-001 → C5-017 |
+| document-specialist | C5-DOC-001 → C5-018 |
+| designer | D5-01 → C5-019; D5-02 → C5-009; D5-03 → C5-020; D5-04 → C5-021; D5-05 → C5-022; D5-06 → C5-023; D5-07 → C5-024; D5-08 → C5-025; D5-09 → C5-026; D5-10 → C5-027; D5-11 → C5-028; D5-12 → C5-029; D5-13 → C5-030; D5-14 → C5-031; D5-15 → C5-032; D5-16 → C5-033; D5-17 → C5-034; D5-18 → C5-035; D5-19 → C5-036; D5-20 → C5-037 |
 
 ## Cross-review agreement
 
-- C4-011 was independently reproduced by the verifier/test/document bundle and
-  the code/critic/architect bundle. Both traced the destructive work before the
-  first caller-ownership check.
-- C4-012 was independently reproduced by those same bundles. Both confirmed
-  that a failed storage clear permits stale persisted bytes to outlive a failed
-  replacement.
-- C4-013 and D4-01 through D4-05 were checked against existing browser
-  coverage. The current suite lacks deterministic assertions for the named
-  failures and tablet geometry.
-- C4-023 and C4-024 were found by an independent read-only audit after the
-  initial implementation. Both were promoted into Plan 84 before final gates
-  instead of being deferred.
-- C4-025 through C4-027 were found by a fresh read-only audit after the first
-  green gate run. They were promoted into Plans 84 and 88 and required another
-  complete gate run instead of being waived.
+- C5-009 was independently found by the critic and the designer static audit.
+  Both traced the absent fallback parent map to a malformed stored category and
+  downstream reward mismatch.
+- C5-017 was independently reproduced by the tracer and test engineer. Both
+  showed that two individually valid amounts can cross the safe-integer
+  boundary and print a one-won-short exact-looking total.
+- The verifier independently reproduced C5-012 through C5-015 and explained
+  why current green tests miss those paths.
+- The code reviewer and critic both identified failures caused by treating
+  partial or implicit product state as authoritative: unknown categories,
+  incomplete persisted facts, implicit portfolio eligibility, and piecemeal
+  fallback taxonomy state.
+- The designer findings were reconciled against shipped markup, CSS tokens,
+  route behavior, and card data. Runtime-only effects remain explicitly marked
+  for browser or assistive-technology regression coverage during implementation.
+
+## Agent failures
+
+- The primary designer stalled during final report generation and again on its
+  single permitted retry. Its isolated browser session and preview were closed
+  exactly and verified clean. The completed static subreview was recovered
+  into `designer.md`; no unobserved live claim was fabricated.
+- No other requested reviewer failed or timed out.
+
+## Baseline validation evidence
+
+- `bun run test`: 2,457 tests passed across 99 files.
+- `bun run test:e2e`: 93 browser tests passed in both reviewer-owned runs, with
+  exact clean postflight ownership checks.
+- Focused parser/rules/core/scraper/CLI verification: 194 tests passed.
+- Lint, typecheck, data, migration, dependency-integrity, documentation, and
+  production build checks passed on the review baseline.
+- `bun audit --json` reproduced 40 advisories across 15 packages: 18 High, 16
+  Moderate, and 6 Low.
+- The host Bun is 1.3.12 while the repository currently pins 1.2.6; baseline
+  results are supporting evidence, not a claim of exact pinned-toolchain
+  reproduction.
+- No deployment was performed.
 
 ## Plan coverage
 
-Every Cycle 4 finding is scheduled. There are no Cycle 4 deferrals.
+Every Cycle 5 finding is scheduled exactly once. There are no Cycle 5
+deferrals.
 
 | Plan | Scheduled findings |
 |---|---|
-| 84 - Core domain consistency | C4-001 through C4-005, C4-023 through C4-025 |
-| 85 - Parser and worker performance | C4-006 through C4-010 |
-| 86 - Analysis replacement atomicity | C4-011, C4-012 |
-| 87 - CLI, scraper, and documentation boundaries | C4-014 through C4-017 |
-| 88 - UI and browser regressions | C4-013, C4-018 through C4-022, C4-026, C4-027 |
+| 89 — Domain and catalog truth | C5-001, C5-007, C5-008, C5-013 |
+| 90 — Parser and input integrity | C5-002, C5-004, C5-005, C5-014, C5-015 |
+| 91 — Persistence and checked output | C5-003, C5-006, C5-017 |
+| 92 — Scraper provenance and issuer documentation | C5-010, C5-011, C5-018 |
+| 93 — Dependency and icon hardening | C5-012, C5-016 |
+| 94 — Taxonomy and upload UX | C5-009, C5-019 through C5-023, C5-026 through C5-028, C5-031 |
+| 95 — Page, report, and card UX | C5-024, C5-025, C5-029, C5-030, C5-032 through C5-037 |
 
-Plans 79 through 83 were fully completed and verified in Cycle 3 and were
-archived before Cycle 4 implementation planning. Historical deferrals remain
-owned by their existing records; no Cycle 4 finding was added to them.
+Plans 84 through 88 were fully completed and verified in Cycle 4 and were
+archived before Cycle 5 implementation. Older historical plans and deferrals
+were left in place; no Cycle 5 finding was added to them.
 
-## Implementation closure and final gates
+## Implementation closure
 
-All 27 unique findings were implemented in Plans 84 through 88. The final diff
-audit added decimal-exact mileage multiplication, visible focus restoration
-after mobile issuer collapse, and a controlled post-settle runtime-error
-observation window. No Cycle 4 finding was deferred.
+All **37 of 37** unique Cycle 5 findings were implemented through Plans 89–95;
+**0 findings were deferred**.
 
-The reward normalization transform was also adjusted to preserve the existing
-`rate` key position. Regenerating through `bun run data:build` reduced roughly
-20,000 lines of property-order-only catalog churn to the intended LOCA 365
-semantic change and deterministic catalog identity updates.
+The final read-only implementation audit found manifestations of existing
+findings rather than new unique issues. README reward/portfolio wording mapped
+to C5-008; persisted-record shape probes mapped to C5-003; parser probes mapped
+to C5-002, C5-004, and C5-005; and the cross-month public-total probe mapped to
+C5-017. Astro 7 documentation drift was introduced during implementation and
+was corrected in the same plan. The aggregate count therefore remains 37.
 
-| Gate | Final result |
-|---|---|
-| `bun run lint` | 7 packages passed; web checked 97 files with 0 errors, warnings, or hints |
-| `bun run typecheck` | 7 packages passed; web checked 97 files with 0 errors, warnings, or hints |
-| `bun run build` | 7/7 packages and 5 Astro pages passed without warnings |
-| `bun run test` | 12/12 workspace tasks passed: 2,402 package tests and 55 root-script tests |
-| `bun run test:bun` | 1,684/1,684 passed |
-| `bunx vitest run` | 91/91 files and 2,394/2,394 tests passed |
-| `bun run test:e2e` | 93/93 passed in the exact repository-owned runner |
+Final configured gates:
 
-Data generation/checks verified 683 cards across 24 issuers. Dependency,
-migration, and documentation checks also passed.
+- `bun run lint` — passed.
+- `bun run typecheck` — passed.
+- `bun run build` — passed.
+- `bun run test` — passed.
+- `bun run test:bun` — 1,737 tests passed.
+- `bunx vitest run` — 2,550 tests passed across 95 files.
+- `bun run test:e2e` — 96 of 96 tests passed, with clean repository-owned
+  process state before and after the run.
 
-Seven distinct gate root causes were repaired during implementation:
-
-1. Astro 6.0.8 emitted its known unused integration re-export warning; the
-   workspace now resolves Astro 6.1.4.
-2. A scraper process test used Bun-specific spawning under Vitest; the test now
-   uses a portable process boundary.
-3. Five browser cases used an impossible island-geometry hydration condition;
-   they now wait for component-specific readiness.
-4. The tablet assertion selected a responsive copy hidden at that breakpoint;
-   it now selects the visible category value inside the real panel.
-5. The mobile issuer assertion retained a locator whose accessible role
-   disappeared after collapse; it now uses a DOM-stable selected control.
-6. The E2E runner forwarded inherited `NO_COLOR` into Playwright's
-   `FORCE_COLOR` process tree; Playwright-owned commands now omit it.
-7. A replacement-runtime fixture retained an empty `bestSingleCard` identity
-   after strict persistence validation; it now uses a valid card identity.
-
-## Review and cleanup evidence
-
-- All 11 requested review roles and both implementation audits completed. No
-  reviewer failed or timed out.
-- Performance, core, parser, CLI, rules, data, dependency, lint, type, and
-  build probes reported by the role bundles passed on the review baseline.
-- The designer inspected the production build at 320, 767, 768, 900, 1024,
-  1100, and 1440 px, light and dark themes, keyboard and pointer interaction,
-  restored and empty states, and print behavior.
-- The designer's isolated agent-browser session, Chrome helper tree, crashpad
-  processes, and Astro preview were closed. An independent audit confirmed no
-  owned E2E run, no listener on TCP 4173, and no repository-owned browser or
-  preview process.
-- The final 93-test browser postflight again confirmed no owned run, listener,
-  browser, or preview process. The six protected Cycle 42 artifacts retained
-  their baseline hashes and remained outside staging.
-- Interactive Chrome, Codex, Travelback, xylolabs, and other-workspace process
-  trees were not signalled.
-- No deployment was performed.
+No deployment was performed (`Deploy mode: none`).

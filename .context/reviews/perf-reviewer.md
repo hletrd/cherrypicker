@@ -1,37 +1,29 @@
-# Cycle 3 — Performance Reviewer
+# Cycle 5 — Performance Reviewer
 
-**Review target:** `614ce5c` on `codex/review-plan-fix-no-deploy-20260723`
-**Mode:** read-only performance review. Cycle 1/2 closures were checked first; the deferred Cycle 1 optimizer and merchant-matcher work (`D-C1-040`, `D-C1-041`) is intentionally not re-reported.
+**Review target:** `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715` on `codex/review-plan-fix-no-deploy-20260723`
+**Mode:** read-only full-repository performance review
 
 ## Inventory and method
 
-The review used the shared Cycle 3 inventory of 2,072 tracked paths / 1,067 current non-historical artifacts. I traced startup, catalog publication/loading, browser parse and analysis queues, worker boundaries, persistence, reports, CLI defaults, and build budgets. Validation included a production web build/budget check, decoded/gzip asset sizing, a 10 MiB text-preprocessing microbenchmark, and fresh-process catalog-load probes.
+The inventory started from all 2,133 tracked paths. I inspected the current runtime, worker, parser, rules, CLI, scraper, build, publication, persistence, component, test, E2E, and workflow paths. The 683 declarative card files across 24 issuers were covered by the canonical schema/publication gates and full-data queries. Generated and historical review artifacts were treated as evidence, not manually reviewed as production source.
 
-## Findings
+The sweep traced initial-load assets, worker payload ownership, full-file parsing, catalog loading and caching, optimizer loops, component mount work, storage serialization, async fan-out, timers/listeners, and build budgets. Cycle 4 closures were checked first. Known deferred optimizer candidate rescanning (`D-C1-040`) and linear merchant-keyword matching (`D-C1-041`) are intentionally not re-reported.
 
-### C3-PERF-001 — CSV worker parsing still performs the full-file decode and bank scan on the main thread
+## Finding
 
-- **Severity:** Medium
+### C5-PERF-001 — Every `Icon` instance reconstructs the complete SVG path lookup table
+
+- **Severity:** Low
 - **Confidence:** High
 - **Status:** confirmed
-- **Location:** `apps/web/src/lib/parser/index.ts:29-58`; `packages/parser/src/shared/encoding.ts:3-46,49-59`; `apps/web/src/lib/parser/detect.ts:156-197`; `apps/web/src/lib/parser/worker-runner.ts:112-116`
-- **Concrete failure scenario:** A user selects one or two 10 MiB CSV statements on a lower-powered phone. Before either worker can parse, the UI thread reads and decodes every byte, tests the complete decoded string against every bank signature, clones that string into the worker, and later scans it again for replacement characters. Two permitted parse lanes can enter this path together, producing visible input/animation delay even though the feature is presented as worker-backed.
-- **Evidence:** The CSV branch calls `file.arrayBuffer()`, `detectTextEncoding()`, `decodeTextBytes()`, and `detectBankFromText()` before `parseWithWorker()`. UTF-8 detection itself performs a fatal full-buffer decode; the next call decodes the buffer again. Bank detection loops over all signature regexes against the full string. Unlike XLSX, the CSV payload is a string, so `postMessage()` cannot transfer it and must structured-clone it. A seven-run 10 MiB probe of the pre-worker encoding/decode/bank/replacement path on this desktop measured **14.66–16.24 ms, 15.63 ms median** in Bun; that already consumes essentially a 60 Hz frame before browser cloning, worker startup, or mobile slowdown.
-- **Suggested fix:** Transfer the original `ArrayBuffer` to the CSV worker and perform encoding detection, decoding, bank detection, replacement counting, and parsing there. Return the detected bank/encoding warning with the parse result. If bank detection must remain outside the parser, limit it to a bounded header sample. Add a browser test with a heartbeat/long-task assertion for the maximum per-file size and two concurrent lanes.
+- **Location:** `apps/web/src/components/ui/Icon.svelte:1-41`; repeated-list consumers `apps/web/src/components/upload/FileDropzone.svelte:476` and `apps/web/src/components/cards/CardDetail.svelte:317`
+- **Concrete scenario:** A maximum-size upload selection renders 50 file rows, each with an `Icon`, or a card detail renders many reward rows. Hydration/mounting constructs the same 27-property lookup object once per icon instance even though its values are immutable application constants.
+- **Evidence:** `icons` is declared in the component's ordinary instance `<script>`, not module scope. The source component is 10,054 bytes and contains 27 path entries. Direct Svelte compilation and the production `Icon.*.js` chunk both place `const o = { ...all paths... }` inside the generated component function, confirming fresh object/property initialization for every instance. This is not a duplicate-download finding—the chunk is loaded once—but it is avoidable repeated allocation and initialization on dense screens.
+- **Suggested fix:** Move the immutable map into `<script module lang="ts">` or a separate module and reference it from instances. A later typed-icon/component conversion could also avoid `{@html}` parsing, but module-scoping the existing map is the narrow fix. Add a compiler-output or mount regression check only if the project wants to prevent this class of component-local static table from returning.
 
-### C3-PERF-002 — Default CLI optimize/report startup reparses all 683 YAML rules instead of using the compiled catalog
+## Verification and final missed-issue sweep
 
-- **Severity:** Medium
-- **Confidence:** High
-- **Status:** confirmed
-- **Location:** `tools/cli/src/commands/optimize.ts:97-127`; `tools/cli/src/commands/report.ts:104-133`; `packages/rules/src/loader.ts:17-52`; generated artifact `scripts/build-json.ts:424`
-- **Concrete failure scenario:** Every ordinary `optimize` or `report` invocation recursively enumerates 683 rule files, launches one read/YAML-parse/Zod-validation promise per file, and retains the resulting graph before doing any user analysis. Repeated CLI use and constrained CI/container runs pay this source-authoring cost even though the repository already publishes a compact optimizer artifact.
-- **Evidence:** Both commands select `DEFAULT_CARDS_DIR` when `--cards` is absent and call `loadAllCardRules()`. That loader recursively collects every YAML path and feeds the entire array to `Promise.allSettled()` without a concurrency bound. Three fresh-process probes loaded 683 rules in **305/313/339 ms** and peaked at approximately **184–186 MiB RSS**. Reading and parsing the generated optimizer JSON took approximately **6 ms** and **33 MiB RSS** in the comparison probe. The custom `--cards` path legitimately needs source YAML; the default path does not.
-- **Suggested fix:** Make the generated, schema-validated optimizer catalog the default CLI runtime input, while retaining YAML loading for explicit `--cards` development overrides. If source loading remains supported, bound read/parse concurrency. Add a CLI startup/RSS budget test that exercises the default 683-card catalog.
-
-## Build and missed-issue sweep
-
-- `bun run web:build:check` passed. The initial client graph was 181.9 KiB decoded / 62.5 KiB gzip; compact catalog and optimizer budgets also passed.
-- Large parser chunks were confirmed lazy/worker-scoped (PDF worker 1.38 MiB raw; analyzer 451.7 KiB; XLSX/HTML workers about 390 KiB each), so they were not reported as initial-load regressions.
-- Cycle 2 cancellation, PDF cleanup, aggregate upload limits, parser entry isolation, and CSV double-file-read fixes remain present.
-- Final searches covered synchronous full-file operations, `Promise.all` fan-out, worker transfer lists, cache lifetime, storage serialization, timers/listeners, generated-data loading, and bundle-budget coverage. No additional performance issue met the evidence threshold.
+- `bun run web:build:check` passed: 17 initial files, 194.8 KiB decoded / 66.5 KiB gzip, with compact catalog, optimizer, and detail-shard budgets passing.
+- `bun run test:e2e` passed 93/93 tests in 37.0 seconds. `bun scripts/run-e2e.ts status --assert-clean` then confirmed no owned runs and port 4173 available.
+- Parser `ArrayBuffer` transfer, bounded delimiter sampling, compiled CLI catalog loading, worker concurrency, lazy parser chunks, cancellation, and publication caching were rechecked and retain their Cycle 4 fixes.
+- Final searches covered synchronous/full-file operations, large-array spread, unbounded `Promise.all`, worker transfer lists, storage copies, component-local static maps, generated-data loading, and listener cleanup. No other non-deferred performance issue met the evidence threshold.

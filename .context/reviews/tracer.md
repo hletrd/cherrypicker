@@ -1,144 +1,106 @@
-# Tracer — Cycle 3
+# Cycle 5 causal tracer review
 
-**Reviewer:** tracer
-**Date:** 2026-07-23
-**Baseline:** `614ce5c`
-**Result:** 2 confirmed Medium findings.
+Date: 2026-07-23
+Baseline: `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715`
 
-## Inventory and causal map
+## Scope
 
-I traced every production path across the web app, core, parsers, rules,
-visualization package, CLI, scraper, scripts, generated artifacts, workspace
-configuration, and deployment workflow. The source inventory was 171 relevant
-production/script files (41,770 lines excluding tests and generated data), plus
-683 canonical card YAML records, 24 issuer indexes/detail shards, 80 unit/script
-test files, and 8 regression E2E specs.
+After inventorying all tracked files, I traced every current user-input path
+through its parser, normalizer, domain boundary, aggregation, persistence, and
+output consumer. The sweep specifically rechecked the Cycle 4 safe-money
+changes through web, optimize, report, and analyze call graphs instead of
+assuming the shared-core fix covered every command. Historical Cycle 4
+findings were compared against current code and are not repeated below.
 
-The highest-risk cross-file chains were followed end to end:
+## Finding
 
-- upload/drop -> `FileDropzone` run owner -> store operation epoch -> analyzer
-  -> bounded parse queue -> lazy parser/worker/PDF lifecycle -> categorizer ->
-  calendar context -> catalog loaders -> optimizer -> persistence/routes;
-- CLI statement -> local-first parser/consent -> calendar context -> catalog ->
-  optimizer -> disclosure/terminal/report;
-- issuer configuration/URL -> network policy/DNS pin -> bounded fetch ->
-  HTML cleaning -> LLM request/response -> canonical validation -> contained
-  YAML write -> publication artifacts -> browser readers; and
-- YAML/taxonomy -> exhaustive semantic validators -> deterministic JSON/docs ->
-  common `sourceHash` -> web caches/consumers.
-
-## Findings
-
-### C3-TR-001 — Scraper input truncation is model-visible but not caller-visible
+### C5-TRACE-001 — `analyze` bypasses the checked analysis aggregate and silently rounds a valid statement total
 
 - **Severity:** Medium
 - **Confidence:** High
 - **Status:** Confirmed
-- **Locations:** `tools/scraper/src/fetcher.ts:321-365`;
-  `tools/scraper/src/extractor.ts:8-14,19-55`;
-  `tools/scraper/src/cli.ts:108-132`;
-  `tools/scraper/__tests__/extractor.test.ts:36-100`
+- **Location:** `packages/parser/src/shared/amount.ts:52-54,57-63`;
+  `tools/cli/src/analysis.ts:31-55`;
+  `tools/cli/src/commands/analyze.ts:55-68`;
+  `packages/viz/src/terminal/summary.ts:25-50,61-74`;
+  same public-report aggregation at
+  `packages/viz/src/report/generator.ts:267-324`;
+  safe comparison path at
+  `packages/core/src/numeric.ts:1-20` and
+  `packages/core/src/analysis/context.ts:87-147`
 
-**Trace:** The fetcher accepts and bounds the remote HTML, `cleanHTML` selects
-main/body text, and the CLI logs the resulting text size. `extractCardRules`
-then keeps only the first 40,000 UTF-16 code units and appends a Korean marker
-inside the model prompt. A schema-valid tool response proceeds through
-`validateExtractedRules`, then `writeCardRule` saves a normal canonical YAML.
-No return type, warning, CLI status, or generated header records that source
-content was omitted.
+Confirmed causal chain:
 
-A safe local request-construction probe supplied a marker after character
-40,000. The request contained the truncation notice but not the trailing
-marker; the caller still received an ordinary request object. Existing tests
-cover **output** truncation (`stop_reason === "max_tokens"`) but never
-**input** truncation.
+1. The canonical parser deliberately accepts each integer amount through
+   `Number.MAX_SAFE_INTEGER`.
+2. `categorizeRawTransactions` copies that validated amount unchanged.
+3. `runAnalyze` categorizes the rows and calls `printSpendingSummary`
+   directly. Unlike `optimize` and `report`, it never calls
+   `prepareCliAnalysis`/`buildAnalysisContext`.
+4. The visualization function independently recomputes category and grand
+   totals using `existing.total += tx.amount` and
+   `grandTotal += tx.amount`, with no safe-integer assertion.
+5. The rounded number is formatted as if it were exact Won and printed to the
+   user. No warning or failure is produced.
 
-**Failure scenario:** A long issuer product page places fee details, exclusions,
-caps, or late benefit sections after the first 40,000 characters. The model can
-produce internally schema-valid rules from the prefix, the scraper reports
-success, and a developer can publish a materially incomplete catalog record
-without any machine-readable completeness signal.
+A direct current-HEAD probe with two individually valid rows,
+`[Number.MAX_SAFE_INTEGER, 2]`, produced:
 
-**Competing hypothesis:** The in-prompt notice tells the model that text was
-cut. That can influence its answer, but it cannot restore missing facts and is
-not propagated to the human caller, validator, YAML header, or publication
-gate. It therefore does not close the data-integrity break.
+```text
+mathematical total (BigInt): 9007199254740993
+printed terminal total:      9,007,199,254,740,992원
+```
 
-**Suggested fix:** Prefer structured section/chunk extraction with deterministic
-coverage and merge/conflict validation. At minimum, make truncation an explicit
-result state that the CLI treats as incomplete (non-zero exit or required
-acknowledgment), include original/sent sizes, and prevent direct publication
-until reviewed. Add boundary tests at 39,999/40,000/40,001 characters and a
-late-section fixture whose omitted restriction must fail completeness.
+The report generator repeats the unchecked aggregation in its exported
+`generateHTMLReport` API. The normal CLI `report` command is protected because
+it first calls `prepareCliAnalysis`, whose monthly checked sum fails closed;
+the direct public viz API is not. The normal CLI `analyze` command remains
+reachable because it bypasses that boundary.
 
-### C3-TR-002 — The analysis cancel signal terminates parser work but not catalog or optimizer work
+Competing hypotheses eliminated:
 
-- **Severity:** Medium
-- **Confidence:** High
-- **Status:** Confirmed
-- **Locations:** `apps/web/src/components/upload/FileDropzone.svelte:162-169,
-  278-351`; `apps/web/src/lib/analyzer.ts:165-220,245-305,375-411`;
-  `apps/web/src/lib/cards.ts:241-275,449-469`;
-  `apps/web/src/lib/store.svelte.ts:335-384`;
-  `apps/web/__tests__/file-parse-queue.test.ts:112-226`
+- **“Cycle 4 made all aggregates safe.”** False. The fixed core paths use
+  `addSafeNonnegativeIntegers`, but `analyze` does not enter them.
+- **“Visualization only formats already-computed totals.”** False. Both
+  terminal and HTML visualization code perform their own independent sums.
+- **“The parser rejects the triggering rows.”** False. Both inputs are safe
+  integers and the parser intentionally accepts the maximum boundary.
+- **“This is only a direct-library misuse.”** False for terminal output:
+  `runAnalyze` calls the vulnerable public function directly. It is true for
+  the HTML variant under the current CLI call graph, which narrows that part
+  of the impact.
+- **“Annual fees have the same hole.”** False. Although the schema text uses
+  `z.number().int().nonnegative()`, Zod's integer check rejected
+  `Number.MAX_SAFE_INTEGER + 1` in a direct probe before publication or scraper
+  output could proceed.
 
-**Trace:** `LatestFileParseRun` supplies an `AbortSignal`; the parse queue passes
-it to active workers, and PDF cleanup rejects promptly. However,
-`analyzeMultipleFiles` awaits `loadCategories()` before its first run check,
-and `optimizeFromTransactions` awaits `loadOptimizerCatalog()` without a
-signal. After parsing, the analyzer invokes optimization without another run
-check or signal. The catalog loaders already support caller-scoped abort races,
-but these calls omit the available signal. Greedy optimization is synchronous
-and also has no cooperative stale/cancel check.
+Failure scenario:
 
-The store operation epoch correctly prevents the late result, error, or
-persistence commit. This is not a stale-state corruption finding. The defect is
-that a canceled run can retain an analyzer continuation, wait for a request
-timeout, parse a large catalog, and execute the full 683-card optimization even
-after the UI has returned to idle or started a newer run.
+A malformed, synthetic, or hostile statement contains two individually valid
+positive amounts whose aggregate crosses the safe-integer boundary. The
+`analyze` command reports an incorrect category and grand total as exact
+currency. This requires unrealistic values, but it violates the repository's
+explicit fail-closed monetary invariant and can silently corrupt financial
+output rather than returning an actionable boundary error.
 
-**Failure scenario:** The user cancels/removes a file or starts another upload
-while the categories/optimizer artifact is slow, or just after parsing
-finishes. Active parser resources stop, but downstream fetch/validation/CPU
-work continues invisibly and competes with the current interaction.
+Suggested fix:
 
-**Competing hypothesis:** Artifact fetches are shared and should not be globally
-aborted for one caller. `cards.ts` already solves that concern with
-`waitForCaller`: a caller's wait can reject without canceling the shared
-request. Passing the run signal would therefore improve prompt cancellation
-without poisoning shared caches.
+- Give viz one shared checked positive-money aggregator (export the core
+  helper or expose an analysis-summary API) and use it for category and grand
+  totals in both terminal and HTML report generation.
+- Keep the command behavior explicit: `analyze` may summarize all parsed
+  months, but it must still validate every amount and every cross-row sum.
+- Fail before printing partial tables when any category or grand total is
+  unsafe.
+- Add regressions for `MAX_SAFE_INTEGER + 2` across two rows, separate-category
+  overflow, the exact-safe boundary, zero/refund filtering, the CLI analyze
+  command, and direct terminal/report APIs.
 
-**Suggested fix:** Thread the execution signal into every caller-scoped
-`loadCategories`/`loadOptimizerCatalog` wait, check the run after every await
-and before/after optimization, and add a cooperative cancellation boundary for
-large synchronous optimization (chunk/yield or worker). Test cancellation
-during initial categories, optimizer load, catalog validation, and optimizer
-execution; assert prompt caller settlement, no stale commit, and cache reuse by
-an unrelated live caller.
+## Validation and final sweep
 
-## Traces closed without findings
-
-- Parser detection now receives complete bytes where required, imports only the
-  selected format, and normal CSV parsing performs one full read.
-- Multi-file outcomes preserve input order, file identity, warning counts, and
-  exact latest/previous calendar-month semantics.
-- Typed payment/channel/fuel/exclusion facts and provenance survive parser,
-  web/CLI adapters, optimization, disclosure, persistence, and restoration.
-- Catalog publication rejects partial/invalid cards and all artifacts are tied
-  to one deterministic `sourceHash`; browser consumers fail closed on a mixed
-  generation.
-- Scraper redirects and connected addresses are revalidated under the same
-  allowlist/public-IP policy, and output paths remain issuer-bound and
-  no-follow.
-- Store epochs prevent analyze/reoptimize/reset/cancel continuations from
-  committing stale state. C3-DBG-001 is a separate same-operation error-policy
-  split, not an epoch race.
-
-## Final missed-issue sweep
-
-I repeated the trace in reverse from every persistent or externally visible
-sink (YAML/JSON, `sessionStorage`, terminal, HTML report, route navigation, and
-Pages artifact) back to its producer and validator. Searches for unguarded
-awaits, catch-and-continue behavior, truncation, shared caches, writes, and raw
-rendering found no additional cross-file Critical/High causal break beyond the
-two findings above and the role-specific debugger/security findings.
+The focused probe reproduced the one-Won discrepancy. All 2,457 current
+unit/integration tests and 93 browser regressions still passed, confirming that
+the existing suite does not guard this call graph. A final search of every
+production `+=`, additive reduction, and monetary consumer found other web
+reductions protected by checked core results; only the two viz recomputations
+above remained outside that invariant.
