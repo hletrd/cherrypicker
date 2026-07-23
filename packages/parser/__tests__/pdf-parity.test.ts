@@ -7,13 +7,15 @@ import {
   getHeaderColumns,
 } from '../src/pdf/table-parser.js';
 import { parseDateStringToISO, isValidYYYYMMDD, isValidYYMMDD, isValidShortDate } from '../src/date-utils.js';
+import {
+  findLastPDFAmountToken,
+  parsePDFText,
+  resolvePDFRowValues,
+} from '../src/shared/pdf-text.js';
 
 // C21-TEST03: PDF parser pure function tests
-// These test the server-side equivalents which are kept in parity with
-// the web-side PDF parser (apps/web/src/lib/parser/pdf.ts).
-// The web-side functions (parseAmount, parseDateToISO, isValidDateCell,
-// parseTable) have identical logic but cannot be imported directly in Bun
-// due to the pdfjs-dist ?url import.
+// These tests execute the shared production kernel used by both the server
+// and browser PDF extraction adapters.
 
 describe('PDF parser pure functions (C21-TEST03)', () => {
   // ---------------------------------------------------------------------------
@@ -71,6 +73,44 @@ describe('PDF parser pure functions (C21-TEST03)', () => {
 
   test('parseAmount handles KRW prefix', () => {
     expect(parseAmountString('KRW 10,000')).toBe(10000);
+  });
+
+  test('fallback extraction preserves negative markers', () => {
+    for (const [line, expected] of [
+      ['2024-01-15 스타벅스 (5,000)', -5000],
+      ['2024-01-15 스타벅스 마이너스5,000원', -5000],
+      ['2024-01-15 스타벅스 －5,000원', -5000],
+    ] as const) {
+      const token = findLastPDFAmountToken(line);
+      expect(token).not.toBeNull();
+      expect(parseAmountString(token!.token)).toBe(expected);
+    }
+  });
+
+  test('shared text parsing excludes every supported refund notation', () => {
+    const result = parsePDFText([
+      '2024-01-15  정상승인  50,000원',
+      '2024-01-16  괄호 환불  (50,000)',
+      '2024-01-17  한글 환불  마이너스50,000원',
+      '2024-01-18  전각 환불  －50,000원',
+      '2024-01-19  후행 환불  50,000-',
+    ].join('\n'));
+
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]?.date).toBe('2024-01-15');
+    expect(result.transactions[0]?.amount).toBe(50000);
+  });
+
+  test('structured row resolution refreshes values after index correction', () => {
+    const row = ['기타', '2024-01-15', '스타벅스', '15,000'];
+    const result = resolvePDFRowValues(
+      row,
+      { dateIdx: 0, amountIdx: 2 },
+      () => ({ idx: 1, value: row[1]! }),
+      () => ({ idx: 3, value: row[3]! }),
+    );
+    expect(result?.dateValue).toBe('2024-01-15');
+    expect(result?.amountValue).toBe('15,000');
   });
 
   test('parseAmount returns null for empty string', () => {

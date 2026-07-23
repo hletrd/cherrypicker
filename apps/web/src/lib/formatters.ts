@@ -26,6 +26,42 @@ export function formatPercent(rate: number): string {
   return formatRate(rate);
 }
 
+export interface CatalogRewardDisplay {
+  rate: number | null;
+  fixedAmount?: number | null;
+  unit?: string | null;
+}
+
+/**
+ * Catalog reward rates are stored as percentage points (0.7 means 0.7%),
+ * unlike calculated effective rates, which are decimals. Fixed benefits must
+ * also keep their unit instead of being coerced to a false 0%.
+ */
+export function formatCatalogReward(tier: CatalogRewardDisplay): string {
+  const number = (value: number) =>
+    value.toLocaleString('ko-KR', { maximumFractionDigits: 2 });
+
+  if (tier.fixedAmount !== null && tier.fixedAmount !== undefined && Number.isFinite(tier.fixedAmount)) {
+    if (tier.unit === 'won_per_liter') return `리터당 ${number(tier.fixedAmount)}원`;
+    if (tier.unit === 'won_per_day') return `일 ${number(tier.fixedAmount)}원`;
+    if (tier.unit === 'mile_per_1500won') return `${number(tier.fixedAmount)}마일/1,500원`;
+    if (tier.unit === 'miles') return `${number(tier.fixedAmount)}마일`;
+    if (tier.unit === null || tier.unit === undefined) return `${number(tier.fixedAmount)}원`;
+    return '표시 가능한 혜택 정보 없음';
+  }
+
+  if (tier.rate !== null && Number.isFinite(tier.rate)) {
+    if (tier.unit === 'mile_per_1500won') return `${number(tier.rate)}마일/1,500원`;
+    if (tier.unit === 'miles') return `${number(tier.rate)}% 마일리지`;
+    if (tier.unit === 'won_per_liter') return `리터당 ${number(tier.rate)}원`;
+    if (tier.unit === 'won_per_day') return `일 ${number(tier.rate)}원`;
+    if (tier.unit === null || tier.unit === undefined) return `${number(tier.rate)}%`;
+    return '표시 가능한 혜택 정보 없음';
+  }
+
+  return '표시 가능한 혜택 정보 없음';
+}
+
 /**
  * Format a decimal rate as percentage with 2 decimal places.
  * Use for effective rate displays that need more precision than formatRate().

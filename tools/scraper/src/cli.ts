@@ -5,62 +5,35 @@ import { fileURLToPath } from 'node:url';
 import { fetchCardPage, cleanHTML } from './fetcher.js';
 import { extractCardRules } from './extractor.js';
 import { writeCardRule } from './writer.js';
+import { parseScraperArgs } from './args.js';
+import type { ScraperIssuer } from './config.js';
+import { SCRAPER_ISSUERS } from './config.js';
+import { buildIssuerNetworkPolicy } from './network-policy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 interface IssuerTarget {
-  issuer: string;
+  issuer: ScraperIssuer;
   baseUrl: string;
   cardListUrl?: string;
+  allowedHosts?: string[];
   notes?: string;
-}
-
-function parseArgs(args: string[]): {
-  issuer: string;
-  url?: string;
-  output: string;
-} {
-  let issuer: string | undefined;
-  let url: string | undefined;
-  let output = join(__dirname, '../../../packages/rules/data/cards');
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--issuer' && args[i + 1]) {
-      issuer = args[i + 1];
-      i++;
-    } else if (args[i] === '--url' && args[i + 1]) {
-      url = args[i + 1];
-      i++;
-    } else if (args[i] === '--output' && args[i + 1]) {
-      output = args[i + 1]!;
-      i++;
-    } else if (args[i] === '--help' || args[i] === '-h') {
-      printHelp();
-      process.exit(0);
-    }
-  }
-
-  if (!issuer) {
-    console.error('오류: --issuer 옵션이 필요합니다.');
-    printHelp();
-    process.exit(1);
-  }
-
-  return { issuer, url, output };
 }
 
 function printHelp(): void {
   console.log(`
-CardPick 카드 규칙 스크래퍼
+CherryPicker 카드 규칙 스크래퍼
 
 사용법:
-  bun run tools/scraper/src/cli.ts --issuer <issuerId> [--url <url>] [--output <dir>]
+  bun run tools/scraper/src/cli.ts --issuer <issuerId> [--url <url>] [--output <dir>] [--force]
 
 옵션:
-  --issuer <id>    카드사 ID (필수): hyundai, kb, samsung, shinhan, lotte, hana, woori, ibk, nh, bc
+  --issuer <id>    카드사 ID (필수): ${SCRAPER_ISSUERS.join(', ')}
   --url <url>      스크래핑할 특정 카드 URL (생략 시 카드사 기본 URL 사용)
+  --allow-host <host> 공식 호스트 외 대상을 명시적으로 추가 (반복 가능)
   --output <dir>   출력 디렉토리 (기본: packages/rules/data/cards/)
+  --force          같은 카드 파일이 있으면 일반 파일만 덮어쓰기
   --help           도움말
 
 예시:
@@ -70,38 +43,71 @@ CardPick 카드 규칙 스크래퍼
 `);
 }
 
-function loadIssuerTarget(issuer: string): IssuerTarget {
+export function loadIssuerTarget(issuer: ScraperIssuer): IssuerTarget {
   const targetsDir = join(__dirname, '../targets');
   const targetFile = join(targetsDir, `${issuer}.json`);
 
+  let content: string;
   try {
-    const content = readFileSync(targetFile, 'utf-8');
-    return JSON.parse(content) as IssuerTarget;
+    content = readFileSync(targetFile, 'utf-8');
   } catch {
     throw new Error(
       `카드사 "${issuer}" 설정 파일을 찾을 수 없습니다: ${targetFile}\n` +
-        '지원 카드사: hyundai, kb, samsung, shinhan, lotte, hana, woori, ibk, nh, bc',
+        `지원 카드사: ${SCRAPER_ISSUERS.join(', ')}`,
     );
   }
+
+  let target: IssuerTarget;
+  try {
+    target = JSON.parse(content) as IssuerTarget;
+  } catch {
+    throw new Error(`카드사 "${issuer}" 설정 파일이 올바른 JSON이 아닙니다.`);
+  }
+  if (target.issuer !== issuer) {
+    throw new Error(
+      `카드사 설정 불일치: 요청 "${issuer}", 설정 "${target.issuer}"`,
+    );
+  }
+  return target;
 }
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  const { issuer, url: urlOverride, output } = parseArgs(args);
+  if (args.includes('--help') || args.includes('-h')) {
+    printHelp();
+    return;
+  }
+  const defaultOutput = join(__dirname, '../../../packages/rules/data/cards');
+  const {
+    issuer,
+    url: urlOverride,
+    output,
+    force,
+    allowHosts: requestedAllowedHosts,
+  } = parseScraperArgs(args, defaultOutput);
 
   // Load issuer target config
   const target = loadIssuerTarget(issuer);
-  const targetUrl = urlOverride ?? target.baseUrl;
+  const networkPolicy = buildIssuerNetworkPolicy(
+    target,
+    urlOverride,
+    requestedAllowedHosts,
+  );
+  const targetUrl = networkPolicy.url;
+  const allowedHosts = networkPolicy.allowedHosts;
 
-  console.log(`\n[CardPick 스크래퍼]`);
+  console.log(`\n[CherryPicker 스크래퍼]`);
   console.log(`카드사: ${issuer}`);
   console.log(`대상 URL: ${targetUrl}`);
   console.log(`출력 디렉토리: ${output}`);
+  if (requestedAllowedHosts.length > 0) {
+    console.warn(`추가 허용 호스트: ${requestedAllowedHosts.join(', ')}`);
+  }
   console.log('');
 
   // Step 1: Fetch page
   console.log('1/4 페이지 가져오는 중...');
-  const html = await fetchCardPage(targetUrl);
+  const html = await fetchCardPage(targetUrl, { allowedHosts });
   console.log(`   HTML 크기: ${Math.round(html.length / 1024)}KB`);
 
   // Step 2: Clean HTML
@@ -118,7 +124,11 @@ async function main(): Promise<void> {
 
   // Step 4: Write YAML
   console.log('4/4 YAML 파일 저장 중...');
-  const filePath = await writeCardRule(cardRules, output);
+  const filePath = await writeCardRule(cardRules, {
+    outputDir: output,
+    expectedIssuer: issuer,
+    overwrite: force,
+  });
   console.log(`   저장 완료: ${filePath}`);
 
   console.log('\n완료!\n');

@@ -1,6 +1,5 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 1,
   "workspaces": {
     "": {
       "name": "cardpick",
@@ -20,6 +19,8 @@
         "@astrojs/check": "^0.9.8",
         "@astrojs/svelte": "^8.0.3",
         "@cherrypicker/core": "workspace:*",
+        "@cherrypicker/parser": "workspace:*",
+        "@cherrypicker/rules": "workspace:*",
         "@cherrypicker/viz": "workspace:*",
         "astro": "^6.0.8",
         "d3-array": "^3.2.0",
@@ -54,6 +55,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
+        "iconv-lite": "^0.6.3",
         "pdf-parse": "^1.1.1",
         "unpdf": "^0.12.0",
         "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
@@ -113,6 +115,7 @@
         "@anthropic-ai/sdk": "^0.39.0",
         "@cherrypicker/rules": "workspace:*",
         "cheerio": "^1.0.0",
+        "iconv-lite": "^0.6.3",
         "yaml": "^2.7.0",
       },
       "devDependencies": {
@@ -1374,7 +1377,7 @@
 
     "wrappy": ["wrappy@1.0.2", "", {}, "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ=="],
 
-    "xlsx": ["xlsx@https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz", { "bin": { "xlsx": "./bin/xlsx.njs" } }, "sha512-oLDq3jw7AcLqKWH2AhCpVTZl8mf6X2YReP+Neh0SJUzV/BdZYjth94tG5toiMB1PPrYtxOCfaoUCkvtuH+3AJA=="],
+    "xlsx": ["xlsx@https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz", { "bin": { "xlsx": "./bin/xlsx.njs" } }],
 
     "xxhash-wasm": ["xxhash-wasm@1.1.0", "", {}, "sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA=="],
 

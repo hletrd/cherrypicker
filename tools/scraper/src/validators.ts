@@ -1,5 +1,14 @@
-import { cardRuleSetSchema } from '@cherrypicker/rules';
+import {
+  cardRuleSetSchema,
+  CatalogValidationError,
+  validateCardRuleSet,
+} from '@cherrypicker/rules';
 import type { CardRuleSet } from '@cherrypicker/rules';
+import type { ScraperIssuer } from './config.js';
+import {
+  getCanonicalScraperRuleContract,
+} from './rule-contract.js';
+import type { ScraperRuleContract } from './rule-contract.js';
 
 export interface ValidationResult {
   valid: boolean;
@@ -11,7 +20,11 @@ export interface ValidationResult {
  * Validate extracted card rules using the Zod schema from @cherrypicker/rules
  * plus additional business logic checks.
  */
-export function validateExtractedRules(rules: unknown): ValidationResult {
+export function validateExtractedRules(
+  rules: unknown,
+  expectedIssuer: ScraperIssuer,
+  contract: ScraperRuleContract = getCanonicalScraperRuleContract(),
+): ValidationResult {
   const errors: string[] = [];
 
   // 1. Zod schema validation
@@ -30,6 +43,60 @@ export function validateExtractedRules(rules: unknown): ValidationResult {
   }
 
   // 2. Business logic validation
+
+  if (parsed.card.issuer !== expectedIssuer) {
+    errors.push(
+      `[비즈니스] card.issuer: 요청한 카드사 "${expectedIssuer}"와 추출 결과 "${parsed.card.issuer}"가 다릅니다`,
+    );
+  }
+
+  try {
+    validateCardRuleSet(parsed, contract.registry);
+  } catch (error) {
+    if (error instanceof CatalogValidationError) {
+      for (const issue of error.issues) {
+        errors.push(`[도메인] ${issue.path}: ${issue.message}`);
+      }
+    } else {
+      errors.push(`[도메인] 규칙 의미 검증 실패: ${String(error)}`);
+    }
+  }
+
+  // Publication accepts a few unambiguous legacy leaf-only categories so old
+  // YAML can be migrated. New scraper output must already use the canonical
+  // parent/subcategory pair and may not rely on that legacy normalization.
+  parsed.rewards.forEach((reward, index) => {
+    for (const field of [
+      'id',
+      'priority',
+      'combination',
+      'stackingGroup',
+      'capGroup',
+      'support',
+    ] as const) {
+      if (reward[field] === undefined) {
+        errors.push(
+          `[도메인] rewards.${index}.${field}: 새 스크래퍼 규칙에 필요한 메타데이터입니다`,
+        );
+      }
+    }
+
+    const resolved = contract.registry.resolvePair(
+      reward.category,
+      reward.subcategory,
+    );
+    if (
+      resolved.value &&
+      (resolved.value.category !== reward.category ||
+        resolved.value.subcategory !== reward.subcategory)
+    ) {
+      errors.push(
+        `[도메인] rewards.${index}: 정규 카테고리는 ` +
+          `"${resolved.value.category}` +
+          `${resolved.value.subcategory ? `.${resolved.value.subcategory}` : ''}"입니다`,
+      );
+    }
+  });
 
   // 2a. Reward tiers should carry at least one reward signal.
   // The runtime schema now preserves authored percentage-like rates as-is

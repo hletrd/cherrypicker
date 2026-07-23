@@ -7,7 +7,7 @@
  * previously untested (C10-01).
  */
 import { describe, test, expect } from 'bun:test';
-import { formatSavingsValue, formatWon } from '../src/lib/formatters.js';
+import { formatCatalogReward, formatSavingsValue, formatWon } from '../src/lib/formatters.js';
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -83,5 +83,30 @@ describe('formatSavingsValue', () => {
     const result = formatSavingsValue(5000);
     // Same as formatSavingsValue(5000, 5000)
     expect(result).toBe('+' + formatWon(5000));
+  });
+});
+
+describe('formatCatalogReward', () => {
+  test('treats catalog rates as percentage points', () => {
+    expect(formatCatalogReward({ rate: 0.7 })).toBe('0.7%');
+    expect(formatCatalogReward({ rate: 5 })).toBe('5%');
+    expect(formatCatalogReward({ rate: 0 })).toBe('0%');
+  });
+
+  test('renders fixed reward units without inventing a percentage', () => {
+    expect(formatCatalogReward({ rate: null, fixedAmount: 60, unit: 'won_per_liter' })).toBe('리터당 60원');
+    expect(formatCatalogReward({ rate: null, fixedAmount: 200, unit: 'won_per_day' })).toBe('일 200원');
+    expect(formatCatalogReward({ rate: null, fixedAmount: 1.5, unit: 'mile_per_1500won' })).toBe('1.5마일/1,500원');
+    expect(formatCatalogReward({ rate: null, fixedAmount: 5_000 })).toBe('5,000원');
+  });
+
+  test('labels mileage rates and does not guess unknown units', () => {
+    expect(formatCatalogReward({ rate: 0.2, unit: 'miles' })).toBe('0.2% 마일리지');
+    expect(formatCatalogReward({ rate: 1, unit: 'unknown-unit' })).toBe('표시 가능한 혜택 정보 없음');
+    expect(formatCatalogReward({ rate: null, fixedAmount: 10, unit: 'unknown-unit' })).toBe('표시 가능한 혜택 정보 없음');
+  });
+
+  test('uses an honest fallback when no displayable value exists', () => {
+    expect(formatCatalogReward({ rate: null, fixedAmount: null })).toBe('표시 가능한 혜택 정보 없음');
   });
 });

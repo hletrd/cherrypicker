@@ -6,7 +6,7 @@ import { runScrape } from './commands/scrape.js';
 
 function printHelp(): void {
   console.log(`
-CardPick — 한국 신용카드 최적화 도구
+CherryPicker — 한국 신용카드 최적화 도구
 
 사용법:
   cherrypicker <command> [options]

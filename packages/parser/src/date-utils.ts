@@ -56,12 +56,15 @@ export function isValidYYYYMMDD(value: string): boolean {
  *  For Feb 29 dates: if the inferred year is not a leap year, walk back
  *  up to 3 years to find the most recent leap year. This ensures Feb 29
  *  from leap-year statements always resolves to a valid date (C88-01). */
-export function inferYear(month: number, day: number): number {
-  const now = new Date();
-  const candidate = new Date(now.getFullYear(), month - 1, day);
-  let year = candidate.getTime() - now.getTime() > 90 * 24 * 60 * 60 * 1000
-    ? now.getFullYear() - 1
-    : now.getFullYear();
+export function inferYear(
+  month: number,
+  day: number,
+  referenceDate: Date = new Date(),
+): number {
+  const candidate = new Date(referenceDate.getFullYear(), month - 1, day);
+  let year = candidate.getTime() - referenceDate.getTime() > 90 * 24 * 60 * 60 * 1000
+    ? referenceDate.getFullYear() - 1
+    : referenceDate.getFullYear();
   // For Feb 29, ensure we land on a leap year
   if (month === 2 && day === 29) {
     for (let i = 0; i < 4; i++) {

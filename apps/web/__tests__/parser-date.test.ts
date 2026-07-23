@@ -120,13 +120,8 @@ describe('inferYear — look-back heuristic', () => {
   });
 
   test('far future month returns previous year', () => {
-    const now = new Date();
-    // A date 6 months in the future should be inferred as previous year
-    const futureMonth = ((now.getMonth() + 6) % 12) + 1;
-    const futureYear = inferYear(futureMonth, 15);
-    // The heuristic says: if the candidate date is > 90 days in the future,
-    // use previous year. For a date 6 months out, this should be true.
-    expect(futureYear).toBe(now.getFullYear() - 1);
+    const referenceDate = new Date(2026, 0, 15);
+    expect(inferYear(7, 15, referenceDate)).toBe(2025);
   });
 });
 

@@ -1,72 +1,27 @@
 import type { ParseResult, BankId } from './types.js';
 import { ParseError } from './types.js';
 import { detectFormatFromFile, detectBankFromText } from './detect.js';
-import { parseCSV } from './csv.js';
-import { parseXLSX } from './xlsx.js';
-import { parsePDF } from './pdf.js';
-import { parseJSON } from './json.js';
-import { parseOFX } from './ofx.js';
-import { parseHTML } from './html.js';
+import { decodeTextBytes, detectTextEncoding } from '@cherrypicker/parser/browser';
 
 export type { FileFormat, BankId, DetectionResult, RawTransaction, ParseResult, BankAdapter } from './types.js';
 export { ParseError } from './types.js';
 export { detectFormatFromFile, detectBank, detectBankFromText, detectCSVDelimiter } from './detect.js';
-export { parseCSV } from './csv.js';
-export { parseXLSX } from './xlsx.js';
-export { parsePDF } from './pdf.js';
-export { parseJSON } from './json.js';
-export { parseOFX } from './ofx.js';
-export { parseHTML } from './html.js';
 
 export async function parseFile(file: File, bank?: BankId): Promise<ParseResult> {
   const format = await detectFormatFromFile(file);
 
   switch (format) {
     case 'csv': {
-      let content: string;
+      const { parseCSV } = await import('./csv.js');
       const buffer = await file.arrayBuffer();
-      // Check for UTF-16 BOM before the utf-8/cp949 trial (C32-F3).
-      // Korean bank systems occasionally export UTF-16 "Unicode" CSVs.
       const arr = new Uint8Array(buffer);
-      if (arr.length >= 2 && arr[0] === 0xFF && arr[1] === 0xFE) {
-        content = new TextDecoder('utf-16le').decode(buffer);
-        const detectedBank = bank ?? detectBankFromText(content);
-        return parseCSV(content, detectedBank ?? undefined);
-      } else if (arr.length >= 2 && arr[0] === 0xFE && arr[1] === 0xFF) {
-        content = new TextDecoder('utf-16be').decode(buffer);
-        const detectedBank = bank ?? detectBankFromText(content);
-        return parseCSV(content, detectedBank ?? undefined);
-      }
-      // CP949 is a strict superset of EUC-KR, so EUC-KR is omitted — it can
-      // never produce fewer replacement characters than CP949, making it
-      // redundant in the "fewest replacement chars" heuristic (C64-02).
-      const ENCODINGS = ['utf-8', 'cp949'] as const;
-      let bestContent = '';
-      let bestReplacements = Infinity;
-
-      // Check ALL encodings instead of breaking early on the first "good
-      // enough" result (C63-07). A file with mostly ASCII content and a few
-      // Korean characters can produce < 5 replacement characters when decoded
-      // as UTF-8, even though it is actually EUC-KR. By checking all candidates
-      // we ensure the encoding with the fewest replacement characters wins.
-      for (const encoding of ENCODINGS) {
-        try {
-          const decoder = new TextDecoder(encoding);
-          const decoded = decoder.decode(buffer);
-          const replacementCount = (decoded.match(/\uFFFD/g) ?? []).length;
-          if (replacementCount < bestReplacements) {
-            bestReplacements = replacementCount;
-            bestContent = decoded;
-          }
-        } catch { continue; }
-      }
-
-      content = bestContent || new TextDecoder('utf-8').decode(buffer);
+      const encoding = detectTextEncoding(arr);
+      const content = decodeTextBytes(arr, encoding);
       // Auto-detect bank from content if not specified
       const detectedBank = bank ?? detectBankFromText(content);
       const result = parseCSV(content, detectedBank ?? undefined);
-      // Warn if encoding detection produced many replacement characters
-      if (bestReplacements > 50) {
+      const replacementCount = (content.match(/\uFFFD/g) ?? []).length;
+      if (replacementCount > 50) {
         result.errors.unshift(new ParseError(
           `파일 인코딩을 정확히 감지하지 못했어요. 일부 가맹점명이 깨질 수 있습니다.`,
         ));
@@ -74,22 +29,27 @@ export async function parseFile(file: File, bank?: BankId): Promise<ParseResult>
       return result;
     }
     case 'xlsx': {
+      const { parseXLSX } = await import('./xlsx.js');
       const buffer = await file.arrayBuffer();
       return parseXLSX(buffer, bank);
     }
     case 'pdf': {
+      const { parsePDF } = await import('./pdf.js');
       const buffer = await file.arrayBuffer();
       return parsePDF(buffer, bank);
     }
     case 'json': {
+      const { parseJSON } = await import('./json.js');
       const content = await file.text();
       return parseJSON(content, bank);
     }
     case 'ofx': {
+      const { parseOFX } = await import('./ofx.js');
       const content = await file.text();
       return parseOFX(content, bank);
     }
     case 'html': {
+      const { parseHTML } = await import('./html.js');
       const content = await file.text();
       return parseHTML(content, bank);
     }

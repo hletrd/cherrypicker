@@ -43,9 +43,17 @@ describe('parseAmount (web)', () => {
     expect(parseAmount('（１，２３４）')).toBe(-1234);
   });
 
-  it('parses parenthesized negatives', () => {
+  it('handles double-negative parentheses without flipping sign (C40-BUG02)', () => {
+    // (-1234) should remain negative, not become positive
+    expect(parseAmount('(-1234)')).toBe(-1234);
+    expect(parseAmount('(-1,234)')).toBe(-1234);
+    expect(parseAmount('(-0)')).toBe(-0);
+  });
+
+  it('preserves single-parenthesis negative behavior (C40-BUG02)', () => {
+    // (1234) should still be negative (accounting notation)
+    expect(parseAmount('(1234)')).toBe(-1234);
     expect(parseAmount('(1,234)')).toBe(-1234);
-    expect(parseAmount('(10000)')).toBe(-10000);
   });
 
   it('parses 마이너스 prefix', () => {

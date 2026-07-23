@@ -1,5 +1,20 @@
 import { existsSync, lstatSync } from 'node:fs';
 
+/** Parse a previous-month spending argument as an exact non-negative KRW
+ * integer. Reject partial `parseInt` matches, fractions, and integers that
+ * cannot be represented safely. */
+export function parsePreviousSpendingArgument(raw: string | undefined): number {
+  if (raw === undefined || !/^\d+$/.test(raw)) {
+    throw new Error(`전월실적은 0 이상의 정수여야 합니다: ${raw ?? '(값 없음)'}`);
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error(`전월실적은 안전한 정수 범위여야 합니다: ${raw}`);
+  }
+  return parsed;
+}
+
 /** Validate a file path argument before parsing.
  *  Rejects paths containing '..' segments (directory traversal) and null bytes.
  *  Rejects symbolic links to prevent indirect traversal.

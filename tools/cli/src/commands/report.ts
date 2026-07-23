@@ -1,14 +1,17 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeFileSync } from 'node:fs';
-import { parseStatement } from '@cherrypicker/parser';
 import { MerchantMatcher, buildConstraints, optimize } from '@cherrypicker/core';
 import { loadCategories, loadAllCardRules, buildCategoryLabelMap } from '@cherrypicker/rules';
-import type { RawTransaction } from '@cherrypicker/parser';
+import type { BankId, RawTransaction } from '@cherrypicker/parser';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import { printOptimizationResult, printSpendingSummary, generateHTMLReport } from '@cherrypicker/viz';
-import { validateFilePath } from '../validation.js';
-import { requireRemoteLLMConsent } from '../consent.js';
+import {
+  parsePreviousSpendingArgument,
+  validateFilePath,
+} from '../validation.js';
+import { parseStatementLocalFirst } from '../parse-statement.js';
+import { printOptimizationDisclosures } from '../disclosures.js';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
   fileURLToPath(new URL('../../../..', import.meta.url)),
@@ -51,11 +54,8 @@ function parseArgs(args: string[]): {
     } else if (args[i] === '--cards' && args[i + 1]) {
       cardsDir = args[i + 1];
       i++;
-    } else if (args[i] === '--prev-spending' && args[i + 1]) {
-      prevSpending = parseInt(args[i + 1]!, 10);
-      if (Number.isNaN(prevSpending) || prevSpending < 0) {
-        throw new Error(`전월실적은 0 이상의 숫자여야 합니다: ${args[i + 1]}`);
-      }
+    } else if (args[i] === '--prev-spending') {
+      prevSpending = parsePreviousSpendingArgument(args[i + 1]);
       i++;
     } else if (args[i] === '--bank' && args[i + 1]) {
       bank = args[i + 1];
@@ -79,15 +79,13 @@ export async function runReport(args: string[]): Promise<void> {
   validateFilePath(file, { mustExist: true, label: '명세서 파일' });
   validateFilePath(output, { mustExist: false, label: '출력 파일' });
 
-  const resolvedAllowRemoteLLM = await requireRemoteLLMConsent(file, allowRemoteLLM, yes);
-
   console.log(`파일 분석 중: ${file}`);
 
-  const parseResult = await parseStatement(file, {
-    ...(bank
-      ? { bank: bank as Parameters<typeof parseStatement>[1] extends { bank?: infer B } ? B : never }
-      : {}),
-    allowRemoteLLM: resolvedAllowRemoteLLM,
+  const parseResult = await parseStatementLocalFirst({
+    filePath: file,
+    ...(bank ? { bank: bank as BankId } : {}),
+    allowRemoteLLM,
+    yes,
   });
 
   if (parseResult.errors.length > 0) {
@@ -139,6 +137,7 @@ export async function runReport(args: string[]): Promise<void> {
   const result = optimize(constraints, cardRules);
 
   // Print terminal summary
+  printOptimizationDisclosures(result, prevSpending);
   printSpendingSummary(categorized, categoryLabels);
   printOptimizationResult(result);
 

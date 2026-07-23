@@ -6,7 +6,7 @@
 
 import type { BankId, ParseResult, RawTransaction } from './types.js';
 import { ParseError } from './types.js';
-import { parseCSVAmount } from './csv.js';
+import { parseAmount } from './amount.js';
 import { parseDateStringToISO, isValidISODate } from './date-utils.js';
 
 /** Field name aliases for date, merchant, and amount fields. */
@@ -83,13 +83,7 @@ function findField(obj: Record<string, unknown>, aliases: string[]): unknown {
 }
 
 function normalizeAmount(raw: unknown, lineIdx: number, errors: ParseError[]): number | null {
-  if (typeof raw === 'number') {
-    return Number.isFinite(raw) ? Math.round(raw) : null;
-  }
-  if (typeof raw === 'string') {
-    const parsed = parseCSVAmount(raw);
-    return parsed !== null && Number.isFinite(parsed) ? parsed : null;
-  }
+  if (typeof raw === 'number' || typeof raw === 'string') return parseAmount(raw);
   if (raw === null || raw === undefined) {
     return null;
   }

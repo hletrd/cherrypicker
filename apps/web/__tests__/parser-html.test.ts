@@ -3,7 +3,9 @@
  * Parity with server-side packages/parser/__tests__/html.test.ts (T13-01).
  */
 import { describe, it, expect } from 'bun:test';
-import { parseHTML, normalizeHTML } from '../src/lib/parser/html.js';
+import * as xlsx from 'xlsx';
+import { normalizeHTML } from '../src/lib/parser/html-normalize.js';
+import { parseHTML, parseHTMLSheet } from '../src/lib/parser/html.js';
 
 describe('HTML Table Parser (web)', () => {
   describe('Basic HTML table parsing', () => {
@@ -203,13 +205,43 @@ describe('HTML Table Parser (web)', () => {
       expect(result.bank).toBe('kb');
     });
 
+    it('parses SheetJS Date objects without locale stringification', () => {
+      const sheet = xlsx.utils.aoa_to_sheet([
+        ['이용일', '이용처', '이용금액'],
+        [new Date(2024, 0, 15), '카페', 5000],
+      ]);
+      const result = parseHTMLSheet(sheet, null);
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]!.date).toBe('2024-01-15');
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('does not emit a transaction with an invalid Date object', () => {
+      const sheet = xlsx.utils.aoa_to_sheet([
+        ['이용일', '이용처', '이용금액'],
+        [new Date(Number.NaN), '카페', 5000],
+      ]);
+      const result = parseHTMLSheet(sheet, null);
+      expect(result.transactions).toHaveLength(0);
+      expect(result.errors.some((error) => error.message.includes('날짜'))).toBe(true);
+    });
+
+    it('does not fabricate a transaction from an ordinary note row', () => {
+      const content = `<table>
+<tr><th>이용일</th><th>이용처</th><th>이용금액</th></tr>
+<tr><td>2024.01.15</td><td>카페</td><td>5,000</td></tr>
+<tr><td></td><td>승인 취소 관련 안내</td><td></td></tr>
+</table>`;
+      expect(parseHTML(content).transactions).toHaveLength(1);
+    });
+
     it('forward-fills merged cells in HTML tables (C99-02)', () => {
       const content = `<table>
 <tr><th>이용일</th><th>이용처</th><th>이용금액</th><th>할부</th><th>비고</th></tr>
-<tr><td>2024.01.15</td><td>스타벅스</td><td>5,500</td><td></td><td></td></tr>
-<tr><td></td><td></td><td>4,500</td><td></td><td></td></tr>
-<tr><td>2024.01.20</td><td>이마트</td><td>45,000</td><td>3</td><td>온라인</td></tr>
-<tr><td></td><td></td><td>15,000</td><td></td><td></td></tr>
+<tr><td rowspan="2">2024.01.15</td><td rowspan="2">스타벅스</td><td>5,500</td><td></td><td></td></tr>
+<tr><td>4,500</td><td></td><td></td></tr>
+<tr><td rowspan="2">2024.01.20</td><td rowspan="2">이마트</td><td>45,000</td><td rowspan="2">3</td><td rowspan="2">온라인</td></tr>
+<tr><td>15,000</td></tr>
 </table>`;
 
       const result = parseHTML(content);

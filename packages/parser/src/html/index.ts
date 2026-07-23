@@ -10,9 +10,13 @@
 import type { BankId, ParseResult, RawTransaction } from '../types.js';
 import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
-import { parseDateStringToISO, isValidISODate } from '../date-utils.js';
-import { parseAmountString } from '../amount.js';
+import { parseAmount } from '../amount.js';
 import { normalizeHTML } from '../csv/shared.js';
+import { parseDateCell } from '../shared/date-cell.js';
+import {
+  createSheetMergeIndex,
+  resolveSheetCell,
+} from '../shared/sheet-cells.js';
 import {
   findColumn,
   DATE_COLUMN_PATTERN,
@@ -79,7 +83,7 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
 }
 
 /** Parse a single HTML sheet (table) for transactions. */
-function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult {
+export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult {
   const rows: unknown[][] = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
   const errors: ParseError[] = [];
   const transactions: RawTransaction[] = [];
@@ -132,114 +136,51 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     };
   }
 
-  // Track last non-empty values for merged cell forward-fill.
-  // Korean bank HTML exports commonly merge cells across rows — similar
-  // to XLSX exports. Forward-fill extends to all columns: date, merchant,
-  // category, installments, memo, and amount (C99-02).
-  let lastDate: unknown = '';
-  let lastMerchant: unknown = '';
-  let lastCategory: unknown = '';
-  let lastInstallments: unknown = '';
-  let lastMemo: unknown = '';
-  let lastAmount: unknown = '';
-
-  // Helper: check if a cell has non-empty, non-whitespace content.
-  function isNonEmpty(val: unknown): boolean {
-    return val !== '' && val != null && String(val).trim() !== '';
-  }
+  const mergeIndex = createSheetMergeIndex(sheet['!merges']);
+  const consumedAmountSources = new Set<string>();
 
   // Parse data rows
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
     if (row.every((c) => !c)) {
-      // Reset forward-fill state on blank rows to prevent values from
-      // unrelated data sections from leaking into subsequent sections (C31-TRACE01)
-      lastDate = '';
-      lastMerchant = '';
-      lastCategory = '';
-      lastInstallments = '';
-      lastMemo = '';
-      lastAmount = '';
       continue;
     }
 
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (isSummaryRow(rowText)) {
-      // Reset forward-fill state so summary row values don't propagate
-      // to merged data cells below (C25-COR01).
-      lastDate = '';
-      lastMerchant = '';
-      lastCategory = '';
-      lastInstallments = '';
-      lastMemo = '';
-      lastAmount = '';
       continue;
     }
 
-    // Forward-fill pattern for all columns (date, merchant, category,
-    // installments, memo, amount). Consistent with XLSX parser logic.
-    // Update last-value only when cell has non-empty, non-whitespace content;
-    // skip update for summary row values to prevent contamination;
-    // use last-value as fallback for empty/whitespace-only cells (C99-02).
+    // Blank cells inherit values only when SheetJS confirms that the cell is
+    // covered by an actual rowspan/colspan merge. Generic forward-fill can
+    // turn spacer or note rows into fabricated transactions.
+    const dateCell = resolveSheetCell(rows, i, dateCol, mergeIndex);
+    const merchantCell = merchantCol === -1
+      ? null
+      : resolveSheetCell(rows, i, merchantCol, mergeIndex);
+    const categoryCell = categoryCol === -1
+      ? null
+      : resolveSheetCell(rows, i, categoryCol, mergeIndex);
+    const installCell = installCol === -1
+      ? null
+      : resolveSheetCell(rows, i, installCol, mergeIndex);
+    const memoCell = memoCol === -1
+      ? null
+      : resolveSheetCell(rows, i, memoCol, mergeIndex);
+    const amountCell = resolveSheetCell(rows, i, amountCol, mergeIndex);
 
-    // Date column forward-fill
-    const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
-    if (dateCol !== -1 && isNonEmpty(rawDateValue)) {
-      if (!isSummaryRow(String(rawDateValue))) {
-        lastDate = rawDateValue;
-      }
-    }
-    const dateRaw = String(dateCol !== -1 ? (isNonEmpty(rawDateValue) ? rawDateValue : lastDate) : '').trim();
+    const dateRaw = dateCell.value;
+    const merchantRaw = String(merchantCell?.value ?? '').trim();
+    const categoryRaw = String(categoryCell?.value ?? '').trim();
+    const installRaw = String(installCell?.value ?? '').trim();
+    const memoRaw = String(memoCell?.value ?? '').trim();
+    const amountRaw = amountCell.value;
 
-    // Merchant column forward-fill
-    const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
-    if (merchantCol !== -1 && isNonEmpty(rawMerchantValue)) {
-      if (!isSummaryRow(String(rawMerchantValue))) {
-        lastMerchant = rawMerchantValue;
-      }
-    }
-    const merchantRaw = String(merchantCol !== -1 ? (isNonEmpty(rawMerchantValue) ? rawMerchantValue : lastMerchant) : '').trim();
-
-    // Category column forward-fill
-    const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
-    if (categoryCol !== -1 && isNonEmpty(rawCategoryValue)) {
-      if (!isSummaryRow(String(rawCategoryValue))) {
-        lastCategory = rawCategoryValue;
-      }
-    }
-    const categoryRaw = String(categoryCol !== -1 ? (isNonEmpty(rawCategoryValue) ? rawCategoryValue : lastCategory) : '').trim();
-
-    // Installments column forward-fill
-    const rawInstallValue = installCol !== -1 ? row[installCol] : '';
-    if (installCol !== -1 && isNonEmpty(rawInstallValue)) {
-      if (!isSummaryRow(String(rawInstallValue))) {
-        lastInstallments = rawInstallValue;
-      }
-    }
-    const installRaw = String(installCol !== -1 ? (isNonEmpty(rawInstallValue) ? rawInstallValue : lastInstallments) : '').trim();
-
-    // Memo column forward-fill
-    const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
-    if (memoCol !== -1 && isNonEmpty(rawMemoValue)) {
-      if (!isSummaryRow(String(rawMemoValue))) {
-        lastMemo = rawMemoValue;
-      }
-    }
-    const memoRaw = String(memoCol !== -1 ? (isNonEmpty(rawMemoValue) ? rawMemoValue : lastMemo) : '').trim();
-
-    // Amount column forward-fill
-    const rawAmountValue = amountCol !== -1 ? row[amountCol] : '';
-    if (amountCol !== -1 && isNonEmpty(rawAmountValue)) {
-      if (!isSummaryRow(String(rawAmountValue))) {
-        lastAmount = rawAmountValue;
-      }
-    }
-    const amountRaw = String(amountCol !== -1 ? (isNonEmpty(rawAmountValue) ? rawAmountValue : lastAmount) : '').trim();
-
-    if (!dateRaw && !merchantRaw && !amountRaw) continue;
+    if (!String(dateRaw ?? '').trim() && !merchantRaw && !String(amountRaw ?? '').trim()) continue;
+    if (amountCell.fromMerge && consumedAmountSources.has(amountCell.sourceKey)) continue;
 
     // Parse amount
-    const amount = parseAmountString(amountRaw);
+    const amount = parseAmount(amountRaw);
     if (amount === null) {
       if (amountRaw) {
         errors.push(new ParseError(`금액을 해석할 수 없습니다: ${amountRaw}`, { line: i + 1, raw: rowText  }));
@@ -255,13 +196,17 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     }
 
     // Parse date
-    const date = parseDateStringToISO(dateRaw);
-    if (!isValidISODate(date) && dateRaw) {
-      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${dateRaw}`, { line: i + 1, raw: rowText  }));
+    const parsedDate = parseDateCell(dateRaw);
+    if (parsedDate.error || !/^\d{4}-\d{2}-\d{2}$/.test(parsedDate.value)) {
+      errors.push(new ParseError(
+        parsedDate.error ?? '날짜를 해석할 수 없습니다: 빈 값',
+        { line: i + 1, raw: rowText },
+      ));
+      continue;
     }
 
     const tx: RawTransaction = {
-      date,
+      date: parsedDate.value,
       merchant: merchantRaw.replace(/^"(.*)"$/, '$1'),
       amount,
     };
@@ -280,6 +225,7 @@ function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult
     }
 
     transactions.push(tx);
+    consumedAmountSources.add(amountCell.sourceKey);
   }
 
   return { bank, format: 'html', transactions, errors };

@@ -1,20 +1,17 @@
 import { createInterface } from 'node:readline';
 
-/** Detect whether the statement file may trigger remote LLM fallback.
- *  Currently only PDF files use LLM fallback. */
-function isPotentialLLMFile(filePath: string): boolean {
-  return filePath.toLowerCase().endsWith('.pdf');
+export interface RemoteLLMConsentOptions {
+  allowRemoteLLM: boolean;
+  yes: boolean;
 }
 
-/** Check if running in non-interactive mode (--yes or CI environment). */
-function isNonInteractive(yesFlag: boolean): boolean {
-  return yesFlag || !!process.env.CI;
+export interface RemoteLLMConsentDependencies {
+  prompt?: () => Promise<boolean>;
+  isCI?: () => boolean;
 }
 
-/** Prompt the user for LLM fallback consent interactively.
- *  Returns true if user confirms, false otherwise.
- *  Times out after 30 seconds to prevent hung processes in piped/Ci environments. */
-async function promptConsent(): Promise<boolean> {
+/** Prompt for consent after local parsing has confirmed that remote fallback is needed. */
+async function promptRemoteLLMConsent(): Promise<boolean> {
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -43,35 +40,37 @@ async function promptConsent(): Promise<boolean> {
   });
 }
 
-/** Enforce LLM fallback consent before parsing a potentially-PDF statement.
- *  Throws if --allow-remote-llm is missing. Prompts interactively unless
- *  --yes or CI is set. Returns the allowRemoteLLM value to pass to parseStatement. */
-export async function requireRemoteLLMConsent(
-  filePath: string,
-  allowRemoteLLM: boolean,
-  yesFlag: boolean,
-): Promise<boolean> {
-  if (!isPotentialLLMFile(filePath)) {
-    return false; // No LLM fallback needed for non-PDF files
-  }
-
-  if (!allowRemoteLLM) {
+/**
+ * Authorize a remote LLM retry after local PDF parsing reports that it is
+ * required. This function deliberately knows nothing about file extensions.
+ */
+export async function authorizeRemoteLLMFallback(
+  options: RemoteLLMConsentOptions,
+  dependencies: RemoteLLMConsentDependencies = {},
+): Promise<void> {
+  if (!options.allowRemoteLLM) {
     throw new Error(
-      '원격 LLM 폴백이 비활성화되어 있습니다.\n' +
-        'PDF 명세서 파싱을 위해 Anthropic API로 최대 8000자의 데이터가 전송됩니다.\n' +
+      '로컬 PDF 분석으로 거래를 찾지 못했습니다.\n' +
+        '원격 LLM 폴백을 사용하면 PDF 데이터 중 최대 8000자가 Anthropic API로 전송됩니다.\n' +
         '이를 허용하려면 --allow-remote-llm 플래그를 추가하세요.\n' +
         '  예시: cherrypicker analyze statement.pdf --allow-remote-llm',
     );
   }
 
-  if (isNonInteractive(yesFlag)) {
-    return true;
+  const isCI = dependencies.isCI ?? (() => Boolean(process.env.CI));
+  if (options.yes) {
+    return;
+  }
+  if (isCI()) {
+    throw new Error(
+      'CI 같은 비대화형 환경에서는 원격 LLM 데이터 전송에 명시적인 동의가 필요합니다.\n' +
+        '--allow-remote-llm과 --yes 옵션을 함께 사용하세요.',
+    );
   }
 
-  const confirmed = await promptConsent();
+  const prompt = dependencies.prompt ?? promptRemoteLLMConsent;
+  const confirmed = await prompt();
   if (!confirmed) {
     throw new Error('사용자가 원격 LLM 폴백을 거부했습니다.');
   }
-
-  return true;
 }

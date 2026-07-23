@@ -29,15 +29,6 @@ export interface ParseOptions {
   allowRemoteLLM?: boolean;
 }
 
-/**
- * Parse a credit card statement file.
- * Auto-detects format (CSV, XLSX, PDF) from file extension and content.
- * Auto-detects bank from file content unless explicitly specified.
- *
- * @param filePath - Absolute path to the statement file
- * @param options - Optional: specify bank ID to skip auto-detection
- * @returns ParseResult with transactions and any errors encountered
- */
 function enrichErrors(result: ParseResult, filePath: string, detectionErrors?: ParseError[]): ParseResult {
   for (const err of result.errors) {
     if (err instanceof ParseError) {
@@ -51,6 +42,16 @@ function enrichErrors(result: ParseResult, filePath: string, detectionErrors?: P
   return result;
 }
 
+/**
+ * Parse a credit card statement file.
+ * Auto-detects formats (CSV/TSV, XLS/XLSX, PDF, JSON, OFX/QFX, HTML/HTM)
+ * from the statement's file extension and content.
+ * Auto-detects bank from file content unless explicitly specified.
+ *
+ * @param filePath - Absolute path to the statement file
+ * @param options - Optional: specify bank ID to skip auto-detection
+ * @returns ParseResult with transactions and any errors encountered
+ */
 export async function parseStatement(filePath: string, options?: ParseOptions): Promise<ParseResult> {
   const detection = await detectFormat(filePath);
   const bank = options?.bank ?? detection.bank ?? undefined;

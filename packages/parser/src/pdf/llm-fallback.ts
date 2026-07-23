@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { isValidISODate } from '../date-utils.js';
 import type { RawTransaction } from '../types.js';
 
 /** Sanitize raw text before sending to LLM to mitigate prompt injection.
@@ -53,55 +54,45 @@ interface LLMTransaction {
   installments?: number;
 }
 
-export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
-  if (typeof window !== 'undefined') {
-    throw new Error('LLM fallback is not available in browser environments');
-  }
+export const PDF_LLM_MAX_INPUT_CHARS = 100_000;
+export const PDF_LLM_MAX_OUTPUT_TOKENS = 8_192;
 
-  const apiKey = process.env['ANTHROPIC_API_KEY']?.trim();
-  if (!apiKey) {
-    throw new Error('API 키가 설정되지 않아 LLM 폴백을 사용할 수 없습니다.');
-  }
-  // Stricter regex matching Anthropic key format: sk-ant-api03-... (90+ chars after hyphen)
-  if (!/^sk-ant-api[0-9]{2,}-[A-Za-z0-9_-]{90,}$/.test(apiKey)) {
+export function buildPDFLLMRequest(
+  text: string,
+  model = process.env['ANTHROPIC_MODEL'] ?? 'claude-sonnet-5',
+): Anthropic.MessageCreateParamsNonStreaming {
+  if (text.length > PDF_LLM_MAX_INPUT_CHARS) {
     throw new Error(
-      'ANTHROPIC_API_KEY 형식이 올바르지 않습니다. 키는 "sk-ant-api03-..." 형식이어야 합니다.'
+      `PDF 텍스트가 너무 깁니다 (${text.length} > ${PDF_LLM_MAX_INPUT_CHARS} 글자). LLM 폴백을 사용할 수 없습니다.`,
     );
   }
 
-  const client = new Anthropic({ apiKey });
-
-  const model = process.env['ANTHROPIC_MODEL'] ?? 'claude-sonnet-5';
-
-  // Reject extremely large inputs before any processing to prevent memory pressure
-  const MAX_INPUT_CHARS = 100_000;
-  if (text.length > MAX_INPUT_CHARS) {
-    throw new Error(`PDF 텍스트가 너무 깁니다 (${text.length} > ${MAX_INPUT_CHARS} 글자). LLM 폴백을 사용할 수 없습니다.`);
-  }
-
-  // Truncate text to avoid token limits — take first 8000 chars
   const truncated = sanitizeLLMInput(
     text.length > 8000 ? text.slice(0, 8000) + '\n...(truncated)' : text
   );
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
+  return {
+    model,
+    // Complete machine-readable JSON is more important than hidden reasoning
+    // here, so reserve the full ceiling for output.
+    thinking: { type: 'disabled' },
+    max_tokens: PDF_LLM_MAX_OUTPUT_TOKENS,
+    system: SYSTEM_PROMPT,
+    messages: [
+      {
+        role: 'user',
+        content: `다음은 신용카드 명세서에서 추출한 텍스트입니다. 거래 내역을 JSON 배열로 파싱해 주세요:\n\n${truncated}`,
+      },
+    ],
+  };
+}
 
-  try {
-  const message = await client.messages.create(
-    {
-      model,
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `다음은 신용카드 명세서에서 추출한 텍스트입니다. 거래 내역을 JSON 배열로 파싱해 주세요:\n\n${truncated}`,
-        },
-      ],
-    },
-    { signal: controller.signal },
-  );
+export function parsePDFLLMResponse(message: Anthropic.Message): RawTransaction[] {
+  if (message.stop_reason === 'max_tokens') {
+    throw new Error(
+      `Claude PDF 파싱 응답이 ${PDF_LLM_MAX_OUTPUT_TOKENS} 토큰 한도에서 잘렸습니다.`,
+    );
+  }
 
   const responseText = message.content
     .filter((block) => block.type === 'text')
@@ -162,16 +153,17 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
       if (typeof tx.date !== 'string' || typeof tx.merchant !== 'string' || typeof tx.amount !== 'number') {
         return false;
       }
-      // Structural validation: date must look like YYYY-MM-DD, amount must be positive finite integer (C31-CR05)
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(tx.date)) return false;
-      if (!Number.isFinite(tx.amount) || tx.amount <= 0) return false;
+      // LLM output is untrusted. Require a real calendar date and an exactly
+      // representable positive integer instead of rounding model mistakes.
+      if (!isValidISODate(tx.date)) return false;
+      if (!Number.isSafeInteger(tx.amount) || tx.amount <= 0) return false;
       return true;
     })
     .map((tx) => {
       const result: RawTransaction = {
         date: tx.date,
         merchant: tx.merchant,
-        amount: Math.round(tx.amount),
+        amount: tx.amount,
       };
       // Validate installments: must be a positive integer > 1 if present (C31-CR05)
       if (typeof tx.installments === 'number' && Number.isFinite(tx.installments) && tx.installments > 1 && Number.isInteger(tx.installments)) {
@@ -179,6 +171,51 @@ export async function parsePDFWithLLM(text: string): Promise<RawTransaction[]> {
       }
       return result;
     });
+}
+
+export type PDFMessageCreate = (
+  request: Anthropic.MessageCreateParamsNonStreaming,
+  options: { signal: AbortSignal },
+) => Promise<Anthropic.Message>;
+
+export interface PDFLLMOptions {
+  createMessage?: PDFMessageCreate;
+}
+
+export async function parsePDFWithLLM(
+  text: string,
+  options: PDFLLMOptions = {},
+): Promise<RawTransaction[]> {
+  if (typeof window !== 'undefined') {
+    throw new Error('LLM fallback is not available in browser environments');
+  }
+
+  const apiKey = process.env['ANTHROPIC_API_KEY']?.trim();
+  if (!apiKey) {
+    throw new Error('API 키가 설정되지 않아 LLM 폴백을 사용할 수 없습니다.');
+  }
+  // Stricter regex matching Anthropic key format: sk-ant-api03-... (90+ chars after hyphen)
+  if (!/^sk-ant-api[0-9]{2,}-[A-Za-z0-9_-]{90,}$/.test(apiKey)) {
+    throw new Error(
+      'ANTHROPIC_API_KEY 형식이 올바르지 않습니다. 키는 "sk-ant-api03-..." 형식이어야 합니다.'
+    );
+  }
+
+  const request = buildPDFLLMRequest(text);
+  const client = options.createMessage ? undefined : new Anthropic({ apiKey });
+  const createMessage = options.createMessage ??
+    ((params: Anthropic.MessageCreateParamsNonStreaming, requestOptions: { signal: AbortSignal }) =>
+      client!.messages.create(params, requestOptions));
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+
+  try {
+    const message = await createMessage(
+      request,
+      { signal: controller.signal },
+    );
+    return parsePDFLLMResponse(message);
   } finally {
     clearTimeout(timeout);
   }

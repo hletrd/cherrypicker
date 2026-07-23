@@ -1,13 +1,16 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseStatement } from '@cherrypicker/parser';
 import { MerchantMatcher, buildConstraints, optimize } from '@cherrypicker/core';
 import { loadCategories, loadAllCardRules, buildCategoryLabelMap } from '@cherrypicker/rules';
-import type { RawTransaction } from '@cherrypicker/parser';
+import type { BankId, RawTransaction } from '@cherrypicker/parser';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import { printCardComparison, printOptimizationResult } from '@cherrypicker/viz';
-import { validateFilePath } from '../validation.js';
-import { requireRemoteLLMConsent } from '../consent.js';
+import {
+  parsePreviousSpendingArgument,
+  validateFilePath,
+} from '../validation.js';
+import { parseStatementLocalFirst } from '../parse-statement.js';
+import { printOptimizationDisclosures } from '../disclosures.js';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
   fileURLToPath(new URL('../../../..', import.meta.url)),
@@ -45,8 +48,8 @@ function parseArgs(args: string[]): {
     if (args[i] === '--cards' && args[i + 1]) {
       cardsDir = args[i + 1];
       i++;
-    } else if (args[i] === '--prev-spending' && args[i + 1]) {
-      prevSpending = parseInt(args[i + 1]!, 10);
+    } else if (args[i] === '--prev-spending') {
+      prevSpending = parsePreviousSpendingArgument(args[i + 1]);
       i++;
     } else if (args[i] === '--bank' && args[i + 1]) {
       bank = args[i + 1];
@@ -69,15 +72,13 @@ export async function runOptimize(args: string[]): Promise<void> {
 
   validateFilePath(file, { mustExist: true, label: '명세서 파일' });
 
-  const resolvedAllowRemoteLLM = await requireRemoteLLMConsent(file, allowRemoteLLM, yes);
-
   console.log(`파일 분석 중: ${file}`);
 
-  const parseResult = await parseStatement(file, {
-    ...(bank
-      ? { bank: bank as Parameters<typeof parseStatement>[1] extends { bank?: infer B } ? B : never }
-      : {}),
-    allowRemoteLLM: resolvedAllowRemoteLLM,
+  const parseResult = await parseStatementLocalFirst({
+    filePath: file,
+    ...(bank ? { bank: bank as BankId } : {}),
+    allowRemoteLLM,
+    yes,
   });
 
   if (parseResult.errors.length > 0) {
@@ -130,6 +131,7 @@ export async function runOptimize(args: string[]): Promise<void> {
   const constraints = buildConstraints(categorized, cardPreviousSpending, categoryLabels);
   const result = optimize(constraints, cardRules);
 
+  printOptimizationDisclosures(result, prevSpending);
   printCardComparison(result.cardResults);
   printOptimizationResult(result);
 }

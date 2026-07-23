@@ -28,6 +28,7 @@ export interface ParseResult {
 }
 
 export class ParseError extends Error {
+  code?: string;
   line?: number;
   raw?: string;
   file?: string;
@@ -35,10 +36,11 @@ export class ParseError extends Error {
 
   constructor(
     message: string,
-    options?: { line?: number; raw?: string; file?: string; format?: FileFormat },
+    options?: { code?: string; line?: number; raw?: string; file?: string; format?: FileFormat },
   ) {
     super(message);
     this.name = 'ParseError';
+    this.code = options?.code;
     this.line = options?.line;
     this.raw = options?.raw;
     this.file = options?.file;

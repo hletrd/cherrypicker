@@ -1,13 +1,12 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseStatement } from '@cherrypicker/parser';
 import { MerchantMatcher } from '@cherrypicker/core';
 import { loadCategories, buildCategoryLabelMap } from '@cherrypicker/rules';
-import type { RawTransaction } from '@cherrypicker/parser';
+import type { BankId, RawTransaction } from '@cherrypicker/parser';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import { printSpendingSummary } from '@cherrypicker/viz';
 import { validateFilePath } from '../validation.js';
-import { requireRemoteLLMConsent } from '../consent.js';
+import { parseStatementLocalFirst } from '../parse-statement.js';
 
 const DEFAULT_CATEGORIES_PATH = resolve(
   fileURLToPath(new URL('../../../..', import.meta.url)),
@@ -53,15 +52,13 @@ export async function runAnalyze(args: string[]): Promise<void> {
 
   validateFilePath(file, { mustExist: true, label: '명세서 파일' });
 
-  const resolvedAllowRemoteLLM = await requireRemoteLLMConsent(file, allowRemoteLLM, yes);
-
   console.log(`파일 분석 중: ${file}`);
 
-  const parseResult = await parseStatement(file, {
-    ...(bank
-      ? { bank: bank as Parameters<typeof parseStatement>[1] extends { bank?: infer B } ? B : never }
-      : {}),
-    allowRemoteLLM: resolvedAllowRemoteLLM,
+  const parseResult = await parseStatementLocalFirst({
+    filePath: file,
+    ...(bank ? { bank: bank as BankId } : {}),
+    allowRemoteLLM,
+    yes,
   });
 
   if (parseResult.errors.length > 0) {

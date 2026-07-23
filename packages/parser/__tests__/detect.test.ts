@@ -211,6 +211,12 @@ describe('detectEncoding', () => {
     expect(detectEncoding(cp949Text)).toBe('cp949');
   });
 
+  test('detects a short CP949 sequence without predecessor-byte signals', () => {
+    const bytes = Buffer.from([0xC0, 0xCC, 0xBF, 0xEB, 0xC0, 0xCF]);
+    expect(detectEncoding(bytes)).toBe('cp949');
+    expect(decodeBuffer(bytes)).toBe('이용일');
+  });
+
   test('returns utf-8 for empty buffer', () => {
     expect(detectEncoding(Buffer.alloc(0))).toBe('utf-8');
   });

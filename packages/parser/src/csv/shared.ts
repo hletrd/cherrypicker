@@ -1,4 +1,7 @@
 import { ParseError } from '../types.js';
+import { parseAmountString } from '../shared/amount.js';
+
+export { parseAmountString } from '../shared/amount.js';
 
 /** Shared utilities for CSV parsers.
  *  Extracted from 10 bank-specific adapters and the generic parser to
@@ -145,52 +148,6 @@ export function isValidCSVAmount(
  *  Returns null for unparseable inputs (NaN), matching the behavior of the
  *  per-parser amount parsing functions. Shared across CSV, XLSX, and PDF
  *  parsers to eliminate code duplication (C97-02). */
-export function parseAmountString(raw: string): number | null {
-  if (!raw.trim()) return null;
-  let cleaned = raw.trim()
-    .replace(/^\+/, '') // Strip leading + sign used by some banks for positive amounts
-    .replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xFF10 + 48)) // full-width digits ０-９ -> 0-9
-    .replace(/，/g, ',').replace(/．/g, '.').replace(/－/g, '-').replace(/＋/g, '+') // full-width comma/dot/minus/plus -> ASCII
-    .replace(/（/g, '(').replace(/）/g, ')') // full-width parentheses -> ASCII
-    .replace(/^KRW\s*/i, '') // ISO 4217 KRW currency prefix
-    .replace(/\s*원$/, '').replace(/[₩￦]/g, '').replace(/,/g, '').replace(/\s/g, '');
-  // Handle "마이너스" prefix — some Korean bank exports use this instead of
-  // a negative sign or parentheses.
-  const isManeuners = /^마이너스/.test(cleaned);
-  if (isManeuners) cleaned = cleaned.replace(/^마이너스/, '');
-  // Handle trailing minus sign — some Korean bank exports use "1,234-"
-  // instead of "-1,234" for negative amounts.
-  const hasTrailingMinus = /\d-$/.test(cleaned);
-  if (hasTrailingMinus) cleaned = cleaned.replace(/-$/, '');
-  let isNeg = (cleaned.startsWith('(') && cleaned.endsWith(')')) || isManeuners || hasTrailingMinus;
-  if (cleaned.startsWith('(') && cleaned.endsWith(')')) {
-    cleaned = cleaned.slice(1, -1);
-    // Parentheses indicate accounting-style negatives. If the inner value
-    // is already negative (e.g., "(-1234)"), don't double-negate (C40-BUG02).
-    if (cleaned.startsWith('-')) {
-      isNeg = false;
-    }
-  }
-  // Reject strings with multiple decimal points (e.g., "1.2.3") or empty-after-dot (e.g., "1.")
-  // These are not valid Korean Won amounts (C29-HIGH-01).
-  const dotCount = (cleaned.match(/\./g) ?? []).length;
-  if (dotCount > 1 || cleaned.endsWith('.')) return null;
-  if (!cleaned) return null;
-  // Reject malformed strings like "1-2-3" that parseFloat would silently accept (C31-CR01).
-  // Allow trailing "원" (e.g., "1234원" → parseFloat returns 1234) which some bank
-  // exports include inside parentheses like "(1,234 원)" (C72-01). Reject other
-  // trailing characters like "1234abc" which indicate corrupted/malformed input.
-  const numMatch = cleaned.match(/^[+-]?\d+(?:\.\d+)?/);
-  if (!numMatch) return null;
-  const afterNum = cleaned.slice(numMatch[0].length);
-  if (/[\d.]/.test(afterNum)) return null;
-  if (afterNum.trim() && afterNum.trim() !== '원') return null;
-  const n = Math.round(parseFloat(cleaned));
-  if (Number.isNaN(n) || !Number.isFinite(n)) return null;
-  if (Math.abs(n) > Number.MAX_SAFE_INTEGER) return null;
-  return isNeg ? -n : n;
-}
-
 /** Parse an installment value from a CSV cell. Returns undefined for
  *  non-numeric values (e.g., "일시불" for lump-sum) which are common and
  *  expected — they mean no installment, not a parse error. Returns the

@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'bun:test';
+import { parseAmountString } from '../src/csv/shared.js';
 import { parseTable, filterTransactionRows, detectHeaderRow, getHeaderColumns } from '../src/pdf/table-parser.js';
 
 describe('parseTable', () => {
@@ -1231,7 +1232,6 @@ describe('C17-06: PDF fallback amount pattern trailing-minus capture group', () 
   test('parseAmountString correctly parses captured trailing-minus value as negative', () => {
     // This is the end-to-end verification: the fixed capture group delivers
     // "1,234-" to parseAmountString, which handles trailing minus (C68-01).
-    const { parseAmountString } = require('../src/csv/shared.js');
     expect(parseAmountString('1,234-')).toBe(-1234);
   });
 

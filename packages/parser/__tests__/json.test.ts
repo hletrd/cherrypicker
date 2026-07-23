@@ -250,4 +250,13 @@ describe('parseJSON', () => {
     // No errors for null/undefined — they are valid "missing amount" indicators
     expect(result.errors.filter(e => e.message.includes('null') || e.message.includes('undefined'))).toHaveLength(0);
   });
+
+  it('rejects numeric amounts beyond the safe-integer boundary', () => {
+    const input = JSON.stringify([
+      { date: '2024-01-01', merchant: 'Unsafe', amount: Number.MAX_SAFE_INTEGER + 1 },
+    ]);
+    const result = parseJSON(input);
+    expect(result.transactions).toHaveLength(0);
+    expect(result.errors.some((error) => error.message.includes('금액을 해석할 수 없습니다'))).toBe(true);
+  });
 });

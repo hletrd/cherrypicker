@@ -3,9 +3,14 @@ import type { BankId, ParseResult } from '../types.js';
 import { ParseError } from '../types.js';
 import { detectBank } from '../detect.js';
 import { getBankColumnConfig, type ColumnConfig } from './adapters/index.js';
-import { parseDateStringToISO, isValidDayForMonth, isValidISODate } from '../date-utils.js';
+import { isValidISODate } from '../date-utils.js';
 import { parseAmount } from '../amount.js';
 import { normalizeHTML } from '../csv/shared.js';
+import { parseDateCell } from '../shared/date-cell.js';
+import {
+  createSheetMergeIndex,
+  resolveSheetCell,
+} from '../shared/sheet-cells.js';
 import {
   findColumn,
   DATE_COLUMN_PATTERN,
@@ -51,102 +56,11 @@ export function parseDateToISO(
   errors?: ParseError[],
   lineIdx?: number,
 ): string {
-  // Detect Excel formula error strings early — produce a specific error
-  // message rather than trying to parse them as dates (C14-01).
-  if (typeof raw === 'string' && EXCEL_ERROR_PATTERN.test(raw.trim())) {
-    if (errors && lineIdx !== undefined) {
-      errors.push(new ParseError(`셀 수식 오류: ${raw.trim()}`, { line: lineIdx + 1 }));
-    }
-    return raw.trim();
+  const result = parseDateCell(raw);
+  if (result.error && errors && lineIdx !== undefined) {
+    errors.push(new ParseError(result.error, { line: lineIdx + 1 }));
   }
-  // Handle Date objects — SheetJS may return these when cellDates is enabled
-  // or in certain edge cases. Defensive hardening (C6-04).
-  if (raw instanceof Date) {
-    if (!Number.isNaN(raw.getTime())) {
-      const y = raw.getFullYear().toString().padStart(4, '0');
-      const m = (raw.getMonth() + 1).toString().padStart(2, '0');
-      const d = raw.getDate().toString().padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    }
-    if (errors && lineIdx !== undefined) {
-      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${String(raw)}`, { line: lineIdx + 1 }));
-    }
-    return String(raw);
-  }
-  if (typeof raw === 'number') {
-    // Check for numeric YYYYMMDD dates (e.g., 20240115) before the serial
-    // date guard. Korean bank XLSX exports sometimes store dates as 8-digit
-    // numbers rather than Excel serial dates. Numbers in the 10000000-99999999
-    // range with valid month/day are parsed as YYYYMMDD dates (C87-01).
-    if (Number.isFinite(raw) && raw >= 10000000 && raw <= 99999999) {
-      const str = Math.trunc(raw).toString();
-      if (str.length === 8) {
-        const y = parseInt(str.slice(0, 4), 10);
-        const m = parseInt(str.slice(4, 6), 10);
-        const d = parseInt(str.slice(6, 8), 10);
-        if (y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && isValidDayForMonth(y, m, d)) {
-          return `${y.toString().padStart(4, '0')}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
-        }
-      }
-    }
-    // Check for numeric YYMMDD dates (e.g., 240115) before the serial date
-    // guard. Some Korean bank XLSX exports store dates as 6-digit YYMMDD
-    // numbers rather than Excel serial dates. The serial date guard rejects
-    // numbers > 100000, which incorrectly rejects these valid dates (C91-02).
-    if (Number.isFinite(raw) && raw >= 100000 && raw <= 999999) {
-      const str = Math.trunc(raw).toString();
-      if (str.length === 6) {
-        const yy = parseInt(str.slice(0, 2), 10);
-        const fullYear = yy >= 50 ? 1900 + yy : 2000 + yy;
-        const m = parseInt(str.slice(2, 4), 10);
-        const d = parseInt(str.slice(4, 6), 10);
-        if (m >= 1 && m <= 12 && isValidDayForMonth(fullYear, m, d)) {
-          return `${fullYear.toString().padStart(4, '0')}-${str.slice(2, 4)}-${str.slice(4, 6)}`;
-        }
-      }
-    }
-    if (!Number.isFinite(raw) || raw < 1 || raw > 100000) {
-      if (errors && lineIdx !== undefined && raw !== 0) {
-        errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw}`, { line: lineIdx + 1 }));
-      }
-      return String(raw);
-    }
-    // Excel serial date number
-    const date = xlsx.SSF.parse_date_code(raw);
-    if (date) {
-      // Validate month/day ranges using month-aware day validation (C67-04).
-      // This ensures serial dates like "Feb 31" are rejected, matching the
-      // string-parsing path which uses isValidDayForMonth() in date-utils.ts.
-      if (date.m >= 1 && date.m <= 12 && isValidDayForMonth(date.y, date.m, date.d)) {
-        const y = date.y.toString().padStart(4, '0');
-        const m = date.m.toString().padStart(2, '0');
-        const d = date.d.toString().padStart(2, '0');
-        return `${y}-${m}-${d}`;
-      }
-      // Invalid date from serial number — report error and return as-is so
-      // the caller can detect the malformed value, matching the web-side
-      // parser behavior in apps/web/src/lib/parser/xlsx.ts (C5-01).
-      if (errors && lineIdx !== undefined) {
-        errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw}`, { line: lineIdx + 1 }));
-      }
-      return String(raw);
-    }
-  }
-  if (typeof raw === 'string') {
-    const result = parseDateStringToISO(raw);
-    // Report unparseable dates as parse errors so users can see which
-    // transactions have malformed dates, matching the web-side behavior
-    // in apps/web/src/lib/parser/xlsx.ts (C71-04).
-    if (!isValidISODate(result) && raw.trim() && errors && lineIdx !== undefined) {
-      errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${raw.trim()}`, { line: lineIdx + 1 }));
-    }
-    return result;
-  }
-  const str = String(raw ?? '');
-  if (str && errors && lineIdx !== undefined) {
-    errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${str}`, { line: lineIdx + 1 }));
-  }
-  return str;
+  return result.value;
 }
 
 function parseInstallments(raw: unknown): number | undefined {
@@ -280,120 +194,60 @@ function parseXLSXSheet(
   const categoryCol = findColumn(headers, config?.category, CATEGORY_COLUMN_PATTERN);
   const memoCol = findColumn(headers, config?.memo, MEMO_COLUMN_PATTERN);
 
+  if (dateCol === -1 || amountCol === -1) {
+    const missing: string[] = [];
+    if (dateCol === -1) missing.push('날짜');
+    if (amountCol === -1) missing.push('금액');
+    return {
+      bank: resolvedBank,
+      format: 'xlsx',
+      transactions: [],
+      errors: [new ParseError(`필수 컬럼을 찾을 수 없습니다: ${missing.join(', ')}`)],
+    };
+  }
+
   const transactions: import('../types.js').RawTransaction[] = [];
   const errors: import('../types.js').ParseError[] = [];
 
-  // Track last non-empty values for merged cell forward-fill.
-  // Korean bank XLSX exports commonly merge cells across installment
-  // rows — SheetJS fills merged cells with empty strings (C4-04).
-  // Forward-fill extends to all columns: date, merchant, category,
-  // installments, memo, and amount (C5-03/C73-01).
-  let lastDate: unknown = '';
-  let lastMerchant: unknown = '';
-  let lastCategory: unknown = '';
-  let lastInstallments: unknown = '';
-  let lastMemo: unknown = '';
-  let lastAmount: unknown = '';
-
-  // Helper: check if a cell has non-empty, non-whitespace content.
-  // Used for consistent forward-fill logic across all columns (C89-03).
-  // Returns false for empty string, null, undefined, and whitespace-only cells.
-  function isNonEmpty(val: unknown): boolean {
-    return val !== '' && val != null && String(val).trim() !== '';
-  }
+  const mergeIndex = createSheetMergeIndex(sheet['!merges']);
+  const consumedAmountSources = new Set<string>();
 
   for (let i = headerRowIdx + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
     if (row.every((c) => !c)) {
-      // Reset forward-fill state on blank rows to prevent values from
-      // unrelated data sections from leaking into subsequent sections (C32-F1).
-      lastDate = '';
-      lastMerchant = '';
-      lastCategory = '';
-      lastInstallments = '';
-      lastMemo = '';
-      lastAmount = '';
       continue;
     }
 
     // Skip summary/total rows
     const rowText = row.map((c) => String(c ?? '')).join(' ');
     if (isSummaryRow(rowText)) {
-      // Reset forward-fill state so summary row values don't propagate
-      // to merged data cells below (C27-COR01).
-      lastDate = '';
-      lastMerchant = '';
-      lastCategory = '';
-      lastInstallments = '';
-      lastMemo = '';
-      lastAmount = '';
       continue;
     }
 
-    // Forward-fill pattern for all columns (date, merchant, category,
-    // installments, memo, amount). Consistent logic: update last-value
-    // only when cell has non-empty, non-whitespace content (isNonEmpty);
-    // skip update for summary row values to prevent contamination;
-    // use last-value as fallback for empty/whitespace-only cells (C89-01).
+    const dateCell = resolveSheetCell(rows, i, dateCol, mergeIndex);
+    const merchantCell = merchantCol === -1
+      ? null
+      : resolveSheetCell(rows, i, merchantCol, mergeIndex);
+    const categoryCell = categoryCol === -1
+      ? null
+      : resolveSheetCell(rows, i, categoryCol, mergeIndex);
+    const installCell = installCol === -1
+      ? null
+      : resolveSheetCell(rows, i, installCol, mergeIndex);
+    const memoCell = memoCol === -1
+      ? null
+      : resolveSheetCell(rows, i, memoCol, mergeIndex);
+    const amountCell = resolveSheetCell(rows, i, amountCol, mergeIndex);
 
-    // Date column forward-fill (C4-04/C47-01/C73-02)
-    const rawDateValue = dateCol !== -1 ? row[dateCol] : '';
-    if (dateCol !== -1 && isNonEmpty(rawDateValue)) {
-      if (!isSummaryRow(String(rawDateValue))) {
-        lastDate = rawDateValue;
-      }
-    }
-    const dateRaw = dateCol !== -1 ? (isNonEmpty(rawDateValue) ? rawDateValue : lastDate) : '';
-
-    // Merchant column forward-fill (C5-03/C47-01/C73-02)
-    const rawMerchantValue = merchantCol !== -1 ? row[merchantCol] : '';
-    if (merchantCol !== -1 && isNonEmpty(rawMerchantValue)) {
-      if (!isSummaryRow(String(rawMerchantValue))) {
-        lastMerchant = rawMerchantValue;
-      }
-    }
-    const merchantRaw = merchantCol !== -1 ? (isNonEmpty(rawMerchantValue) ? rawMerchantValue : lastMerchant) : '';
-
-    // Category column forward-fill (C5-03/C52-06/C73-02)
-    const rawCategoryValue = categoryCol !== -1 ? row[categoryCol] : '';
-    if (categoryCol !== -1 && isNonEmpty(rawCategoryValue)) {
-      if (!isSummaryRow(String(rawCategoryValue))) {
-        lastCategory = rawCategoryValue;
-      }
-    }
-    const categoryRaw = categoryCol !== -1 ? (isNonEmpty(rawCategoryValue) ? rawCategoryValue : lastCategory) : '';
-
-    // Installments column forward-fill (C10-03/C52-06/C73-02)
-    const rawInstallValue = installCol !== -1 ? row[installCol] : '';
-    if (installCol !== -1 && isNonEmpty(rawInstallValue)) {
-      if (!isSummaryRow(String(rawInstallValue))) {
-        lastInstallments = rawInstallValue;
-      }
-    }
-    const installRaw = installCol !== -1 ? (isNonEmpty(rawInstallValue) ? rawInstallValue : lastInstallments) : '';
-
-    // Memo column forward-fill (C15-01/C52-06/C73-02)
-    const rawMemoValue = memoCol !== -1 ? row[memoCol] : '';
-    if (memoCol !== -1 && isNonEmpty(rawMemoValue)) {
-      if (!isSummaryRow(String(rawMemoValue))) {
-        lastMemo = rawMemoValue;
-      }
-    }
-    const memoRaw = memoCol !== -1 ? (isNonEmpty(rawMemoValue) ? rawMemoValue : lastMemo) : '';
-
-    // Amount column forward-fill (C73-01/C52-06/C89-01).
-    // Now consistent with all other columns: whitespace-only cells
-    // forward-fill from last amount (previously returned raw whitespace
-    // which parsed to null, causing row to be skipped).
-    const rawAmountValue = amountCol !== -1 ? row[amountCol] : '';
-    if (amountCol !== -1 && isNonEmpty(rawAmountValue)) {
-      if (!isSummaryRow(String(rawAmountValue))) {
-        lastAmount = rawAmountValue;
-      }
-    }
-    const amountRaw = amountCol !== -1 ? (isNonEmpty(rawAmountValue) ? rawAmountValue : lastAmount) : '';
+    const dateRaw = dateCell.value;
+    const merchantRaw = merchantCell?.value ?? '';
+    const categoryRaw = categoryCell?.value ?? '';
+    const installRaw = installCell?.value ?? '';
+    const memoRaw = memoCell?.value ?? '';
+    const amountRaw = amountCell.value;
 
     if (!dateRaw && !merchantRaw) continue;
+    if (amountCell.fromMerge && consumedAmountSources.has(amountCell.sourceKey)) continue;
 
     const amount = parseAmount(amountRaw);
     if (amount === null) {
@@ -427,15 +281,16 @@ function parseXLSXSheet(
     // (e.g., "45678") or corrupted data leak into the transaction object.
     // Parity with CSV adapter-factory and generic CSV parser which both
     // validate with isValidISODate after parseDateStringToISO (C94-01).
-    if (!isValidISODate(parsedDate) && String(dateRaw ?? '').trim()) {
+    if (!isValidISODate(parsedDate)) {
       // parseDateToISO may have already pushed an error; only add if it didn't
       const alreadyReported = errors.some(
         (e) => e.line === i + 1 && e.message.includes('날짜를 해석할 수 없습니다'),
       );
       if (!alreadyReported) {
-        errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${String(dateRaw).trim()}`, { line: i + 1, raw: rowText,
+        errors.push(new ParseError(`날짜를 해석할 수 없습니다: ${String(dateRaw).trim() || '빈 값'}`, { line: i + 1, raw: rowText,
          }));
       }
+      continue;
     }
 
     const tx = {
@@ -454,6 +309,7 @@ function parseXLSXSheet(
     };
 
     transactions.push(tx);
+    consumedAmountSources.add(amountCell.sourceKey);
   }
 
   return { bank: resolvedBank, format: 'xlsx', transactions, errors };
