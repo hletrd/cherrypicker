@@ -12,6 +12,8 @@ import {
   replaceGeneratedSection,
   repositoryRoot,
   validateDocumentedCardExample,
+  validateAstroMajorClaims,
+  validateGeneratorInstructions,
   validateIssuerFreshnessMetadata,
   validateRootReadmeClaims,
   type ReadmeCatalog,
@@ -138,8 +140,78 @@ describe('README catalog rendering', () => {
       ),
     ).toThrow(/missing recommendation disclosure/);
     expect(() => validateRootReadmeClaims(readme, '^8.0.0')).toThrow(
-      /must document Astro 8/,
+      /only Astro 8/,
     );
+  });
+
+  test('locks every active agent guide to the manifest Astro major', async () => {
+    const [architectureGuide, webPackageSource] = await Promise.all([
+      readFile(`${repositoryRoot}/.claude/CLAUDE.md`, 'utf8'),
+      readFile(`${repositoryRoot}/apps/web/package.json`, 'utf8'),
+    ]);
+    const webPackage = JSON.parse(webPackageSource) as {
+      dependencies?: Record<string, string>;
+    };
+    const astroVersion = webPackage.dependencies?.astro;
+    expect(astroVersion).toBeDefined();
+    expect(() =>
+      validateAstroMajorClaims(
+        architectureGuide,
+        astroVersion!,
+        '.claude/CLAUDE.md',
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateAstroMajorClaims(
+        architectureGuide.replaceAll('Astro 7', 'Astro 6'),
+        astroVersion!,
+        '.claude/CLAUDE.md',
+      ),
+    ).toThrow(/only Astro 7/);
+  });
+
+  test('locks generator and generated-source instructions to data:build', async () => {
+    const [generatorSource, generatedSource, rootPackageSource] =
+      await Promise.all([
+        readFile(`${repositoryRoot}/scripts/build-json.ts`, 'utf8'),
+        readFile(
+          `${repositoryRoot}/apps/web/src/lib/category-labels-fallback.ts`,
+          'utf8',
+        ),
+        readFile(`${repositoryRoot}/package.json`, 'utf8'),
+      ]);
+    const rootPackage = JSON.parse(rootPackageSource) as {
+      scripts?: Record<string, string>;
+    };
+    const dataBuildScript = rootPackage.scripts?.['data:build'];
+
+    expect(() =>
+      validateGeneratorInstructions(
+        generatorSource,
+        generatedSource,
+        dataBuildScript,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateGeneratorInstructions(
+        generatorSource.replace(
+          'bun run data:build',
+          'node --experimental-strip-types scripts/build-json.ts',
+        ),
+        generatedSource,
+        dataBuildScript,
+      ),
+    ).toThrow(/unsupported Node command/);
+    expect(() =>
+      validateGeneratorInstructions(
+        generatorSource,
+        generatedSource.replace(
+          'bun run data:build',
+          'node --experimental-strip-types scripts/build-json.ts',
+        ),
+        dataBuildScript,
+      ),
+    ).toThrow(/unsupported Node command/);
   });
 
   test('renders every root issuer once with a count sum matching the total', () => {

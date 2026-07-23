@@ -4,7 +4,7 @@
 Monorepo for analyzing Korean credit card statements and recommending optimal card usage per spending category.
 
 ## Tech Stack
-- **Astro 6 + Svelte 5** — Web app (apps/web/, runs on Node 24)
+- **Astro 7 + Svelte 5** — Web app (apps/web/, runs on Node 24)
 - **Bun** — Data pipelines (packages/parser/, tools/scraper/, tools/cli/)
 - **Pure TypeScript** — Shared packages (packages/core/, packages/rules/, packages/viz/)
 - **Tailwind CSS 4** — Styling
@@ -19,7 +19,7 @@ Monorepo for analyzing Korean credit card statements and recommending optimal ca
 - `packages/viz/` — Terminal tables + HTML report generation. Pure TS.
 - `tools/cli/` — CLI entry point. Runs on Bun.
 - `tools/scraper/` — LLM-powered card rule scraper. Runs on Bun.
-- `apps/web/` — Astro 6 + Svelte 5 static web app. Browser parsing uses the custom TypeScript parsers, SheetJS, and pdfjs-dist; builds on Node.
+- `apps/web/` — Astro 7 + Svelte 5 static web app. Browser parsing uses the custom TypeScript parsers, SheetJS, and pdfjs-dist; builds on Node.
 
 ## Conventions
 - Card rules stored as YAML in `packages/rules/data/cards/{issuer}/{card-name}.yaml`

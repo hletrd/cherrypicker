@@ -129,6 +129,9 @@ describe('deployment workflow consistency', () => {
     expect(playwrightConfigs[0]).toContain(
       "updateSnapshots: process.env.CI ? 'none' : 'missing'",
     );
+    expect(playwrightConfigs[0]).toContain(
+      'failOnFlakyTests: Boolean(process.env.CI)',
+    );
     expect(playwrightConfigs[0]).not.toContain(
       "testIgnore: '**/visual-regressions.spec.js'",
     );

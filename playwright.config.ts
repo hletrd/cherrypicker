@@ -11,6 +11,7 @@ export default defineConfig({
   updateSnapshots: process.env.CI ? 'none' : 'missing',
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
+  failOnFlakyTests: Boolean(process.env.CI),
   reporter: 'line',
   expect: {
     toHaveScreenshot: {

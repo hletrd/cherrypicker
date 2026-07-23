@@ -1,5 +1,5 @@
 /** Auto-generated from categories.yaml by scripts/build-json.ts
- *  Do not edit manually — run 'node --experimental-strip-types scripts/build-json.ts' to regenerate.
+ *  Do not edit manually — run 'bun run data:build' to regenerate.
  */
 export const FALLBACK_CATEGORY_LABELS: ReadonlyMap<string, string> = new Map([
     ['dining', '외식'],

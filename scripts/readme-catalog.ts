@@ -113,17 +113,7 @@ export function validateRootReadmeClaims(
   markdown: string,
   astroVersion: string,
 ): void {
-  const astroMajor = astroVersion.match(/\d+/)?.[0];
-  if (!astroMajor) {
-    throw new Error(
-      `apps/web/package.json: cannot determine Astro major from "${astroVersion}"`,
-    );
-  }
-  if (!markdown.includes(`Astro ${astroMajor}`)) {
-    throw new Error(
-      `README.md: technology stack must document Astro ${astroMajor}`,
-    );
-  }
+  validateAstroMajorClaims(markdown, astroVersion, 'README.md');
   for (const requiredDisclosure of [
     '추천에 포함된 모든 카드를 사용할 수 있다고 가정',
     '연회비 차감 전 월간 총혜택',
@@ -132,6 +122,64 @@ export function validateRootReadmeClaims(
     if (!markdown.includes(requiredDisclosure)) {
       throw new Error(
         `README.md: missing recommendation disclosure "${requiredDisclosure}"`,
+      );
+    }
+  }
+}
+
+export function validateAstroMajorClaims(
+  markdown: string,
+  astroVersion: string,
+  sourceName: string,
+): void {
+  const astroMajor = astroVersion.match(/\d+/)?.[0];
+  if (!astroMajor) {
+    throw new Error(
+      `apps/web/package.json: cannot determine Astro major from "${astroVersion}"`,
+    );
+  }
+  const documentedMajors = [
+    ...markdown.matchAll(/\bAstro\s+(\d+)\b/g),
+  ].map((match) => match[1]);
+  if (
+    documentedMajors.length === 0 ||
+    documentedMajors.some((major) => major !== astroMajor)
+  ) {
+    throw new Error(
+      `${sourceName}: technology stack must document only Astro ${astroMajor}`,
+    );
+  }
+}
+
+export function validateGeneratorInstructions(
+  generatorSource: string,
+  generatedSource: string,
+  dataBuildScript: string | undefined,
+): void {
+  if (
+    dataBuildScript === undefined ||
+    !dataBuildScript.includes('scripts/build-json.ts')
+  ) {
+    throw new Error(
+      'package.json: data:build must invoke scripts/build-json.ts',
+    );
+  }
+  const command = 'bun run data:build';
+  if (!generatorSource.startsWith('#!/usr/bin/env bun')) {
+    throw new Error('scripts/build-json.ts: generator must use the Bun shebang');
+  }
+  for (const [sourceName, source] of [
+    ['scripts/build-json.ts', generatorSource],
+    ['apps/web/src/lib/category-labels-fallback.ts', generatedSource],
+  ] as const) {
+    if (source.includes('node --experimental-strip-types')) {
+      throw new Error(
+        `${sourceName}: regeneration instructions must not use the unsupported Node command`,
+      );
+    }
+    if (!source.includes(command)) {
+      throw new Error(
+        `${sourceName}: regeneration instructions must use "${command}"`,
       );
     }
   }
@@ -492,19 +540,47 @@ export async function synchronizeReadmeCatalog(options: {
   driftedPaths: string[];
 }> {
   const root = options.root ?? repositoryRoot;
-  const [rootReadme, agentGuide, webPackageJson] = await Promise.all([
+  const [
+    rootReadme,
+    agentGuide,
+    architectureGuide,
+    webPackageJson,
+    rootPackageJson,
+    generatorSource,
+    generatedFallback,
+  ] = await Promise.all([
     readFile(join(root, 'README.md'), 'utf8'),
     readFile(join(root, '.claude/AGENTS.md'), 'utf8'),
+    readFile(join(root, '.claude/CLAUDE.md'), 'utf8'),
     readFile(join(root, 'apps/web/package.json'), 'utf8'),
+    readFile(join(root, 'package.json'), 'utf8'),
+    readFile(join(root, 'scripts/build-json.ts'), 'utf8'),
+    readFile(
+      join(root, 'apps/web/src/lib/category-labels-fallback.ts'),
+      'utf8',
+    ),
   ]);
   const webPackage = JSON.parse(webPackageJson) as {
     dependencies?: Record<string, string>;
+  };
+  const rootPackage = JSON.parse(rootPackageJson) as {
+    scripts?: Record<string, string>;
   };
   const astroVersion = webPackage.dependencies?.astro;
   if (!astroVersion) {
     throw new Error('apps/web/package.json: missing Astro dependency');
   }
   validateRootReadmeClaims(rootReadme, astroVersion);
+  validateAstroMajorClaims(
+    architectureGuide,
+    astroVersion,
+    '.claude/CLAUDE.md',
+  );
+  validateGeneratorInstructions(
+    generatorSource,
+    generatedFallback,
+    rootPackage.scripts?.['data:build'],
+  );
   validateDocumentedCardExample(rootReadme, 'README.md');
   validateDocumentedCardExample(agentGuide, '.claude/AGENTS.md');
   const catalog = await loadReadmeCatalog(root);
