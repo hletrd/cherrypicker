@@ -220,8 +220,30 @@ hosts without claiming issuer ownership.
 regression and did not claim to replace the older linear full-corpus scan.
 No Cycle 11 finding was deferred or dropped.
 
-Final repository gates will be recorded after this closure documentation is
-committed, so that every required command verifies the resulting HEAD.
+## Final verification
+
+The complete required matrix passed on closure-documentation HEAD
+`0b76ebb8538e66921203bc714d060e299dbb1282`:
+
+- `bun run lint`: all seven workspaces passed; the web checker reported zero
+  errors, warnings, or hints across 123 files.
+- `bun run typecheck`: all seven workspaces passed; the web checker again
+  reported zero diagnostics across 123 files.
+- `bun run build`: 7 of 7 package builds passed and Astro generated all five
+  static routes.
+- `bun run test`: all workspace and script tests passed.
+- `bun run test:bun`: 1,635 of 1,635 tests passed.
+- `bunx vitest run`: 2,977 of 2,977 tests passed across 122 files.
+- `bun run test:e2e`: 96 of 96 Playwright tests passed.
+
+The exact E2E status assertion passed before and after the browser run. TCP
+4173 was free at both boundaries, and no repository-owned preview, browser,
+run record, or temporary profile remained. No gate repair was required.
+
+The same seven commands are rerun after the signed documentation-only commit
+containing this section. The cycle handoff records that final-HEAD result,
+because a commit cannot truthfully contain the outcome of tests run after its
+own creation.
 
 The six protected untracked Cycle 42 artifacts remain byte-identical,
 untracked, and unstaged at their recorded SHA-256 values.
