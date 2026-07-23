@@ -200,10 +200,11 @@
           <span
             class="rounded-full px-2.5 py-0.5 text-xs font-medium
               {card.type === 'credit'
-                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-400'
+                ? 'semantic-badge-credit'
                 : card.type === 'check'
-                  ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400'
-                  : 'bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-400'}"
+                  ? 'semantic-badge-check'
+                  : 'semantic-badge-prepaid'}"
+            data-testid="card-detail-type-badge"
           >
             {card.type === 'credit' ? '신용카드' : card.type === 'check' ? '체크카드' : '선불카드'}
           </span>

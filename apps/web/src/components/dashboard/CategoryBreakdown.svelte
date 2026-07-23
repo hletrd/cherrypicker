@@ -109,6 +109,11 @@
   }
 
   let hoveredIndex = $state<number | null>(null);
+  let focusedIndex = $state<number | null>(null);
+  let expandedIndex = $state<number | null>(null);
+  let emphasizedIndex = $derived(
+    hoveredIndex ?? focusedIndex ?? expandedIndex,
+  );
 
   let categories = $derived.by((): CategoryData[] => {
     const assignments = analysisStore.assignments;
@@ -201,14 +206,17 @@
     {#each categories as cat, i}
       {@const isTop3 = i < 3}
       <div
-        class="relative rounded-lg transition-colors duration-150 {isTop3 ? 'bg-[var(--color-bg)]' : ''} {hoveredIndex === i ? 'bg-[var(--color-primary-light)]' : ''}"
+        class="relative rounded-lg transition-colors duration-150 {isTop3 ? 'bg-[var(--color-bg)]' : ''} {emphasizedIndex === i ? 'bg-[var(--color-primary-light)]' : ''}"
         onmouseenter={() => (hoveredIndex = i)}
-        onmouseleave={() => (hoveredIndex = null)}
-        onfocusin={() => (hoveredIndex = i)}
+        onmouseleave={() => {
+          if (hoveredIndex === i) hoveredIndex = null;
+        }}
+        onfocusin={() => (focusedIndex = i)}
         onfocusout={(e) => {
-          // Only collapse if focus is leaving this row entirely (not moving to a child)
+          // Only remove focus emphasis if focus leaves the row entirely.
+          // Persistent disclosure state is activation-controlled below.
           if (!e.currentTarget?.contains(e.relatedTarget as Node)) {
-            hoveredIndex = null;
+            focusedIndex = null;
           }
         }}
       >
@@ -216,9 +224,9 @@
           type="button"
           class="w-full rounded-lg px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] focus:ring-offset-1"
           aria-label={`${cat.labelKo}, ${formatWon(cat.amount)}, ${cat.percentage}%, 상세 정보`}
-          aria-expanded={hoveredIndex === i}
+          aria-expanded={expandedIndex === i}
           aria-controls={`category-details-${i}`}
-          onclick={() => (hoveredIndex = hoveredIndex === i ? null : i)}
+          onclick={() => (expandedIndex = expandedIndex === i ? null : i)}
         >
           <div class="grid min-w-0 grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 sm:grid-cols-[1.25rem_6rem_minmax(8rem,1fr)_7rem_3rem] sm:gap-x-3">
             <!-- Rank -->
@@ -233,8 +241,8 @@
             </div>
 
             <div class="flex items-baseline justify-end gap-2 sm:hidden">
-              <span class="whitespace-nowrap text-sm font-medium">{formatWon(cat.amount)}</span>
-              <span class="whitespace-nowrap text-xs font-semibold {i < 3 ? 'text-[var(--color-primary-fg)]' : 'text-[var(--color-text-muted)]'}">{cat.percentage}%</span>
+              <span class="whitespace-nowrap text-sm font-medium" data-testid="category-amount">{formatWon(cat.amount)}</span>
+              <span class="whitespace-nowrap text-xs font-semibold {i < 3 ? 'text-[var(--color-primary-fg)]' : 'text-[var(--color-text-muted)]'}" data-testid="category-percentage">{cat.percentage}%</span>
             </div>
 
             <!-- Bar -->
@@ -242,23 +250,23 @@
               <div class="h-5 overflow-hidden rounded-lg bg-[var(--color-bg)] shadow-inner sm:h-6" data-testid="category-bar-track">
                 <div
                   class="h-full rounded-lg transition-all duration-700 ease-out"
-                  style="width: {(cat.percentage / maxPercentage) * 100}%; background-color: {cat.color}; opacity: {hoveredIndex === i ? 1 : 0.8}"
+                  style="width: {(cat.percentage / maxPercentage) * 100}%; background-color: {cat.color}; opacity: {emphasizedIndex === i ? 1 : 0.8}"
                 ></div>
               </div>
             </div>
 
             <!-- Amount -->
-            <div class="hidden whitespace-nowrap text-right text-sm font-medium sm:block">{formatWon(cat.amount)}</div>
+            <div class="hidden whitespace-nowrap text-right text-sm font-medium sm:block" data-testid="category-amount">{formatWon(cat.amount)}</div>
 
             <!-- Percentage -->
-            <div class="hidden whitespace-nowrap text-right text-xs font-semibold sm:block {i < 3 ? 'text-[var(--color-primary-fg)]' : 'text-[var(--color-text-muted)]'}">
+            <div class="hidden whitespace-nowrap text-right text-xs font-semibold sm:block {i < 3 ? 'text-[var(--color-primary-fg)]' : 'text-[var(--color-text-muted)]'}" data-testid="category-percentage">
               {cat.percentage}%
             </div>
           </div>
         </button>
 
         <!-- Hover tooltip expansion -->
-        <div id={`category-details-${i}`} class="mx-3 mb-2 mt-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs shadow-md sm:ml-8 {hoveredIndex === i ? 'block' : 'hidden'}">
+        <div id={`category-details-${i}`} class="mx-3 mb-2 mt-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs shadow-md sm:ml-8 {expandedIndex === i ? 'block' : 'hidden'}">
             <div class="flex justify-between gap-8">
               <span class="text-[var(--color-text-muted)]">정확한 금액</span>
               <span class="font-semibold">{formatWon(cat.amount)}</span>

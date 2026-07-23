@@ -23,6 +23,15 @@
   --color-text-muted: #64748b;
   --color-border: #e2e8f0;
 
+  --badge-credit-bg: #dbeafe;
+  --badge-credit-fg: #1d4ed8;
+  --badge-check-bg: #d1fae5;
+  --badge-check-fg: #047857;
+  --badge-prepaid-bg: #ede9fe;
+  --badge-prepaid-fg: #6d28d9;
+  --badge-success-bg: #dcfce7;
+  --badge-success-fg: #15803d;
+
   --gradient-hero: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%);
 
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07);
@@ -54,6 +63,14 @@ html.dark {
   --color-warning-fg: #fcd34d;
   --color-success-fg: #6ee7b7;
   --color-danger-fg: #fca5a5;
+  --badge-credit-bg: #1e3a8a;
+  --badge-credit-fg: #bfdbfe;
+  --badge-check-bg: #064e3b;
+  --badge-check-fg: #a7f3d0;
+  --badge-prepaid-bg: #4c1d95;
+  --badge-prepaid-fg: #ddd6fe;
+  --badge-success-bg: #14532d;
+  --badge-success-fg: #bbf7d0;
 }
 
 html {
@@ -65,6 +82,27 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.semantic-badge-credit,
+.semantic-badge-confidence-high {
+  background-color: var(--badge-credit-bg);
+  color: var(--badge-credit-fg);
+}
+
+.semantic-badge-check {
+  background-color: var(--badge-check-bg);
+  color: var(--badge-check-fg);
+}
+
+.semantic-badge-prepaid {
+  background-color: var(--badge-prepaid-bg);
+  color: var(--badge-prepaid-fg);
+}
+
+.semantic-badge-success {
+  background-color: var(--badge-success-bg);
+  color: var(--badge-success-fg);
 }
 
 @keyframes fadeIn {

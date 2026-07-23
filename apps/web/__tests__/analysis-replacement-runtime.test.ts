@@ -3,7 +3,11 @@ import {
   AnalysisReplacementRuntime,
   type AnalysisReplacementState,
 } from '../src/lib/analysis-replacement-runtime.js';
-import { LatestFileParseRun } from '../src/lib/file-parse-queue.js';
+import {
+  LatestFileParseRun,
+  type FileParseRun,
+} from '../src/lib/file-parse-queue.js';
+import { OperationEpoch } from '../src/lib/operation-epoch.js';
 import {
   deserializeAnalysis,
   serializeAnalysis,
@@ -33,7 +37,11 @@ function analysisFixture(merchant: string): AnalysisResult {
       totalSpending: 10_000,
       effectiveRate: 0,
       savingsVsSingleCard: 0,
-      bestSingleCard: { cardId: '', cardName: '', totalReward: 0 },
+      bestSingleCard: {
+        cardId: 'fixture-card',
+        cardName: '테스트 카드',
+        totalReward: 0,
+      },
       cardResults: [],
     },
   };
@@ -55,7 +63,165 @@ function reloadResult(storage: Map<string, string>): AnalysisResult | null {
   return raw ? deserializeAnalysis(raw).data : null;
 }
 
+function rejectedRun(kind: 'stale' | 'aborted'): FileParseRun {
+  const controller = new AbortController();
+  if (kind === 'aborted') controller.abort();
+
+  return Object.freeze({
+    generation: 99,
+    signal: controller.signal,
+    isCurrent: () => kind !== 'stale',
+    commit(): boolean {
+      throw new Error(`${kind} entry must not acquire operation ownership`);
+    },
+  });
+}
+
+async function expectRejectedEntryDoesNotDisturbCurrent(
+  rejected: FileParseRun,
+): Promise<void> {
+  const storage = new Map<string, string>();
+  const state = {
+    ...emptyState(),
+    result: analysisFixture('success-a'),
+    loading: true,
+    error: 'current operation owns this state',
+    generation: 1,
+    persistWarningKind: 'truncated' as const,
+    truncatedTxCount: 4,
+  };
+  const persistedA = serializeAnalysis(state.result).serialized;
+  storage.set(STORAGE_KEY, persistedA);
+
+  const calls = {
+    clear: 0,
+    load: 0,
+    analyze: 0,
+    persist: 0,
+  };
+  const operationEpoch = new OperationEpoch();
+  const currentOperation = operationEpoch.begin();
+  const runtime = new AnalysisReplacementRuntime(
+    state,
+    {
+      async loadAnalyzerModule() {
+        calls.load++;
+        return {
+          async analyzeMultipleFiles() {
+            calls.analyze++;
+            return analysisFixture('replacement-b');
+          },
+        };
+      },
+      persist(data) {
+        calls.persist++;
+        const persisted = serializeAnalysis(data);
+        storage.set(STORAGE_KEY, persisted.serialized);
+        return persisted.result;
+      },
+      clearPersistedAnalysis() {
+        calls.clear++;
+        storage.delete(STORAGE_KEY);
+        return { kind: null, truncatedTxCount: null };
+      },
+    },
+    operationEpoch,
+  );
+  const stateBeforeRejectedEntry = { ...state };
+
+  await runtime.analyze(
+    new File(['row'], 'rejected.csv'),
+    undefined,
+    { run: rejected },
+  );
+
+  expect(state).toEqual(stateBeforeRejectedEntry);
+  expect(state.result).toBe(stateBeforeRejectedEntry.result);
+  expect(state.result?.transactions?.[0]?.merchant).toBe('success-a');
+  expect(storage.get(STORAGE_KEY)).toBe(persistedA);
+  expect(calls).toEqual({
+    clear: 0,
+    load: 0,
+    analyze: 0,
+    persist: 0,
+  });
+  expect(currentOperation.isCurrent()).toBe(true);
+  expect(currentOperation.signal.aborted).toBe(false);
+}
+
 describe('replacement analysis runtime', () => {
+  test('already-stale entry is a complete no-op and does not abort current owned analysis', async () => {
+    await expectRejectedEntryDoesNotDisturbCurrent(rejectedRun('stale'));
+  });
+
+  test('already-aborted entry is a complete no-op and does not abort current owned analysis', async () => {
+    await expectRejectedEntryDoesNotDisturbCurrent(rejectedRun('aborted'));
+  });
+
+  test('failed persisted clear preserves A in memory and reload storage without starting B', async () => {
+    const storage = new Map<string, string>();
+    const resultA = analysisFixture('success-a');
+    const persistedA = serializeAnalysis(resultA).serialized;
+    storage.set(STORAGE_KEY, persistedA);
+    const state: AnalysisReplacementState = {
+      ...emptyState(),
+      result: resultA,
+      generation: 7,
+      persistWarningKind: 'truncated',
+      truncatedTxCount: 4,
+    };
+    const calls = {
+      clear: 0,
+      load: 0,
+      analyze: 0,
+      persist: 0,
+    };
+    const runtime = new AnalysisReplacementRuntime(state, {
+      async loadAnalyzerModule() {
+        calls.load++;
+        return {
+          async analyzeMultipleFiles() {
+            calls.analyze++;
+            return analysisFixture('replacement-b');
+          },
+        };
+      },
+      persist(data) {
+        calls.persist++;
+        const persisted = serializeAnalysis(data);
+        storage.set(STORAGE_KEY, persisted.serialized);
+        return persisted.result;
+      },
+      clearPersistedAnalysis() {
+        calls.clear++;
+        return { kind: 'error', truncatedTxCount: null };
+      },
+    });
+
+    await runtime.analyze(
+      new File(['row'], 'replacement.csv'),
+      undefined,
+      { run: new LatestFileParseRun().begin() },
+    );
+
+    expect(calls).toEqual({
+      clear: 1,
+      load: 0,
+      analyze: 0,
+      persist: 0,
+    });
+    expect(state.result).toBe(resultA);
+    expect(state.generation).toBe(7);
+    expect(state.loading).toBe(false);
+    expect(state.error).toBe(
+      '저장된 이전 분석 결과를 삭제하지 못했어요. 페이지를 새로고침하고 다시 시도해 보세요.',
+    );
+    expect(state.persistWarningKind).toBe('error');
+    expect(state.truncatedTxCount).toBeNull();
+    expect(storage.get(STORAGE_KEY)).toBe(persistedA);
+    expect(reloadResult(storage)?.transactions?.[0]?.merchant).toBe('success-a');
+  });
+
   test('success A then failure B leaves memory, reload, and direct-route state empty', async () => {
     const storage = new Map<string, string>();
     const state = emptyState();

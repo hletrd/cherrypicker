@@ -9,20 +9,20 @@ import {
 } from '../src/lib/card-grid-state.js';
 
 describe('card grid pagination', () => {
-  test('renders at most 36 items and clamps the final page', () => {
+  test('renders a stable 12-item page and clamps the final page', () => {
     const cards = Array.from({ length: 683 }, (_, index) => `card-${index + 1}`);
 
     const first = getCardGridPage(cards, 1);
-    expect(CARD_GRID_PAGE_SIZE).toBe(36);
-    expect(first.items).toHaveLength(36);
+    expect(CARD_GRID_PAGE_SIZE).toBe(12);
+    expect(first.items).toHaveLength(12);
     expect(first.start).toBe(1);
-    expect(first.end).toBe(36);
-    expect(first.totalPages).toBe(19);
+    expect(first.end).toBe(12);
+    expect(first.totalPages).toBe(57);
 
     const final = getCardGridPage(cards, 999);
-    expect(final.page).toBe(19);
-    expect(final.items).toHaveLength(35);
-    expect(final.start).toBe(649);
+    expect(final.page).toBe(57);
+    expect(final.items).toHaveLength(11);
+    expect(final.start).toBe(673);
     expect(final.end).toBe(683);
   });
 
@@ -105,7 +105,11 @@ describe('CardGrid production wiring', () => {
     expect(source).toContain('aria-label="이전 페이지"');
     expect(source).toContain('aria-label="다음 페이지"');
     expect(source).toContain("aria-current={pageInfo.page === pageNumber ? 'page' : undefined}");
-    expect(source).toContain('data-testid="card-grid-page-range"');
+    expect(source).toContain("'card-grid-page-range'");
+    expect(source).toContain("{@render paginationControls('top')}");
+    expect(source).toContain("{@render paginationControls('bottom')}");
+    expect(source).toContain('data-testid="issuer-filter-toggle"');
+    expect(source).toContain('aria-controls="issuer-filter-options"');
     expect(source).toContain('readCardGridQuery(window.location.search)');
     expect(source).toContain('writeCardGridQuery(');
   });
@@ -126,5 +130,28 @@ describe('CardGrid production wiring', () => {
       expect(start).toBeGreaterThan(-1);
       expect(source.slice(start, start + 180)).toContain('currentPage = 1');
     }
+  });
+
+  test('restores focus to the visible mobile issuer toggle after collapsing options', async () => {
+    const componentUrl = new URL(
+      '../src/components/cards/CardGrid.svelte',
+      import.meta.url,
+    );
+    const source = await readFile(componentUrl, 'utf8');
+    const start = source.indexOf('async function setIssuerFilter');
+    const handler = source.slice(start, start + 500);
+
+    expect(start).toBeGreaterThan(-1);
+    expect(source).toContain('bind:this={issuerFilterToggle}');
+    expect(handler).toContain(
+      'const shouldRestoreFocus = isElementVisible(issuerFilterToggle)',
+    );
+    expect(handler.indexOf('issuersExpanded = false')).toBeLessThan(
+      handler.indexOf('await tick()'),
+    );
+    expect(handler).toContain(
+      'if (shouldRestoreFocus && isElementVisible(issuerFilterToggle))',
+    );
+    expect(handler).toContain('issuerFilterToggle.focus()');
   });
 });

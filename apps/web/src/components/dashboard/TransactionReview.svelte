@@ -315,9 +315,9 @@
                   </td>
                   <td class="px-3 py-2 text-center">
                     {#if tx.confidence >= 1.0}
-                      <span class="inline-block rounded-full bg-green-100 dark:bg-green-900 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-400" title="키워드 정확 일치">정확</span>
+                      <span class="semantic-badge-success inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium" title="키워드 정확 일치">정확</span>
                     {:else if tx.confidence >= 0.8}
-                      <span class="inline-block rounded-full bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-400" title="키워드 부분 일치">높음</span>
+                      <span class="semantic-badge-confidence-high inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium" title="키워드 부분 일치">높음</span>
                     {:else if tx.confidence >= 0.5}
                       <span class="inline-block rounded-full bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400" title="은행 분류 또는 YAML 키워드">보통</span>
                     {:else if tx.confidence > 0}

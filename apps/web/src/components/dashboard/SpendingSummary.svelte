@@ -85,12 +85,18 @@
 {:else if analysisStore.result}
   <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
     <!-- 최근 월 지출 (optimization covers latest month only) -->
-    <div class="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm dark:from-blue-950 dark:to-blue-900/50">
+    <div
+      class="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm dark:from-blue-950 dark:to-blue-900/50"
+      data-testid="latest-spending-tile"
+    >
       <div class="flex items-center gap-1.5 text-sm text-blue-700 dark:text-blue-300">
         <Icon name="credit-card" size={15} />
         <span>최근 월 지출</span>
       </div>
-      <div class="mt-1 text-2xl font-bold text-[var(--color-primary-fg)]">
+      <div
+        class="mt-1 text-2xl font-bold text-[var(--color-primary-fg)]"
+        data-testid="latest-spending-value"
+      >
         {formatWon(analysisStore.optimization?.totalSpending ?? 0)}
       </div>
       {#if analysisStore.result?.monthlyBreakdown && analysisStore.result.monthlyBreakdown.length > 1}

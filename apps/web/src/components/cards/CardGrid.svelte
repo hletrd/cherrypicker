@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { getCards } from '../../lib/api.js';
   import type { CardSummary } from '../../lib/api.js';
   import { formatWon, getIssuerColor, formatIssuerNameKo } from '../../lib/formatters.js';
@@ -34,6 +34,8 @@
   let typeFilter = $state<CardGridTypeFilter>('all');
   let sortOrder = $state<CardGridSortOrder>('name');
   let issuerFilter = $state('');
+  let issuersExpanded = $state(false);
+  let issuerFilterToggle: HTMLButtonElement | null = null;
   let currentPage = $state(1);
   let queryReady = $state(false);
   let requestController: AbortController | null = null;
@@ -148,9 +150,19 @@
     currentPage = 1;
   }
 
-  function setIssuerFilter(value: string) {
+  function isElementVisible(element: HTMLElement | null) {
+    return element !== null && element.offsetParent !== null;
+  }
+
+  async function setIssuerFilter(value: string) {
+    const shouldRestoreFocus = isElementVisible(issuerFilterToggle);
     issuerFilter = value;
     currentPage = 1;
+    issuersExpanded = false;
+    await tick();
+    if (shouldRestoreFocus && isElementVisible(issuerFilterToggle)) {
+      issuerFilterToggle.focus();
+    }
   }
 
   function setSortOrder(value: CardGridSortOrder) {
@@ -210,7 +222,59 @@
   });
 </script>
 
-<div class="flex flex-col gap-5" aria-busy={loading}>
+{#snippet paginationControls(position: 'top' | 'bottom')}
+  <div
+    class="flex flex-col items-center justify-between gap-3 sm:flex-row {position === 'bottom' ? 'mt-6' : ''}"
+    data-testid={`card-grid-pagination-${position}`}
+  >
+    <p
+      class="text-sm text-[var(--color-text-muted)]"
+      aria-live={position === 'top' ? 'polite' : undefined}
+      data-testid={position === 'bottom' ? 'card-grid-page-range' : 'card-grid-page-range-top'}
+    >
+      {pageInfo.start}–{pageInfo.end} / {pageInfo.totalItems}개
+    </p>
+    <nav
+      class="flex flex-wrap items-center justify-center gap-1"
+      aria-label={`카드 목록 ${position === 'top' ? '상단' : '하단'} 페이지`}
+    >
+      <button
+        type="button"
+        class="min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label="이전 페이지"
+        disabled={pageInfo.page === 1}
+        onclick={() => setPage(pageInfo.page - 1)}
+      >
+        이전
+      </button>
+      {#each pageNumbers as pageNumber}
+        <button
+          type="button"
+          class="min-h-11 min-w-11 rounded-lg border px-3 py-2 text-sm transition-colors
+            {pageInfo.page === pageNumber
+              ? 'border-[var(--color-primary-fill)] bg-[var(--color-primary-fill)] text-white'
+              : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-focus)]'}"
+          aria-label={`${pageNumber}페이지`}
+          aria-current={pageInfo.page === pageNumber ? 'page' : undefined}
+          onclick={() => setPage(pageNumber)}
+        >
+          {pageNumber}
+        </button>
+      {/each}
+      <button
+        type="button"
+        class="min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label="다음 페이지"
+        disabled={pageInfo.page === pageInfo.totalPages}
+        onclick={() => setPage(pageInfo.page + 1)}
+      >
+        다음
+      </button>
+    </nav>
+  </div>
+{/snippet}
+
+<div class="flex flex-col gap-5" aria-busy={loading} data-testid="card-grid-root">
   <!-- Search + Sort row -->
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
     <div class="flex-1">
@@ -265,7 +329,11 @@
       </button>
     {/each}
     {#if !loading}
-      <span class="ml-auto rounded-full bg-[var(--color-bg)] px-3 py-1 text-xs font-medium text-[var(--color-text-muted)]" aria-live="polite">
+      <span
+        class="ml-auto rounded-full bg-[var(--color-bg)] px-3 py-1 text-xs font-medium text-[var(--color-text-muted)]"
+        aria-live="polite"
+        data-testid="card-grid-filtered-count"
+      >
         {filteredCards.length}개 카드
       </span>
     {/if}
@@ -273,8 +341,31 @@
 
   <!-- Issuer filter pills -->
   {#if availableIssuers.length > 0}
-    <div class="flex flex-wrap gap-1.5" role="group" aria-labelledby="issuer-filter-label">
-      <span id="issuer-filter-label" class="w-full text-sm font-medium text-[var(--color-text)]">카드사</span>
+    <button
+      type="button"
+      class="flex min-h-11 w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm sm:hidden"
+      aria-expanded={issuersExpanded}
+      aria-controls="issuer-filter-options"
+      data-testid="issuer-filter-toggle"
+      bind:this={issuerFilterToggle}
+      onclick={() => (issuersExpanded = !issuersExpanded)}
+    >
+      <span class="font-medium">카드사 필터</span>
+      <span class="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+        {issuerFilter ? formatIssuerNameKo(issuerFilter) : `${availableIssuers.length}개`}
+        <span
+          aria-hidden="true"
+          class="inline-block transition-transform {issuersExpanded ? 'rotate-180' : ''}"
+        >▼</span>
+      </span>
+    </button>
+    <div
+      id="issuer-filter-options"
+      class="{issuersExpanded ? 'flex' : 'hidden'} flex-wrap gap-1.5 sm:flex"
+      role="group"
+      aria-labelledby="issuer-filter-label"
+    >
+      <span id="issuer-filter-label" class="hidden w-full text-sm font-medium text-[var(--color-text)] sm:block">카드사</span>
       <button
         type="button"
         class="rounded-full border px-2.5 py-1 text-xs transition-colors {issuerFilter === '' ? 'border-[var(--color-primary-fill)] bg-[var(--color-primary-fill)] text-white' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-muted)]'}"
@@ -340,6 +431,8 @@
       {/if}
     </div>
   {:else}
+    {@render paginationControls('top')}
+
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="card-grid-page">
       {#each pageInfo.items as card}
         {@const issuerColor = getIssuerColor(card.issuer)}
@@ -356,23 +449,27 @@
           <span
             class="absolute right-3 top-3 rounded-full px-2 py-0.5 text-xs font-medium
               {card.type === 'credit'
-                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-400'
+                ? 'semantic-badge-credit'
                 : card.type === 'check'
-                  ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400'
-                  : 'bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-400'}"
+                  ? 'semantic-badge-check'
+                  : 'semantic-badge-prepaid'}"
+            data-testid="card-type-badge"
           >
             {card.type === 'credit' ? '신용' : card.type === 'check' ? '체크' : '선불'}
           </span>
 
           <IssuerBadge issuer={card.issuer} compact />
-          <div class="mt-1 pr-10 break-keep [overflow-wrap:anywhere] text-base font-semibold leading-snug">{card.nameKo}</div>
+          <div
+            class="mt-1 pr-10 break-keep [overflow-wrap:anywhere] text-base font-semibold leading-snug"
+            data-testid="card-grid-card-name"
+          >{card.nameKo}</div>
           <div class="mt-0.5 text-xs text-[var(--color-text-muted)] truncate">{card.name}</div>
           <div class="mt-4 flex items-center justify-between">
             <span class="text-sm text-[var(--color-text-muted)]">
               연회비 {card.annualFee.domestic === 0 ? '없음' : formatWon(card.annualFee.domestic)}
             </span>
             {#if card.rewardCategories.length > 0}
-              <span class="rounded-full bg-green-100 dark:bg-green-900 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+              <span class="semantic-badge-success rounded-full px-2 py-0.5 text-xs font-medium">
                 {card.rewardCategories.length}개 혜택
               </span>
             {/if}
@@ -381,48 +478,6 @@
       {/each}
     </div>
 
-    <div class="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row">
-      <p
-        class="text-sm text-[var(--color-text-muted)]"
-        aria-live="polite"
-        data-testid="card-grid-page-range"
-      >
-        {pageInfo.start}–{pageInfo.end} / {pageInfo.totalItems}개
-      </p>
-      <nav class="flex flex-wrap items-center justify-center gap-1" aria-label="카드 목록 페이지">
-        <button
-          type="button"
-          class="min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="이전 페이지"
-          disabled={pageInfo.page === 1}
-          onclick={() => setPage(pageInfo.page - 1)}
-        >
-          이전
-        </button>
-        {#each pageNumbers as pageNumber}
-          <button
-            type="button"
-            class="min-h-11 min-w-11 rounded-lg border px-3 py-2 text-sm transition-colors
-              {pageInfo.page === pageNumber
-                ? 'border-[var(--color-primary-fill)] bg-[var(--color-primary-fill)] text-white'
-                : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-focus)]'}"
-            aria-label={`${pageNumber}페이지`}
-            aria-current={pageInfo.page === pageNumber ? 'page' : undefined}
-            onclick={() => setPage(pageNumber)}
-          >
-            {pageNumber}
-          </button>
-        {/each}
-        <button
-          type="button"
-          class="min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="다음 페이지"
-          disabled={pageInfo.page === pageInfo.totalPages}
-          onclick={() => setPage(pageInfo.page + 1)}
-        >
-          다음
-        </button>
-      </nav>
-    </div>
+    {@render paginationControls('bottom')}
   {/if}
 </div>

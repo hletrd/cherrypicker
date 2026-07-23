@@ -55,10 +55,17 @@ class FakeClassList {
 }
 
 class FakeElement {
-  constructor(private readonly printTrigger: FakeElement | null = null) {}
+  constructor(
+    private readonly printTrigger: FakeElement | null = null,
+    private readonly disabled = false,
+  ) {}
 
   closest(selector: string): FakeElement | null {
     return selector === '[data-print-trigger]' ? this.printTrigger : null;
+  }
+
+  hasAttribute(name: string): boolean {
+    return name === 'disabled' && this.disabled;
   }
 }
 
@@ -97,6 +104,17 @@ describe('production print controller', () => {
     expect(windowEvents.listeners.get('beforeprint')).toHaveLength(1);
     expect(windowEvents.listeners.get('afterprint')).toHaveLength(1);
 
+    const disabledTrigger = new FakeElement(null, true);
+    documentEvents.dispatch('click', {
+      target: new FakeElement(disabledTrigger),
+      preventDefault: () => {
+        preventedClicks += 1;
+      },
+    });
+    expect(preventedClicks).toBe(0);
+    expect(printCalls).toBe(0);
+    expect(classList.contains('print-mode')).toBe(false);
+
     windowEvents.dispatch('beforeprint');
     expect(classList.contains('print-mode')).toBe(true);
     expect(classList.contains('dark')).toBe(false);
@@ -129,5 +147,28 @@ describe('production print controller', () => {
     windowEvents.dispatch('afterprint');
     expect(classList.contains('print-mode')).toBe(false);
     expect(classList.contains('dark')).toBe(false);
+  });
+
+  test('report print control starts inert and is owned by result visibility', async () => {
+    const testDir = dirname(fileURLToPath(import.meta.url));
+    const [reportSource, visibilitySource] = await Promise.all([
+      readFile(resolve(testDir, '../src/pages/report.astro'), 'utf8'),
+      readFile(
+        resolve(testDir, '../src/components/ui/VisibilityToggle.svelte'),
+        'utf8',
+      ),
+    ]);
+
+    expect(reportSource).toContain('id="report-print-action"');
+    expect(reportSource).toMatch(
+      /id="report-print-action"[\s\S]*?\bhidden\b[\s\S]*?\bdisabled\b/,
+    );
+    expect(reportSource).toContain('dataControlId="report-print-action"');
+    expect(visibilitySource).toContain(
+      "cachedDataControl.toggleAttribute('hidden', !hasData)",
+    );
+    expect(visibilitySource).toContain(
+      "cachedDataControl.toggleAttribute('disabled', !hasData)",
+    );
   });
 });

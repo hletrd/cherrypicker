@@ -8,6 +8,70 @@ const { expect, test } = require('@playwright/test');
 const BASE = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/cherrypicker/';
 const FIXTURE = require('path').join(__dirname, 'fixtures', 'regression-upload.csv');
 
+async function waitForComponentHydration(readyLocator) {
+  await expect(readyLocator).toBeAttached();
+  const island = readyLocator.locator('xpath=ancestor::astro-island[1]');
+  await expect(island).toHaveCount(1);
+  await expect(island).not.toHaveAttribute('ssr');
+}
+
+async function waitForChildIslandsHydrated(container) {
+  await expect(container).toBeVisible();
+  await expect(container.locator('astro-island')).not.toHaveCount(0);
+  await expect(container.locator('astro-island[ssr]')).toHaveCount(0);
+}
+
+async function waitForCardCatalog(page) {
+  const root = page.getByTestId('card-grid-root');
+  await waitForComponentHydration(root);
+  await expect(root).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByTestId('card-grid-page')).toBeVisible();
+  await expect(page.getByTestId('card-grid-filtered-count')).toHaveText(
+    /^[1-9]\d*개 카드$/,
+  );
+}
+
+async function readFilteredCardCount(page) {
+  const text = await page.getByTestId('card-grid-filtered-count').innerText();
+  const match = text.match(/^([\d,]+)개 카드$/);
+  expect(match, `Unexpected card-count copy: ${text}`).toBeTruthy();
+  return Number(match[1].replaceAll(',', ''));
+}
+
+async function observePostSettleRuntimeWindow(page, proofName) {
+  await test.step(`observe post-settle runtime window: ${proofName}`, async () => {
+    const marker = `[e2e-post-settle:${proofName}]`;
+    const markerObserved = page.waitForEvent('console', {
+      predicate: (message) =>
+        message.type() === 'debug' && message.text() === marker,
+    });
+
+    await page.evaluate((message) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => console.debug(message));
+      });
+    }, marker);
+
+    const observation = await markerObserved;
+    expect(
+      observation.text(),
+      `${proofName}: post-settle frame sentinel was not observed`,
+    ).toBe(marker);
+  });
+}
+
+function expectNoUnexpectedRuntimeErrors(errors, proofName) {
+  const realErrors = errors.filter(
+    (error) =>
+      !error.includes('Content Security Policy') &&
+      !error.includes('astro-island'),
+  );
+  expect(
+    realErrors,
+    `${proofName}: unexpected runtime errors:\n${realErrors.join('\n')}`,
+  ).toEqual([]);
+}
+
 // The real cycle-6 D6-01 root cause was a runtime type mismatch in
 // parsePreviousSpending (C7-E01). With that fix in place, parallel describe
 // mode is safe — the upload pipeline no longer hangs under concurrency.
@@ -371,6 +435,9 @@ test.describe('Report page', () => {
     // "아직 분석 결과가 없어요" until the store has data). Scope to the
     // visible container explicitly (C7E-bucket-A).
     await expect(page.locator('#report-empty-state').getByText('아직 분석 결과가 없어요')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#report-data-content')).toBeHidden();
+    await expect(page.locator('#report-print-action')).toBeHidden();
+    await expect(page.locator('#report-print-action')).toBeDisabled();
   });
 
   test('shows populated state after analysis', async ({ page }) => {
@@ -385,11 +452,24 @@ test.describe('Report page', () => {
     // Report should load from sessionStorage
     const content = page.locator('#report-data-content');
     await expect(content).toBeVisible();
+    await expect(page.locator('#report-print-action')).toBeVisible();
+    await expect(page.locator('#report-print-action')).toBeEnabled();
   });
 
-  test('print button exists', async ({ page }) => {
+  test('empty report print action is inert', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__uiReviewPrintCalls = 0;
+      window.print = () => {
+        window.__uiReviewPrintCalls += 1;
+      };
+    });
     await page.goto(BASE + 'report');
-    await expect(page.getByRole('button', { name: /인쇄/ })).toBeVisible();
+    const printAction = page.locator('#report-print-action');
+    await expect(printAction).toBeHidden();
+    await expect(printAction).toBeDisabled();
+    await printAction.evaluate((element) => element.click());
+    expect(await page.evaluate(() => window.__uiReviewPrintCalls)).toBe(0);
+    await expect(page.locator('html')).not.toHaveClass(/print-mode/);
   });
 });
 
@@ -419,40 +499,55 @@ test.describe('Cards page', () => {
 
   test('card grid loads cards from JSON', async ({ page }) => {
     await page.goto(BASE + 'cards');
-    await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
-    // Wait for cards to load
-    await page.waitForTimeout(2000);
-    // Should have card count — the footer also renders "683+ 카드 수록",
-    // which matches /개 카드/ loosely; use the live count badge explicitly
-    // (C7E-bucket-A).
-    await expect(page.getByText(/\d+개 카드/).first()).toBeVisible();
+    await waitForCardCatalog(page);
+    const visibleCards = page.getByTestId('card-grid-card');
+    const filteredCount = await readFilteredCardCount(page);
+    expect(filteredCount).toBeGreaterThan(12);
+    await expect(visibleCards).toHaveCount(12);
   });
 
   test('search filters cards', async ({ page }) => {
     await page.goto(BASE + 'cards');
-    await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
-    await page.waitForTimeout(2000);
+    await waitForCardCatalog(page);
+    const baseline = await readFilteredCardCount(page);
+    expect(baseline).toBeGreaterThan(1);
+
     const searchInput = page.getByPlaceholder('카드 이름으로 검색');
-    await searchInput.fill('삼성');
-    // Count should change — use .first() to avoid strict-mode collision with
-    // the footer copy "... 카드 수록" (C7E-bucket-A).
-    const countText = await page.getByText(/\d+개 카드/).first().textContent();
-    expect(countText).toBeTruthy();
+    await searchInput.fill('픽E');
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('search'))
+      .toBe('픽E');
+    await expect(page.getByTestId('card-grid-filtered-count')).toHaveText(
+      '1개 카드',
+    );
+    const filtered = await readFilteredCardCount(page);
+    expect(filtered).toBeLessThan(baseline);
+    await expect(page.getByTestId('card-grid-card')).toHaveCount(1);
+    await expect(page.getByTestId('card-grid-card-name')).toHaveText('픽E');
   });
 
   test('clicking a card opens detail view', async ({ page }) => {
     await page.goto(BASE + 'cards');
-    await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
-    await page.waitForTimeout(2000);
-    // Click first card
-    const firstCard = page.locator('button[class*="rounded-xl"][class*="border"]').first();
-    if (await firstCard.isVisible()) {
-      await firstCard.click();
-      // Detail view shows two "목록으로" affordances (top back-link and
-      // bottom secondary button); use .first() to pick the top one
-      // (C7E-bucket-A).
-      await expect(page.getByText('목록으로').first()).toBeVisible();
-    }
+    await waitForCardCatalog(page);
+
+    const firstCard = page.getByTestId('card-grid-card').first();
+    await expect(firstCard).toBeVisible();
+    const cardId = await firstCard.getAttribute('data-card-id');
+    const cardName = await firstCard.getByTestId('card-grid-card-name').innerText();
+    const cardType = await firstCard.getByTestId('card-type-badge').innerText();
+    expect(cardId).toBeTruthy();
+
+    await firstCard.click();
+    await expect(page).toHaveURL(`${BASE}cards#${cardId}`);
+    const heading = page.getByTestId('card-detail-heading');
+    await expect(heading).toBeVisible();
+    await expect(heading).toBeFocused();
+    await expect(heading).toHaveText(cardName);
+    await expect(page.getByTestId('card-detail-type-badge')).toHaveText(
+      `${cardType}카드`,
+    );
+    await expect(heading.locator('..')).toContainText('국내 연회비');
+    await expect(page.getByText('목록으로').first()).toBeVisible();
   });
 });
 
@@ -473,13 +568,13 @@ test.describe('Empty states', () => {
 
   test('results empty state shows CTA', async ({ page }) => {
     await page.goto(BASE + 'results');
-    // Same reasoning as the dashboard empty-state test above — avoid the
-    // astro-island wait on pages whose islands are inside a hidden
-    // container (C7E-B2).
-    const hasContent = await page.locator('#stat-total-spending').isVisible().catch(() => false);
-    if (!hasContent) {
-      await expect(page.getByText(/아직|명세서를 올/).first()).toBeVisible({ timeout: 10_000 });
-    }
+    const emptyState = page.locator('#results-empty-state');
+    await expect(emptyState).toBeVisible({ timeout: 10_000 });
+    await expect(emptyState).toContainText('아직 분석 결과가 없어요');
+    await expect(page.locator('#results-data-content')).toBeHidden();
+    await expect(
+      emptyState.getByRole('link', { name: '명세서 올리러 가기' }),
+    ).toBeVisible();
   });
 });
 
@@ -594,21 +689,28 @@ test.describe('Responsive layout', () => {
 // ─── CSP & Console Errors ───
 
 test.describe('CSP and runtime errors', () => {
-  test('no unhandled page errors on home', async ({ page }) => {
+  test('home stays error-free through the post-settle runtime window', async ({
+    page,
+  }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => {
       if (msg.type() === 'error') errors.push(msg.text());
     });
     await page.goto(BASE);
-    await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
-    await page.waitForTimeout(2000);
-    // Filter out known CSP issues (we're bypassing CSP in test)
-    const realErrors = errors.filter(e => !e.includes('Content Security Policy') && !e.includes('astro-island'));
-    expect(realErrors.length, `Unexpected errors: ${realErrors.join('\n')}`).toBe(0);
+    const uploadRegion = page.getByRole('region', {
+      name: '카드 명세서 업로드',
+    });
+    await expect(uploadRegion).toBeVisible();
+    await waitForComponentHydration(uploadRegion);
+    await expect(uploadRegion.locator('input[type="file"]')).toBeEnabled();
+    await observePostSettleRuntimeWindow(page, 'home upload readiness');
+    expectNoUnexpectedRuntimeErrors(errors, 'home post-settle proof');
   });
 
-  test('no unhandled page errors on dashboard with data', async ({ page }) => {
+  test('dashboard stays error-free through the post-settle runtime window', async ({
+    page,
+  }) => {
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     page.on('console', (msg) => {
@@ -620,9 +722,18 @@ test.describe('CSP and runtime errors', () => {
     await page.getByRole('spinbutton').fill('300000');
     await page.getByRole('button', { name: /^분석 시작/ }).click();
     await page.waitForURL('**/dashboard', { timeout: 30_000 });
-    await page.waitForTimeout(2000);
-    const realErrors = errors.filter(e => !e.includes('Content Security Policy') && !e.includes('astro-island'));
-    expect(realErrors.length, `Unexpected errors: ${realErrors.join('\n')}`).toBe(0);
+    const dashboardContent = page.locator('#dashboard-data-content');
+    await expect(dashboardContent).toBeVisible();
+    await expect(page.locator('#dashboard-empty-state')).toBeHidden();
+    await expect(page.locator('#dashboard-status')).toHaveText(
+      /^(?:분석이 끝났어요|분석 완료 — 확인할 항목 있음)$/,
+    );
+    await waitForChildIslandsHydrated(dashboardContent);
+    await expect(
+      dashboardContent.getByText('최근 월 지출').first(),
+    ).toBeVisible();
+    await observePostSettleRuntimeWindow(page, 'dashboard data readiness');
+    expectNoUnexpectedRuntimeErrors(errors, 'dashboard post-settle proof');
   });
 });
 

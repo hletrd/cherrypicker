@@ -1,4 +1,4 @@
-export const CARD_GRID_PAGE_SIZE = 36;
+export const CARD_GRID_PAGE_SIZE = 12;
 
 export const CARD_GRID_TYPE_FILTERS = [
   'all',

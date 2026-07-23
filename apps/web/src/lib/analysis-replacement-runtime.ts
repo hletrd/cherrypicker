@@ -36,6 +36,9 @@ export interface AnalysisReplacementDependencies {
   clearPersistedAnalysis(): PersistResult;
 }
 
+const CLEAR_PERSISTED_ANALYSIS_ERROR =
+  '저장된 이전 분석 결과를 삭제하지 못했어요. 페이지를 새로고침하고 다시 시도해 보세요.';
+
 function composeOwnedRun(
   operation: OperationToken,
   callerRun: FileParseRun,
@@ -80,12 +83,16 @@ function composeOwnedRun(
 /**
  * Owns replacement-analysis state transitions without depending on Svelte.
  *
- * Policy:
- * - Starting an analysis synchronously removes the previous persisted record
- *   and clears its in-memory result before the first await.
- * - A non-abort failure leaves both locations empty and exposes the error.
- * - Canceling an active replacement leaves that already-empty state intact and
- *   suppresses an error. Canceling while idle preserves the committed result.
+ * State transitions:
+ * - A stale or aborted replacement B is rejected before it acquires the store
+ *   epoch, so committed A and any current owned operation are untouched.
+ * - A clear failure preserves A in memory and storage, preserves its
+ *   generation, and exposes a storage error without loading or persisting B.
+ * - After a successful clear, A is removed from memory and storage and its
+ *   generation advances. Successful B then commits, advances the generation,
+ *   and persists; failed or aborted B leaves the already-cleared state empty.
+ * - Canceling while idle preserves committed A. Store reset, which is owned by
+ *   the caller, invalidates active work and clears result/persistence state.
  */
 export class AnalysisReplacementRuntime {
   readonly #state: AnalysisReplacementState;
@@ -107,27 +114,50 @@ export class AnalysisReplacementRuntime {
     options: AnalyzeOptions | undefined,
     execution: AnalyzeExecution,
   ): Promise<void> {
+    // Acquiring a new store epoch aborts the current owned operation, so caller
+    // ownership must be established before begin() has any side effects.
+    if (execution.run.signal.aborted || !execution.run.isCurrent()) return;
+
     const operation = this.#operationEpoch.begin();
     const owned = composeOwnedRun(operation, execution.run);
     const ownedExecution: AnalyzeExecution = {
       run: owned.run,
       onProgress: execution.onProgress,
     };
-
-    this.#state.loading = true;
-    this.#state.error = null;
-
-    // Storage and memory are replaced as one synchronous transition. Clearing
-    // storage even when state.result is null also repairs legacy split-brain
-    // states left by an earlier failed replacement.
-    const hadResult = this.#state.result !== null;
-    const clearResult = this.#dependencies.clearPersistedAnalysis();
-    this.#state.result = null;
-    if (hadResult) this.#state.generation++;
-    this.#state.persistWarningKind = clearResult.kind;
-    this.#state.truncatedTxCount = clearResult.truncatedTxCount;
+    const commitState = <Key extends keyof AnalysisReplacementState>(
+      key: Key,
+      value: AnalysisReplacementState[Key],
+    ): boolean => owned.run.commit(() => {
+      this.#state[key] = value;
+    });
 
     try {
+      if (!commitState('loading', true)) return;
+      if (!commitState('error', null)) return;
+
+      // Deleting persisted A is a precondition for replacing committed state.
+      // Clearing even when state.result is null also repairs legacy
+      // split-brain states left by an earlier failed replacement.
+      const hadResult = this.#state.result !== null;
+      if (!owned.run.isCurrent()) return;
+      const clearResult = this.#dependencies.clearPersistedAnalysis();
+      if (!owned.run.isCurrent()) return;
+
+      if (clearResult.kind === 'error') {
+        if (!commitState('error', CLEAR_PERSISTED_ANALYSIS_ERROR)) return;
+        if (!commitState('persistWarningKind', 'error')) return;
+        commitState('truncatedTxCount', null);
+        return;
+      }
+
+      if (!commitState('result', null)) return;
+      if (
+        hadResult &&
+        !commitState('generation', this.#state.generation + 1)
+      ) return;
+      if (!commitState('persistWarningKind', clearResult.kind)) return;
+      if (!commitState('truncatedTxCount', clearResult.truncatedTxCount)) return;
+
       const fileArray = Array.isArray(files) ? files : [files];
       const { analyzeMultipleFiles } =
         await this.#dependencies.loadAnalyzerModule();
@@ -153,14 +183,14 @@ export class AnalysisReplacementRuntime {
       }
 
       // Check ownership immediately before each externally visible commit.
-      if (!owned.run.isCurrent()) return;
-      this.#state.result = analysisResult;
-      this.#state.generation++;
+      if (!commitState('result', analysisResult)) return;
+      if (!commitState('generation', this.#state.generation + 1)) return;
 
       if (!owned.run.isCurrent()) return;
       const persistResult = this.#dependencies.persist(analysisResult);
-      this.#state.persistWarningKind = persistResult.kind;
-      this.#state.truncatedTxCount = persistResult.truncatedTxCount;
+      if (!owned.run.isCurrent()) return;
+      if (!commitState('persistWarningKind', persistResult.kind)) return;
+      commitState('truncatedTxCount', persistResult.truncatedTxCount);
     } catch (error) {
       if (
         !owned.run.isCurrent() ||
@@ -168,9 +198,11 @@ export class AnalysisReplacementRuntime {
       ) {
         return;
       }
-      this.#state.error =
-        error instanceof Error ? error.message : '분석 중 문제가 생겼어요';
-      this.#state.result = null;
+      if (!commitState(
+        'error',
+        error instanceof Error ? error.message : '분석 중 문제가 생겼어요',
+      )) return;
+      commitState('result', null);
     } finally {
       owned.dispose();
       if (operation.isCurrent()) {

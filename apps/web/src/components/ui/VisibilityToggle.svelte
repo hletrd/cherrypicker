@@ -6,9 +6,15 @@
     dataContentId: string;
     emptyStateId: string;
     statusTextId?: string;
+    dataControlId?: string;
   }
 
-  let { dataContentId, emptyStateId, statusTextId }: Props = $props();
+  let {
+    dataContentId,
+    emptyStateId,
+    statusTextId,
+    dataControlId,
+  }: Props = $props();
 
   // Cached element references — queried once on first effect run, then reused
   // to avoid repeated getElementById calls on every store change. Stale refs
@@ -21,6 +27,7 @@
   let cachedStatCardsNeeded: HTMLElement | null = null;
   let cachedStatSavingsLabel: HTMLElement | null = null;
   let cachedStatusText: HTMLElement | null = null;
+  let cachedDataControl: HTMLElement | null = null;
   let originalSavingsLabelText: string | null = null;
 
   function getOrRefreshElement(
@@ -62,9 +69,19 @@
     cachedDataEl = getOrRefreshElement(cachedDataEl, dataContentId);
     cachedEmptyEl = getOrRefreshElement(cachedEmptyEl, emptyStateId);
     if (statusTextId) cachedStatusText = getOrRefreshElement(cachedStatusText, statusTextId);
+    if (dataControlId) {
+      cachedDataControl = getOrRefreshElement(
+        cachedDataControl,
+        dataControlId,
+      );
+    }
 
     if (cachedDataEl && cachedDataEl.isConnected) cachedDataEl.classList.toggle('hidden', !hasData);
     if (cachedEmptyEl && cachedEmptyEl.isConnected) cachedEmptyEl.classList.toggle('hidden', hasData);
+    if (cachedDataControl?.isConnected) {
+      cachedDataControl.toggleAttribute('hidden', !hasData);
+      cachedDataControl.toggleAttribute('disabled', !hasData);
+    }
     if (cachedStatusText?.isConnected) {
       cachedStatusText.textContent = analysisStore.loading
         ? '분석 결과를 불러오는 중이에요'
@@ -129,6 +146,10 @@
     return () => {
       if (cachedDataEl && cachedDataEl.isConnected) cachedDataEl.classList.add('hidden');
       if (cachedEmptyEl && cachedEmptyEl.isConnected) cachedEmptyEl.classList.remove('hidden');
+      if (cachedDataControl && cachedDataControl.isConnected) {
+        cachedDataControl.setAttribute('hidden', '');
+        cachedDataControl.setAttribute('disabled', '');
+      }
 
       if (cachedStatTotalSpending && cachedStatTotalSpending.isConnected) cachedStatTotalSpending.textContent = '—';
       if (cachedStatTotalSavings && cachedStatTotalSavings.isConnected) cachedStatTotalSavings.textContent = '—';

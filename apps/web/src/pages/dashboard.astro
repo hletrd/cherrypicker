@@ -52,10 +52,11 @@ const resultsUrl = buildPageUrl('results');
   <div id="dashboard-data-content" class="hidden">
     <AnalysisWarnings client:load />
     <!-- Top row: summary + breakdown -->
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+    <div class="grid grid-cols-1 gap-6 min-[1100px]:grid-cols-2">
       <div
         class="card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.05s_ease_both]"
         style="opacity:0;animation-fill-mode:forwards;"
+        data-testid="spending-summary-panel"
       >
         <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20" class="text-[var(--color-primary-fg)]" aria-hidden="true">
@@ -69,6 +70,7 @@ const resultsUrl = buildPageUrl('results');
       <div
         class="card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.1s_ease_both]"
         style="opacity:0;animation-fill-mode:forwards;"
+        data-testid="category-breakdown-panel"
       >
         <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20" class="text-[var(--color-primary-fg)]" aria-hidden="true">

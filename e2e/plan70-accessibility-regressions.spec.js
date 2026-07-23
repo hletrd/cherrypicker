@@ -307,7 +307,11 @@ test('card loader exposes a retry without reload and preserves filter/current-pa
   expect(wrapping.width).toBeLessThanOrEqual(wrapping.parentWidth);
   await search.fill('');
 
-  const pageTwo = page.getByRole('button', {
+  const topPager = page.getByRole('navigation', {
+    name: '카드 목록 상단 페이지',
+    exact: true,
+  });
+  const pageTwo = topPager.getByRole('button', {
     name: '2페이지',
     exact: true,
   });
@@ -325,7 +329,7 @@ test('card loader exposes a retry without reload and preserves filter/current-pa
   await credit.click();
   await expect(credit).toHaveAttribute('aria-pressed', 'true');
   await expect(
-    page.getByRole('button', { name: '1페이지', exact: true }),
+    topPager.getByRole('button', { name: '1페이지', exact: true }),
   ).toHaveAttribute('aria-current', 'page');
 
   const issuerButtons = page
@@ -378,11 +382,15 @@ test('desktop recommendations retain native table semantics and keyboard disclos
     .getByRole('button', { name: /상세 정보$/ })
     .first();
   await categoryDisclosure.focus();
-  await expect(categoryDisclosure).toHaveAttribute('aria-expanded', 'true');
-  await categoryDisclosure.press('Enter');
   await expect(categoryDisclosure).toHaveAttribute('aria-expanded', 'false');
   await categoryDisclosure.press('Enter');
   await expect(categoryDisclosure).toHaveAttribute('aria-expanded', 'true');
+  await categoryDisclosure.press('Enter');
+  await expect(categoryDisclosure).toHaveAttribute('aria-expanded', 'false');
+  await categoryDisclosure.click();
+  await expect(categoryDisclosure).toHaveAttribute('aria-expanded', 'true');
+  await categoryDisclosure.click();
+  await expect(categoryDisclosure).toHaveAttribute('aria-expanded', 'false');
 
   const sortGroup = page.getByRole('group', {
     name: '추천 카드 정렬',
@@ -394,6 +402,118 @@ test('desktop recommendations retain native table semantics and keyboard disclos
   });
   await rewardSort.click();
   await expect(rewardSort).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('dashboard panels contain dense values across the tablet breakpoint matrix', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 767, height: 1000 });
+  await analyze(page);
+  await expect(page.getByTestId('latest-spending-value')).toBeVisible();
+  const categoryPanel = page.getByTestId('category-breakdown-panel');
+  await expect(categoryPanel).toBeVisible();
+  await expect(
+    categoryPanel
+      .getByTestId('category-amount')
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible();
+  await page.evaluate(async () => {
+    const finiteAnimations = document
+      .getAnimations()
+      .filter(
+        (animation) =>
+          animation.effect?.getTiming().iterations !== Number.POSITIVE_INFINITY,
+      );
+    await Promise.all(
+      finiteAnimations.map((animation) => animation.finished.catch(() => {})),
+    );
+  });
+
+  for (const width of [767, 768, 900, 1024, 1100]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }),
+    );
+
+    const geometry = await page.evaluate(() => {
+      const rectOf = (element) => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, right: rect.right };
+      };
+      const panelGeometry = (testId) => {
+        const panel = document.querySelector(`[data-testid="${testId}"]`);
+        if (!(panel instanceof HTMLElement)) {
+          throw new Error(`Missing ${testId}`);
+        }
+        return {
+          clientWidth: panel.clientWidth,
+          scrollWidth: panel.scrollWidth,
+          rect: rectOf(panel),
+        };
+      };
+      const visibleRects = (testId) =>
+        [...document.querySelectorAll(`[data-testid="${testId}"]`)]
+          .filter((element) => element.getClientRects().length > 0)
+          .map(rectOf);
+      const primaryValue = document.querySelector(
+        '[data-testid="latest-spending-value"]',
+      );
+      const primaryTile = document.querySelector(
+        '[data-testid="latest-spending-tile"]',
+      );
+      if (!(primaryValue instanceof HTMLElement) || !(primaryTile instanceof HTMLElement)) {
+        throw new Error('Missing primary spending geometry');
+      }
+
+      return {
+        root: {
+          clientWidth: document.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+        },
+        spendingPanel: panelGeometry('spending-summary-panel'),
+        categoryPanel: panelGeometry('category-breakdown-panel'),
+        primaryValue: rectOf(primaryValue),
+        primaryTile: rectOf(primaryTile),
+        categoryAmounts: visibleRects('category-amount'),
+        categoryPercentages: visibleRects('category-percentage'),
+      };
+    });
+
+    expect(geometry.root.scrollWidth, `root overflow at ${width}px`).toBe(
+      geometry.root.clientWidth,
+    );
+    for (const [label, panel] of [
+      ['spending', geometry.spendingPanel],
+      ['category', geometry.categoryPanel],
+    ]) {
+      expect(panel.scrollWidth, `${label} panel overflow at ${width}px`).toBe(
+        panel.clientWidth,
+      );
+    }
+    expect(geometry.primaryValue.left).toBeGreaterThanOrEqual(
+      geometry.primaryTile.left - 1,
+    );
+    expect(geometry.primaryValue.right).toBeLessThanOrEqual(
+      geometry.primaryTile.right + 1,
+    );
+    expect(geometry.categoryAmounts.length).toBeGreaterThan(0);
+    expect(geometry.categoryPercentages.length).toBeGreaterThan(0);
+    for (const rect of [
+      ...geometry.categoryAmounts,
+      ...geometry.categoryPercentages,
+    ]) {
+      expect(rect.left, `category value starts outside at ${width}px`).toBeGreaterThanOrEqual(
+        geometry.categoryPanel.rect.left - 1,
+      );
+      expect(rect.right, `category value ends outside at ${width}px`).toBeLessThanOrEqual(
+        geometry.categoryPanel.rect.right + 1,
+      );
+    }
+  }
 });
 
 for (const width of [320, 375, 400]) {
@@ -481,6 +601,64 @@ for (const width of [320, 375, 400]) {
   });
 }
 
+test('mobile catalog keeps paging before the grid and issuer filters compact', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto(appUrl('cards'));
+  await expect(page.getByTestId('card-grid-root')).toHaveAttribute(
+    'aria-busy',
+    'false',
+  );
+
+  const cards = page.getByTestId('card-grid-card');
+  const topPager = page.getByTestId('card-grid-pagination-top');
+  const bottomPager = page.getByTestId('card-grid-pagination-bottom');
+  const grid = page.getByTestId('card-grid-page');
+  await expect(topPager).toBeVisible();
+  await expect(page.getByTestId('card-grid-page-range-top')).toHaveText(
+    /^\d+–\d+ \/ \d+개$/,
+  );
+  await expect(grid).toBeVisible();
+  await expect(bottomPager).toBeVisible();
+  const cardCount = await cards.count();
+  expect(cardCount).toBeGreaterThan(0);
+  expect(cardCount).toBeLessThanOrEqual(12);
+
+  const [topBox, gridBox, bottomBox] = await Promise.all([
+    topPager.boundingBox(),
+    grid.boundingBox(),
+    bottomPager.boundingBox(),
+  ]);
+  expect(topBox).toBeTruthy();
+  expect(gridBox).toBeTruthy();
+  expect(bottomBox).toBeTruthy();
+  expect(topBox.y + topBox.height).toBeLessThanOrEqual(gridBox.y);
+  expect(bottomBox.y).toBeGreaterThanOrEqual(gridBox.y + gridBox.height);
+
+  const issuerToggle = page.getByTestId('issuer-filter-toggle');
+  const issuerOptions = page.locator('#issuer-filter-options');
+  await expect(issuerToggle).toBeVisible();
+  await expect(issuerToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(issuerOptions).toBeHidden();
+  await issuerToggle.click();
+  await expect(issuerToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(issuerOptions).toBeVisible();
+
+  const firstIssuer = issuerOptions.locator('button').nth(1);
+  await expect(firstIssuer).toBeVisible();
+  await firstIssuer.click();
+  await expect(firstIssuer).toHaveAttribute('aria-pressed', 'true');
+  await expect(issuerToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(issuerOptions).toBeHidden();
+  await expect(issuerToggle).toBeVisible();
+  await expect(issuerToggle).toBeFocused();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('issuer'))
+    .not.toBeNull();
+  await expectNoRootOverflow(page);
+});
+
 test('mobile menu keyboard flow returns focus and reduced motion disables smooth card scrolling', async ({
   page,
 }) => {
@@ -544,7 +722,7 @@ test('mobile menu keyboard flow returns focus and reduced motion disables smooth
   await expect(page).toHaveTitle('카드 목록 | CherryPicker');
 });
 
-test('computed hero, theme, status, and issuer pairs meet WCAG AA', async ({
+test('computed hero, theme, status, issuer, and semantic badge pairs meet WCAG AA', async ({
   page,
 }) => {
   await page.goto(appUrl());
@@ -602,13 +780,84 @@ test('computed hero, theme, status, and issuer pairs meet WCAG AA', async ({
 
   await page.goto(appUrl('cards'));
   await expect(page.getByTestId('card-grid-page')).toBeVisible();
-  await expectOpaqueContrast(page, page.getByTestId('issuer-badge').first());
+  await page.evaluate(() => {
+    const fixture = document.createElement('div');
+    fixture.setAttribute('data-testid', 'semantic-badge-contrast-fixture');
+    fixture.style.cssText =
+      'position:fixed;inset:0 auto auto 0;z-index:9999;display:flex;gap:4px;padding:4px';
+    for (const name of [
+      'credit',
+      'check',
+      'prepaid',
+      'success',
+      'confidence-high',
+    ]) {
+      const badge = document.createElement('span');
+      badge.className = `semantic-badge-${name}`;
+      badge.dataset.semanticBadge = name;
+      badge.textContent = name;
+      badge.style.cssText =
+        'display:inline-block;padding:2px 8px;font-size:10px;font-weight:500';
+      fixture.append(badge);
+    }
+    document.body.append(fixture);
+  });
+
+  const typeGroup = page.getByRole('group', {
+    name: '카드 종류',
+    exact: true,
+  });
+  for (const dark of [false, true]) {
+    await page.evaluate((enabled) => {
+      document.documentElement.classList.toggle('dark', enabled);
+    }, dark);
+    await expectOpaqueContrast(page, page.getByTestId('issuer-badge').first());
+    for (const name of [
+      'credit',
+      'check',
+      'prepaid',
+      'success',
+      'confidence-high',
+    ]) {
+      await expectOpaqueContrast(
+        page,
+        page.locator(`[data-semantic-badge="${name}"]`),
+      );
+    }
+    for (const [filterName, badgeText] of [
+      ['신용카드', '신용'],
+      ['체크카드', '체크'],
+      ['선불카드', '선불'],
+    ]) {
+      await typeGroup
+        .getByRole('button', { name: filterName, exact: true })
+        .click();
+      const typeBadge = page.getByTestId('card-type-badge').first();
+      await expect(typeBadge).toHaveText(badgeText);
+      await expectOpaqueContrast(page, typeBadge);
+    }
+  }
 });
 
 test('light/dark print preparation and narrow report alternatives preserve dense values', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 900 });
+  await page.addInitScript(() => {
+    window.__plan70PrintCalls = 0;
+    window.print = () => {
+      window.__plan70PrintCalls += 1;
+    };
+  });
+  await page.goto(appUrl('report'));
+  await expect(page.locator('#report-empty-state')).toBeVisible();
+  const emptyPrintAction = page.locator('#report-print-action');
+  await expect(emptyPrintAction).toBeHidden();
+  await expect(emptyPrintAction).toBeDisabled();
+  await emptyPrintAction.evaluate((element) => element.click());
+  expect(await page.evaluate(() => window.__plan70PrintCalls)).toBe(0);
+  await expect(page.locator('html')).not.toHaveClass(/print-mode/);
+
   await analyze(page);
   await page.goto(appUrl('results'));
   await expect(page.locator('#results-data-content')).toBeVisible();
@@ -637,6 +886,8 @@ test('light/dark print preparation and narrow report alternatives preserve dense
 
   await page.goto(appUrl('report'));
   await expect(page.locator('#report-data-content')).toBeVisible();
+  await expect(page.locator('#report-print-action')).toBeVisible();
+  await expect(page.locator('#report-print-action')).toBeEnabled();
   await expect(page.getByTestId('report-assignments-mobile')).toBeVisible();
   await expect(page.getByTestId('report-assignments-table')).toBeHidden();
   const reportGeometry = await page.evaluate(() => ({

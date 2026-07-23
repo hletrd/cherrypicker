@@ -29,7 +29,7 @@
     var target = event.target instanceof Element
       ? event.target.closest('[data-print-trigger]')
       : null;
-    if (!target) return;
+    if (!target || target.hasAttribute('disabled')) return;
     event.preventDefault();
     requestPrint();
   });
