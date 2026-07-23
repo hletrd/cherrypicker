@@ -23,6 +23,10 @@ export const ROOT_CATALOG_BEGIN = '<!-- BEGIN GENERATED ISSUER COUNTS -->';
 export const ROOT_CATALOG_END = '<!-- END GENERATED ISSUER COUNTS -->';
 export const ISSUER_INDEX_BEGIN = '<!-- BEGIN GENERATED CARD INDEX -->';
 export const ISSUER_INDEX_END = '<!-- END GENERATED CARD INDEX -->';
+export const VALIDATED_CARD_EXAMPLE_BEGIN =
+  '<!-- BEGIN VALIDATED CARD EXAMPLE -->';
+export const VALIDATED_CARD_EXAMPLE_END =
+  '<!-- END VALIDATED CARD EXAMPLE -->';
 
 export const repositoryRoot = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -52,6 +56,30 @@ export interface ReadmeUpdate {
   path: string;
   current: string | null;
   expected: string;
+}
+
+export function validateDocumentedCardExample(
+  markdown: string,
+  sourceName: string,
+): void {
+  const begin = markdown.indexOf(VALIDATED_CARD_EXAMPLE_BEGIN);
+  const end = markdown.indexOf(
+    VALIDATED_CARD_EXAMPLE_END,
+    begin + VALIDATED_CARD_EXAMPLE_BEGIN.length,
+  );
+  if (begin < 0 || end < 0) {
+    throw new Error(`${sourceName}: missing validated card example markers`);
+  }
+  const section = markdown.slice(
+    begin + VALIDATED_CARD_EXAMPLE_BEGIN.length,
+    end,
+  );
+  const fenced = /```yaml\s*\n([\s\S]*?)\n```/.exec(section);
+  if (!fenced?.[1]) {
+    throw new Error(`${sourceName}: validated card example must be fenced YAML`);
+  }
+  const parsed = parse(fenced[1]) as unknown;
+  parsePublicationCard(parsed, `${sourceName} validated card example`);
 }
 
 function compareText(left: string, right: string): number {
@@ -405,6 +433,12 @@ export async function synchronizeReadmeCatalog(options: {
   driftedPaths: string[];
 }> {
   const root = options.root ?? repositoryRoot;
+  const [rootReadme, agentGuide] = await Promise.all([
+    readFile(join(root, 'README.md'), 'utf8'),
+    readFile(join(root, '.claude/AGENTS.md'), 'utf8'),
+  ]);
+  validateDocumentedCardExample(rootReadme, 'README.md');
+  validateDocumentedCardExample(agentGuide, '.claude/AGENTS.md');
   const catalog = await loadReadmeCatalog(root);
   const updates = await planReadmeUpdates(catalog, root);
   const changedUpdates = updates.filter(

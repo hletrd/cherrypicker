@@ -6,23 +6,29 @@
 1. 나무위키 `{카드사}/카드 상품` 페이지에서 현재 신규 발급 가능한 카드 확인
 2. 카드고릴라, 뱅크샐러드에서 혜택 상세 확인
 3. `packages/rules/data/cards/{issuer}/{slug}.yaml` 파일 생성
-4. `scripts/build-json.ts` 실행해서 cards.json 재생성
-5. `apps/web/public/data/cards.json`에 복사
+4. `bun run data:build`로 전체 공개 데이터를 다시 생성
+5. `bun run data:check`로 YAML, JSON, 발급사 인덱스가 서로 맞는지 확인
+
+`data:build`는 `cards.json`, 카드 요약, 최적화 데이터, 발급사별 상세
+파일, 카테고리, 폴백 레이블, 발급사 README를 한 번에 갱신한다. 생성된
+파일을 따로 복사하거나 직접 고치지 않는다.
 
 ### YAML 스키마
+<!-- BEGIN VALIDATED CARD EXAMPLE -->
 ```yaml
 card:
-  id: "{issuer}-{slug}"
-  issuer: "{issuer}"
-  name: "{English Name}"
-  nameKo: "{한국어 이름}"
-  type: credit  # 또는 check
+  id: "shinhan-example-basic"
+  issuer: "shinhan"
+  name: "Example Basic"
+  nameKo: "예시 베이직"
+  type: credit
   annualFee:
-    domestic: {숫자}
-    international: {숫자}
-  url: ""
-  lastUpdated: "{YYYY-MM-DD}"
+    domestic: 10000
+    international: 10000
+  url: "https://www.shinhancard.com/"
+  lastUpdated: "2026-07-23"
   source: manual
+  discontinued: false
 
 performanceTiers:
   - id: tier0
@@ -33,27 +39,41 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: "{category_id}"
+  - id: reward-001
+    category: dining
+    subcategory: cafe
+    label: "카페 할인"
     type: discount  # 또는 points, cashback, mileage
     tiers:
       - performanceTier: tier0
-        rate: {퍼센트 숫자, 10% = 10.0}
-        monthlyCap: {숫자 또는 null}
-        perTransactionCap: {숫자 또는 null}
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
+    support:
+      status: supported
 
 globalConstraints:
-  monthlyTotalDiscountCap: {숫자 또는 null}
+  monthlyTotalDiscountCap: null
   minimumAnnualSpending: null
 ```
+<!-- END VALIDATED CARD EXAMPLE -->
 
 ### 카드사 목록 (24개)
 hyundai, kb, samsung, shinhan, lotte, hana, woori, ibk, nh, bc, kakao, toss, kbank, bnk, dgb, suhyup, jb, kwangju, jeju, sc, mg, cu, kdb, epost
 
 ### 항목(카테고리) ID
-dining, restaurant, cafe, fast_food, delivery, grocery, supermarket, traditional_market, online_grocery, convenience_store, online_shopping, offline_shopping, department_store, fashion, public_transit, subway, bus, taxi, transportation, fuel, parking, toll, telecom, insurance, medical, hospital, pharmacy, education, academy, books, entertainment, movie, streaming, subscription, travel, airline, hotel, utilities, electricity, gas, water, uncategorized
+최상위 ID와 하위 ID를 섞어 쓰지 않는다. 예를 들어 카페는
+`category: dining`, `subcategory: cafe`, 주유는
+`category: transportation`, `subcategory: fuel`로 적는다. 최상위 ID와
+유효한 조합의 기준은 `packages/rules/data/categories.yaml`이다. 모든
+가맹점에 적용되는 규칙만 `category: '*'`를 쓴다.
 
 ### 단종 카드 처리
-- 신규 발급이 중단된 카드는 YAML 파일에 `discontinued: true` 추가하거나 삭제
+- 신규 발급이 중단된 카드는 `card.discontinued: true`로 표시하거나 삭제
 - 나무위키 `/발급 중단` 페이지에서 단종 여부 확인
 
 ### 리서치 소스 (우선순위)

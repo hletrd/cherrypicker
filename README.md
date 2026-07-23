@@ -163,33 +163,52 @@ PDF의 원격 LLM 폴백은 기본적으로 꺼져 있어요. `--allow-remote-ll
 
 카드 혜택은 `packages/rules/data/cards/{카드사}/{카드이름}.yaml` 파일로 관리돼요.
 
+<!-- BEGIN VALIDATED CARD EXAMPLE -->
 ```yaml
 card:
-  id: "shinhan-b-big"
+  id: "shinhan-example-basic"
   issuer: "shinhan"
-  name: "B.Big"
-  nameKo: "삑"
+  name: "Example Basic"
+  nameKo: "예시 베이직"
   type: credit
   annualFee:
     domestic: 10000
-    international: 13000
+    international: 10000
+  url: "https://www.shinhancard.com/"
+  lastUpdated: "2026-07-23"
+  source: manual
 
 performanceTiers:
-  - id: tier1
-    label: "전월 30만원 이상"
-    minSpending: 300000
+  - id: tier0
+    label: "무실적"
+    minSpending: 0
+    maxSpending: null
+
+performanceExclusions: []
 
 rewards:
-  - category: "public_transit"
+  - id: reward-001
+    category: "dining"
+    subcategory: "cafe"
+    label: "카페 1% 할인"
     type: discount
     tiers:
-      - performanceTier: tier1
-        fixedAmount: 200
-        monthlyCap: 6000
+      - performanceTier: tier0
+        rate: 1.0
+        monthlyCap: null
+        perTransactionCap: null
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
+    support:
+      status: supported
 
 globalConstraints:
-  monthlyTotalDiscountCap: 15000
+  monthlyTotalDiscountCap: null
+  minimumAnnualSpending: null
 ```
+<!-- END VALIDATED CARD EXAMPLE -->
 
 카드 데이터 수정이나 새 카드 추가는 PR로 보내주세요.
 

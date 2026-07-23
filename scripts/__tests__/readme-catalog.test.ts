@@ -11,6 +11,7 @@ import {
   renderRootCatalogSection,
   replaceGeneratedSection,
   repositoryRoot,
+  validateDocumentedCardExample,
   type ReadmeCatalog,
   type ReadmeCatalogIssuer,
 } from '../readme-catalog.js';
@@ -52,7 +53,7 @@ describe('README catalog rendering', () => {
     const expectedFormats = 'CSV/TSV, XLS/XLSX, PDF, JSON, OFX/QFX, HTML/HTM';
     const [readme, parserEntry] = await Promise.all([
       readFile(`${repositoryRoot}/README.md`, 'utf8'),
-      readFile(`${repositoryRoot}/packages/parser/src/index.ts`, 'utf8'),
+      readFile(`${repositoryRoot}/packages/parser/src/statement.ts`, 'utf8'),
     ]);
 
     expect(readme).toContain(expectedFormats);
@@ -174,5 +175,18 @@ describe('README catalog rendering', () => {
     expect(readme).toContain(
       'bun run analyze -- ./statement.pdf --allow-remote-llm',
     );
+  });
+
+  test('keeps README and agent-guide YAML examples canonical', async () => {
+    const [readme, agentGuide] = await Promise.all([
+      readFile(`${repositoryRoot}/README.md`, 'utf8'),
+      readFile(`${repositoryRoot}/.claude/AGENTS.md`, 'utf8'),
+    ]);
+    expect(() =>
+      validateDocumentedCardExample(readme, 'README.md'),
+    ).not.toThrow();
+    expect(() =>
+      validateDocumentedCardExample(agentGuide, '.claude/AGENTS.md'),
+    ).not.toThrow();
   });
 });
