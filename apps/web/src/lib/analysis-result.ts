@@ -297,6 +297,22 @@ function isOptimizationCoherent(optimization: OptimizationResult): boolean {
     if (!unique(categoryKeys)) return false;
     const capsByCategory = new Map<string, typeof card.capsHit>();
     for (const cap of card.capsHit) {
+      const isRuleScoped =
+        cap.capType === 'monthly_category' ||
+        cap.capType === 'per_transaction';
+      const hasNoIdentity =
+        cap.ruleId === undefined && cap.capGroup === undefined;
+      const hasValidIdentity =
+        typeof cap.ruleId === 'string' &&
+        cap.ruleId.length > 0 &&
+        typeof cap.capGroup === 'string' &&
+        cap.capGroup.length > 0;
+      const validIdentity = isRuleScoped
+        ? hasNoIdentity || hasValidIdentity
+        : (
+            cap.capType === 'monthly_total' &&
+            hasNoIdentity
+          );
       if (
         !Number.isSafeInteger(cap.capAmount) ||
         cap.capAmount < 0 ||
@@ -305,6 +321,7 @@ function isOptimizationCoherent(optimization: OptimizationResult): boolean {
         !Number.isSafeInteger(cap.appliedReward) ||
         cap.appliedReward < 0 ||
         cap.appliedReward > cap.actualReward ||
+        !validIdentity ||
         !assignmentByCategory.has(cap.category)
       ) {
         return false;
@@ -329,22 +346,27 @@ function isOptimizationCoherent(optimization: OptimizationResult): boolean {
       categoryReward !== card.totalReward ||
       !sameRate(card.effectiveRate, card.totalReward, card.totalSpending) ||
       card.byCategory.some(
-        (category) =>
-          assignmentByCategory.get(category.category)?.spending !==
-            category.spending ||
-          assignmentByCategory.get(category.category)?.reward !==
-            category.reward ||
-          category.capReached !== capsByCategory.has(category.category) ||
-          (
-            capsByCategory
-              .get(category.category)
-              ?.some(
-                (cap) =>
-                  cap.capType === 'monthly_category' &&
-                  cap.capAmount !== category.capAmount,
-              ) ?? false
-          ) ||
-          !sameRate(category.rate, category.reward, category.spending),
+        (category) => {
+          const monthlyCategoryCaps = (
+            capsByCategory.get(category.category) ?? []
+          ).filter((cap) => cap.capType === 'monthly_category');
+          const legacyCapAmount = (
+            category as { capAmount?: number }
+          ).capAmount;
+          const mismatchedLegacyCap =
+            legacyCapAmount !== undefined &&
+            monthlyCategoryCaps.length === 1 &&
+            monthlyCategoryCaps[0]!.capAmount !== legacyCapAmount;
+          return (
+            assignmentByCategory.get(category.category)?.spending !==
+              category.spending ||
+            assignmentByCategory.get(category.category)?.reward !==
+              category.reward ||
+            category.capReached !== capsByCategory.has(category.category) ||
+            mismatchedLegacyCap ||
+            !sameRate(category.rate, category.reward, category.spending)
+          );
+        },
       )
     ) {
       return false;

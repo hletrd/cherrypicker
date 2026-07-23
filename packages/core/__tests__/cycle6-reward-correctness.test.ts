@@ -305,9 +305,24 @@ describe('calculateRewards - executable exclusive fallback', () => {
       percentageRule('wildcard-positive', '*', 1),
     ]);
 
-    expect(totalReward(card, [
-      makeTransaction('shared-cap-fallback'),
-    ])).toBe(200);
+    const output = calculateRewards({
+      transactions: [makeTransaction('shared-cap-fallback')],
+      previousMonthSpending: 0,
+      cardRule: card,
+    });
+
+    expect(output.totalReward).toBe(200);
+    expect(output.capsHit).toEqual([
+      {
+        category: 'dining.cafe',
+        capType: 'monthly_category',
+        capAmount: 100,
+        actualReward: 100,
+        appliedReward: 100,
+        ruleId: 'additive-shared-cap',
+        capGroup: 'shared',
+      },
+    ]);
   });
 
   test('an unknown percentage type throws even when its reward floors to zero', () => {

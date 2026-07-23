@@ -789,6 +789,10 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     for (const selectedRule of selection.rules) {
       const { rule, ruleIndex, occurrenceKey } = selectedRule;
       const rewardKey = buildRuleKey(rule, ruleIndex);
+      const ruleId =
+        rule.id ??
+        `${buildCategoryKey(rule.category, rule.subcategory)}#${ruleIndex}`;
+      const capGroup = rewardKey;
     const tierRate = findTierRate(rule, tierId);
     if (!tierRate) {
       bucket.rewardType = rule.type;
@@ -884,6 +888,8 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         capAmount: perTxCap,
         actualReward: uncappedReward,
         appliedReward: rawReward,
+        ruleId,
+        capGroup,
       });
       bucket.capReached = true;
     }
@@ -944,8 +950,6 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       ),
     );
     rewardTypeAccum.set(categoryKey, typeMap);
-    bucket.capAmount = monthlyCap ?? undefined;
-
     const finalRuleMonthUsed = ruleMonthUsed.get(rewardKey) ?? 0;
     const reachedRuleCap =
       ruleResult.capReached &&
@@ -959,6 +963,8 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         capAmount: monthlyCap,
         actualReward: rawReward,
         appliedReward: rewardAfterMonthlyCap,
+        ruleId,
+        capGroup,
       });
     }
     // No need for categoryRewards.set() here — the bucket was registered

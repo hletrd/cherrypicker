@@ -18,6 +18,7 @@ export interface CategoryReward {
   rate: number;                 // Effective rate for this category
   rewardType: string;           // discount/points/cashback/mileage/none
   capReached: boolean;
+  /** @deprecated Legacy persisted input only. Read capsHit for cap details. */
   capAmount?: number;
 }
 
@@ -27,6 +28,10 @@ export interface CapInfo {
   capAmount: number;
   actualReward: number;        // What you would get without cap
   appliedReward: number;       // What you actually get
+  /** Stable source rule identity for rule-scoped caps. */
+  ruleId?: string;
+  /** Shared accounting identity for rule-scoped caps. */
+  capGroup?: string;
 }
 
 export interface CalculationIssue {

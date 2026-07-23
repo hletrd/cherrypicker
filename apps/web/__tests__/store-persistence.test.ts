@@ -211,6 +211,69 @@ function analysisFixture(merchant = '테스트 식당'): AnalysisResult {
   };
 }
 
+function cappedAnalysisFixture(merchant = '테스트 식당'): AnalysisResult {
+  const analysis = analysisFixture(merchant);
+  analysis.optimization = {
+    assignments: [
+      {
+        assignedCardId: 'card-1',
+        assignedCardName: '카드 1',
+        category: 'dining',
+        categoryNameKo: '외식',
+        spending: 10_000,
+        transactionCount: 1,
+        reward: 500,
+        rate: 0.05,
+        alternatives: [],
+      },
+    ],
+    cardResults: [
+      {
+        cardId: 'card-1',
+        cardName: '카드 1',
+        totalReward: 500,
+        totalSpending: 10_000,
+        effectiveRate: 0.05,
+        byCategory: [
+          {
+            category: 'dining',
+            categoryNameKo: '외식',
+            spending: 10_000,
+            reward: 500,
+            rate: 0.05,
+            rewardType: 'discount',
+            capReached: true,
+          },
+        ],
+        performanceTier: 'tier0',
+        capsHit: [
+          {
+            category: 'dining',
+            capType: 'monthly_category',
+            capAmount: 500,
+            actualReward: 500,
+            appliedReward: 500,
+            ruleId: 'reward-1',
+            capGroup: 'reward-group',
+          },
+        ],
+      },
+    ],
+    totalReward: 500,
+    totalSpending: 10_000,
+    unassignedSpending: 0,
+    unassignedTransactionCount: 0,
+    effectiveRate: 0.05,
+    savingsVsSingleCard: 0,
+    bestSingleCard: {
+      cardId: 'card-1',
+      cardName: '카드 1',
+      totalReward: 500,
+    },
+  };
+  return analysis;
+}
+
 describe('production persistence parser', () => {
   test('rejects prototype-pollution keys at any depth', () => {
     expect(() =>
@@ -748,7 +811,7 @@ describe('production persistence parser', () => {
     expect(result.shouldRemove).toBe(true);
   });
 
-  test('accepts fully shaped nested optimization entries', () => {
+  test('accepts legacy identity-less v4 nested optimization entries', () => {
     const issue = {
       cardId: 'card-1',
       transactionId: 'tx-1',
@@ -805,6 +868,111 @@ describe('production persistence parser', () => {
       result.data?.optimization.cardResults[0]?.byCategory,
     ).toHaveLength(1);
     expect(result.data?.optimization.cardResults[0]?.capsHit).toHaveLength(1);
+    expect(
+      result.data?.optimization.cardResults[0]?.capsHit[0],
+    ).not.toHaveProperty('ruleId');
+    expect(
+      result.data?.optimization.cardResults[0]?.capsHit[0],
+    ).not.toHaveProperty('capGroup');
+    expect(STORAGE_VERSION).toBe(4);
+  });
+
+  test.each([
+    [
+      'empty rule ID',
+      { ruleId: '', capGroup: 'reward-group' },
+    ],
+    [
+      'non-string cap group',
+      { ruleId: 'reward-1', capGroup: 42 },
+    ],
+    [
+      'unpaired rule ID',
+      { ruleId: 'reward-1' },
+    ],
+    [
+      'card-wide identity',
+      {
+        capType: 'monthly_total',
+        ruleId: 'reward-1',
+        capGroup: 'reward-group',
+      },
+    ],
+  ])('rejects malformed optional cap identity: %s', (_name, identity) => {
+    const result = deserializeAnalysis(
+      persistedFixture({
+        optimization: optimizationFixture({
+          cardResults: [
+            cardResultFixture({
+              byCategory: [
+                categoryRewardFixture({
+                  capReached: true,
+                  capAmount: 500,
+                }),
+              ],
+              capsHit: [
+                {
+                  category: 'dining',
+                  capType: 'monthly_category',
+                  capAmount: 500,
+                  actualReward: 500,
+                  appliedReward: 500,
+                  ...identity,
+                },
+              ],
+            }),
+          ],
+        }),
+      }),
+    );
+
+    expect(result).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
+  test('accepts a legacy v4 singular summary beside plural category caps', () => {
+    const result = deserializeAnalysis(
+      persistedFixture({
+        optimization: optimizationFixture({
+          cardResults: [
+            cardResultFixture({
+              byCategory: [
+                categoryRewardFixture({
+                  capReached: true,
+                  capAmount: 999,
+                }),
+              ],
+              capsHit: [
+                {
+                  category: 'dining',
+                  capType: 'monthly_category',
+                  capAmount: 400,
+                  actualReward: 400,
+                  appliedReward: 400,
+                },
+                {
+                  category: 'dining',
+                  capType: 'monthly_category',
+                  capAmount: 500,
+                  actualReward: 500,
+                  appliedReward: 500,
+                },
+              ],
+            }),
+          ],
+        }),
+      }),
+    );
+
+    expect(result.warningKind).toBeNull();
+    expect(result.shouldRemove).toBe(false);
+    expect(
+      result.data?.optimization.cardResults[0]?.capsHit,
+    ).toHaveLength(2);
   });
 
   test('accepts the explicit no-benefit optimizer contract', () => {
@@ -1213,6 +1381,32 @@ describe('production persistence parser', () => {
 });
 
 describe('production persistence serializer', () => {
+  test.each([
+    ['full', '테스트 식당', null],
+    ['truncated', 'x'.repeat(MAX_PERSIST_SIZE), 'truncated'],
+  ] as const)(
+    'round-trips rule-scoped cap identities in a %s v4 payload',
+    (_label, merchant, warningKind) => {
+      const analysis = cappedAnalysisFixture(merchant);
+      const { serialized } = serializeAnalysis(analysis);
+      const persisted = JSON.parse(serialized);
+
+      expect(persisted._v).toBe(4);
+      expect(persisted.optimization.cardResults[0].capsHit[0]).toMatchObject({
+        ruleId: 'reward-1',
+        capGroup: 'reward-group',
+      });
+      const restored = deserializeAnalysis(serialized);
+      expect(restored.warningKind).toBe(warningKind);
+      expect(
+        restored.data?.optimization.cardResults[0]?.capsHit[0],
+      ).toMatchObject({
+        ruleId: 'reward-1',
+        capGroup: 'reward-group',
+      });
+    },
+  );
+
   test('reload preserves the disclosed user basis used by reoptimization', () => {
     const analysis = analysisFixture();
     analysis.previousSpendingBasis = {

@@ -86,17 +86,27 @@ function isCategoryReward(value: unknown): boolean {
 }
 
 function isCapInfo(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const isRuleScoped =
+    value.capType === 'monthly_category' ||
+    value.capType === 'per_transaction';
+  const validIdentity = isRuleScoped
+    ? (
+        isNonEmptyString(value.ruleId) &&
+        isNonEmptyString(value.capGroup)
+      )
+    : (
+        value.capType === 'monthly_total' &&
+        value.ruleId === undefined &&
+        value.capGroup === undefined
+      );
   return (
-    isRecord(value) &&
     isNonEmptyString(value.category) &&
-    (
-      value.capType === 'monthly_category' ||
-      value.capType === 'monthly_total' ||
-      value.capType === 'per_transaction'
-    ) &&
+    validIdentity &&
     isSafeNonnegativeInteger(value.capAmount) &&
     isSafeNonnegativeInteger(value.actualReward) &&
-    isSafeNonnegativeInteger(value.appliedReward)
+    isSafeNonnegativeInteger(value.appliedReward) &&
+    value.appliedReward <= value.actualReward
   );
 }
 

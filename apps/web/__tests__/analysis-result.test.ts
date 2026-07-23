@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
+import {
+  buildConstraints,
+  greedyOptimize,
+  type CategorizedTransaction,
+} from '@cherrypicker/core';
+import { loadCardRule } from '@cherrypicker/rules';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   buildCategorySpendingSummary,
   isAnalysisResultCoherent,
@@ -121,6 +128,92 @@ function cloneResult(): AnalysisResult {
   return structuredClone(coherentResult());
 }
 
+async function kbAllAnalysis(
+  transactionCount: number,
+): Promise<AnalysisResult> {
+  const card = await loadCardRule(
+    fileURLToPath(
+      new URL(
+        '../../../packages/rules/data/cards/kb/kb-all.yaml',
+        import.meta.url,
+      ),
+    ),
+  );
+  type KbAllTransaction =
+    CategorizedTransaction &
+    NonNullable<AnalysisResult['transactions']>[number];
+  const transactions = Array.from(
+    { length: transactionCount },
+    (_, index): KbAllTransaction => ({
+      id: `amazon-${index + 1}`,
+      date: '2026-07-23',
+      merchant: 'AMAZON',
+      amount: 100_000,
+      currency: 'KRW',
+      category: 'online_shopping',
+      subcategory: undefined,
+      confidence: 1,
+      paymentType: 'overseas',
+      channel: 'online',
+      factProvenance: {
+        paymentType: 'statement',
+        channel: 'statement',
+      },
+    }),
+  );
+  const categoryLabels = new Map([
+    ['online_shopping', '온라인쇼핑'],
+  ]);
+  const optimization = greedyOptimize(
+    buildConstraints(
+      transactions,
+      new Map([[card.card.id, 500_000]]),
+      categoryLabels,
+    ),
+    [card],
+  );
+  const spending = transactionCount * 100_000;
+
+  return {
+    success: true,
+    bank: 'kb',
+    format: 'json',
+    statementPeriod: {
+      start: '2026-07-23',
+      end: '2026-07-23',
+    },
+    transactionCount,
+    fullStatementPeriod: {
+      start: '2026-07-23',
+      end: '2026-07-23',
+    },
+    totalTransactionCount: transactionCount,
+    parseErrors: [],
+    transactions,
+    categoryBreakdown: [
+      {
+        category: 'online_shopping',
+        categoryNameKo: '온라인쇼핑',
+        spending,
+        transactionCount,
+      },
+    ],
+    optimization,
+    monthlyBreakdown: [
+      {
+        month: '2026-07',
+        spending,
+        transactionCount,
+      },
+    ],
+    previousMonthSpendingOption: 500_000,
+    previousSpendingBasis: {
+      kind: 'user-total',
+      amount: 500_000,
+    },
+  };
+}
+
 describe('analysis result coherence', () => {
   test('builds category spending independently of card reward selection', () => {
     const current = coherentResult().transactions![1]!;
@@ -172,6 +265,56 @@ describe('analysis result coherence', () => {
   test('accepts one coherent calculated snapshot', () => {
     expect(isAnalysisResultCoherent(coherentResult())).toBe(true);
   });
+
+  test.each([
+    [
+      1,
+      5_000,
+      [
+        {
+          ruleId: 'reward-004',
+          capGroup: 'reward-004',
+          capAmount: 5_000,
+        },
+      ],
+    ],
+    [
+      2,
+      15_000,
+      [
+        {
+          ruleId: 'reward-004',
+          capGroup: 'reward-004',
+          capAmount: 5_000,
+        },
+        {
+          ruleId: 'reward-001',
+          capGroup: 'reward-001',
+          capAmount: 10_000,
+        },
+      ],
+    ],
+  ] as const)(
+    'accepts real kb-all telemetry for %i overseas Amazon purchase(s)',
+    async (transactionCount, totalReward, expectedCaps) => {
+      const result = await kbAllAnalysis(transactionCount);
+      const card = result.optimization.cardResults[0]!;
+
+      expect(result.optimization.totalReward).toBe(totalReward);
+      expect(card.capsHit.map(({ capAmount }) => capAmount)).toEqual(
+        expectedCaps.map(({ capAmount }) => capAmount),
+      );
+      expect(isAnalysisResultCoherent(result)).toBe(true);
+      expect(card.byCategory[0]).not.toHaveProperty('capAmount');
+      expect(
+        card.capsHit.map(({ ruleId, capGroup, capAmount }) => ({
+          ruleId,
+          capGroup,
+          capAmount,
+        })),
+      ).toEqual([...expectedCaps]);
+    },
+  );
 
   test('requires previous-spending provenance for full and truncated results', () => {
     const full = cloneResult() as AnalysisResult & {
@@ -472,7 +615,7 @@ describe('analysis result coherence', () => {
       (result: AnalysisResult) => {
         const category = result.optimization.cardResults[0]!.byCategory[0]!;
         category.capReached = true;
-        category.capAmount = 500;
+        (category as { capAmount?: number }).capAmount = 500;
         result.optimization.cardResults[0]!.capsHit = [
           {
             category: 'dining',

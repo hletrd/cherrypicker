@@ -520,8 +520,10 @@ const perTxCapFixture: CardRuleSet = {
   performanceExclusions: [],
   rewards: [
     {
+      id: 'fixture-per-tx-rule',
       category: 'dining',
       type: 'discount',
+      capGroup: 'fixture-per-tx-cap',
       tiers: [{ performanceTier: 'tier0', rate: 10, monthlyCap: null, perTransactionCap: 5000 }],
     },
   ],
@@ -547,8 +549,10 @@ const fixedPerTxCapFixture: CardRuleSet = {
   performanceExclusions: [],
   rewards: [
     {
+      id: 'fixture-fixed-per-tx-rule',
       category: 'dining',
       type: 'discount',
+      capGroup: 'fixture-fixed-per-tx-cap',
       tiers: [{
         performanceTier: 'tier0',
         rate: null,
@@ -722,6 +726,40 @@ describe('calculateRewards - global cap and per-transaction cap', () => {
         capAmount: 5000,
         actualReward: 10000,
         appliedReward: 5000,
+        ruleId: 'fixture-per-tx-rule',
+        capGroup: 'fixture-per-tx-cap',
+      },
+    ]);
+  });
+
+  test('keeps repeated per-transaction cap hits as distinct rule events', () => {
+    const output = calculateRewards({
+      transactions: [
+        makeTx('t1', 'dining', 100000),
+        makeTx('t2', 'dining', 100000),
+      ],
+      previousMonthSpending: 0,
+      cardRule: perTxCapFixture,
+    });
+
+    expect(output.capsHit).toEqual([
+      {
+        category: 'dining',
+        capType: 'per_transaction',
+        capAmount: 5000,
+        actualReward: 10000,
+        appliedReward: 5000,
+        ruleId: 'fixture-per-tx-rule',
+        capGroup: 'fixture-per-tx-cap',
+      },
+      {
+        category: 'dining',
+        capType: 'per_transaction',
+        capAmount: 5000,
+        actualReward: 10000,
+        appliedReward: 5000,
+        ruleId: 'fixture-per-tx-rule',
+        capGroup: 'fixture-per-tx-cap',
       },
     ]);
   });
@@ -740,6 +778,8 @@ describe('calculateRewards - global cap and per-transaction cap', () => {
         capAmount: 5000,
         actualReward: 7000,
         appliedReward: 5000,
+        ruleId: 'fixture-fixed-per-tx-rule',
+        capGroup: 'fixture-fixed-per-tx-cap',
       },
     ]);
   });

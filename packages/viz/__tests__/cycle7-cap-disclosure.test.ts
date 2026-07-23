@@ -109,6 +109,54 @@ function captureConsoleLog(run: () => void): string {
 }
 
 describe('exact versus clipped cap disclosure', () => {
+  test('renders both rule caps when one category exhausts two cap groups', () => {
+    const plural = structuredClone(result);
+    plural.cardResults[0]!.capsHit = [
+      {
+        category: 'online_shopping',
+        capType: 'monthly_category',
+        capAmount: 5_000,
+        actualReward: 5_000,
+        appliedReward: 5_000,
+        ruleId: 'reward-004',
+        capGroup: 'reward-004',
+      },
+      {
+        category: 'online_shopping',
+        capType: 'monthly_category',
+        capAmount: 10_000,
+        actualReward: 10_000,
+        appliedReward: 10_000,
+        ruleId: 'reward-001',
+        capGroup: 'reward-001',
+      },
+    ];
+
+    const terminal = captureConsoleLog(() => {
+      printCardComparison(plural.cardResults);
+      printOptimizationResult(plural);
+    });
+    const html = generateHTMLReport(
+      plural,
+      transactions,
+      new Map([['dining', '외식']]),
+      reportContext,
+    );
+
+    expect(terminal).toContain(
+      'online_shopping: 한도 5,000원 도달',
+    );
+    expect(terminal).toContain(
+      'online_shopping: 한도 10,000원 도달',
+    );
+    expect(html).toContain(
+      'online_shopping: 월 한도 5,000원 도달',
+    );
+    expect(html).toContain(
+      'online_shopping: 월 한도 10,000원 도달',
+    );
+  });
+
   test('terminal comparison and optimizer copy never describe an exact hit as zero loss', () => {
     const output = captureConsoleLog(() => {
       printCardComparison(result.cardResults);

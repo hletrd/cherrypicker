@@ -267,17 +267,30 @@ function validCategoryReward(value: unknown): boolean {
 
 function validCapInfo(value: unknown): boolean {
   if (!isPlainObject(value)) return false;
+  const isRuleScoped =
+    value.capType === 'monthly_category' ||
+    value.capType === 'per_transaction';
+  const hasNoIdentity =
+    value.ruleId === undefined && value.capGroup === undefined;
+  const hasValidIdentity =
+    typeof value.ruleId === 'string' &&
+    value.ruleId.length > 0 &&
+    typeof value.capGroup === 'string' &&
+    value.capGroup.length > 0;
+  const validIdentity = isRuleScoped
+    ? hasNoIdentity || hasValidIdentity
+    : (
+        value.capType === 'monthly_total' &&
+        hasNoIdentity
+      );
   return (
     typeof value.category === 'string' &&
     value.category.length > 0 &&
-    (
-      value.capType === 'monthly_category' ||
-      value.capType === 'monthly_total' ||
-      value.capType === 'per_transaction'
-    ) &&
+    validIdentity &&
     safeNonnegativeInteger(value.capAmount) &&
     safeNonnegativeInteger(value.actualReward) &&
-    safeNonnegativeInteger(value.appliedReward)
+    safeNonnegativeInteger(value.appliedReward) &&
+    value.appliedReward <= value.actualReward
   );
 }
 

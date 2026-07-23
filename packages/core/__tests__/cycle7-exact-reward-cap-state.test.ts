@@ -289,8 +289,8 @@ describe('main calculator exact global-cap telemetry', () => {
     expect(result.rewards[0]).toMatchObject({
       reward: 100,
       capReached: true,
-      capAmount: 100,
     });
+    expect(result.rewards[0]).not.toHaveProperty('capAmount');
     expect(result.capsHit).toContainEqual({
       category: 'dining',
       capType: 'monthly_total',
@@ -317,6 +317,8 @@ describe('main calculator exact rule-cap telemetry', () => {
         capAmount: 100,
         actualReward: 100,
         appliedReward: 100,
+        ruleId: 'cycle7-exact-reward',
+        capGroup: 'cycle7-exact-reward',
       },
     ]);
   });
@@ -340,6 +342,8 @@ describe('main calculator exact rule-cap telemetry', () => {
         capAmount: 100,
         actualReward: 50,
         appliedReward: 50,
+        ruleId: 'cycle7-exact-reward',
+        capGroup: 'cycle7-exact-reward',
       },
     ]);
   });
@@ -364,6 +368,8 @@ describe('main calculator exact rule-cap telemetry', () => {
         capAmount: 100,
         actualReward: 110,
         appliedReward: 100,
+        ruleId: 'cycle7-exact-reward',
+        capGroup: 'cycle7-exact-reward',
       },
     ]);
 

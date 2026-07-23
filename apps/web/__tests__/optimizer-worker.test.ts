@@ -100,6 +100,26 @@ const optimizationResult: OptimizationResult = {
   cardResults: [],
 };
 
+function optimizationResultWithCap(
+  cap: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    ...optimizationResult,
+    cardResults: [
+      {
+        cardId: 'card-1',
+        cardName: '카드 1',
+        totalReward: 100,
+        totalSpending: 1_000,
+        effectiveRate: 0.1,
+        byCategory: [],
+        performanceTier: 'tier0',
+        capsHit: [cap],
+      },
+    ],
+  };
+}
+
 describe('browser optimizer worker ownership', () => {
   test('aborting one 683-card caller terminates only its work while the live caller succeeds', async () => {
     const cancelledWorker = new FakeOptimizerWorker();
@@ -209,6 +229,35 @@ describe('browser optimizer worker ownership', () => {
     expect(worker.messageErrorListeners.size).toBe(0);
   });
 
+  test('accepts identity-bearing rule-scoped cap telemetry', async () => {
+    const worker = new FakeOptimizerWorker();
+    const result = optimizationResultWithCap({
+      category: 'dining',
+      capType: 'monthly_category',
+      capAmount: 100,
+      actualReward: 100,
+      appliedReward: 100,
+      ruleId: 'reward-1',
+      capGroup: 'reward-group',
+    });
+    const optimizing = optimizeWithWorker(
+      constraints,
+      [],
+      undefined,
+      () => worker,
+    );
+
+    worker.respond({ ok: true, result });
+
+    expect(
+      (await optimizing).cardResults[0]?.capsHit[0],
+    ).toMatchObject({
+      ruleId: 'reward-1',
+      capGroup: 'reward-group',
+    });
+    expect(worker.terminations).toBe(1);
+  });
+
   test.each([
     ['null payload', null],
     ['undefined payload', undefined],
@@ -244,6 +293,63 @@ describe('browser optimizer worker ownership', () => {
           ...optimizationResult,
           totalReward: Number.NaN,
         },
+      },
+    ],
+    [
+      'rule-scoped cap without identity',
+      {
+        ok: true,
+        result: optimizationResultWithCap({
+          category: 'dining',
+          capType: 'monthly_category',
+          capAmount: 100,
+          actualReward: 100,
+          appliedReward: 100,
+        }),
+      },
+    ],
+    [
+      'rule-scoped cap with only one identity',
+      {
+        ok: true,
+        result: optimizationResultWithCap({
+          category: 'dining',
+          capType: 'per_transaction',
+          capAmount: 100,
+          actualReward: 120,
+          appliedReward: 100,
+          ruleId: 'reward-1',
+        }),
+      },
+    ],
+    [
+      'card-wide cap carrying rule identity',
+      {
+        ok: true,
+        result: optimizationResultWithCap({
+          category: 'dining',
+          capType: 'monthly_total',
+          capAmount: 100,
+          actualReward: 100,
+          appliedReward: 100,
+          ruleId: 'reward-1',
+          capGroup: 'reward-group',
+        }),
+      },
+    ],
+    [
+      'cap with applied reward above actual reward',
+      {
+        ok: true,
+        result: optimizationResultWithCap({
+          category: 'dining',
+          capType: 'monthly_category',
+          capAmount: 100,
+          actualReward: 99,
+          appliedReward: 100,
+          ruleId: 'reward-1',
+          capGroup: 'reward-group',
+        }),
       },
     ],
     ['missing error message', { ok: false }],
