@@ -106,6 +106,8 @@ describe('deployment workflow consistency', () => {
     expect(workflow.indexOf('bun run toolchain:check')).toBeLessThan(
       workflow.indexOf('bun install --frozen-lockfile'),
     );
+    expect(packageJson.scripts['dev:web']).toBe('bun run --cwd apps/web dev');
+    expect(packageJson.scripts['dev:web']).not.toContain('node');
   });
 
   test('blocks advisory-bearing lockfiles in the verified deployment path', () => {

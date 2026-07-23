@@ -90,6 +90,8 @@ describe('shared statement-command option parser', () => {
     expect(
       parseStatementCommandArgs('optimize', [
         'statement.csv',
+        '--categories',
+        'categories.yaml',
         '--cards',
         'cards',
         '--prev-spending',
@@ -98,6 +100,7 @@ describe('shared statement-command option parser', () => {
     ).toEqual({
       help: false,
       file: 'statement.csv',
+      categoriesPath: 'categories.yaml',
       cardsDir: 'cards',
       prevSpending: 500000,
       force: false,
@@ -166,6 +169,45 @@ describe('shared statement-command option parser', () => {
     expect(() =>
       parseStatementCommandArgs('optimize', ['statement.csv', '--force']),
     ).toThrow('optimize 명령에서 지원하지 않는 옵션');
+  });
+
+  test('requires authoring categories and cards to be paired for optimization', () => {
+    for (const command of ['optimize', 'report'] as const) {
+      expect(() =>
+        parseStatementCommandArgs(command, [
+          'statement.csv',
+          '--categories',
+          'categories.yaml',
+        ]),
+      ).toThrow('--categories와 --cards는 함께');
+      expect(() =>
+        parseStatementCommandArgs(command, [
+          'statement.csv',
+          '--cards',
+          'cards',
+        ]),
+      ).toThrow('--categories와 --cards는 함께');
+      expect(
+        parseStatementCommandArgs(command, [
+          'statement.csv',
+          '--categories',
+          'categories.yaml',
+          '--cards',
+          'cards',
+        ]),
+      ).toMatchObject({
+        categoriesPath: 'categories.yaml',
+        cardsDir: 'cards',
+      });
+    }
+
+    expect(
+      parseStatementCommandArgs('analyze', [
+        'statement.csv',
+        '--categories',
+        'categories.yaml',
+      ]),
+    ).toMatchObject({ categoriesPath: 'categories.yaml' });
   });
 
   test('rejects stray and duplicate positional arguments', () => {

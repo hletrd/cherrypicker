@@ -33,6 +33,15 @@ export async function loadCliCardCatalog(
   authoringCategories?: readonly CategoryNode[],
   clock?: CatalogClock,
 ): Promise<LoadedCliCardCatalog> {
+  if (
+    (authoringCardsDirectory === undefined) !==
+    (authoringCategories === undefined)
+  ) {
+    throw new Error(
+      '작성용 카드 규칙과 카테고리 데이터는 함께 지정해야 합니다.',
+    );
+  }
+
   if (authoringCardsDirectory !== undefined) {
     const cards = await loadAllCardRules(authoringCardsDirectory);
     if (cards.length === 0) {
@@ -40,14 +49,9 @@ export async function loadCliCardCatalog(
         '카드 규칙 파일을 찾을 수 없습니다. --cards 옵션으로 규칙 디렉토리를 지정하세요.',
       );
     }
-    if (!authoringCategories) {
-      throw new Error(
-        '작성용 카드 규칙의 의미를 검증하려면 카테고리 데이터가 필요합니다.',
-      );
-    }
     validateCardCatalog(
       cards,
-      new CategoryRegistry([...authoringCategories]),
+      new CategoryRegistry([...authoringCategories!]),
       { clock },
     );
     const eligibleCards = cards.filter(isRecommendationEligibleCard);

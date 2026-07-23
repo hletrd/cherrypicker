@@ -277,12 +277,29 @@ describe('README catalog rendering', () => {
     }
   });
 
-  test('keeps the documented CLI examples executable through root scripts', async () => {
-    const readme = await readFile(`${repositoryRoot}/README.md`, 'utf8');
+  test('binds documented CLI examples to root scripts and remote prerequisites', async () => {
+    const [readme, packageText] = await Promise.all([
+      readFile(`${repositoryRoot}/README.md`, 'utf8'),
+      readFile(`${repositoryRoot}/package.json`, 'utf8'),
+    ]);
+    const packageJson = JSON.parse(packageText) as {
+      scripts?: Record<string, string>;
+    };
+    const localDevelopment = readme.match(
+      /### 로컬 개발\n(?<section>[\s\S]*?)\n---/,
+    )?.groups?.section;
+    expect(localDevelopment).toBeDefined();
+    const commands = localDevelopment!.match(/```bash\n(?<body>[\s\S]*?)```/)
+      ?.groups?.body;
+    expect(commands).toBeDefined();
 
-    expect(readme).toContain('bun run analyze -- ./statement.csv');
-    expect(readme).toContain(
-      'bun run analyze -- ./statement.pdf --allow-remote-llm',
+    expect(packageJson.scripts?.analyze).toBeDefined();
+    expect(commands).toContain('bun run analyze -- ./statement.csv');
+    expect(commands).toMatch(
+      /# ANTHROPIC_API_KEY[^\n]*\n#[^\n]*\nbun run analyze -- \.\/statement\.pdf --allow-remote-llm/,
+    );
+    expect(localDevelopment).toMatch(
+      /ANTHROPIC_API_KEY[\s\S]*비밀 관리자[\s\S]*로그, 저장소에 넣지 말고/,
     );
   });
 

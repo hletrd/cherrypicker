@@ -46,6 +46,22 @@ describe('compiled CLI card catalog', () => {
     ).toBe(false);
   });
 
+  test('rejects either authoring source without its semantic pair', async () => {
+    const categories = await loadCategories(
+      resolve(
+        import.meta.dir,
+        '../../../packages/rules/data/categories.yaml',
+      ),
+    );
+
+    await expect(
+      loadCliCardCatalog(undefined, categories),
+    ).rejects.toThrow('함께 지정');
+    await expect(
+      loadCliCardCatalog('cards-without-categories'),
+    ).rejects.toThrow('함께 지정');
+  });
+
   test('sorts custom rules by card ID and excludes discontinued cards', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'cli-catalog-order-'));
     try {

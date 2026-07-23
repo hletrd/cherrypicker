@@ -15,6 +15,10 @@ import { performance } from 'node:perf_hooks';
 
 const cliEntry = fileURLToPath(new URL('../src/index.ts', import.meta.url));
 const repositoryRoot = fileURLToPath(new URL('../../..', import.meta.url));
+const categoriesPath = join(
+  repositoryRoot,
+  'packages/rules/data/categories.yaml',
+);
 const cardCatalogModuleUrl = new URL(
   '../src/card-catalog.ts',
   import.meta.url,
@@ -317,6 +321,8 @@ describe('CLI process contract', () => {
       const args = [
         'report',
         fixture.statement,
+        '--categories',
+        categoriesPath,
         '--cards',
         fixture.cards,
         '--output',
@@ -366,6 +372,8 @@ describe('CLI process contract', () => {
       const result = runCli([
         'report',
         fixture.statement,
+        '--categories',
+        categoriesPath,
         '--cards',
         fixture.cards,
         '--output',

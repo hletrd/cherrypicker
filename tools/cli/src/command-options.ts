@@ -74,7 +74,9 @@ export const STATEMENT_COMMAND_OPTION_SPECS: readonly CommandOptionSpec[] = [
     kind: 'value',
     commands: ALL_COMMANDS,
     valueLabel: '<file>',
-    description: '사용할 카테고리 규칙 파일을 지정합니다. (기본값: 내장 categories.yaml)',
+    description:
+      '사용할 카테고리 규칙 파일을 지정합니다. optimize/report에서는 작성용 카드 규칙과 함께 사용해야 합니다. ' +
+      '(기본값: 내장 categories.yaml)',
   },
   {
     names: ['--cards'],
@@ -84,7 +86,7 @@ export const STATEMENT_COMMAND_OPTION_SPECS: readonly CommandOptionSpec[] = [
     valueLabel: '<dir>',
     description:
       '작성용 YAML 카드 규칙 디렉토리를 재귀 로드합니다. ' +
-      '(생략: 웹과 같은 컴파일 최적화 카탈로그)',
+      '--categories와 함께 사용해야 합니다. (생략: 웹과 같은 컴파일 최적화 카탈로그)',
   },
   {
     names: ['--prev-spending'],
@@ -325,6 +327,15 @@ export function parseStatementCommandArgs(
     yes: values.yes,
   };
 
+  if (
+    command !== 'analyze' &&
+    Boolean(values.categoriesPath) !== Boolean(values.cardsDir)
+  ) {
+    throw new Error(
+      `${command} 명령에서 --categories와 --cards는 함께 지정해야 합니다.`,
+    );
+  }
+
   if (values.help) {
     return {
       ...parsedValues,
@@ -363,7 +374,7 @@ function commandAssumptions(command: StatementCommandName): readonly string[] {
       '카드 추천은 명세서에서 날짜가 유효한 거래 중 가장 최근 달의 거래만 사용합니다.',
       '--prev-spending을 생략하면 가장 최근 달의 달력상 직전 달 합계를 전월실적으로 사용하고, 해당 전월 데이터가 없으면 0원으로 가정합니다.',
       '--cards를 생략하면 웹 분석과 같은 배포된 cards-optimizer.json을 검증하여 사용합니다.',
-      '--cards를 지정하면 작성용 YAML을 재귀 검증하는 명시적 override 모드로 실행하고 경고를 표시합니다.',
+      '--cards와 --categories를 함께 지정하면 두 작성용 소스를 하나의 의미 계약으로 재귀 검증하는 override 모드로 실행하고 경고를 표시합니다.',
     );
   }
 

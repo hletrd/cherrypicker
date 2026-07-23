@@ -157,11 +157,17 @@ bun run dev:web
 # CLI로 명세서 분석
 bun run analyze -- ./statement.csv
 
+# ANTHROPIC_API_KEY를 셸 또는 비밀 관리자를 통해 환경 변수로 주입한 뒤,
 # 로컬 파싱이 불가능한 PDF만 원격 LLM 폴백 허용
 bun run analyze -- ./statement.pdf --allow-remote-llm
 ```
 
-PDF의 원격 LLM 폴백은 기본적으로 꺼져 있어요. `--allow-remote-llm`을 지정해도 실제 전송 전에 동의를 묻고, CI 같은 비대화형 환경에서는 명시적인 `--yes`가 필요해요.
+PDF의 원격 LLM 폴백은 기본적으로 꺼져 있어요. 사용하려면
+`ANTHROPIC_API_KEY`를 현재 프로세스의 환경 변수로 주입해야 합니다.
+키 값을 명령줄에 직접 적거나 `.env`, 로그, 저장소에 넣지 말고 셸의
+비공개 환경 또는 비밀 관리자를 사용하세요. `--allow-remote-llm`을
+지정해도 실제 전송 전에 동의를 묻고, CI 같은 비대화형 환경에서는
+명시적인 `--yes`가 필요해요.
 
 ---
 
