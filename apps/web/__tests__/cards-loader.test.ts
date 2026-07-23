@@ -397,6 +397,16 @@ describe('generated catalog readers', () => {
     ).toThrow('카드사 정보가 일치');
   });
 
+  test('rejects an unreviewed LLM-scraped official URL before UI consumption', () => {
+    const scraped = structuredClone(shinhanRule);
+    scraped.card.source = 'llm-scrape';
+    scraped.card.url = 'https://attacker.example/phish';
+
+    expect(() =>
+      readCardDetailShard(detailShard(scraped), 'shinhan'),
+    ).toThrow(/llm-scrape.*official card URL/i);
+  });
+
   test('normalizes categories and rejects malformed recursive taxonomy data', () => {
     const normalized = readCategoriesArtifact({
       sourceHash: SOURCE_HASH_A,

@@ -73,6 +73,21 @@ describe('catalog publication boundary', () => {
     },
   );
 
+  test('rejects a safe-scheme model-authored URL without reviewed provenance', () => {
+    const scraped = cardWithUrl('https://attacker.example/phish');
+    scraped.card.source = 'llm-scrape';
+
+    expect(() => parsePublicationCard(scraped, 'scraped.yaml')).toThrow(
+      /llm-scrape.*official card URL/i,
+    );
+    expect(
+      parsePublicationCard(
+        cardWithUrl('https://attacker.example/phish'),
+        'reviewed.yaml',
+      ).card.url,
+    ).toBe('https://attacker.example/phish');
+  });
+
   test('rejects a future lastUpdated value against an injected publication clock', () => {
     const raw = cardWithUrl('https://example.com/card');
     raw.card.lastUpdated = '2026-07-24';

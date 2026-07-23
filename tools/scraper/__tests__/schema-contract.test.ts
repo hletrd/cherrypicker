@@ -93,15 +93,15 @@ describe('scraper schema derives from canonical rules', () => {
     expect(SYSTEM_PROMPT).toContain('status": "unsupported');
   });
 
-  test('keeps trusted issuer and provenance outside the model-authored contract', () => {
-    for (const field of ['issuer', 'source', 'lastUpdated']) {
+  test('keeps trusted coordinates, provenance, and official URL outside the model contract', () => {
+    for (const field of ['issuer', 'source', 'lastUpdated', 'url']) {
       expect(card).not.toHaveProperty(field);
       expect(
         requiredProperties(root, 'tool')['card']?.required,
       ).not.toContain(field);
     }
     expect(SYSTEM_PROMPT).toContain(
-      'issuer, source, lastUpdated는 스크래퍼가 신뢰 경계에서 기록',
+      'url, issuer, source, lastUpdated는 스크래퍼가 신뢰 경계에서 기록',
     );
   });
 });

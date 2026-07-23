@@ -273,7 +273,16 @@ export const cardMetaSchema = z.object({
   lastUpdated: isoCalendarDateSchema,
   source: z.enum(['manual', 'llm-scrape', 'web']),
   discontinued: z.boolean().optional(),
-}).strict();
+}).strict().superRefine((card, ctx) => {
+  if (card.source === 'llm-scrape' && card.url) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['url'],
+      message:
+        'llm-scrape cards cannot publish an official card URL before trusted review',
+    });
+  }
+});
 
 export const globalConstraintsSchema = z.object({
   monthlyTotalDiscountCap: safeNonnegativeInteger.nullable(),

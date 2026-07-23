@@ -102,6 +102,49 @@ describe('safeExternalUrl', () => {
     expect(cardMetaSchema.safeParse({ ...base, url: 'javascript:alert(1)' }).success).toBe(false);
   });
 
+  test('requires explicit reviewed provenance before publishing an official card URL', () => {
+    const base = {
+      id: 'shinhan-safe-card',
+      issuer: 'shinhan',
+      name: 'Safe Card',
+      nameKo: '안전 카드',
+      type: 'credit',
+      annualFee: { domestic: 0, international: 0 },
+      lastUpdated: '2026-07-23',
+    } as const;
+    const attackerUrl = 'https://attacker.example/phish';
+
+    expect(
+      cardMetaSchema.safeParse({
+        ...base,
+        source: 'llm-scrape',
+        url: attackerUrl,
+      }).success,
+    ).toBe(false);
+    expect(
+      cardMetaSchema.safeParse({
+        ...base,
+        source: 'llm-scrape',
+      }).success,
+    ).toBe(true);
+    expect(
+      cardMetaSchema.safeParse({
+        ...base,
+        source: 'llm-scrape',
+        url: '',
+      }).success,
+    ).toBe(true);
+    for (const source of ['manual', 'web'] as const) {
+      expect(
+        cardMetaSchema.safeParse({
+          ...base,
+          source,
+          url: attackerUrl,
+        }).success,
+      ).toBe(true);
+    }
+  });
+
   test('issuer websites require a non-empty safe HTTP(S) URL', () => {
     const base = {
       id: 'shinhan',

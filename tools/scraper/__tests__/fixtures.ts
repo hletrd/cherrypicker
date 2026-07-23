@@ -11,7 +11,6 @@ export function makeCardRule(
       nameKo: '보안 테스트',
       type: 'credit',
       annualFee: { domestic: 0, international: 0 },
-      url: 'https://www.shinhancard.com/security-test',
       lastUpdated: '2026-07-23',
       source: 'llm-scrape',
       ...overrides,

@@ -64,7 +64,6 @@ export function buildCardRuleExtractionTool(
                 },
               },
             },
-            url: { type: 'string', description: '카드 상품 페이지 URL' },
           },
         },
         performanceTiers: {

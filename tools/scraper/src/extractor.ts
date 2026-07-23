@@ -102,10 +102,14 @@ function stampTrustedExtractionBoundary(
   if (card === null || typeof card !== 'object' || Array.isArray(card)) {
     return raw;
   }
+  // Official destinations remain absent until a reviewer promotes the
+  // provenance; page text and model output never choose the published link.
+  const quarantinedCard = { ...card } as Record<string, unknown>;
+  delete quarantinedCard['url'];
   return {
     ...raw,
     card: {
-      ...card,
+      ...quarantinedCard,
       issuer,
       lastUpdated,
       source: 'llm-scrape',

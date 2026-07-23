@@ -1,5 +1,6 @@
+import { cardIdSchema } from '@cherrypicker/rules/browser';
+
 const CARD_SELECTION_PARAM = 'card';
-const CARD_SELECTION_ID = /^[a-z0-9][a-z0-9-]*$/;
 
 export interface CardNavigationLocation {
   pathname: string;
@@ -19,7 +20,7 @@ function cardSelectionParams(search: string): URLSearchParams {
 }
 
 export function isCardSelectionId(value: string): boolean {
-  return CARD_SELECTION_ID.test(value);
+  return cardIdSchema.safeParse(value).success;
 }
 
 export function parseCardSelectionQuery(search: string): string | null {
