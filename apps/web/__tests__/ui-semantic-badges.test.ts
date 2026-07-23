@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
+import { getIssuerColor } from '../src/lib/formatters.js';
 
 function cssBlock(source: string, selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -35,6 +36,26 @@ function contrast(first: string, second: string): number {
     (Math.max(firstLuminance, secondLuminance) + 0.05) /
     (Math.min(firstLuminance, secondLuminance) + 0.05)
   );
+}
+
+function composite(
+  foreground: string,
+  background: string,
+  alpha: number,
+): string {
+  const channels = (hex: string) =>
+    [1, 3, 5].map((index) =>
+      Number.parseInt(hex.slice(index, index + 2), 16)
+    );
+  const foregroundChannels = channels(foreground);
+  const backgroundChannels = channels(background);
+  return `#${
+    foregroundChannels.map((channel, index) =>
+      Math.round(
+        channel * alpha + backgroundChannels[index]! * (1 - alpha),
+      ).toString(16).padStart(2, '0')
+    ).join('')
+  }`;
 }
 
 describe('semantic small-text badges', () => {
@@ -87,5 +108,53 @@ describe('semantic small-text badges', () => {
     expect(transactions).not.toContain(
       'bg-blue-100 dark:bg-blue-900 px-1.5',
     );
+  });
+
+  test('source host text meets AA over every issuer header tint', async () => {
+    const [stylesheet, detail, catalog] = await Promise.all([
+      readFile(new URL('../src/app.css', import.meta.url), 'utf8'),
+      readFile(
+        new URL('../src/components/cards/CardDetail.svelte', import.meta.url),
+        'utf8',
+      ),
+      readFile(
+        new URL('../public/data/cards.json', import.meta.url),
+        'utf8',
+      ),
+    ]);
+    const issuers = (JSON.parse(catalog) as {
+      issuers: Array<{ id: string }>;
+    }).issuers;
+    const modes = [
+      {
+        variables: cssBlock(stylesheet, ':root'),
+        backgroundVariable: 'color-bg',
+      },
+      {
+        variables: cssBlock(stylesheet, 'html.dark'),
+        backgroundVariable: 'color-bg',
+      },
+    ];
+
+    expect(issuers).toHaveLength(24);
+    expect(detail).toContain('text-[var(--color-source-host)]');
+    for (const mode of modes) {
+      const foreground = cssVariable(mode.variables, 'color-source-host');
+      const background = cssVariable(
+        mode.variables,
+        mode.backgroundVariable,
+      );
+      for (const issuer of issuers) {
+        const tintedBackground = composite(
+          getIssuerColor(issuer.id),
+          background,
+          0x22 / 0xff,
+        );
+        expect(
+          contrast(foreground, tintedBackground),
+          `${issuer.id}: ${foreground} on ${tintedBackground}`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
   });
 });

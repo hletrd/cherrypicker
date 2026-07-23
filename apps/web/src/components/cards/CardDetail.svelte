@@ -276,7 +276,7 @@
             <span>상품 정보 출처</span>
             <span aria-hidden="true">·</span>
             <span
-              class="font-normal text-[var(--color-text-muted)]"
+              class="font-normal text-[var(--color-source-host)]"
               data-testid="card-source-host"
             >{cardSourceLink.hostname}</span>
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false">

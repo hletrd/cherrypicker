@@ -21,6 +21,7 @@
   --color-surface: #ffffff;
   --color-text: #0f172a;
   --color-text-muted: #64748b;
+  --color-source-host: #334155;
   --color-border: #e2e8f0;
 
   --badge-credit-bg: #dbeafe;
@@ -57,6 +58,7 @@ html.dark {
   --color-surface: #1e293b;
   --color-text: #f1f5f9;
   --color-text-muted: #94a3b8;
+  --color-source-host: #94a3b8;
   --color-border: #334155;
   --color-primary-light: #1e3a5f;
   --color-primary-fg: #93c5fd;
@@ -151,6 +153,7 @@ html.print-mode body {
     --color-surface: #ffffff;
     --color-text: #000000;
     --color-text-muted: #334155;
+    --color-source-host: #334155;
     --color-border: #94a3b8;
     --color-primary-fg: #1e3a8a;
     --color-success-fg: #065f46;
