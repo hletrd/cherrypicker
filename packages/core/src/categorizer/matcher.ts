@@ -5,7 +5,10 @@ import { LOCATION_KEYWORDS } from './keywords-locations.js';
 import { ENGLISH_KEYWORDS } from './keywords-english.js';
 import { NICHE_KEYWORDS } from './keywords-niche.js';
 import { EXPLICIT_KEYWORD_OVERRIDES } from './keyword-overrides.js';
-import { normalizeMerchantText } from './normalize.js';
+import {
+  normalizedMerchantTermMatches,
+  normalizeMerchantText,
+} from './normalize.js';
 
 interface KeywordSource {
   name: string;
@@ -237,9 +240,9 @@ export class MerchantMatcher {
         }
       | undefined;
     for (const [kw, categoryValue] of this.substringEntries) {
-      const merchantContainsKeyword = lower.includes(kw);
+      const merchantContainsKeyword = normalizedMerchantTermMatches(lower, kw);
       const keywordContainsMerchant =
-        lower.length >= 3 && kw.includes(lower);
+        lower.length >= 3 && normalizedMerchantTermMatches(kw, lower);
       if (merchantContainsKeyword || keywordContainsMerchant) {
         if (
           !bestStaticKw ||

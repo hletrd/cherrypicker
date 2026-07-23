@@ -13,7 +13,10 @@ import type {
   UnsupportedReason,
   UnsupportedRule,
 } from './types.js';
-import { normalizeMerchantText } from '../categorizer/normalize.js';
+import {
+  normalizedMerchantTermMatches,
+  normalizeMerchantText,
+} from '../categorizer/normalize.js';
 import {
   addSafeNonnegativeIntegers,
   assertSafeNonnegativeInteger,
@@ -123,6 +126,13 @@ function ruleConditionsMatch(
       detail: rule.support.reason,
     };
   }
+  if (rule.type === 'mileage') {
+    return {
+      status: 'unsupported',
+      reason: 'unsupported_reward_unit',
+      detail: 'mileage reward valuation contract is not modeled',
+    };
+  }
   if (
     rule.support?.status !== 'supported' &&
     rule.conditions?.note &&
@@ -186,36 +196,12 @@ function merchantAllowlistMatches(
   allowlist: readonly string[],
 ): boolean {
   const normalizedMerchant = normalizeMerchantText(merchant);
-  return allowlist.some((candidate) => {
-    const normalizedCandidate = normalizeMerchantText(candidate);
-    if (normalizedCandidate.length === 0) return false;
-
-    const requiresLeadingBoundary = /^[a-z0-9]/.test(normalizedCandidate);
-    const requiresTrailingBoundary = /[a-z0-9]$/.test(normalizedCandidate);
-    let matchIndex = normalizedMerchant.indexOf(normalizedCandidate);
-
-    while (matchIndex !== -1) {
-      const precedingCharacter = normalizedMerchant[matchIndex - 1];
-      const followingCharacter =
-        normalizedMerchant[matchIndex + normalizedCandidate.length];
-      const hasLeadingBoundary =
-        !requiresLeadingBoundary ||
-        precedingCharacter === undefined ||
-        !/[a-z0-9]/.test(precedingCharacter);
-      const hasTrailingBoundary =
-        !requiresTrailingBoundary ||
-        followingCharacter === undefined ||
-        !/[a-z0-9]/.test(followingCharacter);
-
-      if (hasLeadingBoundary && hasTrailingBoundary) return true;
-      matchIndex = normalizedMerchant.indexOf(
-        normalizedCandidate,
-        matchIndex + 1,
-      );
-    }
-
-    return false;
-  });
+  return allowlist.some((candidate) =>
+    normalizedMerchantTermMatches(
+      normalizedMerchant,
+      normalizeMerchantText(candidate),
+    )
+  );
 }
 
 function ruleSpecificity(rule: RewardRule): number {

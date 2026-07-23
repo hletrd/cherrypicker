@@ -991,7 +991,7 @@ describe('calculateRewards - fixed reward types', () => {
     expect(output.totalReward).toBe(1);
   });
 
-  test('sub-1,500-won mileage zero does not consume maxUses', () => {
+  test('mileage valuation fails closed before occurrence accounting', () => {
     const fixture = structuredClone(fixedRewardPerDayFixture);
     const rule = fixture.rewards[0]!;
     rule.category = 'travel';
@@ -1016,10 +1016,25 @@ describe('calculateRewards - fixed reward types', () => {
       cardRule: fixture,
     });
 
-    expect(output.totalReward).toBe(1);
+    expect(output.totalReward).toBe(0);
+    expect(
+      output.unsupportedRules.map(({ transactionId, reason }) => ({
+        transactionId,
+        reason,
+      })),
+    ).toEqual([
+      {
+        transactionId: 'sub-threshold',
+        reason: 'unsupported_reward_unit',
+      },
+      {
+        transactionId: 'threshold',
+        reason: 'unsupported_reward_unit',
+      },
+    ]);
   });
 
-  test('calculates schema-valid fractional mileage rates in whole miles', () => {
+  test('does not convert schema-valid fractional mileage rates to Won', () => {
     const fixture = cardRuleSetSchema.parse({
       ...structuredClone(simplePlan),
       rewards: [{
@@ -1050,18 +1065,22 @@ describe('calculateRewards - fixed reward types', () => {
       cardRule: fixture,
     });
     expect(fractionalZero.totalReward).toBe(0);
-    expect(fractionalZero.unsupportedRules).toHaveLength(0);
+    expect(fractionalZero.unsupportedRules).toEqual([
+      expect.objectContaining({ reason: 'unsupported_reward_unit' }),
+    ]);
 
     const wholeMile = calculateRewards({
       transactions: [makeTx('fractional-mile', 'travel', 3_000)],
       previousMonthSpending: 0,
       cardRule: fixture,
     });
-    expect(wholeMile.totalReward).toBe(1);
-    expect(wholeMile.unsupportedRules).toHaveLength(0);
+    expect(wholeMile.totalReward).toBe(0);
+    expect(wholeMile.unsupportedRules).toEqual([
+      expect.objectContaining({ reason: 'unsupported_reward_unit' }),
+    ]);
   });
 
-  test('floors decimal mileage after exact multiplication at a whole-mile boundary', () => {
+  test('does not convert decimal mileage at a whole-mile boundary to Won', () => {
     const fixture = cardRuleSetSchema.parse({
       ...structuredClone(simplePlan),
       rewards: [{
@@ -1091,28 +1110,35 @@ describe('calculateRewards - fixed reward types', () => {
       previousMonthSpending: 0,
       cardRule: fixture,
     });
-    expect(belowBoundary.totalReward).toBe(28);
-    expect(belowBoundary.unsupportedRules).toHaveLength(0);
+    expect(belowBoundary.totalReward).toBe(0);
+    expect(belowBoundary.unsupportedRules).toEqual([
+      expect.objectContaining({ reason: 'unsupported_reward_unit' }),
+    ]);
 
     const wholeMileBoundary = calculateRewards({
       transactions: [makeTx('decimal-boundary', 'travel', 150_000)],
       previousMonthSpending: 0,
       cardRule: fixture,
     });
-    expect(wholeMileBoundary.totalReward).toBe(29);
-    expect(wholeMileBoundary.unsupportedRules).toHaveLength(0);
+    expect(wholeMileBoundary.totalReward).toBe(0);
+    expect(wholeMileBoundary.unsupportedRules).toEqual([
+      expect.objectContaining({ reason: 'unsupported_reward_unit' }),
+    ]);
   });
 
-  test('mileage type uses same math as points', () => {
+  test('mileage type never uses percentage math without a valuation', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'travel', 50000)],
       previousMonthSpending: 0,
       cardRule: mileageFixture,
     });
-    // 2% of 50000 = 1000
-    const travel = output.rewards.find((r) => r.category === 'travel');
-    expect(travel!.reward).toBe(1000);
-    expect(travel!.rewardType).toBe('mileage');
+    expect(output.totalReward).toBe(0);
+    expect(output.unsupportedRules).toEqual([
+      expect.objectContaining({
+        transactionId: 't1',
+        reason: 'unsupported_reward_unit',
+      }),
+    ]);
   });
 });
 

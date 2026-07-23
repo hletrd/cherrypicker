@@ -166,6 +166,28 @@ export function compareRewardRelevantTransactions(
   return 0;
 }
 
+function buildCanonicalRewardInput(
+  ...transactionGroups: ReadonlyArray<readonly CategorizedTransaction[]>
+): CategorizedTransaction[] {
+  return transactionGroups
+    .flatMap((transactions) => transactions)
+    .sort(compareRewardRelevantTransactions);
+}
+
+function subtractSafeRewardTotals(
+  after: number,
+  before: number,
+  label: string,
+): number {
+  assertSafeNonnegativeInteger(after, `${label} after`);
+  assertSafeNonnegativeInteger(before, `${label} before`);
+  const difference = after - before;
+  if (!Number.isSafeInteger(difference)) {
+    throw new Error(`${label} difference is not safely representable: ${difference}`);
+  }
+  return difference;
+}
+
 function getCardName(rule: CardRuleSet): string {
   return rule.card.nameKo || rule.card.name;
 }
@@ -338,30 +360,30 @@ function buildAssignments(
     const groupTransactions = transactionsByAssignment.get(key) ?? [];
     const alternatives = cardRules
       .filter((rule) => rule.card.id !== assignment.assignedCardId)
-      .map((rule) => {
+      .flatMap((rule) => {
         const previousMonthSpending =
           cardPreviousSpending.get(rule.card.id) ?? 0;
         const actualTransactions =
           assignedTransactionsByCard.get(rule.card.id) ?? [];
         const before = finalRewardByCard.get(rule.card.id) ?? 0;
         const after = calculateCardOutput(
-          [...actualTransactions, ...groupTransactions],
+          buildCanonicalRewardInput(actualTransactions, groupTransactions),
           previousMonthSpending,
           rule,
         ).totalReward;
-        const reward = after - before;
-        assertSafeNonnegativeInteger(
-          reward,
+        const reward = subtractSafeRewardTotals(
+          after,
+          before,
           `alternative reward for ${rule.card.id}`,
         );
-        return {
+        if (reward <= 0) return [];
+        return [{
           cardId: rule.card.id,
           cardName: getCardName(rule),
           reward,
           rate: assignment.spending > 0 ? reward / assignment.spending : 0,
-        };
+        }];
       })
-      .filter((alternative) => alternative.reward > 0)
       .sort(
         (a, b) => b.reward - a.reward || compareAscii(a.cardId, b.cardId),
       )
@@ -480,9 +502,9 @@ export function greedyOptimize(
   // NaN > 0 is false so NaN amounts are already excluded by the > 0 check,
   // but Number.isFinite also guards the sort comparator against NaN
   // comparisons which sort inconsistently across JS engines.
-  const sortedTransactions = [...constraints.transactions]
-    .filter(isRewardEligibleTransaction)
-    .sort(compareRewardRelevantTransactions);
+  const sortedTransactions = buildCanonicalRewardInput(
+    constraints.transactions.filter(isRewardEligibleTransaction),
+  );
 
   const txAssignments: TxAssignment[] = [];
   const candidateUnsupportedRules: CalculationIssue[] = [];
@@ -513,9 +535,11 @@ export function greedyOptimize(
       continue;
     }
 
-    // On first insertion, create a new array and store it in the map.
-    // On subsequent insertions, push in-place — the map already holds the
-    // same reference so no .set() is needed (C31-02).
+    // sortedTransactions is canonical and this loop advances in that order,
+    // so each card-owned array remains a canonical subsequence. On first
+    // insertion, create a new array and store it in the map. On subsequent
+    // insertions, push in-place — the map already holds the same reference so
+    // no .set() is needed (C31-02).
     let currentTransactions = assignedTransactionsByCard.get(best.cardId);
     if (!currentTransactions) {
       currentTransactions = [transaction];
@@ -533,17 +557,23 @@ export function greedyOptimize(
     });
   }
 
+  const canonicalAssignedTransactionsByCard = new Map(
+    [...assignedTransactionsByCard].map(([cardId, transactions]) => [
+      cardId,
+      buildCanonicalRewardInput(transactions),
+    ] as const),
+  );
   const assignments = buildAssignments(
     txAssignments,
     constraints.categoryLabels,
     executableCardRules,
     cardPreviousSpending,
-    assignedTransactionsByCard,
+    canonicalAssignedTransactionsByCard,
   );
   const cardResults = buildCardResults(
     executableCardRules,
     cardPreviousSpending,
-    assignedTransactionsByCard,
+    canonicalAssignedTransactionsByCard,
     constraints.categoryLabels,
   );
 

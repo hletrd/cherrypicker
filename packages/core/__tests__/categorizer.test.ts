@@ -156,29 +156,29 @@ describe('CategoryTaxonomy - findCategory', () => {
         id: 'second',
         labelKo: '둘째',
         labelEn: 'Second',
-        keywords: ['bcde'],
+        keywords: ['bravo', 'bravo store'],
       },
       {
         id: 'first',
         labelKo: '첫째',
         labelEn: 'First',
-        keywords: ['abcd'],
+        keywords: ['alpha', 'alpha store'],
       },
     ];
     const reverseOrder = [...firstOrder].reverse();
 
     expect(
-      new CategoryTaxonomy(firstOrder).findCategory('abcde').category,
+      new CategoryTaxonomy(firstOrder).findCategory('alpha bravo').category,
     ).toBe('first');
     expect(
-      new CategoryTaxonomy(reverseOrder).findCategory('abcde').category,
+      new CategoryTaxonomy(reverseOrder).findCategory('alpha bravo').category,
     ).toBe('first');
 
     expect(
-      new CategoryTaxonomy(firstOrder).findCategory('bcd').category,
+      new CategoryTaxonomy(firstOrder).findCategory('store').category,
     ).toBe('first');
     expect(
-      new CategoryTaxonomy(reverseOrder).findCategory('bcd').category,
+      new CategoryTaxonomy(reverseOrder).findCategory('store').category,
     ).toBe('first');
   });
 });

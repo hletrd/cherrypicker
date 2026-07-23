@@ -2,7 +2,10 @@ import {
   CategoryRegistry,
   type CategoryNode,
 } from '@cherrypicker/rules/browser';
-import { normalizeMerchantText } from './normalize.js';
+import {
+  normalizedMerchantTermMatches,
+  normalizeMerchantText,
+} from './normalize.js';
 
 interface CategoryMatch {
   category: string;
@@ -165,7 +168,7 @@ export class CategoryTaxonomy {
       | undefined;
     for (const [kw, mapping] of this.keywordMap) {
       if (kw.trim().length < 2) continue;
-      if (lower.includes(kw)) {
+      if (normalizedMerchantTermMatches(lower, kw)) {
         if (
           !bestSubstring ||
           kw.length > bestSubstring.kwLen ||
@@ -215,7 +218,7 @@ export class CategoryTaxonomy {
       | undefined;
     if (lower.length >= 3) {
       for (const [kw, mapping] of this.keywordMap) {
-        if (kw.includes(lower)) {
+        if (normalizedMerchantTermMatches(kw, lower)) {
           if (
             !bestFuzzy ||
             kw.length < bestFuzzy.kwLen ||
