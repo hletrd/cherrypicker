@@ -72,7 +72,8 @@ rewards:
       paymentType: overseas
       note: "해외 가맹점 대한항공 1,500원당 2마일, 면세점 1,500원당 3마일"
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

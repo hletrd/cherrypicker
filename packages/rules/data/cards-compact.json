@@ -67,7 +67,7 @@
       "utilities.gas",
       "utilities.water"
     ],
-    "sourceHash": "06fab718eb0637dd521af71864cc30e1dab991109108df57832ba051c9d57e6c"
+    "sourceHash": "ad1edfe624495c7380b86255de27a29091eacc09e325d82a9533034ad2279b58"
   },
   "issuers": [
     {
@@ -1237,22 +1237,7 @@
           "nameKo": "에어원 플러스",
           "type": "credit",
           "annualFee": 30000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.13,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.07,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "shinhan-deep-dream-platinum-plus",
@@ -1478,15 +1463,7 @@
           "nameKo": "싱가포르항공 크리스플라이어 더 베스트 신한카드",
           "type": "credit",
           "annualFee": 37000,
-          "topRewards": [
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.133,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "shinhan-air-one",
@@ -1745,13 +1722,6 @@
               "category": "*",
               "type": "points",
               "bestValue": 1,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.067,
               "bestValueKind": "rate",
               "unit": null
             }
@@ -2703,22 +2673,7 @@
           "nameKo": "KB국민 마일리지 가온카드 (아시아나)",
           "type": "credit",
           "annualFee": 15000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.1,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "kb-modutour",
@@ -3249,22 +3204,7 @@
           "nameKo": "KB국민 아시아나 올림카드",
           "type": "credit",
           "annualFee": 28000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.13,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "kb-easy-all-titanium",
@@ -4913,22 +4853,7 @@
           "nameKo": "대한항공카드 Edition2 060",
           "type": "credit",
           "annualFee": 60000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.1,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "hyundai-mm",
@@ -5086,22 +5011,7 @@
           "nameKo": "대한항공카드 Edition2 120",
           "type": "credit",
           "annualFee": 120000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.1,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "hyundai-lotte-dept-gold",
@@ -6655,15 +6565,7 @@
           "nameKo": "하나 스카이패스 아멕스 플래티늄",
           "type": "credit",
           "annualFee": 45000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 2,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "hana-jade-classic",
@@ -6679,29 +6581,7 @@
           "nameKo": "하나카드 트래블로그 PRESTIGE",
           "type": "credit",
           "annualFee": 150000,
-          "topRewards": [
-            {
-              "category": "online_shopping",
-              "type": "mileage",
-              "bestValue": 2,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "dining",
-              "type": "mileage",
-              "bestValue": 2,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "convenience_store",
-              "type": "mileage",
-              "bestValue": 2,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "hana-club-premier",
@@ -6744,13 +6624,6 @@
               "category": "travel.airline",
               "type": "discount",
               "bestValue": 10,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "offline_shopping.department_store",
-              "type": "mileage",
-              "bestValue": 2,
               "bestValueKind": "rate",
               "unit": null
             }
@@ -8279,15 +8152,7 @@
           "nameKo": "앤 마일리지 플래티넘 (스카이패스)",
           "type": "credit",
           "annualFee": 47000,
-          "topRewards": [
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.1,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "samsung-taptap-i",
@@ -9481,22 +9346,7 @@
           "nameKo": "SKYPASS 롯데 아멕스카드",
           "type": "credit",
           "annualFee": 37000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.1,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "lotte-rollote-avenuel",
@@ -10676,22 +10526,7 @@
           "nameKo": "우리카드 카드의정석 PREMIUM MILEAGE+",
           "type": "credit",
           "annualFee": 135000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.15,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.1,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "woori-royal-blue-m",
@@ -12669,15 +12504,7 @@
           "nameKo": "IBK 마일앤조이카드",
           "type": "credit",
           "annualFee": 30000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.133,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "ibk-i-mileage-kal",
@@ -12685,22 +12512,7 @@
           "nameKo": "IBK I-Mileage 대한항공",
           "type": "credit",
           "annualFee": 41000,
-          "topRewards": [
-            {
-              "category": "travel",
-              "type": "mileage",
-              "bestValue": 0.2,
-              "bestValueKind": "rate",
-              "unit": null
-            },
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 0.1,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "ibk-bliss5",
@@ -12708,15 +12520,7 @@
           "nameKo": "IBK기업은행 BLISS.5카드",
           "type": "credit",
           "annualFee": 100000,
-          "topRewards": [
-            {
-              "category": "*",
-              "type": "mileage",
-              "bestValue": 1.5,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         },
         {
           "id": "ibk-bliss7",
@@ -15606,15 +15410,7 @@
           "nameKo": "광주은행 여행스케치 아시아나 체크카드",
           "type": "check",
           "annualFee": 0,
-          "topRewards": [
-            {
-              "category": "travel.airline",
-              "type": "mileage",
-              "bestValue": 2,
-              "bestValueKind": "rate",
-              "unit": null
-            }
-          ]
+          "topRewards": []
         }
       ]
     },
@@ -16752,15 +16548,6 @@
           "cardId": "hyundai-m-edition2-premium",
           "issuer": "hyundai",
           "type": "points",
-          "rewardValue": 1.5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "ibk-bliss5",
-          "issuer": "ibk",
-          "type": "mileage",
           "rewardValue": 1.5,
           "rewardValueKind": "rate",
           "unit": null,
@@ -18288,24 +18075,6 @@
           "monthlyCap": null
         },
         {
-          "cardId": "shinhan-singapore-air",
-          "issuer": "shinhan",
-          "type": "mileage",
-          "rewardValue": 0.133,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "kb-asiana-ollim",
-          "issuer": "kb",
-          "type": "mileage",
-          "rewardValue": 0.13,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "hana-travellog-skypass",
           "issuer": "hana",
           "type": "points",
@@ -18315,63 +18084,9 @@
           "monthlyCap": null
         },
         {
-          "cardId": "hyundai-korean-air-edition2-060",
-          "issuer": "hyundai",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "hyundai-korean-air-edition2-120",
-          "issuer": "hyundai",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "ibk-i-mileage-kal",
-          "issuer": "ibk",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "jeju-skypass-plus",
           "issuer": "jeju",
           "type": "points",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "kb-mileage-gaon-asiana",
-          "issuer": "kb",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "lotte-skypass-lotte",
-          "issuer": "lotte",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
           "rewardValue": 0.1,
           "rewardValueKind": "rate",
           "unit": null,
@@ -18396,28 +18111,10 @@
           "monthlyCap": null
         },
         {
-          "cardId": "woori-premium-mileage-plus",
-          "issuer": "woori",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "kb-finetech-kal",
           "issuer": "kb",
           "type": "points",
           "rewardValue": 0.08,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "shinhan-air-one-plus",
-          "issuer": "shinhan",
-          "type": "mileage",
-          "rewardValue": 0.07,
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
@@ -19818,15 +19515,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 3000
-        },
-        {
-          "cardId": "hana-travellog-prestige",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
         },
         {
           "cardId": "hyundai-gmarket-smile-edition3",
@@ -21555,15 +21243,6 @@
           "monthlyCap": 5000
         },
         {
-          "cardId": "hana-travellog-prestige",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "hyundai-gmarket-smile-check",
           "issuer": "hyundai",
           "type": "points",
@@ -22713,15 +22392,6 @@
           "issuer": "samsung",
           "type": "discount",
           "rewardValue": 3,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "hana-travellog-prestige",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
@@ -25289,15 +24959,6 @@
           "monthlyCap": null
         },
         {
-          "cardId": "hana-skypass-amex-platinum",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "jeju-asiana-mileage",
           "issuer": "jeju",
           "type": "points",
@@ -25676,63 +25337,9 @@
           "monthlyCap": null
         },
         {
-          "cardId": "hyundai-korean-air-edition2-060",
-          "issuer": "hyundai",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "hyundai-korean-air-edition2-120",
-          "issuer": "hyundai",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "ibk-i-mileage-kal",
-          "issuer": "ibk",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "jeju-skypass-plus",
           "issuer": "jeju",
           "type": "points",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "kb-asiana-ollim",
-          "issuer": "kb",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "kb-mileage-gaon-asiana",
-          "issuer": "kb",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "lotte-skypass-lotte",
-          "issuer": "lotte",
-          "type": "mileage",
           "rewardValue": 0.2,
           "rewardValueKind": "rate",
           "unit": null,
@@ -25766,27 +25373,9 @@
           "monthlyCap": null
         },
         {
-          "cardId": "woori-premium-mileage-plus",
-          "issuer": "woori",
-          "type": "mileage",
-          "rewardValue": 0.15,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "hana-skypass-check",
           "issuer": "hana",
           "type": "points",
-          "rewardValue": 0.133,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "ibk-mile-and-joy",
-          "issuer": "ibk",
-          "type": "mileage",
           "rewardValue": 0.133,
           "rewardValueKind": "rate",
           "unit": null,
@@ -25797,24 +25386,6 @@
           "issuer": "kb",
           "type": "points",
           "rewardValue": 0.133,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "shinhan-air-one-plus",
-          "issuer": "shinhan",
-          "type": "mileage",
-          "rewardValue": 0.13,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "shinhan-the-premier-gold",
-          "issuer": "shinhan",
-          "type": "mileage",
-          "rewardValue": 0.067,
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
@@ -28088,16 +27659,6 @@
           "unit": null,
           "monthlyCap": null,
           "subcategory": "airline"
-        },
-        {
-          "cardId": "kwangju-travel-sketch-check",
-          "issuer": "kwangju",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "airline"
         }
       ],
       "grocery": [
@@ -29267,78 +28828,6 @@
           "monthlyCap": 2000
         }
       ],
-      "offline_shopping.department_store": [
-        {
-          "cardId": "kb-heritage-reserve",
-          "issuer": "kb",
-          "type": "points",
-          "rewardValue": 50000,
-          "rewardValueKind": "fixedAmount",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "samsung-the-id-1st",
-          "issuer": "samsung",
-          "type": "discount",
-          "rewardValue": 50000,
-          "rewardValueKind": "fixedAmount",
-          "unit": null,
-          "monthlyCap": 50000,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "hyundai-alphabet-s",
-          "issuer": "hyundai",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 50000,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "kb-heritage-smart",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 50000,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "hyundai-genesis",
-          "issuer": "hyundai",
-          "type": "points",
-          "rewardValue": 3,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "hyundai-mirae-asset-diamond",
-          "issuer": "hyundai",
-          "type": "points",
-          "rewardValue": 3,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "hana-club-primus-skypass",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000,
-          "subcategory": "department_store"
-        }
-      ],
       "public_transit.taxi": [
         {
           "cardId": "hana-kakao-t-credit",
@@ -29475,6 +28964,68 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 5000
+        }
+      ],
+      "offline_shopping.department_store": [
+        {
+          "cardId": "kb-heritage-reserve",
+          "issuer": "kb",
+          "type": "points",
+          "rewardValue": 50000,
+          "rewardValueKind": "fixedAmount",
+          "unit": null,
+          "monthlyCap": null,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "samsung-the-id-1st",
+          "issuer": "samsung",
+          "type": "discount",
+          "rewardValue": 50000,
+          "rewardValueKind": "fixedAmount",
+          "unit": null,
+          "monthlyCap": 50000,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "hyundai-alphabet-s",
+          "issuer": "hyundai",
+          "type": "discount",
+          "rewardValue": 10,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 50000,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "kb-heritage-smart",
+          "issuer": "kb",
+          "type": "discount",
+          "rewardValue": 5,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 50000,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "hyundai-genesis",
+          "issuer": "hyundai",
+          "type": "points",
+          "rewardValue": 3,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": null,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "hyundai-mirae-asset-diamond",
+          "issuer": "hyundai",
+          "type": "points",
+          "rewardValue": 3,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": null,
+          "subcategory": "department_store"
         }
       ],
       "travel.hotel": [
@@ -30657,11 +30208,9 @@
       "hana-my-trip-asiana",
       "hana-shinseage-mile",
       "hana-simple-life",
-      "hana-skypass-amex-platinum",
       "hana-skypass-check",
       "hana-travellog-check",
       "hana-travellog-credit",
-      "hana-travellog-prestige",
       "hana-travellog-skypass",
       "hana-viva-g-check",
       "hana-wonder-2.0-free",
@@ -30679,8 +30228,6 @@
       "hyundai-emart-edition3-plus",
       "hyundai-gmarket-smile-check",
       "hyundai-gmarket-smile-edition3",
-      "hyundai-korean-air-edition2-060",
-      "hyundai-korean-air-edition2-120",
       "hyundai-lotte-dept-gold",
       "hyundai-lotte-dept-silver",
       "hyundai-m-edition2-premium",
@@ -30695,12 +30242,10 @@
       "hyundai-z-play-edition2",
       "hyundai-zero-up",
       "ibk-biz-plus",
-      "ibk-bliss5",
       "ibk-easy-cashback-check",
       "ibk-i-all-check",
       "ibk-i-all",
       "ibk-i-gihoo-donghaeng",
-      "ibk-i-mileage-kal",
       "ibk-i-point-check",
       "ibk-ibk-point-check",
       "ibk-infinite",
@@ -30720,7 +30265,6 @@
       "jeju-ub-credit",
       "kakao-jjupjjup-shinhan",
       "kakao-kpass-friends-check-v2",
-      "kb-asiana-ollim",
       "kb-bev-iii",
       "kb-coupang-rocket-check",
       "kb-coupang-wow",
@@ -30734,7 +30278,6 @@
       "kb-heritage-smart",
       "kb-jejuair-refresh",
       "kb-kakaopay-check",
-      "kb-mileage-gaon-asiana",
       "kb-min-check",
       "kb-modutour",
       "kb-nori2-check",
@@ -30761,7 +30304,6 @@
       "lotte-lottemart-check",
       "lotte-rollote-avenuel",
       "lotte-skypass-lotte-amex",
-      "lotte-skypass-lotte",
       "nh-classi-travel",
       "nh-gihoo-donghaeng-check",
       "nh-gs-retail-nh",
@@ -30777,7 +30319,6 @@
       "nh-zgm-the-pay",
       "nh-zgm-vacation",
       "samsung-amex-blue",
-      "samsung-and-mileage-platinum",
       "samsung-gongmu-pension",
       "samsung-id-all",
       "samsung-id-care",
@@ -30806,7 +30347,6 @@
       "sc-zero-edition3-discount",
       "shinhan-11st-check",
       "shinhan-11st",
-      "shinhan-air-one-plus",
       "shinhan-aliexpress",
       "shinhan-bom",
       "shinhan-cj-one-prism",
@@ -30830,7 +30370,6 @@
       "shinhan-simple-plan-platinum",
       "shinhan-simple-plan-plus",
       "shinhan-simple-plan",
-      "shinhan-singapore-air",
       "shinhan-sol-mate",
       "shinhan-sol-pay-check",
       "shinhan-sol-travel-check",
@@ -30860,7 +30399,6 @@
       "woori-opus-silver",
       "woori-point-plus",
       "woori-point",
-      "woori-premium-mileage-plus",
       "woori-travelwallet",
       "woori-two-chairs-w",
       "woori-uniq-plus",

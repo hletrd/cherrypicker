@@ -38,7 +38,7 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **63개** · 최적화 계산 가능 **57개** · 카탈로그 전용 **6개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **63개** · 최적화 계산 가능 **55개** · 카탈로그 전용 **8개** · 최신 업데이트: `2026-03-26`
 
 `계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
 
@@ -51,8 +51,8 @@
 | YES24 현대카드 | 신용 | 계산 가능 | [yes24.yaml](./yes24.yaml) |
 | 네이버 현대카드 Edition2 | 신용 | 계산 가능 | [naver-edition2.yaml](./naver-edition2.yaml) |
 | 넥슨 현대카드 Edition2 | 신용 | 계산 가능 | [nexon-edition2.yaml](./nexon-edition2.yaml) |
-| 대한항공카드 Edition2 060 | 신용 | 계산 가능 | [korean-air-edition2-060.yaml](./korean-air-edition2-060.yaml) |
-| 대한항공카드 Edition2 120 | 신용 | 계산 가능 | [korean-air-edition2-120.yaml](./korean-air-edition2-120.yaml) |
+| 대한항공카드 Edition2 060 | 신용 | 카탈로그 전용 | [korean-air-edition2-060.yaml](./korean-air-edition2-060.yaml) |
+| 대한항공카드 Edition2 120 | 신용 | 카탈로그 전용 | [korean-air-edition2-120.yaml](./korean-air-edition2-120.yaml) |
 | 대한항공카드 the First Edition2 | 신용 | 카탈로그 전용 | [korean-air-edition2-first.yaml](./korean-air-edition2-first.yaml) |
 | 롯데백화점 현대카드 골드 | 신용 | 계산 가능 | [lotte-dept-gold.yaml](./lotte-dept-gold.yaml) |
 | 롯데백화점 현대카드 실버 | 신용 | 계산 가능 | [lotte-dept-silver.yaml](./lotte-dept-silver.yaml) |

@@ -71,7 +71,8 @@ rewards:
         - 아시아나항공
       note: "아시아나항공 구매 시 2배 마일리지 적립"
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

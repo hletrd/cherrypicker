@@ -450,6 +450,7 @@ describe('catalog semantic validation', () => {
       (card) => card.card.id === 'samsung-and-mileage-platinum',
     )!;
     const affectedRuleIds = new Set([
+      'reward-001',
       'reward-002',
       'reward-003',
       'reward-004',
@@ -457,17 +458,23 @@ describe('catalog semantic validation', () => {
       'reward-006',
     ]);
 
-    expect(samsungMileage.rewards[0]!.support.status).toBe('supported');
     expect(
       samsungMileage.rewards
         .filter((rule) => affectedRuleIds.has(rule.id))
-        .map((rule) => [rule.id, rule.support.status]),
+        .map((rule) => [
+          rule.id,
+          rule.support.status,
+          rule.support.status === 'unsupported'
+            ? rule.support.reason
+            : null,
+        ]),
     ).toEqual([
-      ['reward-002', 'unsupported'],
-      ['reward-003', 'unsupported'],
-      ['reward-004', 'unsupported'],
-      ['reward-005', 'unsupported'],
-      ['reward-006', 'unsupported'],
+      ['reward-001', 'unsupported', 'mileage reward valuation contract is not modeled'],
+      ['reward-002', 'unsupported', 'mileage reward valuation contract is not modeled'],
+      ['reward-003', 'unsupported', 'mileage reward valuation contract is not modeled'],
+      ['reward-004', 'unsupported', 'mileage reward valuation contract is not modeled'],
+      ['reward-005', 'unsupported', 'mileage reward valuation contract is not modeled'],
+      ['reward-006', 'unsupported', 'mileage reward valuation contract is not modeled'],
     ]);
     expect(
       cards.flatMap((card) =>

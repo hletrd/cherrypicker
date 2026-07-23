@@ -38,7 +38,8 @@ rewards:
     conditions:
       paymentType: domestic
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
   - category: "travel"
     id: reward-002
     priority: 2
@@ -55,7 +56,8 @@ rewards:
     conditions:
       paymentType: overseas
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

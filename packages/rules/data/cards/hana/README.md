@@ -60,7 +60,7 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **61개** · 최적화 계산 가능 **53개** · 카탈로그 전용 **8개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **61개** · 최적화 계산 가능 **51개** · 카탈로그 전용 **10개** · 최신 업데이트: `2026-03-26`
 
 `계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
 
@@ -85,7 +85,7 @@
 | 하나 1Q My Lunch | 신용 | 계산 가능 | [1q-my-lunch.yaml](./1q-my-lunch.yaml) |
 | 하나 1Q Shopping+ | 신용 | 계산 가능 | [1q-shopping-plus.yaml](./1q-shopping-plus.yaml) |
 | 하나 1Q Special Auto | 신용 | 계산 가능 | [1q-special-auto.yaml](./1q-special-auto.yaml) |
-| 하나 스카이패스 아멕스 플래티늄 | 신용 | 계산 가능 | [skypass-amex-platinum.yaml](./skypass-amex-platinum.yaml) |
+| 하나 스카이패스 아멕스 플래티늄 | 신용 | 카탈로그 전용 | [skypass-amex-platinum.yaml](./skypass-amex-platinum.yaml) |
 | 하나 트래블로그 체크카드 | 체크 | 계산 가능 | [travellog-check.yaml](./travellog-check.yaml) |
 | 하나멤버스 1Q카드 ALL in | 신용 | 계산 가능 | [1q-all-in.yaml](./1q-all-in.yaml) |
 | 하나멤버스 1Q카드 Living | 신용 | 계산 가능 | [1q-living.yaml](./1q-living.yaml) |
@@ -125,6 +125,6 @@
 | 하나카드 원큐카드 | 신용 | 계산 가능 | [1q-card.yaml](./1q-card.yaml) |
 | 하나카드 카카오T 신용 | 신용 | 계산 가능 | [kakao-t-credit.yaml](./kakao-t-credit.yaml) |
 | 하나카드 카카오T 하나카드 | 신용 | 계산 가능 | [kakaot.yaml](./kakaot.yaml) |
-| 하나카드 트래블로그 PRESTIGE | 신용 | 계산 가능 | [travellog-prestige.yaml](./travellog-prestige.yaml) |
+| 하나카드 트래블로그 PRESTIGE | 신용 | 카탈로그 전용 | [travellog-prestige.yaml](./travellog-prestige.yaml) |
 | 하나카드 풀무원 | 신용 | 계산 가능 | [pulmuone.yaml](./pulmuone.yaml) |
 <!-- END GENERATED CARD INDEX -->

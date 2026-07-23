@@ -53,7 +53,7 @@ Hey Young 체크는 무연회비 체크카드로 20만원 낮은 전월실적에
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **80개** · 최적화 계산 가능 **73개** · 카탈로그 전용 **7개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **80개** · 최적화 계산 가능 **71개** · 카탈로그 전용 **9개** · 최신 업데이트: `2026-03-26`
 
 `계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
 
@@ -119,7 +119,7 @@ Hey Young 체크는 무연회비 체크카드로 20만원 낮은 전월실적에
 | 신한카드 혼디모앙 | 신용 | 계산 가능 | [hondimoan.yaml](./hondimoan.yaml) |
 | 심플플랜 | 신용 | 계산 가능 | [simple-plan.yaml](./simple-plan.yaml) |
 | 심플플랜 플러스 | 신용 | 계산 가능 | [simple-plan-plus.yaml](./simple-plan-plus.yaml) |
-| 싱가포르항공 크리스플라이어 더 베스트 신한카드 | 신용 | 계산 가능 | [singapore-air.yaml](./singapore-air.yaml) |
+| 싱가포르항공 크리스플라이어 더 베스트 신한카드 | 신용 | 카탈로그 전용 | [singapore-air.yaml](./singapore-air.yaml) |
 | 쏠플랜 | 신용 | 계산 가능 | [sol-plan.yaml](./sol-plan.yaml) |
 | 알뜰모아 | 신용 | 카탈로그 전용 | [alddulmore.yaml](./alddulmore.yaml) |
 | 알리익스프레스 신한카드 | 신용 | 계산 가능 | [aliexpress.yaml](./aliexpress.yaml) |
@@ -127,7 +127,7 @@ Hey Young 체크는 무연회비 체크카드로 20만원 낮은 전월실적에
 | 언박싱 | 신용 | 계산 가능 | [unboxing.yaml](./unboxing.yaml) |
 | 에듀플랜플러스 | 신용 | 계산 가능 | [edu-plan-plus.yaml](./edu-plan-plus.yaml) |
 | 에어 플래티넘 | 신용 | 계산 가능 | [air-platinum.yaml](./air-platinum.yaml) |
-| 에어원 플러스 | 신용 | 계산 가능 | [air-one-plus.yaml](./air-one-plus.yaml) |
+| 에어원 플러스 | 신용 | 카탈로그 전용 | [air-one-plus.yaml](./air-one-plus.yaml) |
 | 욜로 | 신용 | 카탈로그 전용 | [yolo.yaml](./yolo.yaml) |
 | 이브리웨어 | 신용 | 계산 가능 | [everywhere-ev.yaml](./everywhere-ev.yaml) |
 | 처음 | 신용 | 계산 가능 | [anniverse.yaml](./anniverse.yaml) |

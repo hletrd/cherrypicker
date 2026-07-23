@@ -47,7 +47,8 @@ rewards:
       paymentType: domestic
       note: "국내 가맹점 1,000원당 아시아나 1마일 기본 적립"
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
   - category: travel
     id: reward-002
@@ -68,7 +69,8 @@ rewards:
     conditions:
       note: "해외/면세점 1,000원당 1.5마일 적립"
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

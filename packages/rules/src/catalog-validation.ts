@@ -284,6 +284,19 @@ function collectCardRuleIssuesWithContext(
     }
     if (
       rule.support?.status === 'supported' &&
+      rule.type === 'mileage'
+    ) {
+      issues.push({
+        code: 'unexecutable_reward_tier',
+        cardId,
+        path,
+        message:
+          'supported mileage reward has no explicit program-aware Won ' +
+          'valuation contract; mark it unsupported until valuation is modeled',
+      });
+    }
+    if (
+      rule.support?.status === 'supported' &&
       rule.category === 'uncategorized' &&
       !rule.subcategory &&
       (rule.conditions?.specificMerchants?.length ?? 0) === 0 &&

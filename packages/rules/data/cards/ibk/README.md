@@ -52,14 +52,14 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **43개** · 최적화 계산 가능 **32개** · 카탈로그 전용 **11개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **43개** · 최적화 계산 가능 **29개** · 카탈로그 전용 **14개** · 최신 업데이트: `2026-03-26`
 
 `계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
 
 | 카드명 | 유형 | 추천 계산 상태 | YAML |
 |---|---:|---:|---|
 | IBK I-ALL 체크카드 | 체크 | 계산 가능 | [i-all-check.yaml](./i-all-check.yaml) |
-| IBK I-Mileage 대한항공 | 신용 | 계산 가능 | [i-mileage-kal.yaml](./i-mileage-kal.yaml) |
+| IBK I-Mileage 대한항공 | 신용 | 카탈로그 전용 | [i-mileage-kal.yaml](./i-mileage-kal.yaml) |
 | IBK I-PET | 신용 | 계산 가능 | [i-pet.yaml](./i-pet.yaml) |
 | IBK I-Travel 신용카드 | 신용 | 계산 가능 | [i-travel-credit.yaml](./i-travel-credit.yaml) |
 | IBK I-Travel 체크 | 체크 | 카탈로그 전용 | [i-travel-check.yaml](./i-travel-check.yaml) |
@@ -74,7 +74,7 @@
 | IBK K-패스카드 | 신용 | 카탈로그 전용 | [k-pass.yaml](./k-pass.yaml) |
 | IBK 나라사랑카드 3기 | 신용 | 계산 가능 | [narasarang.yaml](./narasarang.yaml) |
 | IBK 데일리위드카드 | 신용 | 계산 가능 | [daily-with.yaml](./daily-with.yaml) |
-| IBK 마일앤조이카드 | 신용 | 계산 가능 | [mile-and-joy.yaml](./mile-and-joy.yaml) |
+| IBK 마일앤조이카드 | 신용 | 카탈로그 전용 | [mile-and-joy.yaml](./mile-and-joy.yaml) |
 | IBK 소상공인 비즈플러스카드 | 신용 | 계산 가능 | [biz-plus.yaml](./biz-plus.yaml) |
 | IBK 스폰지밥 체크 | 체크 | 카탈로그 전용 | [spongebob-check.yaml](./spongebob-check.yaml) |
 | IBK 알토스 체크 | 체크 | 계산 가능 | [altos-check.yaml](./altos-check.yaml) |
@@ -90,7 +90,7 @@
 | IBK 카픽카드 | 신용 | 카탈로그 전용 | [kapick.yaml](./kapick.yaml) |
 | IBK 포인트 체크카드 | 체크 | 계산 가능 | [i-point-check.yaml](./i-point-check.yaml) |
 | IBK 하이브리드카드 | 신용 | 카탈로그 전용 | [hybrid.yaml](./hybrid.yaml) |
-| IBK기업은행 BLISS.5카드 | 신용 | 계산 가능 | [bliss5.yaml](./bliss5.yaml) |
+| IBK기업은행 BLISS.5카드 | 신용 | 카탈로그 전용 | [bliss5.yaml](./bliss5.yaml) |
 | IBK기업은행 BLISS.7카드 | 신용 | 카탈로그 전용 | [bliss7.yaml](./bliss7.yaml) |
 | IBK기업은행 CEO카드 | 신용 | 카탈로그 전용 | [ceo.yaml](./ceo.yaml) |
 | IBK기업은행 I-ALL 신용카드 | 신용 | 계산 가능 | [i-all.yaml](./i-all.yaml) |

@@ -46,7 +46,7 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **58개** · 최적화 계산 가능 **52개** · 카탈로그 전용 **6개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **58개** · 최적화 계산 가능 **51개** · 카탈로그 전용 **7개** · 최신 업데이트: `2026-03-26`
 
 `계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
 
@@ -99,7 +99,7 @@
 | 아이디 올 | 신용 | 계산 가능 | [id-all.yaml](./id-all.yaml) |
 | 아이디 포켓 | 신용 | 계산 가능 | [id-pocket.yaml](./id-pocket.yaml) |
 | 아이디 플러그인 | 신용 | 계산 가능 | [id-plug-in.yaml](./id-plug-in.yaml) |
-| 앤 마일리지 플래티넘 (스카이패스) | 신용 | 계산 가능 | [and-mileage-platinum.yaml](./and-mileage-platinum.yaml) |
+| 앤 마일리지 플래티넘 (스카이패스) | 신용 | 카탈로그 전용 | [and-mileage-platinum.yaml](./and-mileage-platinum.yaml) |
 | 카카오뱅크 삼성카드 | 신용 | 계산 가능 | [kakaobank.yaml](./kakaobank.yaml) |
 | 카카오페이 삼성카드 | 신용 | 계산 가능 | [kakaopay.yaml](./kakaopay.yaml) |
 | 탭탭 쇼핑 | 신용 | 계산 가능 | [taptap-shopping.yaml](./taptap-shopping.yaml) |

@@ -72,7 +72,8 @@ rewards:
         - G마켓
         - 옥션
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
   - category: dining
     id: reward-003
@@ -96,7 +97,8 @@ rewards:
         - 스타벅스
         - 커피빈
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
   - category: convenience_store
     id: reward-004
@@ -120,7 +122,8 @@ rewards:
         - CU
         - GS25
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
   - category: travel
     id: reward-005

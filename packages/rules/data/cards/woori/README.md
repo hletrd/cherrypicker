@@ -57,7 +57,7 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **52개** · 최적화 계산 가능 **39개** · 카탈로그 전용 **13개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **52개** · 최적화 계산 가능 **38개** · 카탈로그 전용 **14개** · 최신 업데이트: `2026-03-26`
 
 `계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
 
@@ -96,7 +96,7 @@
 | 우리카드 카드의정석 POINT | 신용 | 계산 가능 | [point.yaml](./point.yaml) |
 | 우리카드 카드의정석 POINT CHECK | 체크 | 계산 가능 | [point-check.yaml](./point-check.yaml) |
 | 우리카드 카드의정석 POINT+ | 신용 | 계산 가능 | [point-plus.yaml](./point-plus.yaml) |
-| 우리카드 카드의정석 PREMIUM MILEAGE+ | 신용 | 계산 가능 | [premium-mileage-plus.yaml](./premium-mileage-plus.yaml) |
+| 우리카드 카드의정석 PREMIUM MILEAGE+ | 신용 | 카탈로그 전용 | [premium-mileage-plus.yaml](./premium-mileage-plus.yaml) |
 | 우리카드 카드의정석 PREMIUM POINT+ | 신용 | 카탈로그 전용 | [premium-point-plus.yaml](./premium-point-plus.yaml) |
 | 우리카드 카드의정석 SHOPPING+ | 신용 | 계산 가능 | [shopping-plus.yaml](./shopping-plus.yaml) |
 | 우리카드 카드의정석 TEN | 신용 | 계산 가능 | [ten.yaml](./ten.yaml) |

@@ -59,29 +59,29 @@
 
 <!-- BEGIN GENERATED ISSUER COUNTS -->
 [![Cards](https://img.shields.io/badge/cards-683-2f81f7)](packages/rules/data/cards/)
-[![Optimizer executable](https://img.shields.io/badge/optimizer-566-2f81f7)](packages/rules/data/cards/)
+[![Optimizer executable](https://img.shields.io/badge/optimizer-551-2f81f7)](packages/rules/data/cards/)
 [![Issuers](https://img.shields.io/badge/issuers-24-2f81f7)](packages/rules/data/issuers.yaml)
 
-카탈로그 카드 **683개** 중 **566개**는 현재 최적화 계산에 사용할 수 있습니다.
+카탈로그 카드 **683개** 중 **551개**는 현재 최적화 계산에 사용할 수 있습니다.
 `계산 가능`은 지원되는 혜택 규칙이 하나 이상 있는 발급 가능 카드를 뜻합니다. 나머지는 상세 정보는 볼 수 있지만 추천 점수에는 포함되지 않는 카탈로그 전용 카드입니다.
 
 | 카드사 | ID | 카탈로그 카드 | 최적화 계산 가능 |
 |---|---:|---:|---:|
-| 신한카드 | `shinhan` | 80 | 73 |
-| KB국민카드 | `kb` | 67 | 60 |
-| 현대카드 | `hyundai` | 63 | 57 |
-| 하나카드 | `hana` | 61 | 53 |
-| 삼성카드 | `samsung` | 58 | 52 |
-| 롯데카드 | `lotte` | 55 | 48 |
-| 우리카드 | `woori` | 52 | 39 |
+| 신한카드 | `shinhan` | 80 | 71 |
+| KB국민카드 | `kb` | 67 | 58 |
+| 현대카드 | `hyundai` | 63 | 55 |
+| 하나카드 | `hana` | 61 | 51 |
+| 삼성카드 | `samsung` | 58 | 51 |
+| 롯데카드 | `lotte` | 55 | 47 |
+| 우리카드 | `woori` | 52 | 38 |
 | NH농협카드 | `nh` | 49 | 45 |
-| IBK기업은행 | `ibk` | 43 | 32 |
+| IBK기업은행 | `ibk` | 43 | 29 |
 | BC카드 | `bc` | 22 | 19 |
 | iM뱅크(대구은행) | `dgb` | 21 | 18 |
 | BNK부산은행 | `bnk` | 19 | 15 |
 | 제주은행 | `jeju` | 19 | 19 |
 | 전북은행 | `jb` | 11 | 7 |
-| 광주은행 | `kwangju` | 10 | 8 |
+| 광주은행 | `kwangju` | 10 | 7 |
 | SC제일은행 | `sc` | 10 | 10 |
 | 카카오뱅크 | `kakao` | 9 | 5 |
 | MG새마을금고 | `mg` | 8 | 0 |

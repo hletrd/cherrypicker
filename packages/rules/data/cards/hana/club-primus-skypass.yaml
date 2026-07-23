@@ -69,7 +69,8 @@ rewards:
     conditions:
       note: "면세점, 백화점 이용 시 1,500원당 2마일 특별 적립"
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
   - category: travel
     id: reward-003

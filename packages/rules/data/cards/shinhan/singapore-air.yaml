@@ -36,7 +36,8 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
   - category: "travel"
     id: reward-002
     priority: 2

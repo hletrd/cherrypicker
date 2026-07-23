@@ -67,7 +67,7 @@
       "utilities.gas",
       "utilities.water"
     ],
-    "sourceHash": "06fab718eb0637dd521af71864cc30e1dab991109108df57832ba051c9d57e6c"
+    "sourceHash": "ad1edfe624495c7380b86255de27a29091eacc09e325d82a9533034ad2279b58"
   },
   "issuers": [
     {
@@ -9096,7 +9096,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -9127,7 +9128,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -10889,7 +10891,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -12642,7 +12645,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -20315,7 +20319,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -20346,7 +20351,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -24966,7 +24972,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -24997,7 +25004,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -39037,7 +39045,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -39081,7 +39090,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -40454,7 +40464,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -40498,7 +40509,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -53677,7 +53689,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -53979,7 +53992,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -54026,7 +54040,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-003",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -54073,7 +54088,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-004",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -54468,7 +54484,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -65242,7 +65259,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -73949,7 +73967,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -73980,7 +73999,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -84597,7 +84617,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -84640,7 +84661,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -103048,7 +103070,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -103135,7 +103158,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -103179,7 +103203,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -103310,7 +103335,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-001",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             },
             {
@@ -125867,7 +125893,8 @@
               "stackingGroup": "base",
               "capGroup": "reward-002",
               "support": {
-                "status": "supported"
+                "status": "unsupported",
+                "reason": "mileage reward valuation contract is not modeled"
               }
             }
           ],
@@ -137232,15 +137259,6 @@
           "monthlyCap": null
         },
         {
-          "cardId": "ibk-bliss5",
-          "issuer": "ibk",
-          "type": "mileage",
-          "rewardValue": 1.5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "ibk-ibk-point-3.8",
           "issuer": "ibk",
           "type": "points",
@@ -138762,24 +138780,6 @@
           "monthlyCap": null
         },
         {
-          "cardId": "shinhan-singapore-air",
-          "issuer": "shinhan",
-          "type": "mileage",
-          "rewardValue": 0.133,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "kb-asiana-ollim",
-          "issuer": "kb",
-          "type": "mileage",
-          "rewardValue": 0.13,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "hana-travellog-skypass",
           "issuer": "hana",
           "type": "points",
@@ -138789,63 +138789,9 @@
           "monthlyCap": null
         },
         {
-          "cardId": "hyundai-korean-air-edition2-060",
-          "issuer": "hyundai",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "hyundai-korean-air-edition2-120",
-          "issuer": "hyundai",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "ibk-i-mileage-kal",
-          "issuer": "ibk",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "jeju-skypass-plus",
           "issuer": "jeju",
           "type": "points",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "kb-mileage-gaon-asiana",
-          "issuer": "kb",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "lotte-skypass-lotte",
-          "issuer": "lotte",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "samsung-and-mileage-platinum",
-          "issuer": "samsung",
-          "type": "mileage",
           "rewardValue": 0.1,
           "rewardValueKind": "rate",
           "unit": null,
@@ -138870,28 +138816,10 @@
           "monthlyCap": null
         },
         {
-          "cardId": "woori-premium-mileage-plus",
-          "issuer": "woori",
-          "type": "mileage",
-          "rewardValue": 0.1,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "kb-finetech-kal",
           "issuer": "kb",
           "type": "points",
           "rewardValue": 0.08,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "shinhan-air-one-plus",
-          "issuer": "shinhan",
-          "type": "mileage",
-          "rewardValue": 0.07,
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
@@ -140292,15 +140220,6 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 3000
-        },
-        {
-          "cardId": "hana-travellog-prestige",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
         },
         {
           "cardId": "hyundai-gmarket-smile-edition3",
@@ -142029,15 +141948,6 @@
           "monthlyCap": 5000
         },
         {
-          "cardId": "hana-travellog-prestige",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "hyundai-gmarket-smile-check",
           "issuer": "hyundai",
           "type": "points",
@@ -143187,15 +143097,6 @@
           "issuer": "samsung",
           "type": "discount",
           "rewardValue": 3,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "hana-travellog-prestige",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
@@ -145763,15 +145664,6 @@
           "monthlyCap": null
         },
         {
-          "cardId": "hana-skypass-amex-platinum",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "jeju-asiana-mileage",
           "issuer": "jeju",
           "type": "points",
@@ -146150,63 +146042,9 @@
           "monthlyCap": null
         },
         {
-          "cardId": "hyundai-korean-air-edition2-060",
-          "issuer": "hyundai",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "hyundai-korean-air-edition2-120",
-          "issuer": "hyundai",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "ibk-i-mileage-kal",
-          "issuer": "ibk",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "jeju-skypass-plus",
           "issuer": "jeju",
           "type": "points",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "kb-asiana-ollim",
-          "issuer": "kb",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "kb-mileage-gaon-asiana",
-          "issuer": "kb",
-          "type": "mileage",
-          "rewardValue": 0.2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "lotte-skypass-lotte",
-          "issuer": "lotte",
-          "type": "mileage",
           "rewardValue": 0.2,
           "rewardValueKind": "rate",
           "unit": null,
@@ -146240,27 +146078,9 @@
           "monthlyCap": null
         },
         {
-          "cardId": "woori-premium-mileage-plus",
-          "issuer": "woori",
-          "type": "mileage",
-          "rewardValue": 0.15,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
           "cardId": "hana-skypass-check",
           "issuer": "hana",
           "type": "points",
-          "rewardValue": 0.133,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "ibk-mile-and-joy",
-          "issuer": "ibk",
-          "type": "mileage",
           "rewardValue": 0.133,
           "rewardValueKind": "rate",
           "unit": null,
@@ -146271,24 +146091,6 @@
           "issuer": "kb",
           "type": "points",
           "rewardValue": 0.133,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "shinhan-air-one-plus",
-          "issuer": "shinhan",
-          "type": "mileage",
-          "rewardValue": 0.13,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null
-        },
-        {
-          "cardId": "shinhan-the-premier-gold",
-          "issuer": "shinhan",
-          "type": "mileage",
-          "rewardValue": 0.067,
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": null
@@ -148562,16 +148364,6 @@
           "unit": null,
           "monthlyCap": null,
           "subcategory": "airline"
-        },
-        {
-          "cardId": "kwangju-travel-sketch-check",
-          "issuer": "kwangju",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "airline"
         }
       ],
       "grocery": [
@@ -149741,78 +149533,6 @@
           "monthlyCap": 2000
         }
       ],
-      "offline_shopping.department_store": [
-        {
-          "cardId": "kb-heritage-reserve",
-          "issuer": "kb",
-          "type": "points",
-          "rewardValue": 50000,
-          "rewardValueKind": "fixedAmount",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "samsung-the-id-1st",
-          "issuer": "samsung",
-          "type": "discount",
-          "rewardValue": 50000,
-          "rewardValueKind": "fixedAmount",
-          "unit": null,
-          "monthlyCap": 50000,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "hyundai-alphabet-s",
-          "issuer": "hyundai",
-          "type": "discount",
-          "rewardValue": 10,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 50000,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "kb-heritage-smart",
-          "issuer": "kb",
-          "type": "discount",
-          "rewardValue": 5,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 50000,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "hyundai-genesis",
-          "issuer": "hyundai",
-          "type": "points",
-          "rewardValue": 3,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "hyundai-mirae-asset-diamond",
-          "issuer": "hyundai",
-          "type": "points",
-          "rewardValue": 3,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": null,
-          "subcategory": "department_store"
-        },
-        {
-          "cardId": "hana-club-primus-skypass",
-          "issuer": "hana",
-          "type": "mileage",
-          "rewardValue": 2,
-          "rewardValueKind": "rate",
-          "unit": null,
-          "monthlyCap": 10000,
-          "subcategory": "department_store"
-        }
-      ],
       "public_transit.taxi": [
         {
           "cardId": "hana-kakao-t-credit",
@@ -149949,6 +149669,68 @@
           "rewardValueKind": "rate",
           "unit": null,
           "monthlyCap": 5000
+        }
+      ],
+      "offline_shopping.department_store": [
+        {
+          "cardId": "kb-heritage-reserve",
+          "issuer": "kb",
+          "type": "points",
+          "rewardValue": 50000,
+          "rewardValueKind": "fixedAmount",
+          "unit": null,
+          "monthlyCap": null,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "samsung-the-id-1st",
+          "issuer": "samsung",
+          "type": "discount",
+          "rewardValue": 50000,
+          "rewardValueKind": "fixedAmount",
+          "unit": null,
+          "monthlyCap": 50000,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "hyundai-alphabet-s",
+          "issuer": "hyundai",
+          "type": "discount",
+          "rewardValue": 10,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 50000,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "kb-heritage-smart",
+          "issuer": "kb",
+          "type": "discount",
+          "rewardValue": 5,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": 50000,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "hyundai-genesis",
+          "issuer": "hyundai",
+          "type": "points",
+          "rewardValue": 3,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": null,
+          "subcategory": "department_store"
+        },
+        {
+          "cardId": "hyundai-mirae-asset-diamond",
+          "issuer": "hyundai",
+          "type": "points",
+          "rewardValue": 3,
+          "rewardValueKind": "rate",
+          "unit": null,
+          "monthlyCap": null,
+          "subcategory": "department_store"
         }
       ],
       "travel.hotel": [
@@ -151131,11 +150913,9 @@
       "hana-my-trip-asiana",
       "hana-shinseage-mile",
       "hana-simple-life",
-      "hana-skypass-amex-platinum",
       "hana-skypass-check",
       "hana-travellog-check",
       "hana-travellog-credit",
-      "hana-travellog-prestige",
       "hana-travellog-skypass",
       "hana-viva-g-check",
       "hana-wonder-2.0-free",
@@ -151153,8 +150933,6 @@
       "hyundai-emart-edition3-plus",
       "hyundai-gmarket-smile-check",
       "hyundai-gmarket-smile-edition3",
-      "hyundai-korean-air-edition2-060",
-      "hyundai-korean-air-edition2-120",
       "hyundai-lotte-dept-gold",
       "hyundai-lotte-dept-silver",
       "hyundai-m-edition2-premium",
@@ -151169,12 +150947,10 @@
       "hyundai-z-play-edition2",
       "hyundai-zero-up",
       "ibk-biz-plus",
-      "ibk-bliss5",
       "ibk-easy-cashback-check",
       "ibk-i-all-check",
       "ibk-i-all",
       "ibk-i-gihoo-donghaeng",
-      "ibk-i-mileage-kal",
       "ibk-i-point-check",
       "ibk-ibk-point-check",
       "ibk-infinite",
@@ -151194,7 +150970,6 @@
       "jeju-ub-credit",
       "kakao-jjupjjup-shinhan",
       "kakao-kpass-friends-check-v2",
-      "kb-asiana-ollim",
       "kb-bev-iii",
       "kb-coupang-rocket-check",
       "kb-coupang-wow",
@@ -151208,7 +150983,6 @@
       "kb-heritage-smart",
       "kb-jejuair-refresh",
       "kb-kakaopay-check",
-      "kb-mileage-gaon-asiana",
       "kb-min-check",
       "kb-modutour",
       "kb-nori2-check",
@@ -151235,7 +151009,6 @@
       "lotte-lottemart-check",
       "lotte-rollote-avenuel",
       "lotte-skypass-lotte-amex",
-      "lotte-skypass-lotte",
       "nh-classi-travel",
       "nh-gihoo-donghaeng-check",
       "nh-gs-retail-nh",
@@ -151251,7 +151024,6 @@
       "nh-zgm-the-pay",
       "nh-zgm-vacation",
       "samsung-amex-blue",
-      "samsung-and-mileage-platinum",
       "samsung-gongmu-pension",
       "samsung-id-all",
       "samsung-id-care",
@@ -151280,7 +151052,6 @@
       "sc-zero-edition3-discount",
       "shinhan-11st-check",
       "shinhan-11st",
-      "shinhan-air-one-plus",
       "shinhan-aliexpress",
       "shinhan-bom",
       "shinhan-cj-one-prism",
@@ -151304,7 +151075,6 @@
       "shinhan-simple-plan-platinum",
       "shinhan-simple-plan-plus",
       "shinhan-simple-plan",
-      "shinhan-singapore-air",
       "shinhan-sol-mate",
       "shinhan-sol-pay-check",
       "shinhan-sol-travel-check",
@@ -151334,7 +151104,6 @@
       "woori-opus-silver",
       "woori-point-plus",
       "woori-point",
-      "woori-premium-mileage-plus",
       "woori-travelwallet",
       "woori-two-chairs-w",
       "woori-uniq-plus",

@@ -34,7 +34,7 @@
 <!-- BEGIN GENERATED CARD INDEX -->
 ## 전체 카드 인덱스
 
-> YAML 기준 **67개** · 최적화 계산 가능 **60개** · 카탈로그 전용 **7개** · 최신 업데이트: `2026-03-26`
+> YAML 기준 **67개** · 최적화 계산 가능 **58개** · 카탈로그 전용 **9개** · 최신 업데이트: `2026-03-26`
 
 `계산 가능`은 현재 지원되는 혜택 규칙으로 추천 점수를 계산할 수 있다는 뜻입니다. `카탈로그 전용` 카드는 상세 정보만 제공하며 최적화 후보에서는 제외됩니다.
 
@@ -71,14 +71,14 @@
 | KB국민 마이위시 카드 | 신용 | 계산 가능 | [my-wesh.yaml](./my-wesh.yaml) |
 | KB국민 마이핏카드 적립형 | 신용 | 계산 가능 | [my-fit-points.yaml](./my-fit-points.yaml) |
 | KB국민 마이핏카드 할인형 | 신용 | 계산 가능 | [my-fit-discount.yaml](./my-fit-discount.yaml) |
-| KB국민 마일리지 가온카드 (아시아나) | 신용 | 계산 가능 | [mileage-gaon-asiana.yaml](./mileage-gaon-asiana.yaml) |
+| KB국민 마일리지 가온카드 (아시아나) | 신용 | 카탈로그 전용 | [mileage-gaon-asiana.yaml](./mileage-gaon-asiana.yaml) |
 | KB국민 민 체크카드 | 체크 | 계산 가능 | [min-check.yaml](./min-check.yaml) |
 | KB국민 반려愛카드 | 신용 | 계산 가능 | [petlove-kb.yaml](./petlove-kb.yaml) |
 | KB국민 베브 V 카드 | 신용 | 계산 가능 | [bev-v.yaml](./bev-v.yaml) |
 | KB국민 베브3 카드 | 신용 | 계산 가능 | [bev-iii.yaml](./bev-iii.yaml) |
 | KB국민 스카이패스 골드 카드 | 신용 | 계산 가능 | [skypass-gold.yaml](./skypass-gold.yaml) |
 | KB국민 스카이패스 티타늄카드 | 신용 | 카탈로그 전용 | [skypass-titanium.yaml](./skypass-titanium.yaml) |
-| KB국민 아시아나 올림카드 | 신용 | 계산 가능 | [asiana-ollim.yaml](./asiana-ollim.yaml) |
+| KB국민 아시아나 올림카드 | 신용 | 카탈로그 전용 | [asiana-ollim.yaml](./asiana-ollim.yaml) |
 | KB국민 알뜰폰Hub 카드 | 신용 | 카탈로그 전용 | [alddulpon-hub.yaml](./alddulpon-hub.yaml) |
 | KB국민 에버랜드 판다카드 | 신용 | 계산 가능 | [everland-panda.yaml](./everland-panda.yaml) |
 | KB국민 위시 트래블 카드 | 신용 | 계산 가능 | [wesh-travel.yaml](./wesh-travel.yaml) |

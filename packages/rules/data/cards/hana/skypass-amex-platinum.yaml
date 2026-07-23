@@ -46,7 +46,8 @@ rewards:
       minTransaction: 1000
       specificMerchants: []
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
   - category: '*'
     id: reward-002

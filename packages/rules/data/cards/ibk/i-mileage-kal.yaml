@@ -50,7 +50,8 @@ rewards:
       paymentType: domestic
       note: "국내 가맹점 1,000원당 대한항공 1마일 적립. 무한도"
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
   - category: travel
     id: reward-002
@@ -72,7 +73,8 @@ rewards:
       paymentType: overseas
       note: "해외 가맹점/면세점 1,000원당 추가 1마일 (총 2마일). 월 적립한도 2,000마일"
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
   - category: dining
     id: reward-003

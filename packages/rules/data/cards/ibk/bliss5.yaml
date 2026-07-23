@@ -46,7 +46,8 @@ rewards:
     conditions:
       note: "1,500원당 1마일 기본 적립. BLISS.7 대비 연회비 절반 수준의 실속형 프리미엄 카드"
     support:
-      status: supported
+      status: unsupported
+      reason: "mileage reward valuation contract is not modeled"
 
   - category: entertainment
     id: reward-002
