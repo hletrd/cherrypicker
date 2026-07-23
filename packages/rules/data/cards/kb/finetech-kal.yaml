@@ -29,7 +29,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 국내 이용 대한항공 마일리지 적립 (1500원당 1.2마일)
     type: points
     tiers:
@@ -41,8 +46,17 @@ rewards:
         rate: 0.08
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 해외 이용 대한항공 마일리지 적립 (1500원당 2마일)
     type: points
     tiers:
@@ -54,8 +68,17 @@ rewards:
         rate: 0.13
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: overseas
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 게임/커피/영화 대한항공 마일리지 특별 적립 (1500원당 3마일)
     type: points
     tiers:
@@ -72,6 +95,9 @@ rewards:
         - 게임
         - 커피전문점
         - 영화관
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

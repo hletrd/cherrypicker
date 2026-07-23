@@ -35,6 +35,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -51,8 +56,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "WiBee 온라인 쇼핑 및 간편결제 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: public_transit
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -67,8 +80,15 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: telecom
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -83,8 +103,15 @@ rewards:
         rate: 7.0
         monthlyCap: 7000
         perTransactionCap: null
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: points
     tiers:
       - performanceTier: tier0
@@ -99,6 +126,9 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: transportation
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -45,8 +50,15 @@ rewards:
         - GS칼텍스
         - S-OIL
         - 현대오일뱅크
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -63,8 +75,15 @@ rewards:
         - 롯데시네마
         - CGV
         - 메가박스
+    support:
+      status: supported
 
   - category: subscription
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -85,6 +104,9 @@ rewards:
         - 지니뮤직
         - 쿠팡로켓와우
         - 네이버플러스멤버십
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 13000

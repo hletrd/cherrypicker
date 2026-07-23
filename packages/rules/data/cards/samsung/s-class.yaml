@@ -29,7 +29,13 @@ performanceExclusions:
   - annual_fee
 
 rewards:
-  - category: electronics
+  - category: offline_shopping
+    subcategory: electronics
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 삼성 디지털프라자/삼성닷컴
     type: discount
     tiers:
@@ -41,8 +47,17 @@ rewards:
       specificMerchants:
         - 삼성 디지털프라자
         - 삼성닷컴
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
-  - category: department_store
+  - category: offline_shopping
+    subcategory: department_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 호텔신라/제일모직
     type: discount
     tiers:
@@ -53,8 +68,16 @@ rewards:
     conditions:
       specificMerchants:
         - 호텔신라
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 에버랜드
     type: discount
     tiers:
@@ -65,8 +88,15 @@ rewards:
     conditions:
       specificMerchants:
         - 에버랜드
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: CU편의점
     type: discount
     tiers:
@@ -77,8 +107,15 @@ rewards:
     conditions:
       specificMerchants:
         - CU
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: 온라인 간편결제
     type: discount
     tiers:
@@ -86,6 +123,9 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

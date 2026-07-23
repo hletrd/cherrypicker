@@ -38,6 +38,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -56,8 +61,15 @@ rewards:
         rate: 10.0
         monthlyCap: 16000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -85,8 +97,16 @@ rewards:
         - 슈퍼마켓
         - 프리미엄아울렛
         - 편의점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: transportation
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -112,8 +132,15 @@ rewards:
         - GS칼텍스
         - S-OIL
         - 현대오일뱅크
+    support:
+      status: supported
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -137,6 +164,8 @@ rewards:
       specificMerchants:
         - 스타벅스
         - 폴바셋
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: medical
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: hospital
     type: cashback
     tiers:
@@ -43,8 +48,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "병원·약국 실적 무관 1%, 전월 30만원 이상 시 2% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: medical
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: pharmacy
     type: cashback
     tiers:
@@ -56,8 +69,16 @@ rewards:
         rate: 2.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: offline_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: department_store
     type: cashback
     tiers:
@@ -71,8 +92,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "백화점·마트 실적 무관 1%, 전월 30만원 이상 시 2% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: grocery
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: supermarket
     type: cashback
     tiers:
@@ -84,8 +113,16 @@ rewards:
         rate: 2.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: transportation
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: fuel
     type: cashback
     tiers:
@@ -99,8 +136,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "주유소 실적 무관 1%, 전월 30만원 이상 시 2% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: public_transit
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -113,6 +158,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "대중교통 실적 무관 1%, 전월 30만원 이상 시 2% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

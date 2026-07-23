@@ -25,6 +25,11 @@ performanceExclusions:
 
 rewards:
   - category: travel
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 하나투어 여행상품 마일리지 적립
     type: points
     tiers:
@@ -35,8 +40,15 @@ rewards:
     conditions:
       specificMerchants:
         - 하나투어
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 전 가맹점 마일리지 기본 적립
     type: points
     tiers:
@@ -44,8 +56,15 @@ rewards:
         rate: 0.3
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: travel
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 하나투어 무이자 할부 (2~3개월, 5만원 이상)
     type: discount
     tiers:
@@ -57,6 +76,9 @@ rewards:
       minTransaction: 50000
       specificMerchants:
         - 하나투어
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

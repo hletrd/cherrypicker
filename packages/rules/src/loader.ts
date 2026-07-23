@@ -34,13 +34,20 @@ export async function loadAllCardRules(baseDir: string): Promise<CardRuleSet[]> 
   const settled = await Promise.allSettled(
     yamlFiles.map((filePath) => loadCardRule(filePath)),
   );
-  const results = [];
+  const results: CardRuleSet[] = [];
+  const failures: string[] = [];
   for (const outcome of settled) {
     if (outcome.status === 'fulfilled') {
       results.push(outcome.value);
     } else {
-      console.warn(`[rules] Failed to load card rule: ${outcome.reason}`);
+      failures.push(String(outcome.reason));
     }
+  }
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures.map((message) => new Error(message)),
+      `Refusing to load a partial card catalog: ${failures.length} of ${yamlFiles.length} files failed`,
+    );
   }
   return results;
 }

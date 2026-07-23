@@ -23,6 +23,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -32,8 +37,15 @@ rewards:
     conditions:
       minTransaction: null
       specificMerchants: []
+    support:
+      status: supported
 
   - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -43,8 +55,16 @@ rewards:
     conditions:
       minTransaction: null
       specificMerchants: []
+    support:
+      status: supported
 
-  - category: department_store
+  - category: offline_shopping
+    subcategory: department_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -54,6 +74,8 @@ rewards:
     conditions:
       minTransaction: null
       specificMerchants: []
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

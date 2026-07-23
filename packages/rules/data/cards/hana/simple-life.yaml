@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "Simple 서비스: 국내 전 가맹점 0.7% 할인 (무실적, 무제한)"
     type: discount
     tiers:
@@ -28,6 +33,10 @@ rewards:
         rate: 0.7
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

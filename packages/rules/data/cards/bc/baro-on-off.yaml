@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -45,8 +50,16 @@ rewards:
         perTransactionCap: 1000
     conditions:
       note: "온라인/간편결제 10% 할인. 건당 최대 1천원. 영역별 5천원, 통합 월 1만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -59,8 +72,15 @@ rewards:
         perTransactionCap: 1000
     conditions:
       note: "음식점/커피 10% 할인. 건당 최대 1천원. 영역별 5천원, 통합 월 1만원 한도"
+    support:
+      status: supported
 
   - category: public_transit
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -73,8 +93,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "버스/지하철/택시 10% 할인. 버스·지하철 각 월 최대 2천원. 영역별 5천원, 통합 월 1만원 한도"
+    support:
+      status: supported
 
   - category: travel
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -86,7 +113,10 @@ rewards:
         monthlyCap: 5000
         perTransactionCap: 1000
     conditions:
+      paymentType: overseas
       note: "해외 이용금액 10% 할인. 건당 최대 1천원. 영역별 5천원, 통합 월 1만원 한도"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

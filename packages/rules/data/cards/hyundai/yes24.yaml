@@ -35,7 +35,13 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: books
+  - category: education
+    subcategory: books
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: YES24 도서/음반/DVD
     type: points
     tiers:
@@ -54,8 +60,16 @@ rewards:
     conditions:
       specificMerchants:
         - YES24
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: YES24 그 외 상품
     type: points
     tiers:
@@ -74,8 +88,16 @@ rewards:
     conditions:
       specificMerchants:
         - YES24
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 일반 가맹점
     type: points
     tiers:
@@ -91,6 +113,8 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

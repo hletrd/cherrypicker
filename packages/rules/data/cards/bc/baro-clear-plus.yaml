@@ -43,6 +43,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -63,8 +68,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "점심식사(11~14시) 및 배달앱"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -89,8 +102,15 @@ rewards:
         - 11번가
         - G마켓
         - 옥션
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -109,8 +129,15 @@ rewards:
         rate: 10.0
         monthlyCap: 20000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: telecom
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -129,8 +156,15 @@ rewards:
         rate: 10.0
         monthlyCap: 20000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: streaming
     type: discount
     tiers:
@@ -150,6 +184,8 @@ rewards:
         rate: 10.0
         monthlyCap: 20000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

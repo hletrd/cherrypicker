@@ -38,6 +38,11 @@ performanceExclusions:
 
 rewards:
   - category: "dining"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "음식점/카페 적립"
     type: points
     tiers:
@@ -53,7 +58,14 @@ rewards:
         rate: 5.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "convenience_store"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "편의점 적립"
     type: points
     tiers:
@@ -69,7 +81,14 @@ rewards:
         rate: 5.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "online_shopping"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "온라인쇼핑 적립"
     type: points
     tiers:
@@ -85,7 +104,14 @@ rewards:
         rate: 5.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "telecom"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "통신비 적립"
     type: points
     tiers:
@@ -101,7 +127,14 @@ rewards:
         rate: 10.0
         monthlyCap: 7000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "subscription"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "OTT 구독 (넷플릭스/유튜브프리미엄 등) 적립"
     type: points
     tiers:
@@ -117,7 +150,15 @@ rewards:
         rate: 15.0
         monthlyCap: 7000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
   - category: "subscription"
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     label: "멤버십 서비스 (네이버플러스/쿠팡와우 등) 적립"
     type: points
     tiers:
@@ -133,6 +174,9 @@ rewards:
         rate: 20.0
         monthlyCap: 7000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

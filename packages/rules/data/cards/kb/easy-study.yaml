@@ -36,6 +36,11 @@ performanceExclusions:
 
 rewards:
   - category: "education"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "학원/취미/자기계발 3% 청구할인"
     type: discount
     tiers:
@@ -60,7 +65,15 @@ rewards:
         - 학원
         - 취미교실
         - 자기계발
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
   - category: "education"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "온라인강의/서점/문구 5% 청구할인"
     type: discount
     tiers:
@@ -85,7 +98,15 @@ rewards:
         - 온라인강의
         - 서점
         - 문구
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
   - category: "sports"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "수영장/요가/레포츠클럽 3% 청구할인"
     type: discount
     tiers:
@@ -101,6 +122,8 @@ rewards:
         rate: 3.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

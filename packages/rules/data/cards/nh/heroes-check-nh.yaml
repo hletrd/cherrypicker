@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: education
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -48,8 +53,16 @@ rewards:
         - 알라딘
         - 인터파크도서
       note: "외국어학원·서점·어학시험(토익·TEPS·JPT·KPE)·스포츠센터 10% 할인"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: streaming
     type: discount
     tiers:
@@ -68,8 +81,16 @@ rewards:
         - 웨이브
         - 티빙
       note: "월 2회, 각 5000원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit; merchant category is not reachable by the canonical matcher"
 
   - category: public_transit
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -85,8 +106,16 @@ rewards:
         - 코레일
         - 고속버스
       note: "철도·고속버스 20% 할인 (월 2회, 각 5000원)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit; merchant category is not reachable by the canonical matcher"
 
   - category: telecom
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -102,6 +131,8 @@ rewards:
         - SK텔레콤
         - KT
         - LG유플러스
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

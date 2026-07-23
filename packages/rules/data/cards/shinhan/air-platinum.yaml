@@ -29,7 +29,13 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "airline"
+  - category: travel
+    subcategory: airline
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "대한항공/아시아나 마일리지 적립 (택1, 1500원당 1마일)"
     type: points
     tiers:
@@ -45,7 +51,16 @@ rewards:
         unit: "mile_per_1500won"
         monthlyCap: null
         perTransactionCap: null
-  - category: "fuel"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
+  - category: transportation
+    subcategory: fuel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "주유 마이신한포인트 추가 적립"
     type: points
     tiers:
@@ -53,7 +68,14 @@ rewards:
         rate: 2.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "travel"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "해외 일시불 마이신한포인트 추가 적립"
     type: points
     tiers:
@@ -61,6 +83,8 @@ rewards:
         rate: 2.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

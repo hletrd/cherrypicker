@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: transportation
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 전기/수소차 충전 포인트리 적립 50%
     type: points
     tiers:
@@ -45,8 +50,15 @@ rewards:
       specificMerchants:
         - 전기차 충전소
         - 수소충전소
+    support:
+      status: supported
 
   - category: grocery
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 친환경 식품 전문 브랜드 포인트리 적립 5%
     type: points
     tiers:
@@ -64,8 +76,16 @@ rewards:
         - 올가홀푸드
         - 바이올가
         - 초록마을
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 친환경 포장 배송 쇼핑몰 포인트리 적립 5%
     type: points
     tiers:
@@ -82,6 +102,9 @@ rewards:
       specificMerchants:
         - 쓱닷컴
         - 쿠팡
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

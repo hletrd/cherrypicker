@@ -20,8 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: travel
-    subcategory: overseas
+  - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -32,8 +36,16 @@ rewards:
       specificMerchants:
         - 몰테일
       note: "몰테일 배송비 결제 시 몰테일캐시 3% 적립"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -42,14 +54,24 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "국내 온라인 쇼핑 1% 하나머니 적립"
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
         rate: 0.7
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -2,7 +2,9 @@
 
 > 마지막 업데이트: 2026-03-24
 
-## 카드 목록
+> 이 디렉터리에는 총 22개 카드 YAML이 있습니다. 아래 표는 대표 상품만 요약합니다.
+
+## 대표 카드
 
 | 카드명 | 연회비 | 주요 혜택 | 전월실적 |
 |--------|--------|-----------|----------|
@@ -47,3 +49,34 @@
 - 바로 마카오카드는 주유/장보기를 많이 할수록 할인율이 올라가는 변동형 할인 카드입니다.
 - 바로 에어 플러스 아시아나는 무실적 무한도로 1천원당 1.3 아시아나 마일리지를 적립합니다.
 - 신세계 푸빌라 카드는 신세계그룹 전체에서 무실적 무한도 할인을 제공하는 제휴 카드입니다.
+
+<!-- BEGIN GENERATED CARD INDEX -->
+## 전체 카드 인덱스
+
+> YAML 기준 **22개** · 최신 업데이트: `2026-03-26`
+
+| 카드명 | 유형 | YAML |
+|---|---:|---|
+| BC 바로 BabBara 체크 | 체크 | [baro-barbara-check.yaml](./baro-barbara-check.yaml) |
+| BC 바로 K-패스 카드 | 신용 | [baro-k-pass.yaml](./baro-k-pass.yaml) |
+| BC 바로 KT My Budget Phone | 신용 | [baro-kt-budget.yaml](./baro-kt-budget.yaml) |
+| BC 바로 On&amp;Off 카드 | 신용 | [baro-on-off.yaml](./baro-on-off.yaml) |
+| BC 바로 Paybook Money 체크 | 체크 | [baro-paybook-check.yaml](./baro-paybook-check.yaml) |
+| BC 바로 리워드 플러스 | 신용 | [baro-reward-plus.yaml](./baro-reward-plus.yaml) |
+| BC 바로 마카오카드 | 신용 | [baro-macao.yaml](./baro-macao.yaml) |
+| BC 바로 에어 플러스 스카이패스 | 신용 | [baro-air-plus-skypass.yaml](./baro-air-plus-skypass.yaml) |
+| BC 바로 에어 플러스 아시아나 | 신용 | [baro-air-plus-asiana.yaml](./baro-air-plus-asiana.yaml) |
+| BC 바로 카픽플러스 | 신용 | [baro-kapick-plus.yaml](./baro-kapick-plus.yaml) |
+| BC 바로 클리어 플러스 | 신용 | [baro-clear-plus.yaml](./baro-clear-plus.yaml) |
+| BC 바로 페이백 플러스 | 신용 | [baro-payback-plus.yaml](./baro-payback-plus.yaml) |
+| BC 바로카드 KaPick | 신용 | [baro-kapick.yaml](./baro-kapick.yaml) |
+| BC 바로카드 Lost Ark | 신용 | [baro-lost-ark.yaml](./baro-lost-ark.yaml) |
+| BC 어디로든 그린 EV | 신용 | [bc-green-ev.yaml](./bc-green-ev.yaml) |
+| BC카드 KT SUPER+ | 신용 | [kt-super-plus.yaml](./kt-super-plus.yaml) |
+| BC카드 그린카드 | 신용 | [green-card.yaml](./green-card.yaml) |
+| BC카드 컬리카드 | 신용 | [curly.yaml](./curly.yaml) |
+| GOAT BC 바로카드 | 신용 | [goat.yaml](./goat.yaml) |
+| 신세계 BC 바로 세븐 플렉스 | 신용 | [shinsegae-seven-flex.yaml](./shinsegae-seven-flex.yaml) |
+| 신세계 BC 바로 콰트로 플러스 | 신용 | [baro-quattro-plus.yaml](./baro-quattro-plus.yaml) |
+| 신세계 푸빌라 BC 바로카드 | 신용 | [shinsegae-fubilla.yaml](./shinsegae-fubilla.yaml) |
+<!-- END GENERATED CARD INDEX -->

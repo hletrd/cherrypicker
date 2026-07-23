@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 평일 0.2% 캐시백
     type: cashback
     tiers:
@@ -28,8 +33,18 @@ rewards:
         rate: 0.2
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      weekdays: [1, 2, 3, 4, 5]
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 주말 0.3% 캐시백
     type: cashback
     tiers:
@@ -37,8 +52,18 @@ rewards:
         rate: 0.3
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      weekdays: [0, 6]
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 수요일 0.7% 캐시백
     type: cashback
     tiers:
@@ -46,6 +71,11 @@ rewards:
         rate: 0.7
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      weekdays: [3]
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

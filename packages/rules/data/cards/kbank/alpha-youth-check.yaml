@@ -22,6 +22,11 @@ performanceExclusions:
 
 rewards:
   - category: convenience_store
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -32,8 +37,15 @@ rewards:
       specificMerchants:
         - GS25
       note: "만 14~17세 청소년 전용 카드. 교통카드 충전 기능 포함"
+    support:
+      status: supported
 
-  - category: health
+  - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: beauty
     type: discount
     tiers:
@@ -45,8 +57,16 @@ rewards:
       specificMerchants:
         - 올리브영
         - 다이소
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: discount
     tiers:
@@ -57,8 +77,15 @@ rewards:
     conditions:
       specificMerchants:
         - 메가커피
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -69,8 +96,15 @@ rewards:
       specificMerchants:
         - 무신사
         - 에이블리
+    support:
+      status: supported
 
   - category: dining
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: delivery
     type: discount
     tiers:
@@ -82,6 +116,8 @@ rewards:
       specificMerchants:
         - 배달의민족
       note: "3의 배수 결제 시마다 별 획득, 별 교환소에서 쿠폰으로 교환 (월 최대 5,000원 할인)"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 5000

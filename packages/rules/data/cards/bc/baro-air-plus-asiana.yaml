@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -29,6 +34,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "1천원당 1.3 아시아나 마일리지 적립. 무실적 무한도. 제세공과금/관리비/상품권/무이자할부도 적립 대상. 100만원당 300마일리지 추가 적립"
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

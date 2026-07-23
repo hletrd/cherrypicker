@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: subscription
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -45,8 +50,16 @@ rewards:
         - 티빙
         - 쿠팡
         - 스타벅스
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -59,6 +72,8 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "국내외 전 가맹점 0.5% 기본 청구할인 (무실적, 무한도)"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

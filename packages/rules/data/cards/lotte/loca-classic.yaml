@@ -29,7 +29,12 @@ performanceExclusions:
   - tuition
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "전 가맹점 0.5% 할인 (무실적)"
     type: discount
     tiers:
@@ -41,6 +46,8 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -27,7 +27,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,16 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 1500
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -58,8 +71,15 @@ rewards:
         - 쿠팡
         - G마켓
         - 옥션
+    support:
+      status: supported
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -75,8 +95,15 @@ rewards:
       specificMerchants:
         - 스타벅스
         - 커피빈
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -92,8 +119,15 @@ rewards:
       specificMerchants:
         - CU
         - GS25
+    support:
+      status: supported
 
   - category: travel
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -108,6 +142,9 @@ rewards:
       minTransaction: 1500
       specificMerchants:
         - 해외가맹점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

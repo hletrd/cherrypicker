@@ -30,7 +30,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -43,8 +48,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "전 가맹점 카카오페이 포인트 적립. 무실적 무한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -57,8 +70,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: delivery
     type: points
     tiers:
@@ -72,8 +93,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: grocery
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: supermarket
     type: points
     tiers:
@@ -87,8 +116,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: dining
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: cafe
     type: points
     tiers:
@@ -102,8 +139,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: convenience_store
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: points
     tiers:
       - performanceTier: tier0
@@ -116,8 +161,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: public_transit
+    id: reward-007
+    priority: 7
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-007
     type: points
     tiers:
       - performanceTier: tier0
@@ -130,8 +183,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: transportation
+    id: reward-008
+    priority: 8
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-008
     subcategory: fuel
     type: points
     tiers:
@@ -145,8 +206,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: telecom
+    id: reward-009
+    priority: 9
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-009
     type: points
     tiers:
       - performanceTier: tier0
@@ -159,8 +228,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "카카오페이 포인트 적립. 리빙·멤버십 통합 월 4만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: entertainment
+    id: reward-010
+    priority: 10
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-010
     subcategory: streaming
     type: points
     tiers:
@@ -174,6 +251,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "카카오페이 포인트 적립. 멤버십 영역. 리빙·멤버십 통합 월 4만원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: 40000

@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -28,11 +33,20 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      weekdays: [1, 2, 3, 4, 5]
       minTransaction: null
       specificMerchants: []
       note: "평일 0.2%, 주말/공휴일 0.4% 캐시백. 실적/한도 제한 없음"
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -47,8 +61,16 @@ rewards:
         - 메가MGC커피
         - 빽다방
       note: "프로모션 시즌12. 배달의민족 2만원 이상 1000원, 저가커피 3사 2000원 이상 100원"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -60,8 +82,16 @@ rewards:
       specificMerchants:
         - GS25
       note: "프로모션 시즌12. GS25 건당 5000원 이상 100원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: public_transit
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -72,8 +102,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "프로모션 시즌12. 후불교통(버스/지하철) 월 5만원 이상 이용 시 4000원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: transportation
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -85,8 +123,16 @@ rewards:
       specificMerchants:
         - GS칼텍스
       note: "프로모션 시즌12. GS칼텍스 3만원 이상 3000원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: offline_shopping
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -98,8 +144,16 @@ rewards:
       specificMerchants:
         - 다이소
       note: "프로모션 시즌12. 다이소 2만원 이상 1000원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: online_shopping
+    id: reward-007
+    priority: 7
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-007
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -111,8 +165,16 @@ rewards:
       specificMerchants:
         - 쿠팡
       note: "프로모션 시즌12. 쿠팡 3만원 이상 1000원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: education
+    id: reward-008
+    priority: 8
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-008
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -123,8 +185,16 @@ rewards:
       minTransaction: 100000
       specificMerchants: []
       note: "프로모션 시즌12. 학원업종 10만원 이상 1만원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: medical
+    id: reward-009
+    priority: 9
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-009
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -135,6 +205,9 @@ rewards:
       minTransaction: 200000
       specificMerchants: []
       note: "프로모션 시즌12. 병원업종 20만원 이상 1만원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: 29000

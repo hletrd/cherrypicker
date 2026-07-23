@@ -61,6 +61,13 @@ categories:
           - 요기요
           - 쿠팡이츠
           - 배달
+      - id: bakery
+        labelKo: 베이커리
+        labelEn: Bakery
+        keywords:
+          - 베이커리
+          - 제과점
+          - 빵집
 
   - id: grocery
     labelKo: 식료품/마트
@@ -101,6 +108,12 @@ categories:
           - 쓱닷컴
           - 오아시스마켓
           - 헬로네이처
+      - id: local_shopping
+        labelKo: 지역상점
+        labelEn: Local Shopping
+        keywords:
+          - 동네마트
+          - 지역상점
 
   - id: convenience_store
     labelKo: 편의점
@@ -187,6 +200,41 @@ categories:
           - 통행료
           - 고속도로
           - 한국도로공사
+      - id: ev_charging
+        labelKo: 전기차 충전
+        labelEn: EV Charging
+        keywords:
+          - 전기차충전
+          - 전기차 충전
+          - EV충전
+          - EV 충전
+          - 환경부충전소
+          - 에버온
+          - 차지비
+      - id: car_maintenance
+        labelKo: 차량정비
+        labelEn: Car Maintenance
+        keywords:
+          - 차량정비
+          - 자동차정비
+          - 정비소
+          - 타이어
+      - id: shared_mobility
+        labelKo: 공유 모빌리티
+        labelEn: Shared Mobility
+        keywords:
+          - 따릉이
+          - 킥고잉
+          - 씽씽
+          - 쏘카
+          - 그린카
+      - id: rental
+        labelKo: 렌탈
+        labelEn: Rental
+        keywords:
+          - 렌탈
+          - 렌터카
+          - 렌트카
 
   - id: online_shopping
     labelKo: 온라인쇼핑
@@ -223,6 +271,24 @@ categories:
           - 마이무스
           - 브랜디
           - 하고
+      - id: simple_pay
+        labelKo: 간편결제
+        labelEn: Simple Pay
+        keywords:
+          - 네이버페이
+          - 카카오페이
+          - 삼성페이
+          - 페이코
+          - 토스페이
+      - id: home_shopping
+        labelKo: 홈쇼핑
+        labelEn: Home Shopping
+        keywords:
+          - 홈쇼핑
+          - GS SHOP
+          - CJ온스타일
+          - 현대홈쇼핑
+          - 롯데홈쇼핑
 
   - id: offline_shopping
     labelKo: 오프라인쇼핑
@@ -244,6 +310,35 @@ categories:
           - 갤러리아
           - AK플라자
           - NC백화점
+      - id: beauty
+        labelKo: 미용
+        labelEn: Beauty Services
+        keywords:
+          - 미용실
+          - 헤어샵
+          - 네일샵
+      - id: electronics
+        labelKo: 전자제품
+        labelEn: Electronics
+        keywords:
+          - 삼성디지털프라자
+          - 삼성 디지털프라자
+          - LG베스트샵
+          - 롯데하이마트
+          - 하이마트
+      - id: home_living
+        labelKo: 홈/리빙
+        labelEn: Home & Living
+        keywords:
+          - 이케아
+          - IKEA
+          - 가구
+          - 생활용품
+      - id: daiso
+        labelKo: 다이소
+        labelEn: Daiso
+        keywords:
+          - 다이소
 
   - id: telecom
     labelKo: 통신
@@ -341,6 +436,15 @@ categories:
           - 반디앤루니스
           - 도서
           - 서점
+      - id: language_exam
+        labelKo: 어학/시험
+        labelEn: Language & Exams
+        keywords:
+          - 어학시험
+          - 토익
+          - 토플
+          - 텝스
+          - 자격시험
 
   - id: entertainment
     labelKo: 여가/문화
@@ -376,6 +480,34 @@ categories:
           - 스포티파이
           - 멜론
           - 지니뮤직
+      - id: gaming
+        labelKo: 게임
+        labelEn: Gaming
+        keywords:
+          - 게임
+          - 넥슨
+          - 엔씨소프트
+          - 스팀
+          - 플레이스테이션
+
+  - id: sports
+    labelKo: 스포츠
+    labelEn: Sports
+    keywords:
+      - 스포츠센터
+      - 헬스장
+      - 수영장
+      - 요가
+      - 레포츠
+    subcategories:
+      - id: golf
+        labelKo: 골프
+        labelEn: Golf
+        keywords:
+          - 골프
+          - 골프장
+          - 골프연습장
+          - 골프존
 
   - id: travel
     labelKo: 여행

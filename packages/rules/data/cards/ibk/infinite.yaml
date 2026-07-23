@@ -23,6 +23,11 @@ performanceExclusions:
 
 rewards:
   - category: travel
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: airline
     type: discount
     tiers:
@@ -32,8 +37,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "공항 라운지 무료 이용, 발렛파킹, 골프 그린피 할인 등 프리미엄 서비스"
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -42,14 +54,24 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "특급호텔 다이닝 및 프리미엄 레스토랑 할인"
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -27,6 +27,11 @@ performanceExclusions:
 
 rewards:
   - category: "travel"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "항공 마일리지 적립 (스카이패스 1,500원당 1마일)"
     type: mileage
     tiers:
@@ -38,7 +43,14 @@ rewards:
         rate: 0.067
         monthlyCap: null
         perTransactionCap: null
-  - category: "uncategorized"
+    support:
+      status: supported
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "전 가맹점 기본 적립"
     type: points
     tiers:
@@ -50,6 +62,8 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

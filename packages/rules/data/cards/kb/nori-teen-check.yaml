@@ -31,6 +31,11 @@ performanceExclusions:
 
 rewards:
   - category: "convenience_store"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "편의점/다이소/올리브영 5% 할인"
     type: discount
     tiers:
@@ -51,7 +56,15 @@ rewards:
         - 편의점
         - 다이소
         - 올리브영
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
   - category: "education"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "스터디카페/문구 5% 할인"
     type: discount
     tiers:
@@ -72,7 +85,15 @@ rewards:
         - 스터디카페
         - 독서실
         - 문구
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
   - category: "entertainment"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "PC방/모바일 앱스토어 5% 할인 (만 16세 이상)"
     type: discount
     tiers:
@@ -89,7 +110,14 @@ rewards:
         - PC방
         - 앱스토어
         - 구글플레이
+    support:
+      status: supported
   - category: "uncategorized"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "KB Pay 오프라인 결제 2% 할인"
     type: discount
     tiers:
@@ -105,6 +133,11 @@ rewards:
         rate: 2.0
         monthlyCap: 5000
         perTransactionCap: null
+    conditions:
+      channel: offline
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

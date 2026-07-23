@@ -29,7 +29,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -43,8 +48,16 @@ rewards:
     conditions:
       minTransaction: null
       specificMerchants: []
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
   - category: subscription
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -60,8 +73,16 @@ rewards:
         - 쿠팡 로켓와우
         - 네이버플러스 멤버십
         - SSG 멤버십
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: subscription
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -79,8 +100,16 @@ rewards:
         - 웨이브
         - 쿠팡플레이
         - 디즈니플러스
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: telecom
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -91,6 +120,8 @@ rewards:
         rate: 5.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

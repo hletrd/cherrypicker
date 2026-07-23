@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -40,9 +45,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "제주 지역 음식점 할인"
+    support:
+      status: supported
 
   - category: travel
-    subcategory: accommodation
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
+    subcategory: hotel
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -55,8 +67,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "제주 지역 숙박 할인"
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -67,6 +86,9 @@ rewards:
         rate: 0.2
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

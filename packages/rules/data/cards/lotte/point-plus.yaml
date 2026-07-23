@@ -23,6 +23,11 @@ performanceExclusions:
 
 rewards:
   - category: "uncategorized"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "L.POINT 제휴사 이용 시 L.POINT 더블 적립"
     type: points
     tiers:
@@ -38,7 +43,16 @@ rewards:
         - 롯데시네마
         - 올리브영
         - 세븐일레븐
-  - category: "department_store"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
+  - category: offline_shopping
+    subcategory: department_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "롯데백화점 6개월 할부 무이자"
     type: points
     tiers:
@@ -46,6 +60,9 @@ rewards:
         rate: 0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

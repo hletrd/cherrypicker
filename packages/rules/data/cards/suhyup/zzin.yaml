@@ -31,6 +31,11 @@ performanceExclusions: []
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -54,8 +59,16 @@ rewards:
         - 엔제리너스
         - 이디야
       note: "커피전문점 청구할인. 건당 5000원 이상"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: medical
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -74,8 +87,16 @@ rewards:
       minTransaction: 5000
       specificMerchants: []
       note: "병원/의료기관 청구할인. 건당 5000원 이상"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: subscription
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -96,8 +117,16 @@ rewards:
         - 넷플릭스
         - 유튜브 프리미엄
       note: "OTT 청구할인. 월 1건 한정. 건당 5000원 이상"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit; merchant category is not reachable by the canonical matcher"
 
   - category: online_shopping
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -121,6 +150,9 @@ rewards:
         - 배달의민족
         - 요기요
       note: "온라인배송/배달 청구할인. 건당 5000원 이상"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

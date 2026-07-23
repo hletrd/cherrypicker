@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: "online_shopping"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "네이버페이 온라인 간편결제 10% 네이버페이 포인트 적립"
     type: points
     tiers:
@@ -44,7 +49,15 @@ rewards:
     conditions:
       specificMerchants:
         - 네이버페이 온라인
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
   - category: "dining"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "커피전문점/편의점/배달앱 5% 네이버페이 포인트 적립"
     type: points
     tiers:
@@ -63,7 +76,15 @@ rewards:
         - 배달의민족
         - 쿠팡이츠
         - 요기요
-  - category: "uncategorized"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method; merchant category is not reachable by the canonical matcher"
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "국내외 오프라인 가맹점 0.5% 네이버페이 포인트 적립"
     type: points
     tiers:
@@ -75,6 +96,11 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      channel: offline
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

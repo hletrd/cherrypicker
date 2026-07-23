@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -53,8 +58,16 @@ rewards:
         - 우리WON페이
         - 네이버페이
         - 카카오페이
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -69,6 +82,9 @@ rewards:
         rate: 0.8
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

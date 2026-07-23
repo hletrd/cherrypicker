@@ -35,6 +35,11 @@ performanceExclusions:
 
 rewards:
   - category: telecom
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -52,8 +57,15 @@ rewards:
     conditions:
       specificMerchants:
         - SK텔레콤
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: fuel
     type: discount
     tiers:
@@ -73,8 +85,16 @@ rewards:
       note: "SK주유소 휘발유·경유 100원/L(tier1), 150원/L(tier2)"
       specificMerchants:
         - SK주유소
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -89,8 +109,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: grocery
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: supermarket
     type: discount
     tiers:
@@ -111,6 +138,9 @@ rewards:
         - 이마트
         - 홈플러스
         - 롯데마트
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

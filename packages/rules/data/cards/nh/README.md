@@ -2,7 +2,9 @@
 
 > 마지막 업데이트: 2026-03-24
 
-## 카드 목록
+> 이 디렉터리에는 총 49개 카드 YAML이 있습니다. 아래 표는 대표 상품만 요약합니다.
+
+## 대표 카드
 
 | 카드명 | 연회비 | 주요 혜택 | 전월실적 |
 |--------|--------|-----------|----------|
@@ -46,3 +48,61 @@
 - 올바른 하나로카드는 농협 판매장(하나로마트) 이용이 많은 고객을 위한 제휴 카드입니다.
 - zgm living 카드는 주유/공과금/교육/통신/보험 5대 생활영역에 집중한 적립형 카드입니다.
 - 나무 NH농협카드는 나무증권 고객을 위한 제휴 카드로 5개 할인영역 중 2개를 선택합니다.
+
+<!-- BEGIN GENERATED CARD INDEX -->
+## 전체 카드 인덱스
+
+> YAML 기준 **49개** · 최신 업데이트: `2026-03-26`
+
+| 카드명 | 유형 | YAML |
+|---|---:|---|
+| NH농협 K-패스 체크카드 | 체크 | [k-pass-check.yaml](./k-pass-check.yaml) |
+| NH농협 K-패스카드 | 신용 | [k-pass-nh.yaml](./k-pass-nh.yaml) |
+| NH농협 PETvely 펫블리 | 신용 | [petbly.yaml](./petbly.yaml) |
+| NH농협 SOHO 다사로이+ | 신용 | [soho-dasaroi.yaml](./soho-dasaroi.yaml) |
+| NH농협 TAKE5(테이크5)카드 | 신용 | [take5.yaml](./take5.yaml) |
+| NH농협 zgm living 카드 | 신용 | [zgm-living.yaml](./zgm-living.yaml) |
+| NH농협 zgm 할인카드 | 신용 | [zgm-discount.yaml](./zgm-discount.yaml) |
+| NH농협 zgm.play | 신용 | [zgm-play.yaml](./zgm-play.yaml) |
+| NH농협 zgm.the pay 카드 | 신용 | [zgm-the-pay.yaml](./zgm-the-pay.yaml) |
+| NH농협 zgm.일본여행중 | 신용 | [zgm-japan.yaml](./zgm-japan.yaml) |
+| NH농협 zgm.휴가중 카드 | 신용 | [zgm-vacation.yaml](./zgm-vacation.yaml) |
+| NH농협 기후동행카드 | 신용 | [gihoo-donghaeng.yaml](./gihoo-donghaeng.yaml) |
+| NH농협 별다줄카드 | 신용 | [byeoldajul.yaml](./byeoldajul.yaml) |
+| NH농협 쏠쏠++카드 | 신용 | [solsol-plus.yaml](./solsol-plus.yaml) |
+| NH농협 올바른 FLEX 카드 | 신용 | [olbareun-flex.yaml](./olbareun-flex.yaml) |
+| NH농협 올바른 POINT 카드 | 신용 | [olbareun-point.yaml](./olbareun-point.yaml) |
+| NH농협 올바른 체크카드 | 체크 | [olbareun-check.yaml](./olbareun-check.yaml) |
+| NH농협 올바른 하나로카드 | 신용 | [olbareun-hanaro.yaml](./olbareun-hanaro.yaml) |
+| NH농협 올바른Edu | 신용 | [olbareun-edu.yaml](./olbareun-edu.yaml) |
+| NH농협 올바른NEW HAVE+ | 신용 | [olbareun-new-have.yaml](./olbareun-new-have.yaml) |
+| NH농협 올바른TRAVEL | 신용 | [olbareun-travel.yaml](./olbareun-travel.yaml) |
+| NH농협 지금 해외결제 카드 | 신용 | [zgm-overseas.yaml](./zgm-overseas.yaml) |
+| NH농협 클래시 트래블 | 신용 | [classi-travel.yaml](./classi-travel.yaml) |
+| NH농협카드 GOODGAME 체크 | 체크 | [goodgame-check.yaml](./goodgame-check.yaml) |
+| NH농협카드 GS리테일 NH | 신용 | [gs-retail-nh.yaml](./gs-retail-nh.yaml) |
+| NH농협카드 KT할부 Plus | 신용 | [kt-installment-nh.yaml](./kt-installment-nh.yaml) |
+| NH농협카드 ON PLATINUM | 신용 | [on-platinum.yaml](./on-platinum.yaml) |
+| NH농협카드 SolSol 기본형 | 신용 | [solsol.yaml](./solsol.yaml) |
+| NH농협카드 zgm.고향으로 | 신용 | [zgm-hometown.yaml](./zgm-hometown.yaml) |
+| NH농협카드 Ü Card | 신용 | [u-card.yaml](./u-card.yaml) |
+| NH농협카드 기후동행 신용 NH | 신용 | [gihoo-donghaeng-credit-nh.yaml](./gihoo-donghaeng-credit-nh.yaml) |
+| NH농협카드 기후동행 체크카드 | 체크 | [gihoo-donghaeng-check.yaml](./gihoo-donghaeng-check.yaml) |
+| NH농협카드 라이언 치즈 체크 | 체크 | [ryan-cheese-check.yaml](./ryan-cheese-check.yaml) |
+| NH농협카드 미미카드 | 신용 | [mimi.yaml](./mimi.yaml) |
+| NH농협카드 어피치 스윗 체크 | 체크 | [apeach-sweet-check.yaml](./apeach-sweet-check.yaml) |
+| NH농협카드 올바른 LIFE 적립형 | 신용 | [olbareun-life-points.yaml](./olbareun-life-points.yaml) |
+| NH농협카드 올바른 LIFE 할인형 | 신용 | [olbareun-life-discount.yaml](./olbareun-life-discount.yaml) |
+| NH농협카드 올바른 OIL | 신용 | [olbareun-oil.yaml](./olbareun-oil.yaml) |
+| NH농협카드 올바른 TRAVEL 일본 | 신용 | [olbareun-travel-japan.yaml](./olbareun-travel-japan.yaml) |
+| NH농협카드 춘식이달달 체크카드 | 체크 | [chunsik-daltal-check.yaml](./chunsik-daltal-check.yaml) |
+| NH농협카드 트래블리 체크카드 | 체크 | [travellee-check.yaml](./travellee-check.yaml) |
+| NH농협카드 폼 체크 | 체크 | [pom-check.yaml](./pom-check.yaml) |
+| NH농협카드 히어로즈 체크 | 체크 | [heroes-check-nh.yaml](./heroes-check-nh.yaml) |
+| NH올원 파이카드 | 신용 | [allone-pai.yaml](./allone-pai.yaml) |
+| 나무 NH농협카드 | 신용 | [namu.yaml](./namu.yaml) |
+| 올바른 바직플러스 카드 | 신용 | [olbareun-bazic-plus.yaml](./olbareun-bazic-plus.yaml) |
+| 지금 쇼핑 카드 | 신용 | [zgm-shopping.yaml](./zgm-shopping.yaml) |
+| 지금 스트리밍 카드 | 신용 | [zgm-streaming.yaml](./zgm-streaming.yaml) |
+| 지금 플레이플러스 카드 | 신용 | [zgm-play-plus.yaml](./zgm-play-plus.yaml) |
+<!-- END GENERATED CARD INDEX -->

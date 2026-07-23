@@ -34,6 +34,11 @@ performanceExclusions:
 
 rewards:
   - category: "dining"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "맞춤 할인 (카페/배달앱/델리 중 최다이용 1개)"
     type: discount
     tiers:
@@ -45,7 +50,14 @@ rewards:
         rate: 30.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "telecom"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "이동통신요금 정기결제"
     type: discount
     tiers:
@@ -57,7 +69,14 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "public_transit"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "대중교통 (버스/지하철/택시)"
     type: discount
     tiers:
@@ -69,7 +88,14 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "subscription"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "스트리밍 (넷플릭스/티빙/웨이브/왓챠/멜론/FLO)"
     type: discount
     tiers:
@@ -81,7 +107,14 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "online_shopping"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "온라인 간편결제 (한도 없음)"
     type: discount
     tiers:
@@ -93,6 +126,9 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: 40000

@@ -38,6 +38,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -63,8 +68,16 @@ rewards:
         - G마켓
         - 올리브영
         - 오늘의집
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method; merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -91,8 +104,16 @@ rewards:
         - 메가MGC커피
         - 빽다방
         - 컴포즈커피
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: telecom
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
@@ -113,8 +134,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "생픽(SKT, KT, LGU+ 자동이체, 버스, 지하철, 카카오T, CGV 등) 7% 카카오페이포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method; unmodeled eligibility: account_or_autopay"
 
   - category: uncategorized
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: points
     tiers:
       - performanceTier: tier0
@@ -135,6 +164,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "바로카드 Pick 가맹점 외 카카오페이 결제 시 1% 적립 (전월실적/한도 무관)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

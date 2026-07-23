@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -31,8 +36,16 @@ rewards:
       minTransaction: null
       specificMerchants:
         - 하나원큐페이
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -42,14 +55,24 @@ rewards:
     conditions:
       minTransaction: null
       specificMerchants: []
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
         rate: 0.8
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

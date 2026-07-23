@@ -33,7 +33,12 @@ performanceExclusions:
   - annual_fee
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "전 가맹점 포인트 적립"
     type: points
     tiers:
@@ -49,7 +54,15 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
-  - category: "fuel"
+    support:
+      status: supported
+  - category: transportation
+    subcategory: fuel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "S-OIL 주유 보너스포인트 적립"
     type: points
     tiers:
@@ -65,7 +78,14 @@ rewards:
         unit: "won_per_liter"
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "entertainment"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "놀이공원/프로스포츠 할인"
     type: discount
     tiers:
@@ -77,6 +97,8 @@ rewards:
         rate: 30.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

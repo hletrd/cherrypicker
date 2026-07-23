@@ -29,7 +29,12 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "국내외 전 가맹점 마이신한포인트 적립"
     type: points
     tiers:
@@ -41,7 +46,14 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "uncategorized"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "연간 기프트 (호텔/골프/패션/면세점/상품권 중 택1)"
     type: discount
     tiers:
@@ -50,6 +62,9 @@ rewards:
         fixedAmount: 250000
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

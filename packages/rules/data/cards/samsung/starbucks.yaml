@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 스타벅스 (1만원당 별 5개 적립)
     type: points
     tiers:
@@ -44,8 +49,15 @@ rewards:
     conditions:
       specificMerchants:
         - 스타벅스
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 온라인 간편결제
     type: discount
     tiers:
@@ -53,6 +65,9 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

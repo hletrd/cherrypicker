@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: convenience_store
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -47,8 +52,16 @@ rewards:
         - GS SHOP
         - GS Fresh Mall
       note: "GS리테일 연간 500만원 한도 GS&POINT 적립"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -61,8 +74,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "국내외 전 가맹점 NH포인트 적립 (월 3만원 한도)"
+    support:
+      status: supported
 
   - category: travel
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -75,6 +95,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "국제공항 라운지 연 2회 무료 이용 (전월실적 40만원 이상)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

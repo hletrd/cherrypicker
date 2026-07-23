@@ -20,8 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: travel
-    subcategory: overseas
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -29,9 +33,19 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      channel: offline
+      paymentType: overseas
       note: "일본 오프라인 가맹점 이용 시 10% NH포인트 적립"
+    support:
+      status: unsupported
+      reason: "country-specific eligibility requires country provenance"
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -42,9 +56,15 @@ rewards:
       specificMerchants:
         - 익스피디아
       note: "익스피디아 호텔 9% 할인"
+    support:
+      status: supported
 
-  - category: travel
-    subcategory: overseas
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
@@ -52,15 +72,26 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: overseas
       note: "해외 가맹점 1.5% 적립"
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: points
     tiers:
       - performanceTier: tier0
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

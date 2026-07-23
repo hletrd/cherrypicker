@@ -27,6 +27,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 외식 5% 캐시백
     type: cashback
     tiers:
@@ -34,8 +39,15 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 편의점 3% 캐시백
     type: cashback
     tiers:
@@ -43,8 +55,15 @@ rewards:
         rate: 3.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: public_transit
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 대중교통 2% 캐시백
     type: cashback
     tiers:
@@ -52,6 +71,8 @@ rewards:
         rate: 2.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 11000

@@ -27,6 +27,11 @@ performanceExclusions:
 
 rewards:
   - category: "education"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "학원비 적립"
     type: points
     tiers:
@@ -38,8 +43,16 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: "education"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "인터넷서적 적립"
     type: points
     tiers:
@@ -51,8 +64,16 @@ rewards:
         rate: 7.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: "grocery"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "대형마트 적립"
     type: points
     tiers:
@@ -64,8 +85,15 @@ rewards:
         rate: 7.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "public_transit"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "대중교통 적립"
     type: points
     tiers:
@@ -77,8 +105,15 @@ rewards:
         rate: 7.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "telecom"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "통신비 적립"
     type: points
     tiers:
@@ -90,6 +125,8 @@ rewards:
         rate: 7.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

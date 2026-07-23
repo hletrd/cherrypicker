@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -52,8 +64,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: movie
     type: discount
     tiers:
@@ -67,6 +86,8 @@ rewards:
         perTransactionCap: 5000
     conditions:
       note: "MZ세대 특화 카드. 바우처 서비스: 신세계 이마트 5만원 상품권, 롯데시네마 1인 관람권 5매 등 선택"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

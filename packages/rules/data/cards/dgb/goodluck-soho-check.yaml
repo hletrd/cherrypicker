@@ -26,6 +26,11 @@ performanceExclusions: []
 
 rewards:
   - category: uncategorized
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "전월 30만원 이상 시 전 업종 0.1% 포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -61,8 +74,16 @@ rewards:
         - 다이소
         - 백화점
       note: "대형마트/다이소/백화점 0.7% 포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
@@ -77,8 +98,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "온라인 쇼핑 0.7% 포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: points
     tiers:
       - performanceTier: tier0
@@ -94,8 +123,16 @@ rewards:
       specificMerchants:
         - 배달앱
       note: "배달앱 0.5% 포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: grocery
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: points
     tiers:
       - performanceTier: tier0
@@ -110,8 +147,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "슈퍼마켓 0.5% 포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: utilities
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: points
     tiers:
       - performanceTier: tier0
@@ -126,6 +171,9 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "국세/4대보험 납부 0.5% 포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -25,7 +25,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -37,11 +42,20 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: domestic
       minTransaction: 10000
       specificMerchants: []
       note: "국내 가맹점 건당 1만원 이상 이용 시 0.2% 캐시백. 월 100만원 초과분은 0.4% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -53,9 +67,13 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: overseas
       minTransaction: null
       specificMerchants: []
       note: "해외 가맹점 건당 미화 10달러 이상 이용 시 이용금액의 1% 캐시백. 전월 30만원 이상 필요"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

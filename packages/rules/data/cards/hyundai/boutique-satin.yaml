@@ -30,7 +30,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -41,8 +46,16 @@ rewards:
         rate: 1.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -60,8 +73,16 @@ rewards:
         - 29CM
         - W컨셉
         - S.I.Village
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: medical
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
@@ -75,8 +96,16 @@ rewards:
     conditions:
       specificMerchants:
         - 올리브영
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: points
     tiers:
       - performanceTier: tier0
@@ -91,8 +120,15 @@ rewards:
       specificMerchants:
         - 커피전문점
         - 스타벅스
+    support:
+      status: supported
 
   - category: public_transit
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: points
     tiers:
       - performanceTier: tier0
@@ -103,6 +139,8 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

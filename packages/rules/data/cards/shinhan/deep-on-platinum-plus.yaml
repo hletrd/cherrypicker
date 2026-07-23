@@ -34,6 +34,11 @@ performanceExclusions:
 
 rewards:
   - category: "online_shopping"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "간편결제 (네이버페이/카카오페이/삼성페이 등) 20% 할인"
     type: discount
     tiers:
@@ -45,7 +50,15 @@ rewards:
         rate: 20.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method; ambiguous overlapping reward rules"
   - category: "convenience_store"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "4대 편의점 20% 할인"
     type: discount
     tiers:
@@ -57,7 +70,14 @@ rewards:
         rate: 20.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "online_shopping"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "국내 온라인 10% 할인"
     type: discount
     tiers:
@@ -69,7 +89,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
   - category: "dining"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "배달 (배달의민족/요기요/쿠팡이츠) 10% 할인"
     type: discount
     tiers:
@@ -81,7 +109,14 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "travel"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "항공권 10% 할인"
     type: discount
     tiers:
@@ -93,6 +128,8 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: convenience_store
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -38,8 +43,15 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: cafe
     type: cashback
     tiers:
@@ -51,8 +63,15 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: movie
     type: cashback
     tiers:
@@ -64,8 +83,15 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: public_transit
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -76,6 +102,8 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

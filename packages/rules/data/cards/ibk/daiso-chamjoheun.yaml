@@ -30,7 +30,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: shopping
+  - category: offline_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: daiso
     type: discount
     tiers:
@@ -47,8 +52,16 @@ rewards:
         - 다이소
       minTransaction: 5000
       note: "다이소 5,000원 이상 결제 시 30% 청구할인"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: cafe
     type: discount
     tiers:
@@ -60,8 +73,15 @@ rewards:
         rate: 10.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -72,8 +92,15 @@ rewards:
         rate: 5.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: fuel
     type: discount
     tiers:
@@ -87,8 +114,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "주유 리터당 40원 할인"
+    support:
+      status: supported
 
   - category: grocery
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: supermarket
     type: discount
     tiers:
@@ -100,6 +134,8 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

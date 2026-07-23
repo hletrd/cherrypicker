@@ -22,7 +22,13 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: fuel
+  - category: transportation
+    subcategory: fuel
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -32,6 +38,8 @@ rewards:
     conditions:
       minTransaction: null
       specificMerchants: []
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

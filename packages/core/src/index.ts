@@ -7,11 +7,18 @@ export type {
   CapInfo,
   OptimizationResult,
   CardAssignment,
+  CalculationIssue,
 } from './models/result.js';
 
 // Categorizer
-export { CategoryTaxonomy } from './categorizer/taxonomy.js';
+export {
+  CategoryTaxonomy,
+  TAXONOMY_KEYWORD_OVERRIDES,
+} from './categorizer/taxonomy.js';
+export type { TaxonomyKeywordConflict } from './categorizer/taxonomy.js';
 export { MerchantMatcher } from './categorizer/matcher.js';
+export { getResolvedKeywordConflicts } from './categorizer/matcher.js';
+export type { KeywordConflict } from './categorizer/matcher.js';
 export { MERCHANT_KEYWORDS } from './categorizer/keywords.js';
 
 // Calculator
@@ -19,7 +26,12 @@ export { calculateRewards, buildCategoryKey } from './calculator/reward.js';
 export { calculateDiscount } from './calculator/discount.js';
 export { calculatePoints } from './calculator/points.js';
 export { calculateCashback } from './calculator/cashback.js';
-export type { CalculationInput, CalculationOutput } from './calculator/types.js';
+export type {
+  CalculationInput,
+  CalculationOutput,
+  UnsupportedReason,
+  UnsupportedRule,
+} from './calculator/types.js';
 
 // Optimizer
 export { optimize, greedyOptimize, buildConstraints } from './optimizer/index.js';

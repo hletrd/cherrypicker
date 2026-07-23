@@ -23,6 +23,11 @@ performanceExclusions:
 
 rewards:
   - category: "travel"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "힐튼 호텔 이용 시 힐튼 아너스 포인트 적립"
     type: points
     tiers:
@@ -33,7 +38,14 @@ rewards:
     conditions:
       specificMerchants:
         - 힐튼 호텔
+    support:
+      status: supported
   - category: "grocery"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "슈퍼마켓/음식점/백화점 힐튼 아너스 포인트 적립"
     type: points
     tiers:
@@ -46,7 +58,15 @@ rewards:
         - 슈퍼마켓
         - 음식점
         - 백화점
-  - category: "uncategorized"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "전 가맹점 힐튼 아너스 포인트 기본 적립"
     type: points
     tiers:
@@ -54,6 +74,8 @@ rewards:
         rate: 0.3
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

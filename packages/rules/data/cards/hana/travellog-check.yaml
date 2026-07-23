@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "국내 전 가맹점 0.3% 하나머니 무제한 적립"
     type: points
     tiers:
@@ -28,8 +33,17 @@ rewards:
         rate: 0.3
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "해외 결제 수수료 면제 (환율우대 100%, 해외이용수수료 면제)"
     type: discount
     tiers:
@@ -38,7 +52,11 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: overseas
       note: "해외 가맹점 결제 시 국내 카드사 수수료(건당 $0.5) 및 국제브랜드 수수료(1%) 면제, 해외 ATM 인출 수수료 면제"
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

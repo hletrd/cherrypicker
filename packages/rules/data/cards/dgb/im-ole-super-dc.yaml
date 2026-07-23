@@ -27,6 +27,11 @@ performanceExclusions:
 
 rewards:
   - category: "dining"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "외식 할인"
     type: discount
     tiers:
@@ -38,8 +43,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "grocery"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "대형마트 할인"
     type: discount
     tiers:
@@ -51,8 +63,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "telecom"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "통신비 할인"
     type: discount
     tiers:
@@ -64,8 +83,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "transportation"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "주유 할인"
     type: discount
     tiers:
@@ -79,6 +105,8 @@ rewards:
         unit: "won_per_liter"
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

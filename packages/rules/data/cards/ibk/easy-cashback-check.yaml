@@ -27,7 +27,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "전 가맹점 0.2% 기본 캐시백 (한도 없음)"
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -54,6 +66,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "점심(12~14시), 저녁(18~20시) 타임캐시백 0.6% (전월 30만원 이상 시)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

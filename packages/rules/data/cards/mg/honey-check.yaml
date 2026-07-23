@@ -31,6 +31,11 @@ performanceExclusions: []
 
 rewards:
   - category: entertainment
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: streaming
     type: discount
     tiers:
@@ -53,8 +58,16 @@ rewards:
         - 넷플릭스
         - YouTube Premium
       note: "OTT 자동납부 정기결제 시 건당 2,000원 할인 (전월 20만원 이상)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; merchant category is not reachable by the canonical matcher"
 
   - category: subscription
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -74,8 +87,16 @@ rewards:
       specificMerchants:
         - 쿠팡 로켓와우
       note: "쿠팡 로켓와우 멤버십 최대 2,900원 할인 (전월 30만원 이상)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; merchant category is not reachable by the canonical matcher"
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: general
     type: discount
     tiers:
@@ -94,8 +115,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "간편결제, 쇼핑, 배달앱 결제 시 건당 1,000원 할인 (전월 30만원 이상)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: payment_method"
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: delivery
     type: discount
     tiers:
@@ -118,6 +147,9 @@ rewards:
         - 요기요
         - 쿠팡이츠
       note: "배달앱 건당 1,000원 할인 (전월 30만원 이상)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: 16000

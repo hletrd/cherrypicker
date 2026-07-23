@@ -34,6 +34,11 @@ performanceExclusions:
 
 rewards:
   - category: "offline_shopping"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "다이소 1만원 이상 결제 시 할인"
     type: discount
     tiers:
@@ -47,7 +52,15 @@ rewards:
         fixedAmount: 4000
         monthlyCap: 20000
         perTransactionCap: 4000
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
   - category: "dining"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "배달앱 할인 (월 5회)"
     type: discount
     tiers:
@@ -61,7 +74,15 @@ rewards:
         fixedAmount: 2000
         monthlyCap: 10000
         perTransactionCap: 2000
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit; ambiguous overlapping reward rules"
   - category: "dining"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "커피전문점 할인 (월 5회)"
     type: discount
     tiers:
@@ -75,7 +96,15 @@ rewards:
         fixedAmount: 2000
         monthlyCap: 10000
         perTransactionCap: 2000
-  - category: "uncategorized"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit; ambiguous overlapping reward rules"
+  - category: '*'
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "다이소몰·대형마트·온라인쇼핑·편의점·병원·약국 1% 할인 (무실적, 무한도)"
     type: discount
     tiers:
@@ -91,6 +120,9 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

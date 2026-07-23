@@ -44,6 +44,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -70,8 +75,15 @@ rewards:
       specificMerchants:
         - 스타벅스
         - 커피빈
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -99,8 +111,16 @@ rewards:
         - 멜론
         - 지니뮤직
         - 유튜브
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -123,8 +143,15 @@ rewards:
         rate: 5.0
         monthlyCap: 50000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: medical
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -150,8 +177,16 @@ rewards:
     conditions:
       specificMerchants:
         - 올리브영
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: uncategorized
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -177,6 +212,8 @@ rewards:
     conditions:
       specificMerchants:
         - KB Pay
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

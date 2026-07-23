@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: "dining"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "평일 점심 (11시~14시) 요식업종 할인"
     type: discount
     tiers:
@@ -37,7 +42,17 @@ rewards:
         rate: 5.0
         monthlyCap: 20000
         perTransactionCap: null
+    conditions:
+      weekdays: [1, 2, 3, 4, 5]
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
   - category: "uncategorized"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "연간 마이신한포인트 기프트 (연회비 납부 + 100만원 이상 이용 시)"
     type: points
     tiers:
@@ -46,6 +61,9 @@ rewards:
         fixedAmount: 70000
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

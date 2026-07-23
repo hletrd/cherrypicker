@@ -30,7 +30,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -42,9 +47,17 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: domestic
       note: "국내 가맹점 1,000원당 대한항공 1마일 적립. 무한도"
+    support:
+      status: supported
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -56,9 +69,17 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: overseas
       note: "해외 가맹점/면세점 1,000원당 추가 1마일 (총 2마일). 월 적립한도 2,000마일"
+    support:
+      status: supported
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: discount
     tiers:
@@ -74,6 +95,9 @@ rewards:
       note: "스타벅스 1만원 이상 결제 시 4,000원 청구할인. 연 12회(월 1회)"
       specificMerchants:
         - 스타벅스
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -29,7 +29,13 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "airline"
+  - category: travel
+    subcategory: airline
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "대한항공/아시아나 마일리지 적립 (택1)"
     type: points
     tiers:
@@ -45,7 +51,15 @@ rewards:
         unit: "mile_per_1500won"
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
   - category: "uncategorized"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "연간 기프트 (LG전자/신세계상품권/레스토랑/호텔/포인트 중 택1)"
     type: discount
     tiers:
@@ -54,6 +68,9 @@ rewards:
         fixedAmount: 120000
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

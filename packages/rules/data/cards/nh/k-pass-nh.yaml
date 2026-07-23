@@ -32,6 +32,11 @@ performanceExclusions:
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -44,8 +49,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "대중교통 10% 청구할인. 렌터카/카쉐어링 포함"
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: fuel
     type: discount
     tiers:
@@ -59,8 +71,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "전기차 충전 10% 청구할인"
+    support:
+      status: supported
 
   - category: telecom
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -73,8 +92,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "통신료 5% 할인"
+    support:
+      status: supported
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: delivery
     type: discount
     tiers:
@@ -88,8 +114,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "배달앱 5% 할인"
+    support:
+      status: supported
 
   - category: dining
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: cafe
     type: discount
     tiers:
@@ -106,6 +139,9 @@ rewards:
       specificMerchants:
         - 스타벅스
         - 이디야
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

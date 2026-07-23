@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: cafe
     type: discount
     tiers:
@@ -59,8 +64,15 @@ rewards:
         - 커피빈
         - 메가커피
         - 컴포즈커피
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -77,8 +89,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "외식(음식점) 할인"
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -98,8 +117,15 @@ rewards:
         - 쿠팡
         - 위메프
         - 티몬
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: movie
     type: discount
     tiers:
@@ -117,6 +143,9 @@ rewards:
         perTransactionCap: 4000
     conditions:
       minTransaction: 10000
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

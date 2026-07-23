@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: uncategorized
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -31,6 +36,9 @@ rewards:
       minTransaction: 50000
       specificMerchants: []
       note: "국내외 5만원 이상 결제 시 건당 300원 또는 3,000원 랜덤 캐시백. 가맹점별 1일 1회. 실적/한도 제한 없음"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

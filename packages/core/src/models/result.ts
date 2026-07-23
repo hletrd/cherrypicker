@@ -7,6 +7,7 @@ export interface CardRewardResult {
   byCategory: CategoryReward[];
   performanceTier: string;      // Which tier the user qualifies for
   capsHit: CapInfo[];           // Which caps were reached
+  unsupportedRules?: CalculationIssue[];
 }
 
 export interface CategoryReward {
@@ -28,6 +29,14 @@ export interface CapInfo {
   appliedReward: number;       // What you actually get
 }
 
+export interface CalculationIssue {
+  transactionId: string;
+  ruleId: string;
+  category: string;
+  reason: string;
+  detail?: string;
+}
+
 export interface OptimizationResult {
   assignments: CardAssignment[];
   totalReward: number;
@@ -36,6 +45,7 @@ export interface OptimizationResult {
   savingsVsSingleCard: number;    // vs best single card
   bestSingleCard: { cardId: string; cardName: string; totalReward: number };
   cardResults: CardRewardResult[];
+  unsupportedRules?: CalculationIssue[];
 }
 
 export interface CardAssignment {

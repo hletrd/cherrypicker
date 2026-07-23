@@ -25,7 +25,12 @@ performanceExclusions:
   - annual_fee
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "국내 전 가맹점 포인트 적립"
     type: points
     tiers:
@@ -33,7 +38,16 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
   - category: "dining"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "일상 업종 (카페/배달/편의점 등) 포인트 적립"
     type: points
     tiers:
@@ -41,7 +55,14 @@ rewards:
         rate: 1.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "online_shopping"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "쇼핑 업종 포인트 적립"
     type: points
     tiers:
@@ -49,7 +70,14 @@ rewards:
         rate: 1.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "entertainment"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "여가 업종 포인트 적립"
     type: points
     tiers:
@@ -57,7 +85,14 @@ rewards:
         rate: 1.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "travel"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "해외 가맹점 포인트 적립"
     type: points
     tiers:
@@ -65,7 +100,17 @@ rewards:
         rate: 3.0
         monthlyCap: null
         perTransactionCap: null
-  - category: "department_store"
+    conditions:
+      paymentType: overseas
+    support:
+      status: supported
+  - category: offline_shopping
+    subcategory: department_store
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     label: "프리미엄 영역 (백화점/여행/온라인쇼핑몰/골프/병원) 할인 기프트"
     type: discount
     tiers:
@@ -76,6 +121,8 @@ rewards:
         perTransactionCap: 50000
     conditions:
       minTransaction: 50000
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

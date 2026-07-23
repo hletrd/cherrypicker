@@ -23,7 +23,12 @@ performanceExclusions:
   - tuition
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 국내 가맹점 1,000원당 1마일 적립 (대한항공 또는 아시아나 선택)
     type: points
     tiers:
@@ -31,8 +36,17 @@ rewards:
         rate: 0.1
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 해외 가맹점 1,000원당 2마일 적립
     type: points
     tiers:
@@ -42,6 +56,8 @@ rewards:
         perTransactionCap: null
     conditions:
       paymentType: overseas
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

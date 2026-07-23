@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: convenience_store
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 화요일 편의점 10% 캐시백
     type: cashback
     tiers:
@@ -29,6 +34,7 @@ rewards:
         monthlyCap: 5000
         perTransactionCap: null
     conditions:
+      weekdays: [2]
       specificMerchants:
         - CU
         - GS25
@@ -36,8 +42,16 @@ rewards:
         - 미니스톱
         - 위드미
       note: "화요일만 적용. 건당 5,000원 이상 결제 시. 일 1회, 월 4회 한도."
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit; merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: cafe
     label: 화요일 커피전문점 10% 캐시백
     type: cashback
@@ -47,6 +61,7 @@ rewards:
         monthlyCap: 5000
         perTransactionCap: null
     conditions:
+      weekdays: [2]
       specificMerchants:
         - 커피빈
         - 스타벅스
@@ -55,8 +70,16 @@ rewards:
         - 탐앤탐스
         - 엔제리너스
       note: "화요일만 적용. 건당 8,000원 이상 결제 시. 일 1회, 월 4회 한도."
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit"
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 평일 편의점 5% 캐시백
     type: cashback
     tiers:
@@ -65,6 +88,7 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      weekdays: [1, 2, 3, 4, 5]
       specificMerchants:
         - CU
         - GS25
@@ -72,8 +96,16 @@ rewards:
         - 미니스톱
         - 위드미
       note: "화요일 외 요일 적용"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: cafe
     label: 평일 커피전문점 5% 캐시백
     type: cashback
@@ -83,9 +115,18 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      weekdays: [1, 2, 3, 4, 5]
       note: "화요일 외 요일 적용. 커피전문점, 패스트푸드 포함."
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: education
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: books
     type: cashback
     tiers:
@@ -95,8 +136,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "도서 5% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: entertainment
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -110,6 +159,9 @@ rewards:
         - 메가박스
         - 롯데시네마
       note: "영화관 3,000원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

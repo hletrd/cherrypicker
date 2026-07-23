@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 전 가맹점 0.2% 캐시백
     type: cashback
     tiers:
@@ -28,8 +33,15 @@ rewards:
         rate: 0.2
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 편의점 5% 캐시백
     type: cashback
     tiers:
@@ -37,8 +49,15 @@ rewards:
         rate: 5.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 카페 5% 캐시백
     type: cashback
     tiers:
@@ -53,8 +72,15 @@ rewards:
         - 이디야
         - 메가커피
         - 컴포즈커피
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: 스트리밍 5% 캐시백
     type: cashback
     tiers:
@@ -68,6 +94,9 @@ rewards:
         - 유튜브
         - 멜론
         - 스포티파이
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

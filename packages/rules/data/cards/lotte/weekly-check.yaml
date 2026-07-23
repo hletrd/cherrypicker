@@ -34,7 +34,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "주말 캐시백 (평일 5~10만원 사용 시 0.5%)"
     type: cashback
     tiers:
@@ -54,6 +59,11 @@ rewards:
         rate: 2.0
         monthlyCap: 20000
         perTransactionCap: null
+    conditions:
+      weekdays: [1, 2, 3, 4, 5]
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

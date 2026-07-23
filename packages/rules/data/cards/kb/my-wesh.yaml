@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -44,8 +49,16 @@ rewards:
       minTransaction: null
       specificMerchants:
         - KB Pay
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -56,8 +69,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: 2500
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -72,8 +92,15 @@ rewards:
       specificMerchants:
         - GS25
         - CU
+    support:
+      status: supported
 
   - category: telecom
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -84,8 +111,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: 2500
+    support:
+      status: supported
 
   - category: subscription
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -104,6 +138,9 @@ rewards:
         - 쿠팡플레이
         - 디즈니플러스
         - 유튜브프리미엄
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 25000

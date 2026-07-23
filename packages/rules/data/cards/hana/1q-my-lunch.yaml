@@ -27,6 +27,11 @@ performanceExclusions:
 
 rewards:
   - category: "dining"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "점심시간 음식점 적립 (11시~14시)"
     type: points
     tiers:
@@ -38,8 +43,16 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day; ambiguous overlapping reward rules"
 
   - category: "convenience_store"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "편의점 적립"
     type: points
     tiers:
@@ -51,8 +64,15 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "dining"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "커피전문점 적립"
     type: points
     tiers:
@@ -64,6 +84,9 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: "travel"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "해외 가맹점 캐시백"
     type: cashback
     tiers:
@@ -28,8 +33,17 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: overseas
+    support:
+      status: supported
 
   - category: "dining"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "일본 돈키호테/스타벅스 할인"
     type: discount
     tiers:
@@ -41,8 +55,16 @@ rewards:
       specificMerchants:
         - 돈키호테
         - 스타벅스
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: "convenience_store"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "일본 편의점 할인"
     type: discount
     tiers:
@@ -55,6 +77,9 @@ rewards:
         - 세븐일레븐
         - 패밀리마트
         - 로손
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -2,7 +2,9 @@
 
 > 마지막 업데이트: 2026-03-24
 
-## 카드 목록
+> 이 디렉터리에는 총 58개 카드 YAML이 있습니다. 아래 표는 대표 상품만 요약합니다.
+
+## 대표 카드
 
 | 카드명 | 연회비 | 주요 혜택 | 전월실적 |
 |--------|--------|-----------|----------|
@@ -42,3 +44,70 @@
 
 - [삼성카드 공식 홈페이지](https://www.samsungcard.com)
 - [삼성카드 카드 안내](https://www.samsungcard.com/personal/card/UHPPCA0340M0.jsp)
+
+<!-- BEGIN GENERATED CARD INDEX -->
+## 전체 카드 인덱스
+
+> YAML 기준 **58개** · 최신 업데이트: `2026-03-26`
+
+| 카드명 | 유형 | YAML |
+|---|---:|---|
+| CU배달의민족 탭탭 | 신용 | [cu-baemin-taptap.yaml](./cu-baemin-taptap.yaml) |
+| K-패스 삼성카드 | 신용 | [k-pass-samsung.yaml](./k-pass-samsung.yaml) |
+| SSG.COM 삼성카드 | 신용 | [ssg.yaml](./ssg.yaml) |
+| SSG.COM 삼성카드 체크 | 체크 | [ssg-check.yaml](./ssg-check.yaml) |
+| THE iD. PLATINUM (포인트) | 신용 | [the-id-platinum.yaml](./the-id-platinum.yaml) |
+| T라이트 삼성카드 | 신용 | [t-light.yaml](./t-light.yaml) |
+| 공무원연금 삼성카드 | 신용 | [gongmu-pension.yaml](./gongmu-pension.yaml) |
+| 다이소 삼성카드 | 신용 | [daiso.yaml](./daiso.yaml) |
+| 디 아이디 티타늄 | 신용 | [the-id-titanium.yaml](./the-id-titanium.yaml) |
+| 디 아이디 퍼스트 | 신용 | [the-id-1st.yaml](./the-id-1st.yaml) |
+| 라움 오 | 신용 | [raume-o.yaml](./raume-o.yaml) |
+| 삼성 iD AUTO 카드 | 신용 | [id-auto.yaml](./id-auto.yaml) |
+| 삼성 iD CARE 카드 | 신용 | [id-care.yaml](./id-care.yaml) |
+| 삼성 iD EDU 카드 | 신용 | [id-edu.yaml](./id-edu.yaml) |
+| 삼성 iD EV 카드 | 신용 | [id-ev.yaml](./id-ev.yaml) |
+| 삼성 iD GLOBAL 체크카드 | 체크 | [id-global-check.yaml](./id-global-check.yaml) |
+| 삼성 iD SELECT ALL | 신용 | [id-select-all.yaml](./id-select-all.yaml) |
+| 삼성 iD SELECT ON | 신용 | [id-select-on.yaml](./id-select-on.yaml) |
+| 삼성 iD 달달적립 카드 | 신용 | [id-sweet-point.yaml](./id-sweet-point.yaml) |
+| 삼성 iD 달달할인 카드 | 신용 | [id-sweet-discount.yaml](./id-sweet-discount.yaml) |
+| 삼성 리저브 카드 (American Express) | 신용 | [amex-reserve.yaml](./amex-reserve.yaml) |
+| 삼성 모니모카드 | 신용 | [monimo.yaml](./monimo.yaml) |
+| 삼성라이온즈카드 | 신용 | [samsung-lions.yaml](./samsung-lions.yaml) |
+| 삼성전자 멤버십 BLUE U 삼성카드 | 신용 | [samsung-blue-u.yaml](./samsung-blue-u.yaml) |
+| 삼성카드 &amp; POINT 카드 | 신용 | [and-point.yaml](./and-point.yaml) |
+| 삼성카드 4 | 신용 | [samsung-4.yaml](./samsung-4.yaml) |
+| 삼성카드 5 V2 SE | 신용 | [samsung-5-v2-se.yaml](./samsung-5-v2-se.yaml) |
+| 삼성카드 PAYCO taptap | 신용 | [payco-taptap.yaml](./payco-taptap.yaml) |
+| 삼성카드 S클래스 | 신용 | [s-class.yaml](./s-class.yaml) |
+| 삼성카드 네이버페이 taptap | 신용 | [naverpay-taptap.yaml](./naverpay-taptap.yaml) |
+| 삼성카드 배달의민족 taptap | 신용 | [baemin-taptap.yaml](./baemin-taptap.yaml) |
+| 삼성카드 제주항공 Refresh Point | 신용 | [jejuair-refresh.yaml](./jejuair-refresh.yaml) |
+| 삼성카드 제주항공 taptap | 신용 | [jejuair-taptap.yaml](./jejuair-taptap.yaml) |
+| 삼성페이 탭탭 | 신용 | [taptap-samsung-pay.yaml](./taptap-samsung-pay.yaml) |
+| 삼성페이카드 | 신용 | [samsung-pay-card.yaml](./samsung-pay-card.yaml) |
+| 스타벅스 삼성카드 | 신용 | [starbucks.yaml](./starbucks.yaml) |
+| 아메리칸 익스프레스 블루 | 신용 | [amex-blue.yaml](./amex-blue.yaml) |
+| 아이디 글로벌 | 신용 | [id-global.yaml](./id-global.yaml) |
+| 아이디 무브 | 신용 | [id-move.yaml](./id-move.yaml) |
+| 아이디 비타 | 신용 | [id-vita.yaml](./id-vita.yaml) |
+| 아이디 스테이션 | 신용 | [id-station.yaml](./id-station.yaml) |
+| 아이디 심플 | 신용 | [id-simple.yaml](./id-simple.yaml) |
+| 아이디 에너지 | 신용 | [id-energy.yaml](./id-energy.yaml) |
+| 아이디 온 | 신용 | [id-on.yaml](./id-on.yaml) |
+| 아이디 올 | 신용 | [id-all.yaml](./id-all.yaml) |
+| 아이디 포켓 | 신용 | [id-pocket.yaml](./id-pocket.yaml) |
+| 아이디 플러그인 | 신용 | [id-plug-in.yaml](./id-plug-in.yaml) |
+| 앤 마일리지 플래티넘 (스카이패스) | 신용 | [and-mileage-platinum.yaml](./and-mileage-platinum.yaml) |
+| 카카오뱅크 삼성카드 | 신용 | [kakaobank.yaml](./kakaobank.yaml) |
+| 카카오페이 삼성카드 | 신용 | [kakaopay.yaml](./kakaopay.yaml) |
+| 탭탭 쇼핑 | 신용 | [taptap-shopping.yaml](./taptap-shopping.yaml) |
+| 탭탭드라이브 | 신용 | [taptap-drive.yaml](./taptap-drive.yaml) |
+| 탭탭디지털 | 신용 | [taptap-digital.yaml](./taptap-digital.yaml) |
+| 탭탭아이 | 신용 | [taptap-i.yaml](./taptap-i.yaml) |
+| 탭탭에스 | 신용 | [taptap-s.yaml](./taptap-s.yaml) |
+| 탭탭오 | 신용 | [taptap-o.yaml](./taptap-o.yaml) |
+| 토스 탭탭 S | 신용 | [toss-taptap-s.yaml](./toss-taptap-s.yaml) |
+| 패밀리 삼성카드 | 신용 | [family.yaml](./family.yaml) |
+<!-- END GENERATED CARD INDEX -->

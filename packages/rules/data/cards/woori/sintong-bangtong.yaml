@@ -38,6 +38,11 @@ performanceExclusions:
 
 rewards:
   - category: telecom
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -58,6 +63,9 @@ rewards:
         perTransactionCap: 13000
     conditions:
       note: "통신요금 자동납부 시 전월실적에 따라 월 5,000~13,000원 청구할인. KT/LGU+/SKT 등 통신3사"
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: 13000

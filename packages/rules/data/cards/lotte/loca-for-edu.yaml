@@ -26,7 +26,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: "education"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "학원/학습지/유치원 5% 청구할인 (건당 10만원 이상)"
     type: discount
     tiers:
@@ -44,7 +49,14 @@ rewards:
         - 학원
         - 학습지
         - 유치원
+    support:
+      status: supported
   - category: "education"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "서점/문구 10% 청구할인"
     type: discount
     tiers:
@@ -60,6 +72,9 @@ rewards:
       specificMerchants:
         - 서점
         - 문구
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

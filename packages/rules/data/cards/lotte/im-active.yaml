@@ -38,6 +38,11 @@ performanceExclusions:
 
 rewards:
   - category: medical
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -61,8 +66,15 @@ rewards:
         - 병원
         - 약국
         - 동물병원
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -85,8 +97,16 @@ rewards:
       specificMerchants:
         - 피트니스
         - 레저스포츠
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: insurance
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -105,8 +125,15 @@ rewards:
         rate: 5.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -128,8 +155,15 @@ rewards:
     conditions:
       specificMerchants:
         - 주유소
+    support:
+      status: supported
 
   - category: grocery
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -152,6 +186,9 @@ rewards:
       specificMerchants:
         - 대형마트
         - 슈퍼
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

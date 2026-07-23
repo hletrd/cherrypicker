@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: convenience_store
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -31,8 +36,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "집중캐시백 선택 시. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit"
 
   - category: public_transit
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -43,8 +56,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "집중캐시백 선택 시. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -58,8 +79,16 @@ rewards:
         - 디저트
         - 패스트푸드
       note: "집중캐시백 선택 시. 카페&디저트, 패스트푸드 영역. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit; merchant category is not reachable by the canonical matcher"
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -71,8 +100,16 @@ rewards:
       specificMerchants:
         - 영화관
       note: "집중캐시백 선택 시. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit"
 
   - category: subscription
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -83,8 +120,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "집중캐시백 선택 시. 구독/멤버십 영역. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit"
 
   - category: medical
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -96,8 +141,16 @@ rewards:
       specificMerchants:
         - 올리브영
       note: "집중캐시백 선택 시. 헬스&뷰티 영역. 1만원 이상 500원, 1만원 미만 100원. 영역별 하루 1회, 월 10회"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit; merchant category is not reachable by the canonical matcher"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-007
+    priority: 7
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-007
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -105,9 +158,13 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: domestic
       minTransaction: null
       specificMerchants: []
       note: "어디서나캐시백 선택 시. 국내 온·오프라인 0.3% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

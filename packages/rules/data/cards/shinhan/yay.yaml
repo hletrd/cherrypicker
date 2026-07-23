@@ -31,6 +31,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 배달앱 (배달의민족/요기요) 포인트 적립
     type: points
     tiers:
@@ -46,8 +51,15 @@ rewards:
       specificMerchants:
         - 배달의민족
         - 요기요
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 온라인쇼핑 포인트 적립 (건당 5만원 이상, 건당 2500포인트)
     type: points
     tiers:
@@ -70,6 +82,9 @@ rewards:
         - 쿠팡
         - 마켓컬리
         - 오아시스마켓
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

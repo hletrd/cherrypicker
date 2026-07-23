@@ -1,4 +1,7 @@
-import type { CategoryNode } from '@cherrypicker/rules';
+import {
+  CategoryRegistry,
+  type CategoryNode,
+} from '@cherrypicker/rules/browser';
 
 interface CategoryMatch {
   category: string;
@@ -12,20 +15,57 @@ interface FlatEntry {
   keywords: string[];
 }
 
+export const TAXONOMY_KEYWORD_OVERRIDES: Readonly<Record<string, string>> = {
+  '식당': 'dining.restaurant',
+  '음식점': 'dining.restaurant',
+  '레스토랑': 'dining.restaurant',
+  '주유': 'transportation.fuel',
+  '병원': 'medical.hospital',
+  '의원': 'medical.hospital',
+  '약국': 'medical.pharmacy',
+  '학원': 'education.academy',
+  '영화': 'entertainment.movie',
+  '호텔': 'travel.hotel',
+  '관리비': 'utilities.apartment_mgmt',
+};
+
+export interface TaxonomyKeywordConflict {
+  keyword: string;
+  candidates: string[];
+  selectedCategory: string;
+}
+
+interface CategoryTaxonomyOptions {
+  keywordOverrides?: Readonly<Record<string, string>>;
+}
+
 export class CategoryTaxonomy {
   private readonly nodes: CategoryNode[];
+  private readonly registry: CategoryRegistry;
   /** keyword (lowercase) → { category, subcategory } */
   private readonly keywordMap: Map<string, { category: string; subcategory?: string }>;
+  private readonly resolvedKeywordConflicts: TaxonomyKeywordConflict[] = [];
 
-  constructor(nodes: CategoryNode[]) {
+  constructor(
+    nodes: CategoryNode[],
+    options: CategoryTaxonomyOptions = {},
+  ) {
     this.nodes = nodes;
-    this.keywordMap = this.buildKeywordMap(nodes);
+    this.registry = new CategoryRegistry(nodes);
+    this.keywordMap = this.buildKeywordMap(
+      nodes,
+      options.keywordOverrides ?? TAXONOMY_KEYWORD_OVERRIDES,
+    );
   }
 
   private buildKeywordMap(
     nodes: CategoryNode[],
+    overrides: Readonly<Record<string, string>>,
   ): Map<string, { category: string; subcategory?: string }> {
-    const map = new Map<string, { category: string; subcategory?: string }>();
+    const definitions = new Map<
+      string,
+      Map<string, { category: string; subcategory?: string }>
+    >();
 
     const flatten = (node: CategoryNode, parentId?: string): FlatEntry[] => {
       const entry: FlatEntry = {
@@ -45,14 +85,53 @@ export class CategoryTaxonomy {
     for (const root of nodes) {
       for (const entry of flatten(root)) {
         for (const kw of entry.keywords) {
-          map.set(kw.toLowerCase(), {
+          const keyword = kw.trim().toLowerCase();
+          if (!keyword) continue;
+          const canonicalKey = entry.subcategory
+            ? `${entry.category}.${entry.subcategory}`
+            : entry.category;
+          const candidates = definitions.get(keyword) ?? new Map();
+          candidates.set(canonicalKey, {
             category: entry.category,
             subcategory: entry.subcategory,
           });
+          definitions.set(keyword, candidates);
         }
       }
     }
+
+    const map = new Map<string, { category: string; subcategory?: string }>();
+    for (const [keyword, candidates] of definitions) {
+      const candidateKeys = [...candidates.keys()].sort();
+      let selectedKey = candidateKeys[0]!;
+      if (candidateKeys.length > 1) {
+        const override = overrides[keyword];
+        if (!override) {
+          throw new Error(
+            `Taxonomy keyword "${keyword}" has unresolved categories: ` +
+              candidateKeys.join(', '),
+          );
+        }
+        if (!candidates.has(override)) {
+          throw new Error(
+            `Taxonomy keyword override "${keyword}" selects "${override}", ` +
+              `but candidates are: ${candidateKeys.join(', ')}`,
+          );
+        }
+        selectedKey = override;
+        this.resolvedKeywordConflicts.push({
+          keyword,
+          candidates: candidateKeys,
+          selectedCategory: selectedKey,
+        });
+      }
+      map.set(keyword, candidates.get(selectedKey)!);
+    }
     return map;
+  }
+
+  getResolvedKeywordConflicts(): readonly TaxonomyKeywordConflict[] {
+    return this.resolvedKeywordConflicts;
   }
 
   findCategory(merchantName: string): CategoryMatch {
@@ -124,6 +203,15 @@ export class CategoryTaxonomy {
       collect(root);
     }
     return [...ids];
+  }
+
+  /** Resolve a parent, qualified child, or unambiguous legacy leaf to the
+   * canonical runtime parent/subcategory pair. */
+  resolveCategoryToken(token: string): { category: string; subcategory?: string } | undefined {
+    return this.registry.resolve(token, {
+      allowBareLeaf: true,
+      allowWildcard: false,
+    }).value;
   }
 
   getCategoryLabel(id: string): { ko: string; en: string } {

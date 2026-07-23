@@ -32,15 +32,22 @@ const validCardRuleSet = {
   performanceExclusions: ['tax_payment'],
   rewards: [
     {
+      id: 'reward-001',
       category: 'dining',
       subcategory: 'restaurant',
       label: '외식 할인',
       type: 'discount',
+      priority: 1,
+      combination: 'exclusive',
+      stackingGroup: 'base',
+      capGroup: 'reward-001',
+      support: { status: 'supported' },
       tiers: [
         { performanceTier: 'tier1', rate: 5.0, monthlyCap: 10000, perTransactionCap: null },
       ],
       conditions: {
         specificMerchants: ['테스트식당'],
+        weekdays: [0, 6],
         note: '주말만 적용',
       },
     },
@@ -82,7 +89,9 @@ describe('cardRuleSetSchema - valid data', () => {
   test('preserves fixedAmount/unit tiers without coercing null rate to zero', () => {
     const fixedAmountRule = structuredClone(validCardRuleSet);
     fixedAmountRule.rewards[0] = {
+      ...fixedAmountRule.rewards[0]!,
       category: 'transportation',
+      subcategory: undefined,
       type: 'cashback',
       tiers: [
         {
@@ -101,6 +110,51 @@ describe('cardRuleSetSchema - valid data', () => {
     expect(result.data.rewards[0]?.tiers[0]?.rate).toBeNull();
     expect(result.data.rewards[0]?.tiers[0]?.fixedAmount).toBe(100);
     expect(result.data.rewards[0]?.tiers[0]?.unit).toBe('won_per_liter');
+    expect(result.data.rewards[0]?.tiers[0]?.value).toEqual({
+      kind: 'fuel_per_liter',
+      amount: 100,
+    });
+  });
+
+  test('publishes authored percentage points as a discriminated value', () => {
+    const result = cardRuleSetSchema.parse(validCardRuleSet);
+    expect(result.rewards[0]?.tiers[0]?.value).toEqual({
+      kind: 'percentage',
+      amount: 5,
+    });
+  });
+
+  test('round-trips canonical parsed output idempotently', () => {
+    const first = cardRuleSetSchema.parse(validCardRuleSet);
+    const second = cardRuleSetSchema.parse(first);
+
+    expect(second).toEqual(first);
+  });
+
+  test('rejects serialized values that disagree with authored reward fields', () => {
+    const canonical = cardRuleSetSchema.parse(validCardRuleSet);
+    const tampered = structuredClone(canonical);
+    tampered.rewards[0]!.tiers[0]!.value = {
+      kind: 'percentage',
+      amount: 50,
+    };
+
+    expect(cardRuleSetSchema.safeParse(tampered).success).toBe(false);
+  });
+
+  test('requires the explicit selection, cap, and support contract', () => {
+    for (const field of [
+      'id',
+      'priority',
+      'combination',
+      'stackingGroup',
+      'capGroup',
+      'support',
+    ] as const) {
+      const bad = structuredClone(validCardRuleSet);
+      delete (bad.rewards[0] as Record<string, unknown>)[field];
+      expect(cardRuleSetSchema.safeParse(bad).success).toBe(false);
+    }
   });
 });
 
@@ -166,6 +220,35 @@ describe('cardRuleSetSchema - invalid data', () => {
     bad.rewards[0]!.tiers[0]!.rate = -5;
     const result = cardRuleSetSchema.safeParse(bad);
     expect(result.success).toBe(false);
+  });
+
+  test.each([100.01, Number.NaN, Number.POSITIVE_INFINITY])(
+    'rejects invalid percentage-point rate %s',
+    (rate) => {
+      const bad = structuredClone(validCardRuleSet);
+      bad.rewards[0]!.tiers[0]!.rate = rate;
+      expect(cardRuleSetSchema.safeParse(bad).success).toBe(false);
+    },
+  );
+
+  test('rejects unsafe monetary integers', () => {
+    const bad = structuredClone(validCardRuleSet);
+    bad.rewards[0]!.tiers[0]!.monthlyCap = Number.MAX_SAFE_INTEGER + 1;
+    expect(cardRuleSetSchema.safeParse(bad).success).toBe(false);
+  });
+
+  test('rejects unknown reward units and condition fields', () => {
+    const unknownUnit = structuredClone(validCardRuleSet);
+    unknownUnit.rewards[0]!.tiers[0]!.rate = null;
+    unknownUnit.rewards[0]!.tiers[0]!.fixedAmount = 100;
+    unknownUnit.rewards[0]!.tiers[0]!.unit = 'won_per_visit';
+    expect(cardRuleSetSchema.safeParse(unknownUnit).success).toBe(false);
+
+    const unknownCondition = structuredClone(validCardRuleSet);
+    Object.assign(unknownCondition.rewards[0]!.conditions!, {
+      excludeOnline: true,
+    });
+    expect(cardRuleSetSchema.safeParse(unknownCondition).success).toBe(false);
   });
 
   test('rejects missing globalConstraints', () => {

@@ -29,7 +29,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 전 가맹점 포인트 적립 (1200원당 10P)
     type: points
     tiers:
@@ -41,8 +46,15 @@ rewards:
         rate: 0.83
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 제주항공 이용 추가 포인트 적립 (1200원당 10P 추가)
     type: points
     tiers:
@@ -57,8 +69,15 @@ rewards:
     conditions:
       specificMerchants:
         - 제주항공
+    support:
+      status: supported
 
   - category: travel
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 제주항공 항공권/부가서비스 결제일 할인 (30만원 이상 시 2만원)
     type: discount
     tiers:
@@ -75,6 +94,8 @@ rewards:
       minTransaction: 300000
       specificMerchants:
         - 제주항공
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -35,6 +35,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -54,8 +59,15 @@ rewards:
         - 쿠팡
         - 위메프
         - 티몬
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -75,8 +87,16 @@ rewards:
         - CU
         - GS25
         - 미니스톱
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: discount
     tiers:
@@ -96,8 +116,15 @@ rewards:
       specificMerchants:
         - 배스킨라빈스
         - 파리바게뜨
+    support:
+      status: supported
 
   - category: medical
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -112,6 +139,8 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

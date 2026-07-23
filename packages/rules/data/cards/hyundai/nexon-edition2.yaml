@@ -30,7 +30,13 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: gaming
+  - category: entertainment
+    subcategory: gaming
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 넥슨 PC/모바일 게임 결제 (10% 적립)
     type: points
     tiers:
@@ -45,8 +51,16 @@ rewards:
     conditions:
       specificMerchants:
         - 넥슨
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: PC방
     type: points
     tiers:
@@ -58,8 +72,15 @@ rewards:
         rate: 5.0
         monthlyCap: 2000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 온라인몰
     type: points
     tiers:
@@ -71,8 +92,15 @@ rewards:
         rate: 3.0
         monthlyCap: 2000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: 배달앱
     type: points
     tiers:
@@ -84,8 +112,15 @@ rewards:
         rate: 3.0
         monthlyCap: 2000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: 편의점
     type: points
     tiers:
@@ -97,6 +132,8 @@ rewards:
         rate: 3.0
         monthlyCap: 2000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

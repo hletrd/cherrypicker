@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -58,8 +63,16 @@ rewards:
         - PAYCO
         - 쿠페이
         - SK PAY
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: grocery
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -82,8 +95,16 @@ rewards:
         - 롯데마트
         - 코스트코
         - 트레이더스
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: transportation
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -105,8 +126,15 @@ rewards:
         - GS칼텍스
         - S-OIL
         - 현대오일뱅크
+    support:
+      status: supported
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -130,8 +158,15 @@ rewards:
         - 폴바셋
         - 투썸플레이스
         - 블루보틀
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -146,6 +181,9 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

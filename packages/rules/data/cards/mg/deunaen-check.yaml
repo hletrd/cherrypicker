@@ -31,6 +31,11 @@ performanceExclusions: []
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: general
     type: cashback
     tiers:
@@ -52,8 +57,16 @@ rewards:
         - 무신사
         - 지그재그
       note: "온라인쇼핑 20% 캐시백"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: cafe
     type: cashback
     tiers:
@@ -75,8 +88,16 @@ rewards:
         - 투썸플레이스
         - 커피빈
       note: "커피전문점 20% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: subscription
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -97,6 +118,9 @@ rewards:
         - 카카오페이
         - 페이코
       note: "간편결제 20% 캐시백 (전월 20만원 이상 시)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: payment_method; merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

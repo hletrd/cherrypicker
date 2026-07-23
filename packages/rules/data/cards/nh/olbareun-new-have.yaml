@@ -31,7 +31,12 @@ performanceExclusions:
   - insurance
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -44,8 +49,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "국내외 전 가맹점 0.7% NH포인트 기본 적립 (무한도)"
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -57,9 +69,17 @@ rewards:
         monthlyCap: 10000
         perTransactionCap: null
     conditions:
+      paymentType: overseas
       note: "당월 이용금액 1위 영역 3.5% 적립 (6개 영역: 온라인쇼핑/배달앱, 오프라인쇼핑/잡화, 이동통신/구독, 대중교통/택시, 커피/편의점, 해외이용). 월 1만원 한도"
+    support:
+      status: supported
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
@@ -72,6 +92,8 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "당월 이용금액 2위 영역 2.1% 적립. 월 1만원 한도"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

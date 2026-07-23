@@ -1,5 +1,6 @@
 export type RewardType = 'discount' | 'points' | 'cashback' | 'mileage';
-export type RewardUnit = string;
+export type RewardUnit = 'won_per_day' | 'won_per_liter' | 'mile_per_1500won' | 'miles';
+import type { PerformanceExclusionId } from './performance-exclusions.js';
 
 export type CardType = 'credit' | 'check' | 'prepaid';
 
@@ -14,25 +15,49 @@ export interface RewardTierRate {
   performanceTier: string;
   rate: number | null;
   fixedAmount?: number | null;
-  unit?: string | null;
+  unit?: RewardUnit | null;
+  value: RewardValue;
   monthlyCap: number | null;
   perTransactionCap: number | null;
+  annualCap?: number | null;
 }
 
 export interface RewardConditions {
   minTransaction?: number;
+  maxTransaction?: number;
   specificMerchants?: string[];
+  weekdays?: number[];
+  maxUses?: number;
+  usePeriod?: 'day' | 'month';
+  channel?: 'online' | 'offline';
+  paymentType?: 'domestic' | 'overseas';
   note?: string;
-  [key: string]: unknown;
+}
+
+export type RewardSupport =
+  | { status: 'supported' }
+  | { status: 'unsupported'; reason: string };
+
+export type RuleCombination = 'exclusive' | 'additive';
+
+export interface RewardValue {
+  kind: 'percentage' | 'fixed_per_transaction' | 'fixed_per_day' | 'mileage_per_spend' | 'fuel_per_liter';
+  amount: number;
 }
 
 export interface RewardRule {
+  id: string;
   category: string;
   subcategory?: string;
   label?: string;
   type: RewardType;
   tiers: RewardTierRate[];
   conditions?: RewardConditions;
+  priority: number;
+  combination: RuleCombination;
+  stackingGroup: string;
+  capGroup: string;
+  support: RewardSupport;
 }
 
 export interface CardMeta {
@@ -48,19 +73,21 @@ export interface CardMeta {
   url?: string;
   lastUpdated: string;
   source: 'manual' | 'llm-scrape' | 'web';
+  discontinued?: boolean;
 }
 
 export interface GlobalConstraints {
   monthlyTotalDiscountCap: number | null;
   minimumAnnualSpending: number | null;
+  monthlyMileageCap?: number;
+  annualBonusMileage?: number;
   note?: string;
-  [key: string]: unknown;
 }
 
 export interface CardRuleSet {
   card: CardMeta;
   performanceTiers: PerformanceTier[];
-  performanceExclusions: string[];
+  performanceExclusions: PerformanceExclusionId[];
   rewards: RewardRule[];
   globalConstraints: GlobalConstraints;
 }

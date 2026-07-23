@@ -31,6 +31,11 @@ performanceExclusions:
 
 rewards:
   - category: transportation
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 수소차 충전요금 할인
     type: discount
     tiers:
@@ -45,8 +50,15 @@ rewards:
     conditions:
       specificMerchants:
         - 수소충전소
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 주차장/자동차SVC 할인
     type: discount
     tiers:
@@ -58,8 +70,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: offline_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 할인점/편의점/배달앱 할인
     type: discount
     tiers:
@@ -71,6 +90,8 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

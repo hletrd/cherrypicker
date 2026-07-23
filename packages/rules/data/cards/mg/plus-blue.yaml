@@ -31,6 +31,11 @@ performanceExclusions: []
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: restaurant
     type: discount
     tiers:
@@ -46,8 +51,16 @@ rewards:
         rate: 10.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: cafe
     type: discount
     tiers:
@@ -68,8 +81,16 @@ rewards:
         - 스타벅스
         - 투썸플레이스
         - 폴바셋
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: telecom
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -86,8 +107,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "자동납부 시"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: utilities
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -104,8 +133,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "도시가스, 전기요금 자동납부 시"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: insurance
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -122,8 +159,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "4대 보험(건강보험, 국민연금, 고용보험, 산재보험) 자동납부 시"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: grocery
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     subcategory: supermarket
     type: discount
     tiers:
@@ -139,8 +184,16 @@ rewards:
         rate: 10.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: transportation
+    id: reward-007
+    priority: 7
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-007
     subcategory: fuel
     type: discount
     tiers:
@@ -156,6 +209,9 @@ rewards:
         rate: 10.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

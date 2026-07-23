@@ -1,7 +1,13 @@
 import { describe, test, expect, beforeAll } from 'bun:test';
 import { join } from 'path';
-import { CategoryTaxonomy } from '../src/categorizer/taxonomy.js';
-import { MerchantMatcher } from '../src/categorizer/matcher.js';
+import {
+  CategoryTaxonomy,
+  TAXONOMY_KEYWORD_OVERRIDES,
+} from '../src/categorizer/taxonomy.js';
+import {
+  getResolvedKeywordConflicts,
+  MerchantMatcher,
+} from '../src/categorizer/matcher.js';
 import { loadCategories } from '@cherrypicker/rules';
 
 const categoriesPath = join(
@@ -74,6 +80,7 @@ describe('CategoryTaxonomy - findCategory', () => {
   test('finds dining category via keyword', () => {
     const result = taxonomy.findCategory('식당');
     expect(result.category).toBe('dining');
+    expect(result.subcategory).toBe('restaurant');
     expect(result.confidence).toBeGreaterThan(0);
   });
 
@@ -133,6 +140,45 @@ describe('CategoryTaxonomy - findCategory', () => {
     // 'cgv' lowercase — keyword is 'CGV' in yaml, stored lowercase in map
     const result = taxonomy.findCategory('cgv');
     expect(result.category).toBe('entertainment');
+  });
+});
+
+describe('CategoryTaxonomy - keyword conflict contract', () => {
+  test('every live taxonomy conflict has an explicit audited winner', () => {
+    const conflicts = taxonomy.getResolvedKeywordConflicts();
+    expect(conflicts).toHaveLength(11);
+    expect(Object.keys(TAXONOMY_KEYWORD_OVERRIDES)).toHaveLength(11);
+    expect(
+      conflicts.every((conflict) =>
+        conflict.candidates.includes(conflict.selectedCategory)
+      ),
+    ).toBe(true);
+  });
+
+  test('a conflicting taxonomy keyword without an override is fatal', () => {
+    const fixtureNodes = [
+      {
+        id: 'first',
+        labelKo: '첫째',
+        labelEn: 'First',
+        keywords: ['shared'],
+      },
+      {
+        id: 'second',
+        labelKo: '둘째',
+        labelEn: 'Second',
+        keywords: ['shared'],
+      },
+    ];
+
+    expect(
+      () => new CategoryTaxonomy(fixtureNodes, { keywordOverrides: {} }),
+    ).toThrow(/unresolved categories/);
+    expect(
+      new CategoryTaxonomy(fixtureNodes, {
+        keywordOverrides: { shared: 'second' },
+      }).findCategory('shared').category,
+    ).toBe('second');
   });
 });
 
@@ -229,7 +275,8 @@ describe('MerchantMatcher - static MERCHANT_KEYWORDS', () => {
 describe('MerchantMatcher - rawCategory fallback', () => {
   test('uses rawCategory when it matches a known taxonomy ID', () => {
     const result = matcher.match('완전히알수없는가맹점999', 'cafe');
-    expect(result.category).toBe('cafe');
+    expect(result.category).toBe('dining');
+    expect(result.subcategory).toBe('cafe');
     expect(result.confidence).toBe(0.5);
   });
 
@@ -316,6 +363,18 @@ describe('MerchantMatcher - length guard (C10-02 / C11-13)', () => {
 });
 
 describe('Cross-file keyword duplicate detection (C3-02)', () => {
+  test('every canonical keyword conflict has an explicit audited override', () => {
+    const conflicts = getResolvedKeywordConflicts();
+    expect(conflicts).toHaveLength(211);
+    expect(
+      conflicts.every(
+        (conflict) =>
+          conflict.resolution === 'explicit_override' &&
+          conflict.candidates.includes(conflict.selectedCategory),
+      ),
+    ).toBe(true);
+  });
+
   test('ENGLISH_KEYWORDS should not grow duplicate keys with MERCHANT_KEYWORDS', async () => {
     const { MERCHANT_KEYWORDS } = await import('../src/categorizer/keywords.js');
     const { ENGLISH_KEYWORDS } = await import('../src/categorizer/keywords-english.js');
@@ -354,7 +413,8 @@ describe('MerchantMatcher - LRU cache (C5-07)', () => {
     const result1 = matcher.match('완전히알수없는가맹점999');
     const result2 = matcher.match('완전히알수없는가맹점999', 'cafe');
     expect(result1.category).toBe('uncategorized');
-    expect(result2.category).toBe('cafe');
+    expect(result2.category).toBe('dining');
+    expect(result2.subcategory).toBe('cafe');
   });
 
   test('cache differentiates by case and spacing', () => {

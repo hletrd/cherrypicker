@@ -38,6 +38,11 @@ performanceExclusions:
 
 rewards:
   - category: "utilities"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "공과금 (전기/도시가스) 할인"
     type: discount
     tiers:
@@ -53,7 +58,14 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: 50000
+    support:
+      status: supported
   - category: "telecom"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "통신요금 할인"
     type: discount
     tiers:
@@ -69,7 +81,14 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: 50000
+    support:
+      status: supported
   - category: "convenience_store"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "편의점 할인 (오전9시~오후9시)"
     type: discount
     tiers:
@@ -85,7 +104,15 @@ rewards:
         rate: 10.0
         monthlyCap: 30000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
   - category: "medical"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "병원/약국 할인 (오전9시~오후9시)"
     type: discount
     tiers:
@@ -101,7 +128,15 @@ rewards:
         rate: 10.0
         monthlyCap: 30000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
   - category: "online_shopping"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "온라인쇼핑 할인 (오후9시~오전9시)"
     type: discount
     tiers:
@@ -117,7 +152,15 @@ rewards:
         rate: 10.0
         monthlyCap: 30000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
   - category: "dining"
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     label: "식음료 할인 (오후9시~오전9시)"
     type: discount
     tiers:
@@ -133,7 +176,15 @@ rewards:
         rate: 10.0
         monthlyCap: 30000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
   - category: "grocery"
+    id: reward-007
+    priority: 7
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-007
     label: "주말 대형할인마트 할인"
     type: discount
     tiers:
@@ -149,7 +200,16 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    conditions:
+      weekdays: [0, 6]
+    support:
+      status: supported
   - category: "transportation"
+    id: reward-008
+    priority: 8
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-008
     label: "주말 주유소 할인"
     type: discount
     tiers:
@@ -171,6 +231,10 @@ rewards:
         unit: "won_per_liter"
         monthlyCap: 10000
         perTransactionCap: null
+    conditions:
+      weekdays: [0, 6]
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

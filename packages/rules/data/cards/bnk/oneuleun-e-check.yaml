@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: simple_pay
     type: cashback
     tiers:
@@ -41,8 +46,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "간편결제 5% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: delivery
     type: cashback
     tiers:
@@ -59,8 +72,15 @@ rewards:
         - 배달의민족
         - 요기요
         - 쿠팡이츠
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -71,6 +91,8 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

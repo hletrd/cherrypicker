@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: uncategorized
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -42,6 +47,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "전월 30만원 이상 시 타임 캐시백 0.6% 추가 (합산 0.8%)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

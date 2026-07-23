@@ -40,6 +40,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -60,8 +65,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "엘페이 포함 간편결제 이용시 엘포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -80,6 +93,9 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

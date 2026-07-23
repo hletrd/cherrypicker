@@ -2,7 +2,9 @@
 
 > 마지막 업데이트: 2026-03-24
 
-## 카드 목록
+> 이 디렉터리에는 총 5개 카드 YAML이 있습니다. 아래 표는 대표 상품만 요약합니다.
+
+## 대표 카드
 
 | 카드명 | 연회비 | 주요 혜택 | 전월실적 |
 |--------|--------|-----------|----------|
@@ -15,3 +17,17 @@
 - 해외결제 2% 무제한 캐시백 (공통)
 - ATM 현금인출 수수료 면제 (공통)
 - 캐시백 종류를 월 5회까지 변경 가능
+
+<!-- BEGIN GENERATED CARD INDEX -->
+## 전체 카드 인덱스
+
+> YAML 기준 **5개** · 최신 업데이트: `2026-03-25`
+
+| 카드명 | 유형 | YAML |
+|---|---:|---|
+| K-패스 체크카드 | 체크 | [k-pass-check.yaml](./k-pass-check.yaml) |
+| 모임카드 | 체크 | [moim-check.yaml](./moim-check.yaml) |
+| 토스뱅크 체크카드 | 체크 | [check-card.yaml](./check-card.yaml) |
+| 토스뱅크 토심이 첵첵 체크카드 | 체크 | [tosim-check.yaml](./tosim-check.yaml) |
+| 토스뱅크 하나카드 Day | 신용 | [hana-day-credit.yaml](./hana-day-credit.yaml) |
+<!-- END GENERATED CARD INDEX -->

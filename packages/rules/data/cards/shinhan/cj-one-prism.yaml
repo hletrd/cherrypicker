@@ -29,7 +29,13 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "beauty"
+  - category: offline_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
+    subcategory: beauty
     label: "올리브영 CJ ONE 포인트 10% 적립"
     type: points
     tiers:
@@ -44,7 +50,15 @@ rewards:
     conditions:
       specificMerchants:
         - 올리브영
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
   - category: "entertainment"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "CGV CJ ONE 포인트 5% 적립"
     type: points
     tiers:
@@ -59,7 +73,14 @@ rewards:
     conditions:
       specificMerchants:
         - CGV
+    support:
+      status: supported
   - category: "dining"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "뚜레쥬르/VIPS CJ ONE 포인트 5% 적립"
     type: points
     tiers:
@@ -75,7 +96,14 @@ rewards:
       specificMerchants:
         - 뚜레쥬르
         - VIPS
+    support:
+      status: supported
   - category: "subscription"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "TVING CJ ONE 포인트 5% 적립"
     type: points
     tiers:
@@ -90,7 +118,15 @@ rewards:
     conditions:
       specificMerchants:
         - TVING
-  - category: "uncategorized"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
+  - category: '*'
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "전 가맹점 CJ ONE 포인트 기본 적립"
     type: points
     tiers:
@@ -102,6 +138,8 @@ rewards:
         rate: 0.3
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

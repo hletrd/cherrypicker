@@ -26,7 +26,13 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "home_living"
+  - category: offline_shopping
+    subcategory: home_living
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "IKEA 오프라인/온라인 5만원 이상 결제 시 10% 할인"
     type: discount
     tiers:
@@ -43,7 +49,15 @@ rewards:
       specificMerchants:
         - IKEA
         - 이케아
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
   - category: "dining"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "IKEA 레스토랑/카페 1만원 이상 결제 시 15% 할인"
     type: discount
     tiers:
@@ -60,7 +74,15 @@ rewards:
       specificMerchants:
         - IKEA 레스토랑
         - IKEA 카페
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
   - category: "convenience_store"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "편의점 5% 할인"
     type: discount
     tiers:
@@ -68,7 +90,14 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "entertainment"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "영화관 5% 할인"
     type: discount
     tiers:
@@ -76,7 +105,14 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "telecom"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "이동통신 자동납부 5% 할인"
     type: discount
     tiers:
@@ -84,6 +120,8 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

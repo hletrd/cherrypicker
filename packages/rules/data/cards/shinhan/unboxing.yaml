@@ -34,6 +34,11 @@ performanceExclusions:
 
 rewards:
   - category: "offline_shopping"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "백화점/홈쇼핑/아울렛 쇼핑 캐시백 (3만원 이상 결제 시)"
     type: discount
     tiers:
@@ -47,7 +52,14 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 30000
+    support:
+      status: supported
   - category: "online_shopping"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "언박싱 스페셜 (트렌드샵/온라인몰 월회비/배송비) 할인"
     type: discount
     tiers:
@@ -61,7 +73,14 @@ rewards:
         fixedAmount: 2500
         monthlyCap: 15000
         perTransactionCap: 2500
+    support:
+      status: supported
   - category: "travel"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "해외 이용 추가 캐시백 (전월 해외 20만원 이상 시)"
     type: discount
     tiers:
@@ -73,6 +92,11 @@ rewards:
         rate: 10.0
         monthlyCap: 20000
         perTransactionCap: null
+    conditions:
+      paymentType: overseas
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

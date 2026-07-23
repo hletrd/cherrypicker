@@ -26,6 +26,11 @@ performanceExclusions:
 
 rewards:
   - category: "offline_shopping"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "갤러리아백화점 현장할인"
     type: discount
     tiers:
@@ -40,8 +45,16 @@ rewards:
     conditions:
       specificMerchants:
         - 갤러리아백화점
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: "offline_shopping"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "갤러리아백화점 청구할인"
     type: discount
     tiers:
@@ -56,8 +69,16 @@ rewards:
     conditions:
       specificMerchants:
         - 갤러리아백화점
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "생활영역 청구할인"
     type: discount
     tiers:
@@ -69,6 +90,9 @@ rewards:
         rate: 3.0
         monthlyCap: 30000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

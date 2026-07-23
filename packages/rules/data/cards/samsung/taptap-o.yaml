@@ -30,20 +30,39 @@ performanceExclusions:
 
 rewards:
   - category: "public_transit"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier1
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "telecom"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier1
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "entertainment"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "CGV/롯데시네마"
     type: discount
     tiers:
@@ -52,7 +71,14 @@ rewards:
         fixedAmount: 5000
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "dining"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "커피전문점 패키지 선택 시"
     type: discount
     tiers:
@@ -60,7 +86,14 @@ rewards:
         rate: 30.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "online_shopping"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "쇼핑 패키지 선택 시 (오픈마켓/트렌디샵/소셜커머스)"
     type: discount
     tiers:
@@ -68,6 +101,8 @@ rewards:
         rate: 7.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

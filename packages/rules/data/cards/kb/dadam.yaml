@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -52,8 +57,16 @@ rewards:
         - 버스
         - 지하철
         - 택시
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: telecom
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -68,8 +81,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -87,8 +107,15 @@ rewards:
     conditions:
       specificMerchants:
         - SK주유소
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -107,8 +134,16 @@ rewards:
       specificMerchants:
         - 인터파크 영화예매
         - 놀이공원
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: travel
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: points
     tiers:
       - performanceTier: tier0
@@ -126,6 +161,9 @@ rewards:
     conditions:
       specificMerchants:
         - 해외가맹점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

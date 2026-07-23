@@ -27,6 +27,11 @@ performanceExclusions:
 
 rewards:
   - category: "medical"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "병원/약국/동물병원 10% 할인 (건당 2만원 이상)"
     type: discount
     tiers:
@@ -45,7 +50,14 @@ rewards:
         - 의원
         - 약국
         - 동물병원
+    support:
+      status: supported
   - category: "sports"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "헬스장/스포츠센터 5% 할인"
     type: discount
     tiers:
@@ -62,6 +74,9 @@ rewards:
         - 헬스장
         - 스포츠센터
         - 수영장
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

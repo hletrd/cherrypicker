@@ -27,7 +27,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "1,500원당 1마일 기본 적립. BLISS.7 대비 연회비 절반 수준의 실속형 프리미엄 카드"
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: movie
     type: discount
     tiers:
@@ -58,6 +70,9 @@ rewards:
         - CGV
         - 메가박스
         - 롯데시네마
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: "public_transit"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "대중교통 5% 마이신한포인트 적립"
     type: points
     tiers:
@@ -41,7 +46,14 @@ rewards:
         rate: 5.0
         monthlyCap: 8000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "telecom"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "통신요금 2% 마이신한포인트 적립"
     type: points
     tiers:
@@ -53,7 +65,14 @@ rewards:
         rate: 2.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "convenience_store"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "편의점 2% 마이신한포인트 적립"
     type: points
     tiers:
@@ -65,7 +84,14 @@ rewards:
         rate: 2.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "dining"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "커피전문점 2% 마이신한포인트 적립"
     type: points
     tiers:
@@ -77,7 +103,14 @@ rewards:
         rate: 2.0
         monthlyCap: null
         perTransactionCap: null
-  - category: "uncategorized"
+    support:
+      status: supported
+  - category: '*'
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "해외 이용 1.3% 마이신한포인트 적립"
     type: points
     tiers:
@@ -90,8 +123,9 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
-      specificMerchants:
-        - 해외가맹점
+      paymentType: overseas
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 16000

@@ -35,6 +35,11 @@ performanceExclusions:
 
 rewards:
   - category: telecom
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -53,8 +58,15 @@ rewards:
       specificMerchants:
         - SK텔레콤
       note: "SKT 단말기 구매 서비스 할인 포함"
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: movie
     type: discount
     tiers:
@@ -74,8 +86,16 @@ rewards:
       specificMerchants:
         - 메가박스
       note: "메가박스 영화예매 1+1 (월 1회)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit; merchant category is not reachable by the canonical matcher"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
@@ -90,6 +110,9 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: 25000

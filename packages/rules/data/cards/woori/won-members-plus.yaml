@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -51,8 +56,16 @@ rewards:
       note: "우리WON마켓 2.0% 꿀머니 적립"
       specificMerchants:
         - 우리WON마켓
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -69,8 +82,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "주요 리테일 1.5% 꿀머니 적립"
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: movie
     type: discount
     tiers:
@@ -88,6 +108,9 @@ rewards:
         perTransactionCap: 3000
     conditions:
       note: "영화관 3,000원 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

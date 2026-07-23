@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 해외/온라인 결제 7% 할인
     type: discount
     tiers:
@@ -35,8 +40,17 @@ rewards:
         rate: 7.0
         monthlyCap: 10000
         perTransactionCap: null
+    conditions:
+      channel: online
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 스트리밍 7% 할인
     type: discount
     tiers:
@@ -51,6 +65,9 @@ rewards:
         - 디즈니플러스
         - 티빙
         - 웨이브
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

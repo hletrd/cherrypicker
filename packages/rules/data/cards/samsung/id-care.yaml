@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: "medical"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "병원/약국/동물병원 5% 결제일 할인"
     type: discount
     tiers:
@@ -47,7 +52,15 @@ rewards:
         - 의원
         - 약국
         - 동물병원
-  - category: "apartment_mgmt"
+    support:
+      status: supported
+  - category: utilities
+    subcategory: apartment_mgmt
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "아파트관리비/이동통신/4대 사회보험 5% 결제일 할인"
     type: discount
     tiers:
@@ -67,6 +80,9 @@ rewards:
         - 건강보험
         - 고용보험
         - 산재보험
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

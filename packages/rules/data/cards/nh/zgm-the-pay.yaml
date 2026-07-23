@@ -23,7 +23,12 @@ performanceExclusions:
   - insurance
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -32,8 +37,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "국내/해외 전 가맹점 1% 청구할인. 무실적 무한도"
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -53,6 +65,9 @@ rewards:
         - L페이
         - SK페이
         - 페이코
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method; merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -34,7 +34,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -51,6 +56,8 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "전 가맹점 직접 할인"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

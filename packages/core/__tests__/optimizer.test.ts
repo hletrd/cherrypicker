@@ -35,6 +35,8 @@ function makeTx(
     merchant,
     amount,
     currency: 'KRW',
+    paymentType: 'domestic',
+    factProvenance: { paymentType: 'statement' },
     category,
     subcategory,
     confidence: 1.0,
@@ -201,6 +203,29 @@ describe('greedyOptimize - two cards', () => {
     expect(assignment?.alternatives).toHaveLength(1);
   });
 
+  test('retains unsupported issues from a losing candidate card', () => {
+    const constraints = makeConstraints(
+      [makeTx('t1', 'convenience_store', 50000, 'CU 강남점')],
+      new Map([
+        ['shinhan-simple-plan', 0],
+        ['shinhan-mr-life', 500000],
+      ]),
+    );
+
+    const result = greedyOptimize(constraints, [simplePlan, mrLife]);
+
+    expect(result.assignments[0]?.assignedCardId).toBe('shinhan-simple-plan');
+    expect(result.cardResults.some((card) => card.cardId === 'shinhan-mr-life')).toBe(false);
+    expect(result.unsupportedRules).toContainEqual(
+      expect.objectContaining({
+        transactionId: 't1',
+        ruleId: 'reward-003',
+        category: 'convenience_store',
+        reason: 'rule_marked_unsupported',
+      }),
+    );
+  });
+
   test('cardResults contains entries for cards that have assignments', () => {
     const constraints = makeConstraints([
       makeTx('t1', 'convenience_store', 50000),
@@ -263,25 +288,22 @@ describe('greedyOptimize - edge cases', () => {
     expect(result.totalSpending).toBe(100000);
   });
 
-  test('category with no matching rule gets 0 reward', () => {
-    // simple-plan only rewards 'uncategorized' at tier0
-    // A 'dining' transaction with no matching rule should get 0 reward
+  test('all-merchant wildcard rewards a categorized transaction', () => {
     const constraints = makeConstraints([
       makeTx('t1', 'dining', 50000),
     ], new Map([['shinhan-simple-plan', 0]]));
     const result = greedyOptimize(constraints, [simplePlan]);
     const dining = result.assignments.find((a) => a.category === 'dining');
-    // simple-plan has no dining rule, so dining gets 0 reward
     expect(dining).toBeDefined();
-    expect(dining!.reward).toBe(0);
+    expect(dining!.reward).toBe(500);
   });
 
   test('all cards giving 0 reward still produces assignments', () => {
-    // No card has rules for 'entertainment' in simple-plan
+    // mr-life has no tier0 reward for entertainment.
     const constraints = makeConstraints([
       makeTx('t1', 'entertainment', 50000),
-    ], new Map([['shinhan-simple-plan', 0]]));
-    const result = greedyOptimize(constraints, [simplePlan]);
+    ], new Map([['shinhan-mr-life', 0]]));
+    const result = greedyOptimize(constraints, [mrLife]);
     expect(result.assignments.length).toBeGreaterThan(0);
     expect(result.totalReward).toBe(0);
   });

@@ -32,7 +32,12 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 전 가맹점 캐시백
     type: cashback
     tiers:
@@ -44,6 +49,8 @@ rewards:
         rate: 0.8
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

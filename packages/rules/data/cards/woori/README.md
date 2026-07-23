@@ -2,7 +2,9 @@
 
 > 마지막 업데이트: 2026-03-24
 
-## 카드 목록
+> 이 디렉터리에는 총 52개 카드 YAML이 있습니다. 아래 표는 대표 상품만 요약합니다.
+
+## 대표 카드
 
 | 카드명 | 연회비 | 주요 혜택 | 전월실적 |
 |--------|--------|-----------|----------|
@@ -53,3 +55,64 @@
 - POINT 시리즈는 적립 시 결제건당 1만원 미만 제외
 - 오하CHECK/COOKIE CHECK/POINT CHECK는 체크카드로 연회비 없음
 - 공과금, 아파트관리비, 등록금 등은 대부분 적립/할인 제외
+
+<!-- BEGIN GENERATED CARD INDEX -->
+## 전체 카드 인덱스
+
+> YAML 기준 **52개** · 최신 업데이트: `2026-03-26`
+
+| 카드명 | 유형 | YAML |
+|---|---:|---|
+| D4@카드의정석 | 신용 | [d4.yaml](./d4.yaml) |
+| K-패스 우리카드 | 신용 | [k-pass.yaml](./k-pass.yaml) |
+| KREAM 우리카드 | 신용 | [kream.yaml](./kream.yaml) |
+| 갤러리아 플래티넘 우리카드 | 신용 | [galleria-platinum.yaml](./galleria-platinum.yaml) |
+| 우리카드 010PAY | 신용 | [010pay.yaml](./010pay.yaml) |
+| 우리카드 ALL 우리카드 Infinite | 신용 | [all-infinite.yaml](./all-infinite.yaml) |
+| 우리카드 ALL 우리카드 Premium | 신용 | [all-premium.yaml](./all-premium.yaml) |
+| 우리카드 DA카드의정석Ⅱ | 신용 | [da2.yaml](./da2.yaml) |
+| 우리카드 EVERY WON POINT | 신용 | [every-won-point.yaml](./every-won-point.yaml) |
+| 우리카드 ROYAL BLUE M (SKYPASS) | 신용 | [royal-blue-m.yaml](./royal-blue-m.yaml) |
+| 우리카드 SHOPPING+ | 신용 | [shopping-plus-v2.yaml](./shopping-plus-v2.yaml) |
+| 우리카드 TWO CHAIRS W | 신용 | [two-chairs-w.yaml](./two-chairs-w.yaml) |
+| 우리카드 The OPUS Silver | 신용 | [opus-silver.yaml](./opus-silver.yaml) |
+| 우리카드 다모아 DIRECT+ | 신용 | [damoa-direct.yaml](./damoa-direct.yaml) |
+| 우리카드 다모아 Platinum DIRECT+ | 신용 | [damoa-platinum-direct.yaml](./damoa-platinum-direct.yaml) |
+| 우리카드 다모아할인+ | 신용 | [damoa-discount-plus.yaml](./damoa-discount-plus.yaml) |
+| 우리카드 바디프랜드 | 신용 | [bodyfriend.yaml](./bodyfriend.yaml) |
+| 우리카드 블루다이아몬드II | 신용 | [blue-diamond2.yaml](./blue-diamond2.yaml) |
+| 우리카드 세븐코어 | 신용 | [7core.yaml](./7core.yaml) |
+| 우리카드 우리모아+ | 신용 | [woori-moa.yaml](./woori-moa.yaml) |
+| 우리카드 위비온플러스+ | 신용 | [wibi-on-plus.yaml](./wibi-on-plus.yaml) |
+| 우리카드 위비할인+ | 신용 | [wibi-discount.yaml](./wibi-discount.yaml) |
+| 우리카드 카드의정석 COOKIE CHECK | 체크 | [cookie-check.yaml](./cookie-check.yaml) |
+| 우리카드 카드의정석 DISCOUNT | 신용 | [discount.yaml](./discount.yaml) |
+| 우리카드 카드의정석 EVERY 1 | 신용 | [every1.yaml](./every1.yaml) |
+| 우리카드 카드의정석 EVERY DIRECT | 신용 | [every-direct.yaml](./every-direct.yaml) |
+| 우리카드 카드의정석 EVERY DISCOUNT | 신용 | [every-discount.yaml](./every-discount.yaml) |
+| 우리카드 카드의정석 EVERY MILE SKYPASS | 신용 | [every-mile-skypass.yaml](./every-mile-skypass.yaml) |
+| 우리카드 카드의정석 EVERY POINT | 신용 | [every-point.yaml](./every-point.yaml) |
+| 우리카드 카드의정석 I&amp;U+ | 신용 | [iu-plus.yaml](./iu-plus.yaml) |
+| 우리카드 카드의정석 POINT | 신용 | [point.yaml](./point.yaml) |
+| 우리카드 카드의정석 POINT CHECK | 체크 | [point-check.yaml](./point-check.yaml) |
+| 우리카드 카드의정석 POINT+ | 신용 | [point-plus.yaml](./point-plus.yaml) |
+| 우리카드 카드의정석 PREMIUM MILEAGE+ | 신용 | [premium-mileage-plus.yaml](./premium-mileage-plus.yaml) |
+| 우리카드 카드의정석 PREMIUM POINT+ | 신용 | [premium-point-plus.yaml](./premium-point-plus.yaml) |
+| 우리카드 카드의정석 SHOPPING+ | 신용 | [shopping-plus.yaml](./shopping-plus.yaml) |
+| 우리카드 카드의정석 TEN | 신용 | [ten.yaml](./ten.yaml) |
+| 우리카드 카드의정석 UNIQ+ | 신용 | [uniq-plus.yaml](./uniq-plus.yaml) |
+| 우리카드 카드의정석 UNTACT+ | 신용 | [untact-plus.yaml](./untact-plus.yaml) |
+| 우리카드 카드의정석 WOWRI | 신용 | [wowri.yaml](./wowri.yaml) |
+| 우리카드 카드의정석 신통방통 | 신용 | [sintong-bangtong.yaml](./sintong-bangtong.yaml) |
+| 우리카드 카드의정석 에브리마일 | 신용 | [card-of-rules-every-mile.yaml](./card-of-rules-every-mile.yaml) |
+| 우리카드 카드의정석 오하CHECK | 체크 | [oha-check.yaml](./oha-check.yaml) |
+| 우리카드 카드의정석 우리WON멤버스+ | 신용 | [won-members-plus.yaml](./won-members-plus.yaml) |
+| 우리카드 카드의정석 칼퇴 체크카드 | 체크 | [kalteoi-check.yaml](./kalteoi-check.yaml) |
+| 우리카드 카드의정석2 | 신용 | [card-of-rules-2.yaml](./card-of-rules-2.yaml) |
+| 우리카드 하이마트 | 신용 | [himart.yaml](./himart.yaml) |
+| 우리카드 현대렌탈케어 우리카드 | 신용 | [hyundai-rental.yaml](./hyundai-rental.yaml) |
+| 카드의정석 EVERY MILE 아시아나 | 신용 | [every-mile-asiana.yaml](./every-mile-asiana.yaml) |
+| 카드의정석 NEW우리V카드 | 신용 | [new-woori-v.yaml](./new-woori-v.yaml) |
+| 카드의정석2 EXK 체크카드 | 체크 | [price-is-right-check.yaml](./price-is-right-check.yaml) |
+| 트래블월렛 우리카드 | 신용 | [travelwallet.yaml](./travelwallet.yaml) |
+<!-- END GENERATED CARD INDEX -->

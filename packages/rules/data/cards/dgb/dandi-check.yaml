@@ -26,6 +26,11 @@ performanceExclusions: []
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -45,8 +50,16 @@ rewards:
         - 베니건스
         - 아웃백
       note: "스타벅스 등 커피 10%, 패밀리레스토랑 20% 결제일 캐시백"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -64,8 +77,16 @@ rewards:
         - 메가박스
         - 롯데시네마
       note: "영화관 3000원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -82,8 +103,16 @@ rewards:
         - CU
         - GS25
       note: "편의점 5% 결제일 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: telecom
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -98,8 +127,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "이동통신요금 자동이체 시 3% 결제일 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: account_or_autopay"
 
   - category: online_shopping
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -114,6 +151,9 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "온라인 쇼핑몰 5% 결제일 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

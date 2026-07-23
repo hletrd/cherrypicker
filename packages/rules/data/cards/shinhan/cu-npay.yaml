@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: "convenience_store"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "CU 편의점 네이버페이QR 결제 시 20% 할인"
     type: discount
     tiers:
@@ -44,7 +49,15 @@ rewards:
     conditions:
       specificMerchants:
         - CU
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
   - category: "convenience_store"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "CU 편의점 실물카드/삼성페이/신한SOLPay 결제 시 15% 할인"
     type: discount
     tiers:
@@ -59,7 +72,15 @@ rewards:
     conditions:
       specificMerchants:
         - CU 실물카드
-  - category: "uncategorized"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "일반 오프라인 가맹점 네이버페이QR 결제 시 5% 네이버페이 포인트"
     type: points
     tiers:
@@ -67,6 +88,11 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      channel: offline
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

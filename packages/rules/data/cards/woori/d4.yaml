@@ -31,6 +31,11 @@ performanceExclusions:
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "대중교통 33% 할인"
     type: discount
     tiers:
@@ -42,8 +47,15 @@ rewards:
         rate: 33.0
         monthlyCap: 11000
         perTransactionCap: 3300
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: cafe
     label: "커피전문점 55% 할인"
     type: discount
@@ -56,8 +68,15 @@ rewards:
         rate: 55.0
         monthlyCap: 11000
         perTransactionCap: 3300
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: movie
     label: "영화관 5,500원 할인"
     type: discount
@@ -72,6 +91,9 @@ rewards:
         perTransactionCap: 5500
     conditions:
       note: "영화관 이용 시 건당 5,500원 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: 22000

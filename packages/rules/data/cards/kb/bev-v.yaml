@@ -34,7 +34,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "주중 (월~목) 전 가맹점 포인트리 적립"
     type: points
     tiers:
@@ -46,8 +51,17 @@ rewards:
         rate: 1.5
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      weekdays: [1, 2, 3, 4]
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "주말 (금~일) 전 가맹점 포인트리 적립"
     type: points
     tiers:
@@ -59,8 +73,18 @@ rewards:
         rate: 3.0
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      weekdays: [5, 6, 0]
+    support:
+      status: supported
 
-  - category: department_store
+  - category: offline_shopping
+    subcategory: department_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "주중 일상쇼핑 (백화점/대형마트) 포인트리 적립"
     type: points
     tiers:
@@ -72,8 +96,16 @@ rewards:
         rate: 1.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: weekday"
 
   - category: uncategorized
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "연간 쿠폰 (신세계상품권/롯데상품권/포인트리/호텔뷔페 중 택1)"
     type: discount
     tiers:
@@ -82,6 +114,9 @@ rewards:
         fixedAmount: 150000
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -29,8 +34,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "전 가맹점 0.7% NH포인트 기본 적립 (적립한도 없음)"
+    support:
+      status: supported
 
   - category: grocery
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -38,10 +50,14 @@ rewards:
         monthlyCap: 10000
         perTransactionCap: null
     conditions:
+      weekdays: [0, 6]
       specificMerchants:
         - 농협판매장
         - 농협운영주유소
       note: "주말 기부지역 가맹점 및 농협 판매장 추가 0.7% 적립 (고향사랑기부 고객)"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

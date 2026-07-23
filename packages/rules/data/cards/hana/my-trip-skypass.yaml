@@ -27,7 +27,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,16 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 1000
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -58,6 +71,9 @@ rewards:
         - 대한항공
         - 진에어
         - 해외가맹점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

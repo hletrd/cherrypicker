@@ -36,6 +36,11 @@ performanceExclusions:
 
 rewards:
   - category: grocery
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "대형마트 5% 할인"
     type: discount
     tiers:
@@ -57,8 +62,16 @@ rewards:
         - 홈플러스
         - 롯데마트
         - 코스트코
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: transportation
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: fuel
     label: "주유소 5% 할인"
     type: discount
@@ -75,8 +88,15 @@ rewards:
         rate: 5.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: offline_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "백화점 5% 할인"
     type: discount
     tiers:
@@ -98,8 +118,15 @@ rewards:
         - 현대백화점
         - 신세계백화점
         - 갤러리아백화점
+    support:
+      status: supported
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "아웃백 25% 할인"
     type: discount
     tiers:
@@ -118,8 +145,15 @@ rewards:
     conditions:
       specificMerchants:
         - 아웃백스테이크하우스
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: movie
     label: "CGV 6,000원 할인"
     type: discount
@@ -139,6 +173,9 @@ rewards:
     conditions:
       specificMerchants:
         - CGV
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

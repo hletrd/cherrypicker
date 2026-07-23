@@ -31,6 +31,11 @@ performanceExclusions:
 
 rewards:
   - category: convenience_store
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -45,8 +50,16 @@ rewards:
       specificMerchants:
         - GS25
         - 이마트24
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: public_transit
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -59,8 +72,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "시내 대중교통"
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
@@ -73,8 +93,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "네이버페이 포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: streaming
     type: discount
     tiers:
@@ -89,6 +117,9 @@ rewards:
     conditions:
       specificMerchants:
         - 넷플릭스
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

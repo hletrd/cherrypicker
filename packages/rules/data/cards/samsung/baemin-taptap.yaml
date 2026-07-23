@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: "dining"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "배달의민족 결제일 할인 (2,000원/건)"
     type: discount
     tiers:
@@ -45,7 +50,14 @@ rewards:
     conditions:
       specificMerchants:
         - 배달의민족
+    support:
+      status: supported
   - category: "convenience_store"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "CU 편의점 결제일 할인 (200원/1,500원당)"
     type: discount
     tiers:
@@ -60,7 +72,14 @@ rewards:
     conditions:
       specificMerchants:
         - CU
+    support:
+      status: supported
   - category: "public_transit"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "대중교통 결제일 할인 (100원/1,000원당)"
     type: discount
     tiers:
@@ -72,6 +91,8 @@ rewards:
         rate: 10.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

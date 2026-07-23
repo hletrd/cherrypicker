@@ -35,6 +35,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -55,8 +60,15 @@ rewards:
         - 네이버쇼핑
         - G마켓
         - 11번가
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: delivery
     type: discount
     tiers:
@@ -72,8 +84,15 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: streaming
     type: discount
     tiers:
@@ -89,6 +108,8 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

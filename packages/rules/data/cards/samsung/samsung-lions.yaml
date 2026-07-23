@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: entertainment
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 삼성라이온즈 홈경기 입장권/굿즈샵
     type: discount
     tiers:
@@ -40,8 +45,15 @@ rewards:
     conditions:
       specificMerchants:
         - 삼성라이온즈
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 홈구장 내 식음매장
     type: discount
     tiers:
@@ -49,8 +61,15 @@ rewards:
         rate: 10.0
         monthlyCap: 20000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: public_transit
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 대중교통/택시
     type: discount
     tiers:
@@ -58,8 +77,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: 배달앱/온라인쇼핑몰
     type: discount
     tiers:
@@ -67,8 +93,15 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: subscription
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: 디지털콘텐츠 (OTT 등)
     type: discount
     tiers:
@@ -76,8 +109,15 @@ rewards:
         rate: 50.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     label: 철도요금 (KTX/SRT 등)
     type: discount
     tiers:
@@ -85,6 +125,8 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

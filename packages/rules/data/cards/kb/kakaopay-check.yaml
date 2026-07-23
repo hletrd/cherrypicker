@@ -23,6 +23,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 카카오페이 결제 (2% 적립)
     type: points
     tiers:
@@ -33,8 +38,16 @@ rewards:
     conditions:
       specificMerchants:
         - 카카오페이
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 커피전문점 (1% 적립)
     type: points
     tiers:
@@ -48,8 +61,15 @@ rewards:
         - 이디야
         - 투썸플레이스
         - 커피빈
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: CU편의점 (1% 적립)
     type: points
     tiers:
@@ -60,6 +80,8 @@ rewards:
     conditions:
       specificMerchants:
         - CU
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

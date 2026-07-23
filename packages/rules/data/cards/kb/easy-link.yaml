@@ -35,6 +35,11 @@ performanceExclusions:
 
 rewards:
   - category: utilities
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "자동납부 캐시백 (2건 이상 자동납부 등록 시)"
     type: discount
     tiers:
@@ -43,8 +48,16 @@ rewards:
         fixedAmount: 5000
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: utilities
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "자동납부 캐시백 (4건 이상 자동납부 등록 시)"
     type: discount
     tiers:
@@ -53,8 +66,16 @@ rewards:
         fixedAmount: 10000
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "선택형 패키지 (패밀리팩/사업자팩/직장인팩 택1) 할인"
     type: discount
     tiers:
@@ -66,8 +87,16 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: telecom
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "통신 자동납부 할인"
     type: discount
     tiers:
@@ -76,8 +105,15 @@ rewards:
         fixedAmount: 5000
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "영화관 할인 (월 1회)"
     type: discount
     tiers:
@@ -91,6 +127,9 @@ rewards:
         fixedAmount: 3000
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

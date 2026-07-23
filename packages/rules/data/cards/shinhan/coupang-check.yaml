@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 쿠팡 이용금액 3% 쿠팡캐시 적립
     type: points
     tiers:
@@ -44,8 +49,16 @@ rewards:
         - 쿠팡
         - 쿠팡이츠
         - 쿠팡플레이
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 스타벅스 10% 캐시백
     type: discount
     tiers:
@@ -60,6 +73,8 @@ rewards:
     conditions:
       specificMerchants:
         - 스타벅스
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

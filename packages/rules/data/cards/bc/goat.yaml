@@ -4,7 +4,7 @@ card:
   name: GOAT BC Baro Card
   nameKo: GOAT BC 바로카드
   type: credit
-  discontinued: "2026-03-06"
+  discontinued: true
   annualFee:
     domestic: 12000
     international: 15000
@@ -27,6 +27,11 @@ performanceExclusions:
 
 rewards:
   - category: uncategorized
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -35,8 +40,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "페이북 머니 적립, 무실적 무한도. 당월 100만원 초과분은 1% 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -44,7 +57,11 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: overseas
       note: "해외 가맹점 적립. 당월 100만원 초과분은 2% 적립. 해외이용수수료 별도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

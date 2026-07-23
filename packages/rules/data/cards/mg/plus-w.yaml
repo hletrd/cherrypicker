@@ -36,6 +36,11 @@ performanceExclusions: []
 
 rewards:
   - category: education
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: academy
     type: discount
     tiers:
@@ -57,8 +62,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "입시·보습, 외국어, 예체능, 무술도장, 자동차운전, 직업훈련학원"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: medical
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: hospital
     type: discount
     tiers:
@@ -78,8 +91,16 @@ rewards:
         rate: 5.0
         monthlyCap: 40000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: medical
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: pharmacy
     type: discount
     tiers:
@@ -99,8 +120,16 @@ rewards:
         rate: 5.0
         monthlyCap: 40000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: offline_shopping
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -127,8 +156,16 @@ rewards:
         - 롯데마트
         - 올리브영
         - 다이소
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: entertainment
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -149,6 +186,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "골프장, 헬스클럽, 레저시설, 헤어샵 등 여가생활"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

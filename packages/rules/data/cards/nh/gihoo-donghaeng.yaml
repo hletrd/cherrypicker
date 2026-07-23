@@ -32,6 +32,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -47,8 +52,16 @@ rewards:
       specificMerchants:
         - G마켓
         - 옥션
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: telecom
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -61,8 +74,16 @@ rewards:
         perTransactionCap: 4000
     conditions:
       note: "통신사 자동납부 월 4,000원 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: discount
     tiers:
@@ -78,6 +99,9 @@ rewards:
       note: "스타벅스 3,000원 할인"
       specificMerchants:
         - 스타벅스
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

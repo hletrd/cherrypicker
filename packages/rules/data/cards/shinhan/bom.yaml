@@ -33,7 +33,12 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "전 가맹점 캐시백"
     type: discount
     tiers:
@@ -49,7 +54,14 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "public_transit"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "버스/지하철 후불교통 캐시백"
     type: discount
     tiers:
@@ -65,7 +77,14 @@ rewards:
         unit: "won_per_day"
         monthlyCap: 6000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "subscription"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "디지털 구독 (넷플릭스/유튜브프리미엄) 캐시백"
     type: discount
     tiers:
@@ -77,6 +96,8 @@ rewards:
         rate: 50.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

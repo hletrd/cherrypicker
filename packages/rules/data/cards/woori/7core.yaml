@@ -29,6 +29,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 온라인쇼핑 10% 할인 (건당 2만원 이상)
     type: discount
     tiers:
@@ -40,8 +45,16 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: grocery
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 대형마트 10% 할인 (건당 2만원 이상)
     type: discount
     tiers:
@@ -53,8 +66,16 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 배달앱 10% 할인 (건당 2만원 이상)
     type: discount
     tiers:
@@ -71,8 +92,16 @@ rewards:
         - 배달의민족
         - 요기요
         - 쿠팡이츠
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: 커피 10% 할인 (건당 2만원 이상)
     type: discount
     tiers:
@@ -91,8 +120,16 @@ rewards:
         - 이디야
         - 메가커피
         - 컴포즈커피
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: education
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: 교육 10% 할인 (건당 2만원 이상)
     type: discount
     tiers:
@@ -104,8 +141,16 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: medical
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     label: 병원 10% 할인 (건당 2만원 이상)
     type: discount
     tiers:
@@ -117,8 +162,16 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: transportation
+    id: reward-007
+    priority: 7
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-007
     label: 주유 10% 할인 (건당 2만원 이상)
     type: discount
     tiers:
@@ -130,6 +183,9 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: 100000

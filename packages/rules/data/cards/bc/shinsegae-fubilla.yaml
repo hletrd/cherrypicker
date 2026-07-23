@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: uncategorized
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -37,8 +42,16 @@ rewards:
         - SSG닷컴
         - 스타벅스
         - 신세계면세점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: department_store
     type: discount
     tiers:
@@ -50,8 +63,16 @@ rewards:
       note: "신세계백화점 1.7% 청구할인. 무실적 무한도"
       specificMerchants:
         - 신세계백화점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: travel
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -59,9 +80,17 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: overseas
       note: "해외 가맹점 1.7% 청구할인. 무실적 무한도"
+    support:
+      status: supported
 
   - category: education
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -72,6 +101,9 @@ rewards:
       note: "신세계 아카데미 2.7% 청구할인. 무실적 무한도"
       specificMerchants:
         - 신세계아카데미
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

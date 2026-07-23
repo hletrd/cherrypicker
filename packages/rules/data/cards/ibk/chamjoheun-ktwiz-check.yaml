@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: entertainment
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -44,8 +49,17 @@ rewards:
       specificMerchants:
         - kt wiz
       note: "수원 kt wiz 홈경기 입장권 1일 1매 3000원 할인, 월 횟수 무제한"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
-  - category: electronics
+  - category: offline_shopping
+    subcategory: electronics
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -60,8 +74,16 @@ rewards:
       specificMerchants:
         - kt wiz
       note: "수원 kt wiz 파크 내 야구용품점 10% 할인"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: movie
     type: discount
     tiers:
@@ -73,8 +95,15 @@ rewards:
         rate: 100.0
         monthlyCap: 4000
         perTransactionCap: 4000
+    support:
+      status: supported
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -85,8 +114,15 @@ rewards:
         rate: 20.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: dining
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: cafe
     type: discount
     tiers:
@@ -98,6 +134,8 @@ rewards:
         rate: 20.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

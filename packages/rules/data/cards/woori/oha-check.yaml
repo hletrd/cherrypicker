@@ -38,6 +38,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -62,8 +67,15 @@ rewards:
         - 쿠팡
         - 무신사
         - 지그재그
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -89,8 +101,15 @@ rewards:
         - 배달의민족
         - 요기요
         - 쿠팡이츠
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -109,8 +128,15 @@ rewards:
         rate: 5.0
         monthlyCap: 30000
         perTransactionCap: 1000
+    support:
+      status: supported
 
   - category: utilities
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -129,6 +155,8 @@ rewards:
         rate: 5.0
         monthlyCap: 30000
         perTransactionCap: 1000
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

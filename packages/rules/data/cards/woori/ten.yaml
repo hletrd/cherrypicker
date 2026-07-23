@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -56,8 +61,15 @@ rewards:
         - 메가MGC커피
         - 컴포즈커피
         - 매머드커피
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -78,8 +90,16 @@ rewards:
         - CU
         - GS25
         - 세븐일레븐
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: public_transit
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -100,8 +120,16 @@ rewards:
         - 버스
         - 지하철
         - 택시
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: telecom
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -122,8 +150,15 @@ rewards:
         - SKT
         - KT
         - LGU+
+    support:
+      status: supported
 
   - category: travel
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -138,8 +173,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: dining
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: discount
     tiers:
       - performanceTier: tier0
@@ -157,8 +199,15 @@ rewards:
     conditions:
       minTransaction: null
       specificMerchants: []
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-007
+    priority: 7
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-007
     type: discount
     tiers:
       - performanceTier: tier0
@@ -179,6 +228,9 @@ rewards:
         - 우리페이
         - 네이버페이
         - 카카오페이
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

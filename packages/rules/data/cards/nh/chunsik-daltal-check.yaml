@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: cafe
     type: cashback
     tiers:
@@ -44,8 +49,16 @@ rewards:
         - 카카오프렌즈샵
         - 스타벅스
       note: "카카오 캐릭터 춘식이 디자인 카드. 카카오 제휴 가맹점 할인"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -60,8 +73,15 @@ rewards:
       specificMerchants:
         - 카카오쇼핑
         - 카카오선물하기
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -72,6 +92,9 @@ rewards:
         rate: 0.2
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

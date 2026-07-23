@@ -45,7 +45,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 전 가맹점 기본 캐시백 (1만원 이상 0.3%, 5만원 이상 0.5%)
     type: cashback
     tiers:
@@ -74,7 +79,11 @@ rewards:
         monthlyCap: 30000
         perTransactionCap: null
     conditions:
+      weekdays: [0, 6]
       note: "건당 1만원 이상 0.3% 캐시백, 5만원 이상 0.5% 캐시백. 주말/공휴일 추가 0.1% (최대 0.6%). 후불교통 기본 탑재."
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

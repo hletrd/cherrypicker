@@ -32,6 +32,11 @@ performanceExclusions:
 
 rewards:
   - category: "online_shopping"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "간편결제 포인트 적립"
     type: points
     tiers:
@@ -47,8 +52,16 @@ rewards:
         rate: 1.5
         monthlyCap: 30000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
   - category: "convenience_store"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "편의점 포인트 적립"
     type: points
     tiers:
@@ -66,8 +79,15 @@ rewards:
         fixedAmount: 1000
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "online_shopping"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "쿠팡/G마켓/배달의민족 포인트 적립"
     type: points
     tiers:
@@ -88,6 +108,9 @@ rewards:
         - 쿠팡
         - G마켓
         - 배달의민족
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

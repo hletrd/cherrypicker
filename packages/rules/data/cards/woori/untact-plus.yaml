@@ -38,6 +38,11 @@ performanceExclusions:
 
 rewards:
   - category: entertainment
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: streaming
     type: discount
     tiers:
@@ -65,8 +70,16 @@ rewards:
         - 멜론
         - 티빙
         - 웨이브
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: subscription
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -87,8 +100,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "이동통신, 전기요금, 렌탈, 학습지 등 생활월납 10% 청구할인"
+    support:
+      status: supported
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: delivery
     type: discount
     tiers:
@@ -112,8 +132,15 @@ rewards:
       specificMerchants:
         - 배달의민족
         - 요기요
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -134,6 +161,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "간편결제(5대 페이) 온라인업종 결제 시 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

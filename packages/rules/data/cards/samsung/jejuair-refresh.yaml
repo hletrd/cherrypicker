@@ -25,7 +25,12 @@ performanceExclusions:
   - annual_fee
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "국내외 전 가맹점 제주항공 Refresh Point 적립 (1,200원당 10P)"
     type: points
     tiers:
@@ -33,7 +38,14 @@ rewards:
         rate: 0.83
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "travel"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "해외/면세점 추가 Refresh Point 적립 (1,200원당 10P 추가)"
     type: points
     tiers:
@@ -45,7 +57,15 @@ rewards:
       specificMerchants:
         - 해외가맹점
         - 면세점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
   - category: "travel"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "국내 공항 라운지 무료 이용"
     type: discount
     tiers:
@@ -57,6 +77,9 @@ rewards:
     conditions:
       specificMerchants:
         - 공항 라운지
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

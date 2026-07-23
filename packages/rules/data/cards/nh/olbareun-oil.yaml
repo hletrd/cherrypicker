@@ -35,6 +35,11 @@ performanceExclusions:
 
 rewards:
   - category: transportation
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: fuel
     type: discount
     tiers:
@@ -55,8 +60,16 @@ rewards:
         - GS칼텍스
         - 농협주유소
       note: "GS칼텍스·농협주유소 리터당 100원(tier1), 150원(tier2) 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: cafe
     type: discount
     tiers:
@@ -76,8 +89,15 @@ rewards:
       specificMerchants:
         - 스타벅스
         - 이디야
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -92,8 +112,15 @@ rewards:
         rate: 5.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: public_transit
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -108,6 +135,8 @@ rewards:
         rate: 5.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -17,6 +17,23 @@ export interface SkippedTransaction {
   reason: 'non_krw' | 'negative_amount';
 }
 
+export type UnsupportedReason =
+  | 'rule_marked_unsupported'
+  | 'restriction_in_note'
+  | 'missing_payment_type'
+  | 'missing_channel'
+  | 'missing_fuel_volume'
+  | 'missing_occurrence_context'
+  | 'unsupported_reward_unit';
+
+export interface UnsupportedRule {
+  transactionId: string;
+  ruleId: string;
+  category: string;
+  reason: UnsupportedReason;
+  detail?: string;
+}
+
 export interface CalculationOutput {
   cardId: string;
   performanceTier: string;
@@ -25,6 +42,7 @@ export interface CalculationOutput {
   totalSpending: number;
   capsHit: CapInfo[];
   skippedTransactions: SkippedTransaction[];
+  unsupportedRules: UnsupportedRule[];
 }
 
 // ---------------------------------------------------------------------------

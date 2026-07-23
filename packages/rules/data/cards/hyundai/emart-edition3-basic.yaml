@@ -30,7 +30,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: mart
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 이마트/이마트에브리데이/SSG닷컴
     type: points
     tiers:
@@ -47,8 +52,15 @@ rewards:
         - 이마트
         - 이마트에브리데이
         - SSG닷컴
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 쿠팡
     type: points
     tiers:
@@ -63,8 +75,15 @@ rewards:
     conditions:
       specificMerchants:
         - 쿠팡
+    support:
+      status: supported
 
   - category: medical
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 병원/약국
     type: points
     tiers:
@@ -76,8 +95,15 @@ rewards:
         rate: 1.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: education
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: 학원
     type: points
     tiers:
@@ -89,8 +115,15 @@ rewards:
         rate: 1.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: 국내외 전 가맹점
     type: points
     tiers:
@@ -102,6 +135,8 @@ rewards:
         rate: 0.5
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

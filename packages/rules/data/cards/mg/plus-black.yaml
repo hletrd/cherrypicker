@@ -26,6 +26,11 @@ performanceExclusions: []
 
 rewards:
   - category: travel
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: airline
     type: discount
     tiers:
@@ -39,8 +44,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "해외여행 전 가맹점, 여행 플랫폼, 면세점 10% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: department_store
     type: discount
     tiers:
@@ -52,8 +65,16 @@ rewards:
         rate: 10.0
         monthlyCap: 30000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: discount
     tiers:
@@ -67,8 +88,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "커피전문점 50% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
-  - category: transportation
+  - category: public_transit
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: taxi
     type: discount
     tiers:
@@ -82,6 +111,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "택시 50% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

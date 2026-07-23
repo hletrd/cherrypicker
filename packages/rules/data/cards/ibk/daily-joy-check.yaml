@@ -41,6 +41,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: cafe
     type: discount
     tiers:
@@ -68,8 +73,15 @@ rewards:
         - 할리스
         - 탐앤탐스
         - 엔제리너스
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -88,8 +100,15 @@ rewards:
         rate: 5.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -113,8 +132,15 @@ rewards:
         - 쿠팡
         - 티몬
         - 위메프
+    support:
+      status: supported
 
   - category: public_transit
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -133,8 +159,16 @@ rewards:
         rate: 0
         monthlyCap: null
         perTransactionCap: 100
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
   - category: entertainment
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: movie
     type: discount
     tiers:
@@ -156,6 +190,9 @@ rewards:
         perTransactionCap: 4000
     conditions:
       minTransaction: 10000
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

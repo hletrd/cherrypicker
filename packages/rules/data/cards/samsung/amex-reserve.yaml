@@ -34,6 +34,11 @@ performanceExclusions:
 
 rewards:
   - category: "online_shopping"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "온라인쇼핑 5% 적립"
     type: points
     tiers:
@@ -52,7 +57,14 @@ rewards:
     conditions:
       specificMerchants:
         - 온라인쇼핑
+    support:
+      status: supported
   - category: "travel"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "해외 이용 5% 적립"
     type: points
     tiers:
@@ -69,9 +81,15 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
-      specificMerchants:
-        - 해외가맹점
+      paymentType: overseas
+    support:
+      status: supported
   - category: "dining"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "음식/카페/영화 30% 할인"
     type: discount
     tiers:
@@ -88,6 +106,9 @@ rewards:
         - 음식점
         - 카페
         - 영화관
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

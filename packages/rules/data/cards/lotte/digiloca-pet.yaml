@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: medical
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 반려동물 센터/동물병원 캐시백
     type: cashback
     tiers:
@@ -53,6 +58,9 @@ rewards:
         - 동물병원
         - 반려동물센터
         - 펫샵
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

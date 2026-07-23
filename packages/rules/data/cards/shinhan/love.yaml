@@ -34,6 +34,11 @@ performanceExclusions:
 
 rewards:
   - category: "convenience_store"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "편의점 할인"
     type: discount
     tiers:
@@ -49,8 +54,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "dining"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "카페/베이커리 할인"
     type: discount
     tiers:
@@ -66,8 +78,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "online_shopping"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "온라인쇼핑 할인"
     type: discount
     tiers:
@@ -83,8 +102,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "entertainment"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "영화 할인"
     type: discount
     tiers:
@@ -100,8 +126,15 @@ rewards:
         rate: 30.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "public_transit"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "대중교통 할인"
     type: discount
     tiers:
@@ -117,6 +150,8 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

@@ -31,6 +31,11 @@ performanceExclusions:
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 버스/지하철/철도 캐시백
     type: cashback
     tiers:
@@ -42,8 +47,15 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 전기차 충전 캐시백
     type: cashback
     tiers:
@@ -58,8 +70,15 @@ rewards:
     conditions:
       specificMerchants:
         - 전기차 충전소
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 공유모빌리티 캐시백
     type: cashback
     tiers:
@@ -76,8 +95,15 @@ rewards:
         - 쏘카
         - 그린카
         - 따릉이
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: CGV 온라인 영화 예매 캐시백
     type: cashback
     tiers:
@@ -93,6 +119,8 @@ rewards:
     conditions:
       specificMerchants:
         - CGV
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

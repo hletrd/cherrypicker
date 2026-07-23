@@ -25,6 +25,11 @@ performanceExclusions:
 
 rewards:
   - category: offline_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "올리브영 할인 (무실적/무한도)"
     type: discount
     tiers:
@@ -32,8 +37,15 @@ rewards:
         rate: 10.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "뚜레쥬르/투썸플레이스 할인 (무실적/무한도)"
     type: discount
     tiers:
@@ -41,8 +53,16 @@ rewards:
         rate: 10.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "CJ푸드빌 (빕스/제일제면소 등) 할인"
     type: discount
     tiers:
@@ -50,8 +70,16 @@ rewards:
         rate: 20.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: online_shopping
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "CJ온스타일 할인"
     type: discount
     tiers:
@@ -59,8 +87,15 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "CGV 영화 할인"
     type: discount
     tiers:
@@ -69,6 +104,8 @@ rewards:
         fixedAmount: 6000
         monthlyCap: null
         perTransactionCap: 6000
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

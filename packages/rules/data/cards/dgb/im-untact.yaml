@@ -36,6 +36,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: simple_pay
     type: discount
     tiers:
@@ -61,8 +66,16 @@ rewards:
         - 페이코
         - SSG페이
       note: "간편결제 10% 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method; merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: delivery
     type: discount
     tiers:
@@ -83,8 +96,15 @@ rewards:
         - 배달의민족
         - 요기요
         - 쿠팡이츠
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: streaming
     type: discount
     tiers:
@@ -108,6 +128,9 @@ rewards:
         - 지니뮤직
         - 웨이브
         - FLO
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 35000

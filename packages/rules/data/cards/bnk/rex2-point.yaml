@@ -22,7 +22,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -30,9 +35,17 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: domestic
       note: "국내 전 가맹점 1% 포인트 적립"
+    support:
+      status: supported
 
-  - category: grocery
+  - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: department_store
     type: discount
     tiers:
@@ -44,8 +57,16 @@ rewards:
       specificMerchants:
         - 신세계백화점
         - 롯데백화점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: grocery
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: supermarket
     type: discount
     tiers:
@@ -57,8 +78,16 @@ rewards:
       specificMerchants:
         - 이마트
         - 롯데마트
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: transportation
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: fuel
     type: discount
     tiers:
@@ -68,8 +97,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "주유 리터당 70원 할인"
+    support:
+      status: supported
 
   - category: travel
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: airline
     type: discount
     tiers:
@@ -79,6 +115,8 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "공항라운지 무료, 호텔공항 발렛파킹 무료, 15만원 상당 바우처(호텔다이닝/신세계롯데상품권/골프할인 등) 선택"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

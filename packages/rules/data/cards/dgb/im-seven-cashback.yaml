@@ -40,7 +40,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -62,8 +67,15 @@ rewards:
     conditions:
       minTransaction: 30000
       note: "국내외 전 가맹점 3만원 이상 일시불 결제 시 7% 캐시백"
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: streaming
     type: discount
     tiers:
@@ -90,6 +102,9 @@ rewards:
         - 멜론
         - 지니뮤직
         - 웨이브
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

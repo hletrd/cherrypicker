@@ -36,6 +36,11 @@ performanceExclusions:
 
 rewards:
   - category: education
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 학원/학습지/독서실 할인
     type: discount
     tiers:
@@ -51,8 +56,15 @@ rewards:
         rate: 5.0
         monthlyCap: 30000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: sports
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 문화센터/수영장/스포츠센터 할인
     type: discount
     tiers:
@@ -68,8 +80,15 @@ rewards:
         rate: 5.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: offline_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 서적 (YES24/교보문고 등) 할인
     type: discount
     tiers:
@@ -93,6 +112,9 @@ rewards:
         - 교보문고
         - 인터파크도서
         - 알라딘
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

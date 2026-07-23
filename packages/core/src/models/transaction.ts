@@ -1,3 +1,5 @@
+import type { PerformanceExclusionId } from '@cherrypicker/rules';
+
 export interface Transaction {
   id: string;
   date: string;          // ISO 8601
@@ -7,6 +9,19 @@ export interface Transaction {
   installments?: number; // 할부 개월
   rawCategory?: string;  // Bank's own category if present
   memo?: string;
+  paymentType?: 'domestic' | 'overseas';
+  channel?: 'online' | 'offline';
+  fuelVolumeLiters?: number;
+  performanceExclusionTags?: PerformanceExclusionId[];
+  factProvenance?: Partial<
+    Record<
+      | 'paymentType'
+      | 'channel'
+      | 'fuelVolumeLiters'
+      | 'performanceExclusionTags',
+      'statement' | 'user'
+    >
+  >;
 }
 
 export interface CategorizedTransaction extends Transaction {

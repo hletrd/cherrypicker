@@ -41,6 +41,11 @@ performanceExclusions:
 
 rewards:
   - category: convenience_store
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -59,8 +64,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: medical
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: pharmacy
     type: discount
     tiers:
@@ -84,8 +96,16 @@ rewards:
       note: "올리브영 10% 할인"
       specificMerchants:
         - 올리브영
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: discount
     tiers:
@@ -114,8 +134,15 @@ rewards:
         - 엔제리너스
         - 메가커피
         - 컴포즈커피
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: movie
     type: discount
     tiers:
@@ -137,8 +164,16 @@ rewards:
         perTransactionCap: 10000
     conditions:
       note: "CGV/롯데시네마/메가박스 월 1회 1만원 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
   - category: public_transit
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -159,6 +194,9 @@ rewards:
         perTransactionCap: 200
     conditions:
       note: "후불교통 1회 200원 할인, 최대 2,000원"
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

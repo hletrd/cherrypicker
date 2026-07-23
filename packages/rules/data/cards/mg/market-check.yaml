@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: grocery
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: traditional_market
     type: cashback
     tiers:
@@ -30,8 +35,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "전통시장 및 나들가게 15% 할인. 일 2회 한도. 국세청 등록 가맹점에 한함."
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
   - category: public_transit
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -40,8 +53,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "교통 5% 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: telecom
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -51,6 +72,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "휴대폰요금 월 2,000원 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

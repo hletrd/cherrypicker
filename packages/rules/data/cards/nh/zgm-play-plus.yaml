@@ -27,6 +27,11 @@ performanceExclusions:
 
 rewards:
   - category: "entertainment"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "영화관 할인"
     type: discount
     tiers:
@@ -43,8 +48,15 @@ rewards:
         - CGV
         - 메가박스
         - 롯데시네마
+    support:
+      status: supported
 
   - category: "entertainment"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "스트리밍 할인"
     type: discount
     tiers:
@@ -56,8 +68,15 @@ rewards:
         rate: 20.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "dining"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "카페 할인"
     type: discount
     tiers:
@@ -69,8 +88,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "online_shopping"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "간편결제 할인"
     type: discount
     tiers:
@@ -82,6 +108,9 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

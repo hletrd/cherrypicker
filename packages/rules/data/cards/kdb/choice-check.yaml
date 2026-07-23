@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: grocery
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: supermarket
     label: 선택 업종 1 - 대형할인점 5% 캐시백
     type: cashback
@@ -31,8 +36,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "10대 업종 중 고객이 직접 선택한 2개 업종에 한해 5% 캐시백. 연 2회 변경 가능. 이 카테고리는 선택 가능한 업종 예시."
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: general
     label: 선택 업종 - 온라인쇼핑 5% 캐시백
     type: cashback
@@ -43,8 +56,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "10대 선택 가능 업종: 대형할인점, 온라인쇼핑, 백화점, 병의원/약국, 숙박, 슈퍼, 통신, 스포츠/레저, 홈쇼핑, 커피 중 2개 선택."
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: offline_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: department_store
     label: 선택 업종 - 백화점 5% 캐시백
     type: cashback
@@ -53,8 +74,16 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: medical
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: 선택 업종 - 병의원/약국 5% 캐시백
     type: cashback
     tiers:
@@ -62,8 +91,16 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: telecom
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: 선택 업종 - 통신 5% 캐시백
     type: cashback
     tiers:
@@ -71,8 +108,16 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: dining
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     subcategory: cafe
     label: 선택 업종 - 커피 5% 캐시백
     type: cashback
@@ -81,8 +126,16 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: travel
+    id: reward-007
+    priority: 7
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-007
     subcategory: hotel
     label: 선택 업종 - 숙박 5% 캐시백
     type: cashback
@@ -91,8 +144,16 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: entertainment
+    id: reward-008
+    priority: 8
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-008
     label: 선택 업종 - 스포츠/레저 5% 캐시백
     type: cashback
     tiers:
@@ -100,6 +161,9 @@ rewards:
         rate: 5.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

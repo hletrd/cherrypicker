@@ -22,7 +22,12 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "전 가맹점 기본 적립 1%"
     type: points
     tiers:
@@ -30,7 +35,14 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "travel"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "해외/면세점 2% 추가 적립"
     type: points
     tiers:
@@ -42,6 +54,9 @@ rewards:
       specificMerchants:
         - 해외가맹점
         - 면세점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -28,11 +33,20 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: domestic
       minTransaction: null
       specificMerchants: []
       note: "국내 전 가맹점 0.7% 청구할인 (결제계좌 수협은행 기준). 타행 결제계좌 시 0.4%"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: account_or_autopay"
 
   - category: telecom
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -43,6 +57,9 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "통신요금 20% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

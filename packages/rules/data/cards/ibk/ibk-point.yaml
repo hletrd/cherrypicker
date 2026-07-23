@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: uncategorized
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -42,6 +47,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "건별 10만원 미만 0.6%, 10~30만원 0.8%, 30~70만원 1.1%, 70~100만원 2.2%, 100만원 이상 3.3% IBK포인트 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

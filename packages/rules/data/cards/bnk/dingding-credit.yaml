@@ -33,7 +33,12 @@ performanceExclusions:
   - utility_bills
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -52,8 +57,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "전 가맹점 0.2% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: transportation
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -72,8 +85,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "전 주유소(LPG 포함) 리터당 60원 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -92,8 +113,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "커피/외식 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -115,8 +144,16 @@ rewards:
         - 메가박스
         - 롯데시네마
       note: "영화관 인터넷 예매 시 3000원 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: telecom
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -135,6 +172,9 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "이동통신 요금 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

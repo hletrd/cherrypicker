@@ -2,7 +2,9 @@
 
 > 마지막 업데이트: 2026-03-24
 
-## 카드 목록
+> 이 디렉터리에는 총 19개 카드 YAML이 있습니다. 아래 표는 대표 상품만 요약합니다.
+
+## 대표 카드
 
 | 카드명 | 연회비 | 주요 혜택 | 전월실적 |
 |--------|--------|-----------|----------|
@@ -14,3 +16,31 @@
 - 딩딩 시리즈: 20~30대 타깃 생활밀착형 카드
 - 주유 할인이 강점 (신용카드 리터당 60원)
 - BNK경남은행도 동일 금융그룹이나 별도 카드 상품 운영
+
+<!-- BEGIN GENERATED CARD INDEX -->
+## 전체 카드 인덱스
+
+> YAML 기준 **19개** · 최신 업데이트: `2026-03-25`
+
+| 카드명 | 유형 | YAML |
+|---|---:|---|
+| BNK B Smart 카드 | 신용 | [b-smart.yaml](./b-smart.yaml) |
+| BNK Y카드 | 신용 | [y-card.yaml](./y-card.yaml) |
+| BNK 그린카드 v2 | 신용 | [green-card-v2.yaml](./green-card-v2.yaml) |
+| BNK경남은행 Daily | 체크 | [daily1-check.yaml](./daily1-check.yaml) |
+| BNK부산은행 2030플래티넘 Gold | 신용 | [2030-platinum-gold.yaml](./2030-platinum-gold.yaml) |
+| BNK부산은행 BNK프렌즈 체크카드 | 체크 | [bnk-friends-check.yaml](./bnk-friends-check.yaml) |
+| BNK부산은행 K-패스 체크카드 | 체크 | [k-pass-check.yaml](./k-pass-check.yaml) |
+| BNK부산은행 REX2 대한항공마일리지형 | 신용 | [rex2-kal.yaml](./rex2-kal.yaml) |
+| BNK부산은행 REX2 포인트형 | 신용 | [rex2-point.yaml](./rex2-point.yaml) |
+| BNK부산은행 딩딩 신용카드 | 신용 | [dingding-credit.yaml](./dingding-credit.yaml) |
+| BNK부산은행 딩딩 체크카드 | 체크 | [dingding-check.yaml](./dingding-check.yaml) |
+| BNK부산은행 마이존 체크카드 | 체크 | [myzone-check.yaml](./myzone-check.yaml) |
+| BNK부산은행 부자되세요 더 마일리지 체크카드 | 체크 | [bujadoseyo-mileage-check.yaml](./bujadoseyo-mileage-check.yaml) |
+| BNK부산은행 오늘은e 신용카드 | 신용 | [oneuleun-e.yaml](./oneuleun-e.yaml) |
+| BNK부산은행 오늘은e 체크카드 | 체크 | [oneuleun-e-check.yaml](./oneuleun-e-check.yaml) |
+| BNK부산은행 청춘불패 체크카드 | 체크 | [cheongchun-check.yaml](./cheongchun-check.yaml) |
+| 부산 BUVIX 카드 | 신용 | [buvix.yaml](./buvix.yaml) |
+| 부자되세요 아파트카드 | 신용 | [apartment.yaml](./apartment.yaml) |
+| 카카오페이 체크카드 | 체크 | [kakaopay-check.yaml](./kakaopay-check.yaml) |
+<!-- END GENERATED CARD INDEX -->

@@ -35,7 +35,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -52,8 +57,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "페이북 머니 기본적립, 적립한도 없음"
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: movie
     type: points
     tiers:
@@ -71,8 +83,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "특별적립 - 영화/구독서비스"
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: streaming
     type: points
     tiers:
@@ -88,8 +107,15 @@ rewards:
         rate: 30.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: offline_shopping
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: points
     tiers:
       - performanceTier: tier0
@@ -106,8 +132,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "특별적립 - 백화점, 대형마트"
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: fuel
     type: points
     tiers:
@@ -125,8 +158,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "특별적립 - 주유소"
+    support:
+      status: supported
 
   - category: telecom
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: points
     tiers:
       - performanceTier: tier0
@@ -143,6 +183,8 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "특별적립 - 핸드폰요금 자동납부 필수"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -33,7 +33,13 @@ performanceExclusions:
   - annual_fee
 
 rewards:
-  - category: "cafe"
+  - category: dining
+    subcategory: cafe
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "커피전문점 할인"
     type: discount
     tiers:
@@ -45,7 +51,14 @@ rewards:
         rate: 30.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "online_shopping"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "마켓컬리 할인"
     type: discount
     tiers:
@@ -57,7 +70,14 @@ rewards:
         rate: 20.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "travel"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "KTX/SRT 할인"
     type: discount
     tiers:
@@ -71,7 +91,14 @@ rewards:
         fixedAmount: 5000
         monthlyCap: 10000
         perTransactionCap: null
-  - category: "uncategorized"
+    support:
+      status: supported
+  - category: '*'
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "최다이용 상위 3개 업종 5% 할인"
     type: discount
     tiers:
@@ -83,6 +110,9 @@ rewards:
         rate: 5.0
         monthlyCap: 20000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

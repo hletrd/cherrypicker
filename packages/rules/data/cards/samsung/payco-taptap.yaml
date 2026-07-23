@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: "uncategorized"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "PAYCO 결제 시 5% PAYCO 포인트 적립"
     type: points
     tiers:
@@ -44,6 +49,9 @@ rewards:
     conditions:
       specificMerchants:
         - PAYCO
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

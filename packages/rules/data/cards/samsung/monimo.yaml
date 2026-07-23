@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: telecom
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 이동통신요금/아파트관리비 정기결제
     type: discount
     tiers:
@@ -37,8 +42,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: public_transit
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 대중교통/택시/배달앱
     type: discount
     tiers:
@@ -46,8 +58,15 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 온라인쇼핑몰/편의점/올리브영 (선택 1)
     type: discount
     tiers:
@@ -55,8 +74,16 @@ rewards:
         rate: 7.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: 스타벅스/온라인패션/스트리밍 (선택 2)
     type: discount
     tiers:
@@ -64,6 +91,9 @@ rewards:
         rate: 30.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
 globalConstraints:
   monthlyTotalDiscountCap: 25000

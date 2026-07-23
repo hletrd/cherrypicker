@@ -27,7 +27,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -39,9 +44,18 @@ rewards:
         monthlyCap: 100000
         perTransactionCap: null
     conditions:
+      paymentType: domestic
       note: "국내 가맹점 1% 포인트 적립. 월 10만 포인트 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -54,8 +68,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "해외/항공/호텔/면세점 2% 포인트 적립. 월 10만 포인트 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: offline_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: department_store
     type: discount
     tiers:
@@ -69,8 +91,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "백화점/대형마트/고속철도 10% 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: cafe
     type: discount
     tiers:
@@ -90,6 +120,9 @@ rewards:
         - 아티제
         - 폴바셋
         - 투썸플레이스
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

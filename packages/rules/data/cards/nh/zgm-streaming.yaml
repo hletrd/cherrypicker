@@ -27,6 +27,11 @@ performanceExclusions:
 
 rewards:
   - category: "entertainment"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "스트리밍 할인 (넷플릭스/웨이브/티빙/멜론 등)"
     type: discount
     tiers:
@@ -46,8 +51,16 @@ rewards:
         - 멜론
         - 지니뮤직
         - 스포티파이
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: "subscription"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "멤버십 할인"
     type: discount
     tiers:
@@ -65,8 +78,16 @@ rewards:
         - 네이버플러스멤버십
         - 쿠팡로켓와우
         - SSG닷컴
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: "dining"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "스타벅스 사이렌오더 할인"
     type: discount
     tiers:
@@ -81,6 +102,8 @@ rewards:
     conditions:
       specificMerchants:
         - 스타벅스
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

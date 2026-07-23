@@ -27,7 +27,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "NH포인트 무제한 적립 (포인트형). 또는 스카이패스/아시아나클럽 마일리지형 선택 가능"
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -53,9 +66,17 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      channel: online
       note: "비대면/구독경제/온라인 이용 시 추가 포인트 적립"
+    support:
+      status: supported
 
   - category: travel
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: airline
     type: discount
     tiers:
@@ -69,6 +90,8 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "공항 라운지 무료 이용"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

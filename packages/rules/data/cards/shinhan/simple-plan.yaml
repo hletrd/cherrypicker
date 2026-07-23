@@ -25,7 +25,12 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "국내 전 가맹점 1% 할인 (무실적, 무제한)"
     type: discount
     tiers:
@@ -33,7 +38,16 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
-  - category: "uncategorized"
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "해외 전 가맹점 2% 할인 (무실적, 무제한)"
     type: discount
     tiers:
@@ -41,6 +55,10 @@ rewards:
         rate: 2.0
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: overseas
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

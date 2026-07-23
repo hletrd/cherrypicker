@@ -1,45 +1,226 @@
 import { z } from 'zod';
+import { cardIdSchema, safeExternalUrlSchema } from './security.js';
+import { PERFORMANCE_EXCLUSION_IDS } from './performance-exclusions.js';
 
 export const rewardTypeSchema = z.enum(['discount', 'points', 'cashback', 'mileage']);
 
 export const cardTypeSchema = z.enum(['credit', 'check', 'prepaid']);
 
+const safeNonnegativeInteger = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const safeNonnegativeNumber = z.number().nonnegative().max(Number.MAX_SAFE_INTEGER);
+
 export const performanceTierSchema = z.object({
   id: z.string(),
   label: z.string(),
-  minSpending: z.number().int().nonnegative(),
-  maxSpending: z.number().int().nonnegative().nullable(),
-});
+  minSpending: safeNonnegativeInteger,
+  maxSpending: safeNonnegativeInteger.nullable(),
+}).strict();
+
+const rewardUnitSchema = z.enum([
+  'won_per_day',
+  'won_per_liter',
+  'mile_per_1500won',
+  'miles',
+]);
+
+export const rewardValueSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('percentage'),
+    amount: z.number().min(0).max(100),
+  }).strict(),
+  z.object({
+    kind: z.literal('fixed_per_transaction'),
+    amount: safeNonnegativeNumber,
+  }).strict(),
+  z.object({
+    kind: z.literal('fixed_per_day'),
+    amount: safeNonnegativeNumber,
+  }).strict(),
+  z.object({
+    kind: z.literal('mileage_per_spend'),
+    amount: safeNonnegativeNumber,
+  }).strict(),
+  z.object({
+    kind: z.literal('fuel_per_liter'),
+    amount: safeNonnegativeNumber,
+  }).strict(),
+]);
+
+interface RewardValueSource {
+  rate: number | null;
+  fixedAmount: number | null;
+  unit: z.infer<typeof rewardUnitSchema> | null;
+}
+
+function deriveRewardValue(
+  tier: RewardValueSource,
+): z.infer<typeof rewardValueSchema> {
+  if (tier.rate !== null) {
+    return {
+      kind: tier.unit === 'miles' ? 'mileage_per_spend' : 'percentage',
+      amount: tier.rate,
+    };
+  }
+  if (tier.fixedAmount !== null) {
+    return {
+      kind:
+        tier.unit === 'won_per_day'
+          ? 'fixed_per_day'
+          : tier.unit === 'won_per_liter'
+            ? 'fuel_per_liter'
+            : tier.unit === 'mile_per_1500won' || tier.unit === 'miles'
+              ? 'mileage_per_spend'
+              : 'fixed_per_transaction',
+      amount: tier.fixedAmount,
+    };
+  }
+  return { kind: 'percentage', amount: 0 };
+}
 
 export const rewardTierRateSchema = z.object({
   performanceTier: z.string(),
-  rate: z.number().nonnegative().nullable(),
-  fixedAmount: z.number().nonnegative().nullable().optional().transform((v) => v ?? null),
-  unit: z.string().min(1).nullable().optional().transform((v) => v ?? null),
-  monthlyCap: z.number().int().nonnegative().nullable().optional().transform((v) => v ?? null),
-  perTransactionCap: z.number().int().nonnegative().nullable().optional().transform((v) => v ?? null),
-}).refine(
-  (tier) => !(tier.rate !== null && tier.rate > 0 && tier.fixedAmount !== null && tier.fixedAmount > 0),
-  { message: 'rate and fixedAmount are mutually exclusive — use one or the other, not both' },
-);
+  // Authored percentage points: 5 means 5%, never the fraction 0.05.
+  rate: z.number().min(0).max(100).nullable(),
+  fixedAmount: safeNonnegativeNumber.nullable().optional().transform((v) => v ?? null),
+  // Legacy Samsung files used fixedAmountPerLiter. It is accepted only as a
+  // migration input and normalized to fixedAmount + won_per_liter below.
+  fixedAmountPerLiter: safeNonnegativeInteger.optional(),
+  unit: rewardUnitSchema.nullable().optional().transform((v) => v ?? null),
+  monthlyCap: safeNonnegativeInteger.nullable().optional().transform((v) => v ?? null),
+  perTransactionCap: safeNonnegativeInteger.nullable().optional().transform((v) => v ?? null),
+  annualCap: safeNonnegativeInteger.nullable().optional().transform((v) => v ?? null),
+  // Generated catalogs carry the normalized value. Accept it only when it
+  // exactly agrees with the authored rate/fixed/unit fields, making the
+  // canonical schema safe and idempotent for publication readers.
+  value: rewardValueSchema.optional(),
+}).strict().superRefine((tier, ctx) => {
+  const fixedAmount = tier.fixedAmountPerLiter ?? tier.fixedAmount;
+  const unit = tier.fixedAmountPerLiter !== undefined
+    ? 'won_per_liter' as const
+    : tier.unit;
+  if (tier.fixedAmountPerLiter !== undefined && tier.fixedAmount !== null) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'fixedAmountPerLiter and fixedAmount are mutually exclusive',
+    });
+  }
+  if (tier.rate !== null && tier.rate > 0 && fixedAmount !== null && fixedAmount > 0) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'rate and fixedAmount are mutually exclusive — use one or the other, not both',
+    });
+  }
+  if (
+    tier.unit !== null &&
+    tier.unit !== 'miles' &&
+    (fixedAmount === null || fixedAmount <= 0)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `${tier.unit} requires a positive fixedAmount`,
+    });
+  }
+  if (
+    fixedAmount !== null &&
+    tier.unit !== 'mile_per_1500won' &&
+    !Number.isInteger(fixedAmount)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'fixed monetary rewards must use a safe integer amount',
+    });
+  }
+  const derivedValue = deriveRewardValue({
+    rate: tier.rate,
+    fixedAmount,
+    unit,
+  });
+  if (
+    tier.value !== undefined &&
+    (tier.value.kind !== derivedValue.kind ||
+      tier.value.amount !== derivedValue.amount)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['value'],
+      message:
+        'value must exactly match the normalized rate, fixedAmount, and unit',
+    });
+  }
+}).transform((tier) => {
+  const fixedAmount = tier.fixedAmountPerLiter ?? tier.fixedAmount;
+  const unit = tier.fixedAmountPerLiter !== undefined ? 'won_per_liter' as const : tier.unit;
+  const {
+    fixedAmountPerLiter: _legacyFixedAmountPerLiter,
+    value: _serializedValue,
+    ...rest
+  } = tier;
+  const value = deriveRewardValue({
+    rate: tier.rate,
+    fixedAmount,
+    unit,
+  });
+  return { ...rest, fixedAmount, unit, value };
+});
 
 export const rewardConditionsSchema = z.object({
-  minTransaction: z.number().int().nonnegative().nullable().optional().transform((v) => v ?? undefined).pipe(z.number().int().nonnegative().optional()),
+  minTransaction: safeNonnegativeInteger.nullable().optional().transform((v) => v ?? undefined),
+  maxTransaction: safeNonnegativeInteger.nullable().optional().transform((v) => v ?? undefined),
   specificMerchants: z.array(z.string()).optional(),
+  weekdays: z.array(z.number().int().min(0).max(6)).min(1).optional(),
+  maxUses: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+  usePeriod: z.enum(['day', 'month']).optional(),
+  channel: z.enum(['online', 'offline']).optional(),
+  paymentType: z.enum(['domestic', 'overseas']).optional(),
   note: z.string().optional(),
-}).passthrough();
+}).strict().superRefine((conditions, ctx) => {
+  if (conditions.maxTransaction !== undefined &&
+      conditions.minTransaction !== undefined &&
+      conditions.maxTransaction < conditions.minTransaction) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'maxTransaction must be greater than or equal to minTransaction',
+    });
+  }
+  if ((conditions.maxUses === undefined) !== (conditions.usePeriod === undefined)) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'maxUses and usePeriod must be provided together',
+    });
+  }
+});
+
+export const rewardSupportSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('supported') }).strict(),
+  z.object({
+    status: z.literal('unsupported'),
+    reason: z.string().min(1),
+  }).strict(),
+]);
+
+const ruleContractIdSchema = z
+  .string()
+  .min(1)
+  .max(96)
+  .regex(/^[a-z0-9][a-z0-9-]*$/);
 
 export const rewardRuleSchema = z.object({
+  id: ruleContractIdSchema,
   category: z.string(),
   subcategory: z.string().optional(),
   label: z.string().optional(),
   type: rewardTypeSchema,
   tiers: z.array(rewardTierRateSchema).min(1),
   conditions: rewardConditionsSchema.optional(),
-}).passthrough();
+  priority: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  combination: z.enum(['exclusive', 'additive']),
+  stackingGroup: ruleContractIdSchema,
+  capGroup: ruleContractIdSchema,
+  support: rewardSupportSchema,
+}).strict();
 
 export const cardMetaSchema = z.object({
-  id: z.string(),
+  id: cardIdSchema,
   issuer: z.string(),
   name: z.string(),
   nameKo: z.string(),
@@ -48,27 +229,27 @@ export const cardMetaSchema = z.object({
     domestic: z.number().int().nonnegative(),
     international: z.number().int().nonnegative(),
   }),
-  // Keep runtime validation aligned with the generator lane: the catalog
-  // currently contains some issuer/card URLs that are useful as references
-  // but are not strict WHATWG-valid URLs.
-  url: z.string().optional(),
+  url: safeExternalUrlSchema.optional(),
   lastUpdated: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be ISO 8601 date (YYYY-MM-DD)'),
   source: z.enum(['manual', 'llm-scrape', 'web']),
-});
+  discontinued: z.boolean().optional(),
+}).strict();
 
 export const globalConstraintsSchema = z.object({
-  monthlyTotalDiscountCap: z.number().int().nonnegative().nullable(),
-  minimumAnnualSpending: z.number().int().nonnegative().nullable(),
+  monthlyTotalDiscountCap: safeNonnegativeInteger.nullable(),
+  minimumAnnualSpending: safeNonnegativeInteger.nullable(),
+  monthlyMileageCap: safeNonnegativeInteger.optional(),
+  annualBonusMileage: safeNonnegativeInteger.optional(),
   note: z.string().optional(),
-}).passthrough();
+}).strict();
 
 export const cardRuleSetSchema = z.object({
   card: cardMetaSchema,
   performanceTiers: z.array(performanceTierSchema).min(1),
-  performanceExclusions: z.array(z.string()),
+  performanceExclusions: z.array(z.enum(PERFORMANCE_EXCLUSION_IDS)),
   rewards: z.array(rewardRuleSchema).min(1),
   globalConstraints: globalConstraintsSchema,
-});
+}).strict();
 
 export const categoryNodeSchema: z.ZodType<{
   id: string;
@@ -94,8 +275,11 @@ export const issuerMetaSchema = z.object({
   id: z.string(),
   nameKo: z.string(),
   nameEn: z.string(),
-  website: z.string().url(),
-});
+  website: safeExternalUrlSchema.refine(
+    (value) => value !== '',
+    'Issuer website must be an absolute HTTP(S) URL',
+  ),
+}).strict();
 
 export const categoriesFileSchema = z.object({
   categories: z.array(categoryNodeSchema),
@@ -103,6 +287,18 @@ export const categoriesFileSchema = z.object({
 
 export const issuersFileSchema = z.object({
   issuers: z.array(issuerMetaSchema),
+}).strict().superRefine((file, ctx) => {
+  const seen = new Set<string>();
+  file.issuers.forEach((issuer, index) => {
+    if (seen.has(issuer.id)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['issuers', index, 'id'],
+        message: `duplicate issuer id "${issuer.id}"`,
+      });
+    }
+    seen.add(issuer.id);
+  });
 });
 
 // Inferred types from schemas
@@ -111,6 +307,7 @@ export type CardType = z.infer<typeof cardTypeSchema>;
 export type PerformanceTier = z.infer<typeof performanceTierSchema>;
 export type RewardTierRate = z.infer<typeof rewardTierRateSchema>;
 export type RewardConditions = z.infer<typeof rewardConditionsSchema>;
+export type RewardSupport = z.infer<typeof rewardSupportSchema>;
 export type RewardRule = z.infer<typeof rewardRuleSchema>;
 export type CardMeta = z.infer<typeof cardMetaSchema>;
 export type GlobalConstraints = z.infer<typeof globalConstraintsSchema>;

@@ -29,7 +29,12 @@ performanceExclusions:
   - annual_fee
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "모든 업종 기본 적립 (무실적/무한도)"
     type: points
     tiers:
@@ -41,7 +46,14 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
   - category: "transportation"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "주유 (5만원 이상 결제 시 건당 2,000원)"
     type: discount
     tiers:
@@ -52,7 +64,14 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 50000
+    support:
+      status: supported
   - category: "entertainment"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "영화 (1만원 이상 결제 시 건당 5,000원)"
     type: discount
     tiers:
@@ -63,6 +82,8 @@ rewards:
         perTransactionCap: null
     conditions:
       minTransaction: 10000
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

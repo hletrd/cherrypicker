@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: convenience_store
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 편의점/음식점/택시 Daily 할인 5~20%
     type: discount
     tiers:
@@ -46,8 +51,16 @@ rewards:
         - 편의점
         - 음식점
         - 택시
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: telecom
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 통신/생활요금 Monthly 할인 5%
     type: discount
     tiers:
@@ -59,8 +72,15 @@ rewards:
         rate: 5.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 캐릭터샵/배달앱 Someday 할인 5%
     type: discount
     tiers:
@@ -75,6 +95,9 @@ rewards:
     conditions:
       specificMerchants:
         - 배달앱
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

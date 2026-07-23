@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: transportation
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: fuel
     type: discount
     tiers:
@@ -53,8 +58,15 @@ rewards:
       specificMerchants:
         - S-OIL
         - HD현대오일뱅크
+    support:
+      status: supported
 
   - category: public_transit
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -71,8 +83,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "대중교통 10% 청구할인. 통합 월 3천원 한도"
+    support:
+      status: supported
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: discount
     tiers:
@@ -90,8 +109,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "커피전문점 10% 청구할인. 통합 월 3천원 한도"
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -107,7 +133,11 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: domestic
       note: "국내 전 가맹점 0.7% 기본할인, 100만원 이상 시 1%"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -41,6 +41,11 @@ performanceExclusions:
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -59,8 +64,15 @@ rewards:
         rate: 5.0
         monthlyCap: 50000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: telecom
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -79,8 +91,15 @@ rewards:
         rate: 5.0
         monthlyCap: 50000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
@@ -105,8 +124,15 @@ rewards:
         - 네이버페이
         - 카카오페이
         - PAYCO
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: points
     tiers:
       - performanceTier: tier0
@@ -125,6 +151,9 @@ rewards:
         rate: 0.8
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

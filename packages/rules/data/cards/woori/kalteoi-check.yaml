@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "저녁 6시~11시 음식점/주점/카페 이용금액 5% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
 
   - category: convenience_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -54,8 +67,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "저녁 6시~11시 편의점 이용금액 5% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
 
   - category: public_transit
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -68,8 +89,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "저녁 6시~11시 대중교통/택시/카셰어링 5% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
 
   - category: medical
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: pharmacy
     type: cashback
     tiers:
@@ -83,6 +112,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "저녁 6시~11시 헬스/뷰티 이용금액 5% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: time_of_day"
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: K-Pass 대중교통 환급 (일반 20%, 청년 30%, 저소득 53%)
     type: cashback
     tiers:
@@ -28,8 +33,16 @@ rewards:
         rate: 20.0
         monthlyCap: 60000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: public_transit
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 대중교통 추가 2,000원 캐시백
     type: cashback
     tiers:
@@ -38,6 +51,9 @@ rewards:
         fixedAmount: 2000
         monthlyCap: 2000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

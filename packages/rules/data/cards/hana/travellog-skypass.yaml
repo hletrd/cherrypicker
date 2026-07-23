@@ -27,7 +27,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "국내 전 가맹점 1,000원당 1마일 대한항공 스카이패스 적립"
     type: points
     tiers:
@@ -40,9 +45,17 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: domestic
       note: "1,000원당 1 스카이패스 마일리지 적립 (적립률 환산 약 0.1%)"
+    support:
+      status: supported
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "해외 결제 수수료 면제 + 해외 이용 시 추가 마일리지 적립"
     type: points
     tiers:
@@ -55,7 +68,10 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      paymentType: overseas
       note: "해외 가맹점 이용 시 1,000원당 2마일 적립, 해외 결제 수수료 면제"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

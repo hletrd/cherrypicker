@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: grocery
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 롯데마트/롯데마트맥스 2% 할인
     type: discount
     tiers:
@@ -32,8 +37,16 @@ rewards:
       specificMerchants:
         - 롯데마트
         - 롯데마트맥스
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 전 가맹점 0.2% 할인
     type: discount
     tiers:
@@ -41,6 +54,8 @@ rewards:
         rate: 0.2
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 10000

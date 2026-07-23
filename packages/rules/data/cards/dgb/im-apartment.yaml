@@ -32,7 +32,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: apartment_mgmt
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -50,8 +55,15 @@ rewards:
     conditions:
       minTransaction: 100000
       note: "아파트 관리비 건당 10만원 이상 자동납부 시 월 1만원 정액 할인"
+    support:
+      status: supported
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -66,8 +78,15 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: fuel
     type: discount
     tiers:
@@ -83,6 +102,8 @@ rewards:
         rate: 5.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

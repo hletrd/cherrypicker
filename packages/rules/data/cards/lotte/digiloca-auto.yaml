@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: transportation
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 주유 캐시백 (리터당 최대 150원)
     type: cashback
     tiers:
@@ -53,6 +58,8 @@ rewards:
         monthlyCap: 50000
         perTransactionCap: null
     conditions: {}
+    support:
+      status: supported
 globalConstraints:
   monthlyTotalDiscountCap: 50000
   minimumAnnualSpending: null

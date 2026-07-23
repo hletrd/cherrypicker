@@ -32,6 +32,11 @@ performanceExclusions:
 
 rewards:
   - category: travel
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -43,9 +48,17 @@ rewards:
         monthlyCap: 10000
         perTransactionCap: null
     conditions:
+      paymentType: overseas
       note: "해외 가맹점(해외사이트 포함) 7% 청구할인. 일본/중국 특화"
+    support:
+      status: supported
 
   - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: department_store
     type: discount
     tiers:
@@ -65,8 +78,16 @@ rewards:
         - 현대백화점
         - AK플라자
         - 갤러리아백화점
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: discount
     tiers:
@@ -80,6 +101,8 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "커피전문점 10% 할인"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 20000

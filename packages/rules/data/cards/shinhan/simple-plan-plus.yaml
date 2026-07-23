@@ -25,7 +25,12 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "국내 전 가맹점 1.5% 할인 (무실적, 무제한)"
     type: discount
     tiers:
@@ -33,7 +38,16 @@ rewards:
         rate: 1.5
         monthlyCap: null
         perTransactionCap: null
-  - category: "uncategorized"
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "해외 전 가맹점 2% 할인 (무실적, 무제한)"
     type: discount
     tiers:
@@ -41,7 +55,16 @@ rewards:
         rate: 2.0
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: overseas
+    support:
+      status: supported
   - category: "uncategorized"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "월 40만원 이상 이용 시 (마트·병원·주유 3만원 포함) 2만원 환급"
     type: cashback
     tiers:
@@ -50,6 +73,9 @@ rewards:
         fixedAmount: 20000
         monthlyCap: 20000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

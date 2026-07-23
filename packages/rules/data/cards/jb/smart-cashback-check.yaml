@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -31,8 +36,16 @@ rewards:
       minTransaction: 5000
       specificMerchants: []
       note: "전 가맹점 최대 1.2% 캐시백. 건당 5000원 이상"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -43,8 +56,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "전국 제과점 10% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: transportation
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -55,8 +76,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "전국 주유소 리터당 30원 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -67,8 +96,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "전북지역 영화관 현장할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: education
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -80,6 +117,9 @@ rewards:
       specificMerchants:
         - 교보문고
       note: "교보문고 광화문/전주점 2% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -35,6 +35,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -55,8 +60,16 @@ rewards:
         - 이마트몰
         - 스타벅스
       note: "SSG.COM, 이마트몰 5% 할인"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: grocery
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: supermarket
     type: discount
     tiers:
@@ -76,6 +89,9 @@ rewards:
       specificMerchants:
         - 이마트
         - 트레이더스
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

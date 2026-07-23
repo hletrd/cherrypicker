@@ -9,119 +9,31 @@
  * and outputs a single organized JSON file.
  */
 
-import { readFile, readdir, writeFile, mkdir } from 'fs/promises';
+import { readFile, readdir, writeFile, mkdir, unlink } from 'fs/promises';
 import { basename, dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { parse } from 'yaml';
-import { z } from 'zod';
+import { MerchantMatcher } from '../packages/core/src/categorizer/matcher.js';
+import {
+  categoriesFileSchema,
+  issuersFileSchema,
+  CatalogValidationError,
+  CategoryRegistry,
+  validateCardCatalog,
+} from '../packages/rules/src/index.js';
+import type {
+  CardRuleSet,
+  CategoryNode,
+  IssuerMeta,
+} from '../packages/rules/src/index.js';
+import {
+  buildWebCatalogArtifacts,
+  isIndexableReward,
+  parsePublicationCard,
+  staleGeneratedShardNames,
+} from './catalog-publication.js';
 
-// ── Relaxed schema for YAML files that may have extra/missing fields ──
-
-const nullableNumber = z.union([z.number(), z.null()]);
-const optNullableNumber = z.union([z.number(), z.null()]).optional().transform((v) => v ?? null);
-
-const rewardTierRateSchema = z.object({
-  performanceTier: z.string(),
-  rate: nullableNumber,
-  fixedAmount: optNullableNumber,
-  unit: z.string().nullable().optional().transform((v) => v ?? null),
-  monthlyCap: optNullableNumber,
-  perTransactionCap: optNullableNumber,
-});
-
-const rewardConditionsSchema = z.object({
-  minTransaction: z.union([z.number(), z.null()]).optional().transform((v) => v ?? undefined),
-  specificMerchants: z.array(z.string()).optional(),
-  note: z.string().optional(),
-}).passthrough();
-
-const rewardRuleSchema = z.object({
-  category: z.string(),
-  subcategory: z.string().optional(),
-  label: z.string().optional(),
-  type: z.enum(['discount', 'points', 'cashback', 'mileage']),
-  tiers: z.array(rewardTierRateSchema).min(1),
-  conditions: rewardConditionsSchema.optional(),
-}).passthrough();
-
-const performanceTierSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  minSpending: z.number().int().nonnegative(),
-  maxSpending: z.number().int().nonnegative().nullable().optional().default(null),
-});
-
-const cardMetaSchema = z.object({
-  id: z.string(),
-  issuer: z.string(),
-  name: z.string(),
-  nameKo: z.string(),
-  type: z.enum(['credit', 'check', 'prepaid']),
-  annualFee: z.object({
-    domestic: z.number().int().nonnegative(),
-    international: z.number().int().nonnegative(),
-  }),
-  url: z.string().optional().default(''),
-  lastUpdated: z.string().default('2026-03-24'),
-  source: z.enum(['manual', 'llm-scrape', 'web']).default('manual'),
-}).strip();
-
-const globalConstraintsSchema = z.object({
-  monthlyTotalDiscountCap: z.number().nullable().optional().default(null),
-  minimumAnnualSpending: z.number().nullable().optional().default(null),
-  note: z.string().optional(),
-}).passthrough();
-
-const cardRuleSetSchema = z.object({
-  card: cardMetaSchema,
-  performanceTiers: z.array(performanceTierSchema).min(1),
-  performanceExclusions: z.array(z.string()).optional().default([]),
-  rewards: z.array(rewardRuleSchema).min(1),
-  globalConstraints: globalConstraintsSchema.optional().default({}),
-}).strip();
-
-// ── Types ──
-
-interface CardEntry {
-  card: {
-    id: string;
-    issuer: string;
-    name: string;
-    nameKo: string;
-    type: 'credit' | 'check' | 'prepaid';
-    annualFee: { domestic: number; international: number };
-    url: string;
-    lastUpdated: string;
-    source: string;
-  };
-  performanceTiers: Array<{
-    id: string;
-    label: string;
-    minSpending: number;
-    maxSpending: number | null;
-  }>;
-  performanceExclusions: string[];
-  rewards: Array<{
-    category: string;
-    subcategory?: string;
-    label?: string;
-    type: string;
-    tiers: Array<{
-      performanceTier: string;
-      rate: number | null;
-      fixedAmount: number | null;
-      unit: string | null;
-      monthlyCap: number | null;
-      perTransactionCap: number | null;
-    }>;
-    conditions?: Record<string, unknown>;
-  }>;
-  globalConstraints: {
-    monthlyTotalDiscountCap: number | null;
-    minimumAnnualSpending: number | null;
-    note?: string;
-  };
-}
+type CardEntry = CardRuleSet;
 
 type RewardIndexValueKind = 'rate' | 'fixedAmount';
 
@@ -194,24 +106,35 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = join(ROOT, 'packages/rules/data');
 const CARDS_DIR = join(DATA_DIR, 'cards');
 const OUTPUT_DIR = join(ROOT, 'packages/rules/data');
+const CHECK_MODE = process.argv.includes('--check');
 
 console.log('🔍 Scanning YAML card files...\n');
 
 // Load issuers
-const issuersRaw = parse(await readFile(join(DATA_DIR, 'issuers.yaml'), 'utf-8')) as { issuers: Array<{ id: string; nameKo: string; nameEn: string; website: string }> };
-const issuerMap = new Map(issuersRaw.issuers.map((i) => [i.id, i]));
+const issuersResult = issuersFileSchema.safeParse(
+  parse(await readFile(join(DATA_DIR, 'issuers.yaml'), 'utf-8')),
+);
+if (!issuersResult.success) {
+  throw new Error(`Invalid issuers.yaml:\n${issuersResult.error.message}`);
+}
+const issuerMap = new Map<string, IssuerMeta>(
+  issuersResult.data.issuers.map((issuer) => [issuer.id, issuer]),
+);
 
 // Load categories
-const categoriesRaw = parse(await readFile(join(DATA_DIR, 'categories.yaml'), 'utf-8')) as { categories: unknown[] };
-const validCategoryIds = new Set<string>();
-function extractCategoryIds(nodes: unknown[]) {
-  for (const node of nodes) {
-    const n = node as { id?: string; subcategories?: unknown[] };
-    if (n.id) validCategoryIds.add(n.id);
-    if (n.subcategories) extractCategoryIds(n.subcategories);
-  }
+const categoriesResult = categoriesFileSchema.safeParse(
+  parse(await readFile(join(DATA_DIR, 'categories.yaml'), 'utf-8')),
+);
+if (!categoriesResult.success) {
+  throw new Error(`Invalid categories.yaml:\n${categoriesResult.error.message}`);
 }
-extractCategoryIds(categoriesRaw.categories);
+const categoriesRaw: { categories: CategoryNode[] } = {
+  categories: categoriesResult.data.categories as CategoryNode[],
+};
+const categoryRegistry = new CategoryRegistry(categoriesRaw.categories);
+const merchantMatcher = new MerchantMatcher(categoriesRaw.categories, {
+  strict: true,
+});
 
 // Scan all YAML files
 const yamlFiles = await collectYamlFiles(CARDS_DIR);
@@ -219,7 +142,6 @@ console.log(`📂 Found ${yamlFiles.length} YAML card files across ${issuerMap.s
 
 const cards: CardEntry[] = [];
 const errors: Array<{ file: string; error: string }> = [];
-const warnings: Array<{ file: string; warning: string }> = [];
 
 for (const filePath of yamlFiles) {
   const relPath = filePath.replace(ROOT + '/', '');
@@ -228,41 +150,24 @@ for (const filePath of yamlFiles) {
   try {
     const content = await readFile(filePath, 'utf-8');
     const raw = parse(content) as unknown;
-    const result = cardRuleSetSchema.safeParse(raw);
-
-    if (!result.success) {
-      const issues = result.error.issues.map((i) => `  ${i.path.join('.')}: ${i.message}`).join('\n');
-      errors.push({ file: relPath, error: issues });
-      continue;
-    }
-
-    const card = result.data as CardEntry;
+    const card = parsePublicationCard(raw, relPath);
 
     // Validate issuer matches directory
     if (card.card.issuer !== issuerDir) {
-      warnings.push({ file: relPath, warning: `issuer "${card.card.issuer}" doesn't match directory "${issuerDir}"` });
-    }
-
-    // Validate category IDs
-    for (const reward of card.rewards) {
-      if (reward.category !== '*' && reward.category !== 'uncategorized' && !validCategoryIds.has(reward.category)) {
-        warnings.push({ file: relPath, warning: `unknown category "${reward.category}"` });
-      }
-    }
-
-    // Check performance tier references
-    const tierIds = new Set(card.performanceTiers.map((t) => t.id));
-    for (const reward of card.rewards) {
-      for (const tier of reward.tiers) {
-        if (!tierIds.has(tier.performanceTier)) {
-          warnings.push({ file: relPath, warning: `reward references unknown tier "${tier.performanceTier}"` });
-        }
-      }
+      errors.push({
+        file: relPath,
+        error: `issuer "${card.card.issuer}" doesn't match directory "${issuerDir}"`,
+      });
+      continue;
     }
 
     // Check for missing issuer registration
     if (!issuerMap.has(card.card.issuer)) {
-      warnings.push({ file: relPath, warning: `issuer "${card.card.issuer}" not in issuers.yaml` });
+      errors.push({
+        file: relPath,
+        error: `issuer "${card.card.issuer}" not in issuers.yaml`,
+      });
+      continue;
     }
 
     cards.push(card);
@@ -281,15 +186,26 @@ if (errors.length > 0) {
     console.log(`    ${error}`);
   }
 }
-if (warnings.length > 0) {
-  console.log(`\n⚠️  Warnings: ${warnings.length}`);
-  for (const { file, warning } of warnings) {
-    console.log(`  ${file}: ${warning}`);
-  }
-}
-
 if (errors.length > 0) {
   process.exit(1);
+}
+
+try {
+  validateCardCatalog(cards, categoryRegistry, {
+    resolveMerchant: (merchant) => {
+      const resolved = merchantMatcher.match(merchant);
+      return {
+        category: resolved.category,
+        subcategory: resolved.subcategory,
+      };
+    },
+  });
+} catch (error) {
+  if (error instanceof CatalogValidationError) {
+    console.error(error.message);
+    process.exit(1);
+  }
+  throw error;
 }
 
 // ── Build organized output ──
@@ -328,6 +244,7 @@ const issuersOutput: IssuerData[] = sortedIssuers.map(([issuerId, issuerCards]) 
 const byCategoryIndex: Record<string, IndexedReward[]> = {};
 for (const card of cards) {
   for (const reward of card.rewards) {
+    if (!isIndexableReward(reward)) continue;
     const cat = reward.subcategory ? `${reward.category}.${reward.subcategory}` : reward.category;
     if (!byCategoryIndex[cat]) byCategoryIndex[cat] = [];
     const bestTier = pickBestTier(reward.tiers);
@@ -357,6 +274,7 @@ const prepaidCards = cards.filter((c) => c.card.type === 'prepaid').map((c) => c
 // Build no-min-spend index (cards with tier0 that has meaningful rewards)
 const noMinSpend = cards.filter((c) => {
   return c.rewards.some((r) =>
+    isIndexableReward(r) &&
     r.tiers.some((t) => t.performanceTier === 'tier0' && getTierComparableValue(t) > 0)
   );
 }).map((c) => c.card.id);
@@ -364,10 +282,13 @@ const noMinSpend = cards.filter((c) => {
 const output: OrganizedOutput = {
   meta: {
     version: '1.0.0',
-    generatedAt: new Date().toISOString(),
+    generatedAt: `${cards
+      .map((entry) => entry.card.lastUpdated)
+      .sort()
+      .at(-1) ?? '1970-01-01'}T00:00:00.000Z`,
     totalIssuers: issuersOutput.length,
     totalCards: cards.length,
-    categories: [...validCategoryIds].sort(),
+    categories: categoryRegistry.canonicalKeys().sort(),
   },
   issuers: issuersOutput,
   categories: categoriesRaw.categories,
@@ -378,9 +299,53 @@ const output: OrganizedOutput = {
   },
 };
 
+const driftedPaths: string[] = [];
+async function publish(path: string, content: string): Promise<void> {
+  if (!CHECK_MODE) {
+    await writeFile(path, content, 'utf-8');
+    return;
+  }
+  try {
+    const current = await readFile(path, 'utf-8');
+    if (current !== content) driftedPaths.push(path);
+  } catch {
+    driftedPaths.push(path);
+  }
+}
+
+async function reconcileShardDirectory(
+  directory: string,
+  expectedNames: ReadonlySet<string>,
+): Promise<void> {
+  let existingNames: string[] = [];
+  try {
+    existingNames = (await readdir(directory, { withFileTypes: true }))
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .sort();
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !('code' in error) ||
+      error.code !== 'ENOENT'
+    ) {
+      throw error;
+    }
+  }
+
+  for (const name of staleGeneratedShardNames(existingNames, expectedNames)) {
+    const stalePath = join(directory, name);
+    if (CHECK_MODE) {
+      driftedPaths.push(stalePath);
+    } else {
+      await unlink(stalePath);
+    }
+  }
+}
+
 // Write output
 const outputPath = join(OUTPUT_DIR, 'cards.json');
-await writeFile(outputPath, JSON.stringify(output, null, 2), 'utf-8');
+await publish(outputPath, JSON.stringify(output, null, 2));
 
 console.log(`\n📊 Output: ${outputPath}`);
 console.log(`   ${output.meta.totalIssuers} issuers, ${output.meta.totalCards} cards`);
@@ -404,6 +369,7 @@ const compactOutput = {
       type: c.card.type,
       annualFee: c.card.annualFee.domestic,
       topRewards: c.rewards
+        .filter(isIndexableReward)
         .map((r) => ({
           category: r.subcategory ? `${r.category}.${r.subcategory}` : r.category,
           type: r.type,
@@ -419,19 +385,43 @@ const compactOutput = {
 };
 
 const compactPath = join(OUTPUT_DIR, 'cards-compact.json');
-await writeFile(compactPath, JSON.stringify(compactOutput, null, 2), 'utf-8');
+await publish(compactPath, JSON.stringify(compactOutput, null, 2));
 console.log(`   ${compactPath} (compact index)`);
 
 // Copy to web app's public directory for static serving
 const webPublicDir = join(ROOT, 'apps/web/public/data');
-await mkdir(webPublicDir, { recursive: true });
-await writeFile(join(webPublicDir, 'cards.json'), JSON.stringify(output, null, 2), 'utf-8');
+if (!CHECK_MODE) await mkdir(webPublicDir, { recursive: true });
+await publish(join(webPublicDir, 'cards.json'), JSON.stringify(output, null, 2));
 
 // Also write categories as JSON
 const categoriesJsonPath = join(webPublicDir, 'categories.json');
-await writeFile(categoriesJsonPath, JSON.stringify(categoriesRaw, null, 2), 'utf-8');
+await publish(categoriesJsonPath, JSON.stringify(categoriesRaw, null, 2));
 console.log(`   ${join(webPublicDir, 'cards.json')} (web public)`);
 console.log(`   ${categoriesJsonPath} (web public)`);
+
+// Browser runtime artifacts: compact list data, issuer-scoped details, and a
+// flat optimizer-ready rule array. Unsupported rewards remain in detail and
+// optimizer payloads for disclosure, but never enter summary reward counts.
+const webCatalog = buildWebCatalogArtifacts(output.meta, issuersOutput);
+const summaryPath = join(webPublicDir, 'cards-summary.json');
+const optimizerPath = join(webPublicDir, 'cards-optimizer.json');
+const detailDir = join(webPublicDir, 'card-details');
+if (!CHECK_MODE) await mkdir(detailDir, { recursive: true });
+
+await publish(summaryPath, JSON.stringify(webCatalog.summary));
+await publish(optimizerPath, JSON.stringify(webCatalog.optimizer));
+
+const expectedDetailNames = new Set<string>();
+for (const [issuerId, shard] of webCatalog.detailShards) {
+  const fileName = `${issuerId}.json`;
+  expectedDetailNames.add(fileName);
+  await publish(join(detailDir, fileName), JSON.stringify(shard));
+}
+await reconcileShardDirectory(detailDir, expectedDetailNames);
+
+console.log(`   ${summaryPath} (web card summary)`);
+console.log(`   ${optimizerPath} (web optimizer catalog)`);
+console.log(`   ${detailDir} (${expectedDetailNames.size} issuer detail shards)`);
 
 // Generate fallback category labels TypeScript module for web app (C7-04)
 // This eliminates the hardcoded duplication anti-pattern by generating the
@@ -448,7 +438,13 @@ for (const node of categoriesRaw.categories as Array<{ id: string; labelKo: stri
 }
 const fallbackModule = `/** Auto-generated from categories.yaml by scripts/build-json.ts\n *  Do not edit manually — run 'node --experimental-strip-types scripts/build-json.ts' to regenerate.\n */\nexport const FALLBACK_CATEGORY_LABELS: ReadonlyMap<string, string> = new Map([\n${fallbackEntries.join('\n')}\n  ]);\n`;
 const fallbackPath = join(ROOT, 'apps/web/src/lib/category-labels-fallback.ts');
-await writeFile(fallbackPath, fallbackModule, 'utf-8');
+await publish(fallbackPath, fallbackModule);
 console.log(`   ${fallbackPath} (auto-generated fallback labels)`);
+
+if (driftedPaths.length > 0) {
+  console.error('\nGenerated catalog drift detected:');
+  for (const path of driftedPaths) console.error(`  ${path}`);
+  process.exitCode = 1;
+}
 
 console.log('\n✨ Done!');

@@ -6,4 +6,5 @@ export type {
   CapInfo,
   OptimizationResult,
   CardAssignment,
+  CalculationIssue,
 } from './result.js';

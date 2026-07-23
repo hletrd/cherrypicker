@@ -16,11 +16,18 @@ const rulesDir = join(import.meta.dir, '../../../packages/rules/data/cards');
 
 let simplePlan: CardRuleSet;
 let mrLife: CardRuleSet;
+let mrLifeCapFixture: CardRuleSet;
 let kbMinCheck: CardRuleSet;
 
 beforeAll(async () => {
   simplePlan = await loadCardRule(join(rulesDir, 'shinhan/simple-plan.yaml'));
   mrLife = await loadCardRule(join(rulesDir, 'shinhan/mr-life.yaml'));
+  mrLifeCapFixture = structuredClone(mrLife);
+  const convenienceRule = mrLifeCapFixture.rewards.find(
+    (rule) => rule.category === 'convenience_store',
+  )!;
+  convenienceRule.label = '편의점 할인 테스트 픽스처';
+  convenienceRule.support = { status: 'supported' };
   kbMinCheck = await loadCardRule(join(rulesDir, 'kb/min-check.yaml'));
 });
 
@@ -37,6 +44,8 @@ function makeTx(
     merchant,
     amount,
     currency: 'KRW',
+    paymentType: 'domestic',
+    factProvenance: { paymentType: 'statement' },
     category,
     subcategory,
     confidence: 1.0,
@@ -96,6 +105,88 @@ const cashbackFixture: CardRuleSet = {
       category: 'grocery',
       type: 'cashback',
       tiers: [{ performanceTier: 'tier0', rate: 5, monthlyCap: null, perTransactionCap: null }],
+    },
+  ],
+  globalConstraints: {
+    monthlyTotalDiscountCap: null,
+    minimumAnnualSpending: null,
+  },
+};
+
+const overseasFixture: CardRuleSet = {
+  card: {
+    id: 'fixture-overseas-card',
+    issuer: 'fixture',
+    name: 'Fixture Overseas Card',
+    nameKo: '해외 조건 테스트 카드',
+    type: 'credit',
+    annualFee: { domestic: 0, international: 0 },
+    url: 'https://example.com/overseas-fixture',
+    lastUpdated: '2026-07-23',
+    source: 'manual',
+  },
+  performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+  performanceExclusions: [],
+  rewards: [
+    {
+      id: 'overseas-base',
+      category: 'travel',
+      type: 'discount',
+      conditions: { paymentType: 'overseas' },
+      tiers: [{
+        performanceTier: 'tier0',
+        rate: 5,
+        monthlyCap: null,
+        perTransactionCap: null,
+      }],
+    },
+  ],
+  globalConstraints: {
+    monthlyTotalDiscountCap: null,
+    minimumAnnualSpending: null,
+  },
+};
+
+const stackingFixture: CardRuleSet = {
+  card: {
+    id: 'fixture-stacking-card',
+    issuer: 'fixture',
+    name: 'Fixture Stacking Card',
+    nameKo: '중첩 규칙 테스트 카드',
+    type: 'credit',
+    annualFee: { domestic: 0, international: 0 },
+    url: 'https://example.com/stacking-fixture',
+    lastUpdated: '2026-07-23',
+    source: 'manual',
+  },
+  performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+  performanceExclusions: [],
+  rewards: [
+    {
+      id: 'base',
+      category: 'dining',
+      type: 'discount',
+      combination: 'exclusive',
+      priority: 1,
+      tiers: [{
+        performanceTier: 'tier0',
+        rate: 1,
+        monthlyCap: null,
+        perTransactionCap: null,
+      }],
+    },
+    {
+      id: 'bonus',
+      category: 'dining',
+      type: 'discount',
+      combination: 'additive',
+      priority: 1,
+      tiers: [{
+        performanceTier: 'tier0',
+        rate: 2,
+        monthlyCap: null,
+        perTransactionCap: null,
+      }],
     },
   ],
   globalConstraints: {
@@ -198,7 +289,7 @@ describe('calculateRewards - mr-life (tiered, capped)', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'convenience_store', 150000)],
       previousMonthSpending: 300000,
-      cardRule: mrLife,
+      cardRule: mrLifeCapFixture,
     });
     const cat = output.rewards.find((r) => r.category === 'convenience_store');
     expect(cat).toBeDefined();
@@ -215,7 +306,7 @@ describe('calculateRewards - mr-life (tiered, capped)', () => {
         makeTx('t3', 'convenience_store', 50000),
       ],
       previousMonthSpending: 300000,  // tier1, cap=10000
-      cardRule: mrLife,
+      cardRule: mrLifeCapFixture,
     });
     const cat = output.rewards.find((r) => r.category === 'convenience_store');
     expect(cat!.reward).toBe(10000);
@@ -226,12 +317,12 @@ describe('calculateRewards - mr-life (tiered, capped)', () => {
     const outputTier1 = calculateRewards({
       transactions: [makeTx('t1', 'convenience_store', 200000)],
       previousMonthSpending: 300000,
-      cardRule: mrLife,
+      cardRule: mrLifeCapFixture,
     });
     const outputTier3 = calculateRewards({
       transactions: [makeTx('t1', 'convenience_store', 200000)],
       previousMonthSpending: 1000000,
-      cardRule: mrLife,
+      cardRule: mrLifeCapFixture,
     });
     const rewardTier1 = outputTier1.rewards.find((r) => r.category === 'convenience_store')!.reward;
     const rewardTier3 = outputTier3.rewards.find((r) => r.category === 'convenience_store')!.reward;
@@ -246,7 +337,7 @@ describe('calculateRewards - mr-life (tiered, capped)', () => {
         makeTx('t3', 'dining', 30000),
       ],
       previousMonthSpending: 500000,  // tier2
-      cardRule: mrLife,
+      cardRule: mrLifeCapFixture,
     });
     // All three categories should have reward entries
     const categories = output.rewards.map((r) => r.category);
@@ -264,7 +355,7 @@ describe('calculateRewards - mr-life (tiered, capped)', () => {
         makeTx('t1', 'convenience_store', 200000),
       ],
       previousMonthSpending: 300000,  // tier1, monthlyCap=10000
-      cardRule: mrLife,
+      cardRule: mrLifeCapFixture,
     });
     // Cap should be hit — either in capsHit or captured in capReached
     const cat = output.rewards.find((r) => r.category === 'convenience_store');
@@ -275,10 +366,27 @@ describe('calculateRewards - mr-life (tiered, capped)', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'convenience_store', 10000)],
       previousMonthSpending: 300000,
-      cardRule: mrLife,
+      cardRule: mrLifeCapFixture,
     });
     const cat = output.rewards.find((r) => r.category === 'convenience_store');
     expect(cat!.rewardType).toBe('discount');
+  });
+
+  test('real time-restricted benefits remain unsupported without transaction time', () => {
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'convenience_store', 150000)],
+      previousMonthSpending: 300000,
+      cardRule: mrLife,
+    });
+
+    expect(output.totalReward).toBe(0);
+    expect(output.unsupportedRules).toContainEqual(
+      expect.objectContaining({
+        transactionId: 't1',
+        ruleId: 'reward-003',
+        reason: 'rule_marked_unsupported',
+      }),
+    );
   });
 });
 
@@ -333,6 +441,39 @@ const perTxCapFixture: CardRuleSet = {
       category: 'dining',
       type: 'discount',
       tiers: [{ performanceTier: 'tier0', rate: 10, monthlyCap: null, perTransactionCap: 5000 }],
+    },
+  ],
+  globalConstraints: {
+    monthlyTotalDiscountCap: null,
+    minimumAnnualSpending: null,
+  },
+};
+
+const fixedPerTxCapFixture: CardRuleSet = {
+  card: {
+    id: 'fixture-fixed-per-tx-cap-card',
+    issuer: 'fixture',
+    name: 'Fixture Fixed Per-Tx Cap Card',
+    nameKo: '고정 건당상한 테스트 카드',
+    type: 'credit',
+    annualFee: { domestic: 0, international: 0 },
+    url: 'https://example.com/fixed-per-tx-cap-fixture',
+    lastUpdated: '2026-07-23',
+    source: 'manual',
+  },
+  performanceTiers: [{ id: 'tier0', label: '무실적', minSpending: 0, maxSpending: null }],
+  performanceExclusions: [],
+  rewards: [
+    {
+      category: 'dining',
+      type: 'discount',
+      tiers: [{
+        performanceTier: 'tier0',
+        rate: null,
+        fixedAmount: 7000,
+        monthlyCap: null,
+        perTransactionCap: 5000,
+      }],
     },
   ],
   globalConstraints: {
@@ -492,6 +633,33 @@ describe('calculateRewards - global cap and per-transaction cap', () => {
     });
     const dining = output.rewards.find((r) => r.category === 'dining');
     expect(dining!.reward).toBe(5000);
+    expect(output.capsHit).toEqual([
+      {
+        category: 'dining',
+        capType: 'per_transaction',
+        capAmount: 5000,
+        actualReward: 10000,
+        appliedReward: 5000,
+      },
+    ]);
+  });
+
+  test('fixed reward clipping is reported as a per-transaction cap hit', () => {
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'dining', 10000)],
+      previousMonthSpending: 0,
+      cardRule: fixedPerTxCapFixture,
+    });
+    expect(output.totalReward).toBe(5000);
+    expect(output.capsHit).toEqual([
+      {
+        category: 'dining',
+        capType: 'per_transaction',
+        capAmount: 5000,
+        actualReward: 7000,
+        appliedReward: 5000,
+      },
+    ]);
   });
 
   test('per-transaction cap does not affect transactions under cap', () => {
@@ -550,6 +718,21 @@ describe('calculateRewards - filtering and edge cases', () => {
     expect(output.totalReward).toBe(0);
   });
 
+  test.each([
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['a fractional Won value', 1000.5],
+    ['an unsafe integer', Number.MAX_SAFE_INTEGER + 1],
+  ])('rejects %s transaction amount at the public boundary', (_label, amount) => {
+    expect(() =>
+      calculateRewards({
+        transactions: [makeTx('bad-amount', 'uncategorized', amount)],
+        previousMonthSpending: 0,
+        cardRule: simplePlan,
+      }),
+    ).toThrow(/transaction amount must be a finite safe integer/);
+  });
+
   test('rule with null rate and null fixedAmount produces 0 reward', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'dining', 100000)],
@@ -570,6 +753,103 @@ describe('calculateRewards - filtering and edge cases', () => {
     });
     const dining = output.rewards.find((r) => r.category === 'dining');
     expect(dining!.reward).toBe(200); // 10000 * 0.02 = 200
+  });
+});
+
+describe('calculateRewards - typed condition facts', () => {
+  test('overseas reward applies to a verified overseas transaction', () => {
+    const output = calculateRewards({
+      transactions: [{
+        ...makeTx('t1', 'travel', 10000),
+        paymentType: 'overseas',
+        factProvenance: { paymentType: 'statement' },
+      }],
+      previousMonthSpending: 0,
+      cardRule: overseasFixture,
+    });
+    expect(output.totalReward).toBe(500);
+    expect(output.unsupportedRules).toHaveLength(0);
+  });
+
+  test('overseas reward does not apply to a domestic transaction', () => {
+    const output = calculateRewards({
+      transactions: [{
+        ...makeTx('t1', 'travel', 10000),
+        paymentType: 'domestic',
+        factProvenance: { paymentType: 'statement' },
+      }],
+      previousMonthSpending: 0,
+      cardRule: overseasFixture,
+    });
+    expect(output.totalReward).toBe(0);
+    expect(output.unsupportedRules).toHaveLength(0);
+  });
+
+  test('overseas reward is unsupported when payment metadata is absent', () => {
+    const {
+      paymentType: _paymentType,
+      factProvenance: _factProvenance,
+      ...transactionWithoutPaymentMetadata
+    } = makeTx('t1', 'travel', 10000);
+    const output = calculateRewards({
+      transactions: [transactionWithoutPaymentMetadata],
+      previousMonthSpending: 0,
+      cardRule: overseasFixture,
+    });
+    expect(output.totalReward).toBe(0);
+    expect(output.unsupportedRules).toEqual([
+      expect.objectContaining({
+        transactionId: 't1',
+        ruleId: 'overseas-base',
+        reason: 'missing_payment_type',
+      }),
+    ]);
+  });
+});
+
+describe('calculateRewards - explicit rule combination', () => {
+  test('an additive bonus stacks with the selected exclusive base rule', () => {
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'dining', 10000)],
+      previousMonthSpending: 0,
+      cardRule: stackingFixture,
+    });
+    expect(output.totalReward).toBe(300);
+  });
+
+  test('exclusive rules select the highest authored priority', () => {
+    const cardRule: CardRuleSet = {
+      ...stackingFixture,
+      rewards: [
+        {
+          ...stackingFixture.rewards[0]!,
+          id: 'low',
+          priority: 1,
+          tiers: [{
+            performanceTier: 'tier0',
+            rate: 1,
+            monthlyCap: null,
+            perTransactionCap: null,
+          }],
+        },
+        {
+          ...stackingFixture.rewards[0]!,
+          id: 'high',
+          priority: 2,
+          tiers: [{
+            performanceTier: 'tier0',
+            rate: 3,
+            monthlyCap: null,
+            perTransactionCap: null,
+          }],
+        },
+      ],
+    };
+    expect(calculateRewards({
+      transactions: [makeTx('t1', 'dining', 10000)],
+      previousMonthSpending: 0,
+      cardRule,
+    }).totalReward).toBe(300);
   });
 });
 
@@ -616,7 +896,7 @@ describe('calculateRewards - multiple transactions accumulating toward monthly c
         makeTx('t3', 'convenience_store', 50000),
       ],
       previousMonthSpending: 300000,
-      cardRule: mrLife,
+      cardRule: mrLifeCapFixture,
     });
     const cat = output.rewards.find((r) => r.category === 'convenience_store');
     expect(cat!.reward).toBe(10000);
@@ -624,8 +904,8 @@ describe('calculateRewards - multiple transactions accumulating toward monthly c
   });
 });
 
-describe('calculateRewards - broad category rule blocked by subcategorized transaction', () => {
-  test('broad dining rule does not match cafe subcategory transaction', () => {
+describe('calculateRewards - category inheritance', () => {
+  test('broad dining rule applies to a cafe subcategory transaction', () => {
     const broadOnlyFixture: CardRuleSet = {
       card: {
         id: 'fixture-broad-only-card',
@@ -652,7 +932,6 @@ describe('calculateRewards - broad category rule blocked by subcategorized trans
         minimumAnnualSpending: null,
       },
     };
-    // Transaction with subcategory='cafe' should NOT match the broad dining rule
     const output = calculateRewards({
       transactions: [makeTx('t1', 'dining', 20000, '스타벅스', 'cafe')],
       previousMonthSpending: 0,
@@ -660,7 +939,7 @@ describe('calculateRewards - broad category rule blocked by subcategorized trans
     });
     const cafe = output.rewards.find((r) => r.category === 'dining.cafe');
     expect(cafe).toBeDefined();
-    expect(cafe!.reward).toBe(0);
+    expect(cafe!.reward).toBe(1000);
   });
 });
 
@@ -687,7 +966,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     expect(telecom!.reward).toBe(2500);
   });
 
-  test('won_per_liter fuel discount returns fixedAmount as per-transaction discount', () => {
+  test('won_per_liter benefit is not guessed when statement volume is missing', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'transportation', 50000)],
       previousMonthSpending: 300000,
@@ -695,9 +974,31 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     });
     const transportation = output.rewards.find((reward) => reward.category === 'transportation');
     expect(transportation).toBeDefined();
-    // won_per_liter applies fixedAmount (60 Won) as a per-transaction discount
-    // since transaction model does not carry fuel volume in liters.
-    expect(transportation!.reward).toBe(60);
+    expect(transportation!.reward).toBe(0);
+    expect(output.unsupportedRules).toEqual([
+      expect.objectContaining({
+        transactionId: 't1',
+        category: 'transportation',
+        reason: 'missing_fuel_volume',
+      }),
+    ]);
+  });
+
+  test('won_per_liter benefit uses explicit statement volume with provenance', () => {
+    const transaction = {
+      ...makeTx('t1', 'transportation', 50000),
+      fuelVolumeLiters: 20,
+      factProvenance: { fuelVolumeLiters: 'statement' as const },
+    };
+    const output = calculateRewards({
+      transactions: [transaction],
+      previousMonthSpending: 300000,
+      cardRule: mrLife,
+    });
+    const transportation = output.rewards.find((reward) => reward.category === 'transportation');
+    expect(transportation).toBeDefined();
+    expect(transportation!.reward).toBe(1200);
+    expect(output.unsupportedRules).toHaveLength(0);
   });
 
   test('subcategory-specific rules win over broad category rules', () => {
@@ -711,7 +1012,18 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     expect(cafe!.reward).toBe(1000);
   });
 
-  test('subcategory-specific merchant misses result in 0 reward when broad rule is blocked', () => {
+  test('explicit merchant rules remain reachable across inferred category differences', () => {
+    const output = calculateRewards({
+      transactions: [makeTx('t1', 'online_shopping', 20000, '메가커피 강남')],
+      previousMonthSpending: 0,
+      cardRule: subcategoryFixture,
+    });
+    const bucket = output.rewards.find((reward) => reward.category === 'online_shopping');
+    expect(bucket).toBeDefined();
+    expect(bucket!.reward).toBe(1000);
+  });
+
+  test('subcategory-specific merchant miss falls back to the broad category rule', () => {
     const output = calculateRewards({
       transactions: [makeTx('t1', 'dining', 20000, '스타벅스 강남', 'cafe')],
       previousMonthSpending: 0,
@@ -719,9 +1031,7 @@ describe('calculateRewards - fixed amount and subcategory handling', () => {
     });
     const cafe = output.rewards.find((reward) => reward.category === 'dining.cafe');
     expect(cafe).toBeDefined();
-    // Broad dining rule is blocked because tx has subcategory='cafe'
-    // Specific cafe rule doesn't match because merchant doesn't contain '메가커피'
-    expect(cafe!.reward).toBe(0);
+    expect(cafe!.reward).toBe(400);
   });
 
   test('rate takes precedence over fixedAmount when both are present on same tier (C26-COR01)', () => {

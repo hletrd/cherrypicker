@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -28,9 +33,17 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      channel: online
       note: "Paybook 앱 QR·온라인 결제 시 1% Paybook 머니 적립"
+    support:
+      status: supported
 
   - category: education
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -39,14 +52,24 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "학습·간식·휴식 카테고리 0.5% 적립"
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: points
     tiers:
       - performanceTier: tier0
         rate: 0.2
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

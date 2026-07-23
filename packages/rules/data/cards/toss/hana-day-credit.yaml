@@ -31,6 +31,11 @@ performanceExclusions: []
 
 rewards:
   - category: telecom
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -53,8 +58,16 @@ rewards:
         - LGU+
         - 알뜰폰
       note: "통신요금(SKT, KT, LGU+, 알뜰폰) 자동납부 10% 청구할인"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: utilities
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -73,8 +86,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "아파트 관리비 자동납부 10% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: education
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -93,8 +114,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "학원비(외국어, 입시/보습, 운전면허, 예체능, 기술/직업훈련, 무술도장) 10% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: medical
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: discount
     tiers:
       - performanceTier: tier0
@@ -113,8 +142,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "병원 10% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: dining
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: discount
     tiers:
       - performanceTier: tier0
@@ -138,8 +175,16 @@ rewards:
         - 투썸플레이스
         - 할리스
       note: "커피전문점(스타벅스, 커피빈, 이디야, 투썸플레이스, 할리스) 10% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: offline_shopping
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: discount
     tiers:
       - performanceTier: tier0
@@ -162,8 +207,16 @@ rewards:
         - 홈플러스
         - 토스쇼핑
       note: "쇼핑(이마트, 롯데마트, 홈플러스, 토스쇼핑) 10% 청구할인"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: insurance
+    id: reward-007
+    priority: 7
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-007
     type: discount
     tiers:
       - performanceTier: tier0
@@ -182,8 +235,16 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "손해보험, 건강보험/고용보험/산재보험/국민연금 자동납부 10% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: entertainment
+    id: reward-008
+    priority: 8
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-008
     type: discount
     tiers:
       - performanceTier: tier0
@@ -204,6 +265,9 @@ rewards:
         - 골프장
         - 골프연습장
       note: "골프장/골프연습장 10% 청구할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

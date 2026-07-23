@@ -20,7 +20,12 @@ performanceTiers:
 performanceExclusions: []
 
 rewards:
-  - category: uncategorized
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 에코머니 포인트 적립
     type: cashback
     tiers:
@@ -30,8 +35,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "에코머니 가맹점(친환경 제품 매장)에서 결제금액의 1~5% 에코머니 포인트 적립"
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
   - category: utilities
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 우체국 서비스 10% 할인
     type: discount
     tiers:
@@ -41,8 +54,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "우체국 서비스(우편, 택배 등) 이용 시 전월 실적 있으면 10% 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: public_transit
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 교통카드 기능
     type: discount
     tiers:
@@ -52,6 +73,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "T-money 선불 교통카드 기능 탑재. 별도 충전 후 이용."
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

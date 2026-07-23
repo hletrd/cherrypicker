@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: K-Pass 대중교통 환급 (일반 20%, 청년 30%, 저소득 53%)
     type: cashback
     tiers:
@@ -30,8 +35,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "K-패스 정부 환급 프로그램. 월 15회 이상 이용 시 최대 60회까지 환급. 일반 20%, 청년 30%, 저소득층 53%."
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
   - category: convenience_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -45,8 +58,16 @@ rewards:
         - 세븐일레븐
         - 이마트24
       note: "1만원 이상 결제 시 1% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: cashback
     tiers:
@@ -63,8 +84,16 @@ rewards:
         - 컴포즈커피
         - 이디야
       note: "1만원 이상 결제 시 1% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: online_shopping
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: general
     type: cashback
     tiers:
@@ -76,8 +105,16 @@ rewards:
       specificMerchants:
         - 쿠팡
       note: "1만원 이상 결제 시 1% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; merchant category is not reachable by the canonical matcher"
 
   - category: medical
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: pharmacy
     type: cashback
     tiers:
@@ -90,6 +127,9 @@ rewards:
         - 올리브영
         - 다이소
       note: "1만원 이상 결제 시 1% 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

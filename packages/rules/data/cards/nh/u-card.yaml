@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: uncategorized
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: points
     tiers:
       - performanceTier: tier0
@@ -29,8 +34,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "건별 10만원 미만 0.7% NH포인트 무제한 적립"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; ambiguous overlapping reward rules"
 
   - category: uncategorized
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -39,6 +52,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "건별 10만원 이상 1.5% NH포인트 무제한 적립, 매년 최대 20만원 캐시백, 연 15만원 상당 바우처, 전세계 공항라운지 무료"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; ambiguous overlapping reward rules"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

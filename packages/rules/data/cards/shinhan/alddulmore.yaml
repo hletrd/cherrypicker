@@ -34,6 +34,11 @@ performanceExclusions:
 
 rewards:
   - category: "telecom"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "알뜰폰 통신요금 자동이체 할인"
     type: discount
     tiers:
@@ -45,6 +50,9 @@ rewards:
         rate: 50.0
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: account_or_autopay"
 
 globalConstraints:
   monthlyTotalDiscountCap: 15000

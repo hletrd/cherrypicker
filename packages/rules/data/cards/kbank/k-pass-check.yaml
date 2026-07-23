@@ -21,6 +21,11 @@ performanceExclusions: []
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 대중교통 이용금액 환급 (일반 20%, 청년 30%, 저소득 53%)
     type: discount
     tiers:
@@ -28,8 +33,15 @@ rewards:
         rate: 20.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 국내 전 가맹점 0.2% 캐시백
     type: discount
     tiers:
@@ -37,6 +49,10 @@ rewards:
         rate: 0.2
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: uncategorized
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: mileage
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "아시아나항공 마일리지 적립 (전월 30만원 이상 시 1,000원당 1마일)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
   - category: travel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: airline
     type: mileage
     tiers:
@@ -57,6 +70,8 @@ rewards:
       specificMerchants:
         - 아시아나항공
       note: "아시아나항공 구매 시 2배 마일리지 적립"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

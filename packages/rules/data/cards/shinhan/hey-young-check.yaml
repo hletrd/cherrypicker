@@ -42,6 +42,11 @@ performanceExclusions:
 
 rewards:
   - category: "public_transit"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "대중교통 5% 캐시백"
     type: cashback
     tiers:
@@ -61,7 +66,14 @@ rewards:
         rate: 5.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "telecom"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "통신요금 자동이체 캐시백 (5만원 이상)"
     type: cashback
     tiers:
@@ -85,7 +97,15 @@ rewards:
         fixedAmount: 2000
         monthlyCap: 2000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: account_or_autopay"
   - category: "convenience_store"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "GS25 1천원 캐시백 (1만원 결제, 하루 1회, 월 5회)"
     type: cashback
     tiers:
@@ -109,7 +129,15 @@ rewards:
         fixedAmount: 1000
         monthlyCap: 5000
         perTransactionCap: 1000
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
   - category: "online_shopping"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "쿠팡 1천원 캐시백 (2만원 결제, 하루 1회, 월 5회)"
     type: cashback
     tiers:
@@ -133,7 +161,15 @@ rewards:
         fixedAmount: 1000
         monthlyCap: 5000
         perTransactionCap: 1000
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
   - category: "dining"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "스타벅스 1천원 캐시백 (하루 1회, 월 5회)"
     type: cashback
     tiers:
@@ -157,7 +193,15 @@ rewards:
         fixedAmount: 1000
         monthlyCap: 5000
         perTransactionCap: 1000
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
   - category: "entertainment"
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     label: "CGV 5천원 캐시백 (2만원 결제, 월 1회)"
     type: cashback
     tiers:
@@ -181,6 +225,9 @@ rewards:
         fixedAmount: 5000
         monthlyCap: 5000
         perTransactionCap: 5000
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

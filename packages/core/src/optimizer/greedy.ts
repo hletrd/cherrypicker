@@ -1,6 +1,13 @@
 import type { CardRuleSet } from '@cherrypicker/rules';
 import type { CategorizedTransaction } from '../models/transaction.js';
-import type { OptimizationResult, CardAssignment, CardRewardResult, CategoryReward, CapInfo } from '../models/result.js';
+import type {
+  OptimizationResult,
+  CardAssignment,
+  CardRewardResult,
+  CategoryReward,
+  CapInfo,
+  CalculationIssue,
+} from '../models/result.js';
 import type { OptimizationConstraints } from './constraints.js';
 import { calculateRewards, buildCategoryKey } from '../calculator/reward.js';
 
@@ -9,6 +16,11 @@ interface CardScore {
   cardName: string;
   reward: number;
   rate: number;
+}
+
+interface CardScoringResult {
+  scores: CardScore[];
+  unsupportedRules: CalculationIssue[];
 }
 
 interface TxAssignment {
@@ -41,23 +53,34 @@ function scoreCardsForTransaction(
   cardRules: CardRuleSet[],
   cardPreviousSpending: Map<string, number>,
   assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
-): CardScore[] {
+): CardScoringResult {
   // Defensive guard: callers should pre-filter, but division by zero
   // would produce Infinity and corrupt sort ordering.
   if (transaction.amount <= 0 || !Number.isFinite(transaction.amount)) {
-    return [];
+    return { scores: [], unsupportedRules: [] };
   }
   const scores: CardScore[] = [];
+  const unsupportedRules: CalculationIssue[] = [];
 
   for (const rule of cardRules) {
     const currentTransactions = assignedTransactionsByCard.get(rule.card.id) ?? [];
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
 
     const before = calculateCardOutput(currentTransactions, previousMonthSpending, rule).totalReward;
-    const after = calculateCardOutput([...currentTransactions, transaction], previousMonthSpending, rule).totalReward;
-    const reward = Math.max(0, after - before);
+    const after = calculateCardOutput([...currentTransactions, transaction], previousMonthSpending, rule);
+    const reward = Math.max(0, after.totalReward - before);
     // transaction.amount is guaranteed positive here (pre-filtered at line 198).
     const rate = reward / transaction.amount;
+
+    // Candidate cards that lose the marginal-reward comparison do not appear
+    // in cardResults. Retain only issues produced for this transaction while
+    // scoring the candidate, so disclosures cover real matching limitations
+    // without attributing issues from previously assigned transactions.
+    unsupportedRules.push(
+      ...after.unsupportedRules.filter(
+        (issue) => issue.transactionId === transaction.id,
+      ),
+    );
 
     scores.push({
       cardId: rule.card.id,
@@ -67,7 +90,26 @@ function scoreCardsForTransaction(
     });
   }
 
-  return scores.sort((a, b) => b.reward - a.reward);
+  return {
+    scores: scores.sort((a, b) => b.reward - a.reward),
+    unsupportedRules,
+  };
+}
+
+function deduplicateCalculationIssues(
+  issues: readonly CalculationIssue[],
+): CalculationIssue[] {
+  const unique = new Map<string, CalculationIssue>();
+  for (const issue of issues) {
+    const key = [
+      issue.transactionId,
+      issue.ruleId,
+      issue.category,
+      issue.reason,
+    ].join('\u0000');
+    if (!unique.has(key)) unique.set(key, issue);
+  }
+  return [...unique.values()];
 }
 
 function buildAssignments(txAssignments: TxAssignment[], categoryLabels: Map<string, string>): CardAssignment[] {
@@ -174,6 +216,7 @@ function buildCardResults(
       byCategory,
       performanceTier: output.performanceTier,
       capsHit,
+      unsupportedRules: output.unsupportedRules,
     });
   }
 
@@ -212,14 +255,17 @@ export function greedyOptimize(
     });
 
   const txAssignments: TxAssignment[] = [];
+  const candidateUnsupportedRules: CalculationIssue[] = [];
 
   for (const transaction of sortedTransactions) {
-    const scores = scoreCardsForTransaction(
+    const scoring = scoreCardsForTransaction(
       transaction,
       cardRules,
       cardPreviousSpending,
       assignedTransactionsByCard,
     );
+    const { scores } = scoring;
+    candidateUnsupportedRules.push(...scoring.unsupportedRules);
     const best = scores[0];
     if (!best) continue;
 
@@ -266,6 +312,10 @@ export function greedyOptimize(
   }
 
   const savingsVsSingleCard = totalReward - bestSingleCard.totalReward;
+  const unsupportedRules = deduplicateCalculationIssues([
+    ...candidateUnsupportedRules,
+    ...cardResults.flatMap((result) => result.unsupportedRules ?? []),
+  ]);
 
   return {
     assignments,
@@ -275,5 +325,6 @@ export function greedyOptimize(
     savingsVsSingleCard,
     bestSingleCard,
     cardResults,
+    unsupportedRules,
   };
 }

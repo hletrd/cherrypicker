@@ -36,6 +36,11 @@ performanceExclusions:
 
 rewards:
   - category: utilities
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -52,8 +57,15 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "공과금(전기, 가스, 수도) 10% 할인"
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: streaming
     type: discount
     tiers:
@@ -77,8 +89,16 @@ rewards:
         - 왓챠
         - 티빙
       note: "스트리밍 구독료 30% 할인"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: telecom
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -93,6 +113,8 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

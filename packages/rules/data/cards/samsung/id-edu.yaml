@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: "education"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "학원/학습지/인터넷강의 10% 결제일 할인 (월 최대 7만원)"
     type: discount
     tiers:
@@ -53,7 +58,16 @@ rewards:
         - 이투스
         - 엠베스트
         - 대성마이맥
-  - category: "apartment_mgmt"
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
+  - category: utilities
+    subcategory: apartment_mgmt
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "아파트관리비 5,000원 할인"
     type: discount
     tiers:
@@ -62,7 +76,14 @@ rewards:
         fixedAmount: 5000
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "dining"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "배달앱 5% 결제일 할인"
     type: discount
     tiers:
@@ -75,6 +96,8 @@ rewards:
         - 배달의민족
         - 쿠팡이츠
         - 요기요
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 80000

@@ -26,6 +26,11 @@ performanceExclusions: []
 
 rewards:
   - category: convenience_store
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,16 @@ rewards:
       minTransaction: 3000
       specificMerchants: []
       note: "영역별 3000원 이상 결제 시 건당 캐시백. 영역별 1일 1회. 무실적 300원, 전월 30만 이상 500원"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
   - category: dining
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -56,8 +69,16 @@ rewards:
       minTransaction: 3000
       specificMerchants: []
       note: "영역별 3000원 이상 결제 시 건당 캐시백. 영역별 1일 1회"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
   - category: online_shopping
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -72,8 +93,16 @@ rewards:
       minTransaction: 3000
       specificMerchants: []
       note: "영역별 3000원 이상 결제 시 건당 캐시백. 영역별 1일 1회"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
   - category: public_transit
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -88,6 +117,9 @@ rewards:
       minTransaction: null
       specificMerchants: []
       note: "전월 30만원 이상 시 대중교통 이용금액 월 5만원 초과 시 3000원 추가 캐시백. K-패스 환급 별도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount"
 
 globalConstraints:
   monthlyTotalDiscountCap: 150000

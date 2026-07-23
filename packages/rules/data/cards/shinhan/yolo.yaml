@@ -41,7 +41,13 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "cafe"
+  - category: dining
+    subcategory: cafe
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "커피 선택 시 (스타벅스/커피빈 등) 할인 (20%/15%/10% 중 선택)"
     type: discount
     tiers:
@@ -61,7 +67,14 @@ rewards:
         rate: 20.0
         monthlyCap: 40000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "convenience_store"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "편의점 선택 시 (GS25/CU/세븐일레븐) 할인"
     type: discount
     tiers:
@@ -81,7 +94,14 @@ rewards:
         rate: 10.0
         monthlyCap: 40000
         perTransactionCap: null
+    support:
+      status: supported
   - category: "entertainment"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "영화 선택 시 (CGV/롯데시네마) 할인"
     type: discount
     tiers:
@@ -101,6 +121,8 @@ rewards:
         rate: 10.0
         monthlyCap: 40000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 40000

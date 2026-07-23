@@ -32,6 +32,11 @@ performanceExclusions:
 
 rewards:
   - category: dining
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -44,8 +49,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "외식 5% 캐시백. 5개 할인영역 중 선택 2개 적용. 영역별 5천원, 통합 월 1만5천원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: convenience_store
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -58,8 +71,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "편의점 5% 캐시백. 5개 할인영역 중 선택 2개 적용. 영역별 5천원, 통합 월 1만5천원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: transportation
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: fuel
     type: cashback
     tiers:
@@ -73,8 +94,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "주유 5% 캐시백. 5개 할인영역 중 선택 2개 적용. 영역별 5천원, 통합 월 1만5천원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: public_transit
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -87,8 +116,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "교통 5% 캐시백. 5개 할인영역 중 선택 2개 적용. 영역별 5천원, 통합 월 1만5천원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: online_shopping
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -101,8 +138,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "온라인쇼핑 5% 캐시백. 5개 할인영역 중 선택 2개 적용. 영역별 5천원, 통합 월 1만5천원 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: subscription
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -115,6 +160,9 @@ rewards:
         perTransactionCap: 2900
     conditions:
       note: "나무멤버스 월정액 2,900원 캐시백"
+    support:
+      status: unsupported
+      reason: "unmodeled_reward_value"
 
 globalConstraints:
   monthlyTotalDiscountCap: 17900

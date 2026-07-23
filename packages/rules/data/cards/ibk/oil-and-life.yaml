@@ -23,27 +23,48 @@ performanceExclusions:
 
 rewards:
   - category: transportation
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: fuel
     type: discount
     tiers:
       - performanceTier: tier0
-        rate: 120
+        rate: null
+        fixedAmount: 120
+        unit: won_per_liter
         monthlyCap: null
         perTransactionCap: null
     conditions:
       specificMerchants:
         - GS칼텍스
       note: "GS칼텍스 주유 리터당 120원 할인 (LPG 포함)"
+    support:
+      status: supported
 
   - category: telecom
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
         rate: 3.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: movie
     type: discount
     tiers:
@@ -55,6 +76,9 @@ rewards:
       specificMerchants:
         - CGV
         - 롯데시네마
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

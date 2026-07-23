@@ -33,7 +33,12 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "전 가맹점 기본 적립"
     type: points
     tiers:
@@ -49,8 +54,15 @@ rewards:
         rate: 1.1
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "dining"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "아껴드림 외식 할인"
     type: discount
     tiers:
@@ -66,8 +78,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "convenience_store"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "아껴드림 편의점 할인"
     type: discount
     tiers:
@@ -83,8 +102,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "online_shopping"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "아껴드림 온라인쇼핑 할인"
     type: discount
     tiers:
@@ -100,8 +126,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: "transportation"
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     label: "주유 할인 (리터당 80원)"
     type: discount
     tiers:
@@ -121,6 +154,8 @@ rewards:
         unit: "won_per_liter"
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

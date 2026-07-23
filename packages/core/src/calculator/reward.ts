@@ -1,7 +1,13 @@
 import type { RewardRule, RewardTierRate, PerformanceTier } from '@cherrypicker/rules';
 import type { CategorizedTransaction } from '../models/transaction.js';
 import type { CategoryReward, CapInfo } from '../models/result.js';
-import type { CalculationInput, CalculationOutput, SkippedTransaction } from './types.js';
+import type {
+  CalculationInput,
+  CalculationOutput,
+  SkippedTransaction,
+  UnsupportedReason,
+  UnsupportedRule,
+} from './types.js';
 import { calculateDiscount } from './discount.js';
 import { calculatePoints } from './points.js';
 import { calculateCashback } from './cashback.js';
@@ -35,63 +41,208 @@ export function buildCategoryKey(category: string, subcategory?: string): string
   return subcategory ? `${category}.${subcategory}` : category;
 }
 
-function buildRuleKey(rule: RewardRule): string {
-  return buildCategoryKey(rule.category, rule.subcategory);
+function buildRuleKey(rule: RewardRule, ruleIndex: number): string {
+  return rule.capGroup ?? rule.id ?? `${buildCategoryKey(rule.category, rule.subcategory)}#${ruleIndex}`;
 }
 
-function ruleConditionsMatch(rule: RewardRule, tx: CategorizedTransaction): boolean {
-  if (rule.conditions?.minTransaction !== undefined && tx.amount < rule.conditions.minTransaction) {
-    return false;
+interface ConditionResult {
+  status: 'match' | 'miss' | 'unsupported';
+  reason?: UnsupportedReason;
+  detail?: string;
+  occurrenceKey?: string;
+}
+
+const RESTRICTION_NOTE_PATTERN =
+  /(월\s*\d+\s*회|일\s*\d+\s*회|주중|주말|요일|오프라인|온라인\s*(?:제외|전용)|자동이체|결제계좌|택\s*1|건당|회당|시간대)/;
+
+function isValidIsoDate(date: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
+}
+
+function ruleConditionsMatch(
+  rule: RewardRule,
+  tx: CategorizedTransaction,
+  ruleId: string,
+  occurrenceUses: Map<string, number>,
+): ConditionResult {
+  if (rule.support?.status === 'unsupported') {
+    return {
+      status: 'unsupported',
+      reason: 'rule_marked_unsupported',
+      detail: rule.support.reason,
+    };
   }
-  // excludeOnline removed — no parser populates isOnline (C32-F2)
+  if (
+    rule.support?.status !== 'supported' &&
+    rule.conditions?.note &&
+    RESTRICTION_NOTE_PATTERN.test(rule.conditions.note)
+  ) {
+    return {
+      status: 'unsupported',
+      reason: 'restriction_in_note',
+      detail: rule.conditions.note,
+    };
+  }
+  if (rule.conditions?.minTransaction !== undefined && tx.amount < rule.conditions.minTransaction) {
+    return { status: 'miss' };
+  }
+  if (rule.conditions?.maxTransaction !== undefined && tx.amount > rule.conditions.maxTransaction) {
+    return { status: 'miss' };
+  }
   if (
     rule.conditions?.specificMerchants &&
     rule.conditions.specificMerchants.length > 0 &&
     !rule.conditions.specificMerchants.some((merchant) => tx.merchant.includes(merchant))
   ) {
-    return false;
+    return { status: 'miss' };
   }
-  return true;
+  if (rule.conditions?.paymentType) {
+    if (!tx.paymentType) {
+      return { status: 'unsupported', reason: 'missing_payment_type' };
+    }
+    if (tx.paymentType !== rule.conditions.paymentType) return { status: 'miss' };
+  }
+  if (rule.conditions?.channel) {
+    if (!tx.channel) {
+      return { status: 'unsupported', reason: 'missing_channel' };
+    }
+    if (tx.channel !== rule.conditions.channel) return { status: 'miss' };
+  }
+  if (rule.conditions?.weekdays) {
+    if (!isValidIsoDate(tx.date)) {
+      return {
+        status: 'unsupported',
+        reason: 'missing_occurrence_context',
+        detail: 'weekday condition requires a valid ISO transaction date',
+      };
+    }
+    const weekday = new Date(`${tx.date}T00:00:00Z`).getUTCDay();
+    if (!rule.conditions.weekdays.includes(weekday)) return { status: 'miss' };
+  }
+  if (rule.conditions?.maxUses !== undefined && rule.conditions.usePeriod) {
+    if (!isValidIsoDate(tx.date)) {
+      return {
+        status: 'unsupported',
+        reason: 'missing_occurrence_context',
+        detail: 'occurrence condition requires a valid ISO transaction date',
+      };
+    }
+    const period = rule.conditions.usePeriod === 'day' ? tx.date : tx.date.slice(0, 7);
+    const occurrenceKey = `${ruleId}:${period}`;
+    if ((occurrenceUses.get(occurrenceKey) ?? 0) >= rule.conditions.maxUses) {
+      return { status: 'miss' };
+    }
+    return { status: 'match', occurrenceKey };
+  }
+  return { status: 'match' };
 }
 
 function ruleSpecificity(rule: RewardRule): number {
   let score = 0;
   if (rule.category !== '*') score += 100;
   if (rule.subcategory) score += 50;
-  if (rule.conditions?.specificMerchants?.length) score += 25;
-  // excludeOnline removed (C32-F2)
+  // An explicit merchant allowlist is a stronger identifier than an inferred
+  // category. It also keeps merchant-authored benefits reachable when a
+  // statement categorizer assigns the merchant to a different valid vertical.
+  if (rule.conditions?.specificMerchants?.length) score += 1000;
+  if (rule.conditions?.paymentType || rule.conditions?.channel) score += 10;
   if (rule.conditions?.minTransaction !== undefined) score += 5;
+  if (rule.conditions?.maxTransaction !== undefined) score += 5;
   return score;
 }
 
-function findRule(rules: RewardRule[], tx: CategorizedTransaction): RewardRule | undefined {
-  const candidates = rules.filter((rule) => {
-    if (rule.category !== '*' && rule.category !== tx.category) return false;
-    if (rule.subcategory && rule.subcategory !== tx.subcategory) return false;
-    if (!tx.subcategory && rule.subcategory) return false;
-    // Broad category rules (no subcategory) should not match transactions
-    // that have a subcategory — Korean card terms typically exclude
-    // subcategories like cafe from the broader dining category.
-    //
-    // Rationale: In Korean credit card reward structures, a "dining 5%"
-    // rule usually does NOT cover cafe subcategory transactions; cafe
-    // gets its own separate rule (possibly with a different rate). If we
-    // allowed broad rules to match subcategorized transactions, the
-    // optimizer would over-count rewards for those transactions.
-    if (tx.subcategory && !rule.subcategory && rule.category !== '*') return false;
-    return ruleConditionsMatch(rule, tx);
-  });
+interface SelectedRule {
+  rule: RewardRule;
+  ruleIndex: number;
+  occurrenceKey?: string;
+}
 
-  if (candidates.length === 0) return undefined;
+interface RuleSelection {
+  rules: SelectedRule[];
+  unsupported: UnsupportedRule[];
+}
 
-  // Secondary sort by index ensures deterministic ordering when two rules
-  // have equal specificity. Without this, Array.sort is not guaranteed
-  // stable across JS engines, causing non-deterministic rule selection (C1-12).
-  return candidates.sort((a, b) => {
-    const diff = ruleSpecificity(b) - ruleSpecificity(a);
-    if (diff !== 0) return diff;
-    return rules.indexOf(a) - rules.indexOf(b);
-  })[0];
+function compareRuleCandidates(
+  a: SelectedRule,
+  b: SelectedRule,
+): number {
+  const diff = ruleSpecificity(b.rule) - ruleSpecificity(a.rule);
+  if (diff !== 0) return diff;
+  const priorityDiff = (b.rule.priority ?? 0) - (a.rule.priority ?? 0);
+  if (priorityDiff !== 0) return priorityDiff;
+  const idDiff = (a.rule.id ?? '').localeCompare(b.rule.id ?? '');
+  if (idDiff !== 0) return idDiff;
+  return a.ruleIndex - b.ruleIndex;
+}
+
+function findRules(
+  rules: RewardRule[],
+  tx: CategorizedTransaction,
+  occurrenceUses: Map<string, number>,
+): RuleSelection {
+  const candidates: SelectedRule[] = [];
+  const unsupported: UnsupportedRule[] = [];
+
+  for (const [ruleIndex, rule] of rules.entries()) {
+    const hasMerchantAllowlist = (rule.conditions?.specificMerchants?.length ?? 0) > 0;
+    if (!hasMerchantAllowlist) {
+      if (rule.category !== '*' && rule.category !== tx.category) continue;
+      if (rule.subcategory && rule.subcategory !== tx.subcategory) continue;
+      if (!tx.subcategory && rule.subcategory) continue;
+    }
+
+    const ruleId = rule.id ?? `${buildCategoryKey(rule.category, rule.subcategory)}#${ruleIndex}`;
+    const condition = ruleConditionsMatch(rule, tx, ruleId, occurrenceUses);
+    if (condition.status === 'unsupported') {
+      unsupported.push({
+        transactionId: tx.id,
+        ruleId,
+        category: buildCategoryKey(rule.category, rule.subcategory),
+        reason: condition.reason ?? 'rule_marked_unsupported',
+        detail: condition.detail,
+      });
+      continue;
+    }
+    if (condition.status === 'match') {
+      candidates.push({ rule, ruleIndex, occurrenceKey: condition.occurrenceKey });
+    }
+  }
+
+  if (candidates.length === 0) return { rules: [], unsupported };
+
+  const groups = new Map<string, SelectedRule[]>();
+  for (const candidate of candidates) {
+    const group = candidate.rule.stackingGroup ?? '__default__';
+    const members = groups.get(group) ?? [];
+    members.push(candidate);
+    groups.set(group, members);
+  }
+
+  const selected: SelectedRule[] = [];
+  for (const group of [...groups.keys()].sort()) {
+    const members = groups.get(group)!;
+    const additive = members
+      .filter(({ rule }) => rule.combination === 'additive')
+      .sort(compareRuleCandidates);
+    selected.push(...additive);
+
+    const exclusive = members
+      .filter(({ rule }) => rule.combination !== 'additive')
+      .sort(compareRuleCandidates);
+    if (exclusive[0]) selected.push(exclusive[0]);
+  }
+
+  return { rules: selected, unsupported };
 }
 
 type RewardCalcFn = (
@@ -150,36 +301,46 @@ function calculateFixedReward(
   tierRate: RewardTierRate,
   ruleKey: string,
   dayRewardTracker: Set<string>,
-): number {
+): { reward: number; unsupportedReason?: UnsupportedReason; detail?: string } {
   const fixedAmount = tierRate.fixedAmount ?? 0;
-  if (fixedAmount <= 0) return 0;
+  if (fixedAmount <= 0) return { reward: 0 };
 
   if (tierRate.unit === 'won_per_day') {
     const dayKey = `${ruleKey}:${tx.date}`;
-    if (dayRewardTracker.has(dayKey)) return 0;
+    if (dayRewardTracker.has(dayKey)) return { reward: 0 };
     dayRewardTracker.add(dayKey);
-    return fixedAmount;
+    return { reward: fixedAmount };
   }
 
   if (tierRate.unit === 'mile_per_1500won') {
-    return Math.floor(tx.amount / 1500) * fixedAmount;
+    return { reward: Math.floor(tx.amount / 1500) * fixedAmount };
   }
 
   if (tierRate.unit === 'won_per_liter') {
-    // Transaction model doesn't carry fuel volume, so apply fixedAmount
-    // as a per-transaction discount — matches per-transaction display
-    // in Korean card apps for fuel discounts.
-    return fixedAmount;
+    const liters = tx.fuelVolumeLiters;
+    if (
+      !Number.isFinite(liters) ||
+      (liters ?? 0) <= 0 ||
+      !tx.factProvenance?.fuelVolumeLiters
+    ) {
+      return {
+        reward: 0,
+        unsupportedReason: 'missing_fuel_volume',
+        detail: 'fuel-per-liter reward requires positive volume with provenance',
+      };
+    }
+    return { reward: fixedAmount * liters! };
   }
 
   if (tierRate.unit === null || tierRate.unit === undefined) {
-    return fixedAmount;
+    return { reward: fixedAmount };
   }
 
-  // Do not fabricate unit-based reward quantities from missing transaction metadata.
-  // These rewards stay unsupported until the transaction model carries the relevant
-  // volume / accrual basis explicitly.
-  return 0;
+  return {
+    reward: 0,
+    unsupportedReason: 'unsupported_reward_unit',
+    detail: `unsupported reward unit: ${String(tierRate.unit)}`,
+  };
 }
 
 export function calculateRewards(input: CalculationInput): CalculationOutput {
@@ -211,12 +372,14 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
   // 2. Track monthly caps per rule and global while accumulating per-category outputs
   const ruleMonthUsed = new Map<string, number>();
   const dayRewardTracker = new Set<string>();
+  const occurrenceUses = new Map<string, number>();
   let globalMonthUsed = 0;
   const globalCap = globalConstraints.monthlyTotalDiscountCap;
 
   const categoryRewards = new Map<string, CategoryReward>();
   const capsHit: CapInfo[] = [];
   const skippedTransactions: SkippedTransaction[] = [];
+  const unsupportedRules: UnsupportedRule[] = [];
 
   // Track cumulative reward per rewardType within each category bucket,
   // so the dominant type (highest cumulative reward) is reported rather
@@ -224,6 +387,14 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
   const rewardTypeAccum = new Map<string, Map<string, number>>();
 
   for (const tx of transactions) {
+    // Public calculator boundary: statement amounts are Won integers and must
+    // be representable exactly. Reject invalid numeric input instead of
+    // allowing NaN/Infinity/unsafe integers to corrupt reward totals.
+    if (!Number.isFinite(tx.amount) || !Number.isSafeInteger(tx.amount)) {
+      throw new Error(
+        `transaction amount must be a finite safe integer, got ${tx.amount} for ${tx.id}`,
+      );
+    }
     // Skip negative-amount transactions (refunds, reversals)
     if (tx.amount <= 0) {
       skippedTransactions.push({ id: tx.id, amount: tx.amount, currency: tx.currency ?? 'KRW', reason: 'negative_amount' });
@@ -236,8 +407,11 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     }
 
     const categoryKey = buildCategoryKey(tx.category, tx.subcategory);
-    const rule = tierId === 'none' ? undefined : findRule(rewardRules, tx);
-    const rewardKey = rule ? buildRuleKey(rule) : categoryKey;
+    const selection: RuleSelection = tierId === 'none'
+      ? { rules: [], unsupported: [] as UnsupportedRule[] }
+      : findRules(rewardRules, tx, occurrenceUses);
+    unsupportedRules.push(...selection.unsupported);
+    const firstRule = selection.rules[0]?.rule;
     // Register the bucket in the Map immediately after creation so that it is
     // always present before any mutations. Prior code deferred .set() until
     // later, which worked in JS's single-threaded execution but was fragile
@@ -251,7 +425,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
         spending: 0,
         reward: 0,
         rate: 0,
-        rewardType: rule?.type ?? 'none',
+        rewardType: firstRule?.type ?? 'none',
         capReached: false,
       };
       categoryRewards.set(categoryKey, bucket);
@@ -259,10 +433,19 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
 
     bucket.spending += tx.amount;
 
-    if (!rule) {
+    if (selection.rules.length === 0) {
       continue;
     }
 
+    for (const selectedRule of selection.rules) {
+      const { rule, ruleIndex, occurrenceKey } = selectedRule;
+      const rewardKey = buildRuleKey(rule, ruleIndex);
+      if (occurrenceKey) {
+        occurrenceUses.set(
+          occurrenceKey,
+          (occurrenceUses.get(occurrenceKey) ?? 0) + 1,
+        );
+      }
     const tierRate = findTierRate(rule, tierId);
     if (!tierRate) {
       bucket.rewardType = rule.type;
@@ -275,26 +458,57 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     const currentRuleMonthUsed = ruleMonthUsed.get(rewardKey) ?? 0;
 
     let rawReward = 0;
+    let uncappedReward = 0;
     let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
     const hasFixedReward = (tierRate.fixedAmount ?? 0) > 0;
     if (normalizedRate !== null && normalizedRate > 0) {
-      // Rate-based reward. When both rate and fixedAmount are present on the
-      // same tier, rate takes precedence — Korean card rules do not currently
-      // use both together, and the calculator does not combine them.
+      if (tierRate.unit !== null && tierRate.unit !== undefined) {
+        unsupportedRules.push({
+          transactionId: tx.id,
+          ruleId: rule.id ?? rewardKey,
+          category: categoryKey,
+          reason: 'unsupported_reward_unit',
+          detail: `rate-based reward carries unit ${tierRate.unit}`,
+        });
+        continue;
+      }
       const calcFn = getCalcFn(rule.type);
-      const uncappedReward = calcFn(tx.amount, normalizedRate, null, 0).reward;
+      uncappedReward = calcFn(tx.amount, normalizedRate, null, 0).reward;
       rawReward = perTxCap !== null ? Math.min(uncappedReward, perTxCap) : uncappedReward;
       ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
     } else if (hasFixedReward) {
-      rawReward = calculateFixedReward(tx, tierRate, rewardKey, dayRewardTracker);
-      const effectiveFixedReward = perTxCap !== null ? Math.min(rawReward, perTxCap) : rawReward;
-      rawReward = effectiveFixedReward;
+      const fixed = calculateFixedReward(tx, tierRate, rewardKey, dayRewardTracker);
+      if (fixed.unsupportedReason) {
+        unsupportedRules.push({
+          transactionId: tx.id,
+          ruleId: rule.id ?? rewardKey,
+          category: categoryKey,
+          reason: fixed.unsupportedReason,
+          detail: fixed.detail,
+        });
+        continue;
+      }
+      uncappedReward = fixed.reward;
+      rawReward = perTxCap !== null
+        ? Math.min(uncappedReward, perTxCap)
+        : uncappedReward;
       ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
     } else {
       // Rule has neither rate nor fixed amount — produces 0 reward.
       // Wildcard rules (category === '*') legitimately have no rate.
       rawReward = 0;
       ruleResult = applyMonthlyCap(0, monthlyCap, currentRuleMonthUsed);
+    }
+
+    if (perTxCap !== null && uncappedReward > perTxCap) {
+      capsHit.push({
+        category: categoryKey,
+        capType: 'per_transaction',
+        capAmount: perTxCap,
+        actualReward: uncappedReward,
+        appliedReward: rawReward,
+      });
+      bucket.capReached = true;
     }
 
     ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed);
@@ -347,6 +561,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     }
     // No need for categoryRewards.set() here — the bucket was registered
     // immediately after creation and mutations are reflected by reference (C8-02).
+    }
   }
 
   const categoryRewardList = [...categoryRewards.values()].map((bucket) => {
@@ -381,5 +596,6 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     totalSpending,
     capsHit,
     skippedTransactions,
+    unsupportedRules,
   };
 }

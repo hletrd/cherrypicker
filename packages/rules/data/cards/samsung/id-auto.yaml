@@ -34,21 +34,36 @@ performanceExclusions:
 
 rewards:
   - category: transportation
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 주유 (휘발유/경유/등유)
     type: discount
     tiers:
       - performanceTier: tier1
         rate: null
-        fixedAmountPerLiter: 60
+        fixedAmount: 60
+        unit: won_per_liter
         monthlyCap: 6000
         perTransactionCap: null
       - performanceTier: tier2
         rate: null
-        fixedAmountPerLiter: 90
+        fixedAmount: 90
+        unit: won_per_liter
         monthlyCap: 9000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: transportation
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: 주차/하이패스/대리운전
     type: discount
     tiers:
@@ -60,8 +75,16 @@ rewards:
         rate: 10.0
         monthlyCap: 5000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
 
   - category: convenience_store
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 편의점/커피전문점
     type: discount
     tiers:
@@ -73,8 +96,15 @@ rewards:
         rate: 10.0
         monthlyCap: 3000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: online_shopping
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: 온라인 간편결제
     type: discount
     tiers:
@@ -86,6 +116,9 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "K-패스 대중교통 이용금액 20% 환급 (월 15회 이상 이용 시). 청년 30%, 저소득층 53%, 다자녀 30~50%"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit; ambiguous overlapping reward rules"
 
   - category: public_transit
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -54,8 +67,16 @@ rewards:
         perTransactionCap: 4000
     conditions:
       note: "대중교통(버스/지하철) 월 5만원 이상 결제 시 4,000원 캐시백 (전월 30만원 이상)"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; ambiguous overlapping reward rules"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: delivery
     type: cashback
     tiers:
@@ -70,8 +91,15 @@ rewards:
     conditions:
       specificMerchants:
         - 배달의민족
+    support:
+      status: supported
 
   - category: convenience_store
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -85,8 +113,15 @@ rewards:
     conditions:
       specificMerchants:
         - GS25
+    support:
+      status: supported
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -98,7 +133,10 @@ rewards:
         monthlyCap: null
         perTransactionCap: null
     conditions:
+      weekdays: [0, 6]
       note: "전 가맹점 0.2% 기본 캐시백 (주말/공휴일 0.4%)"
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

@@ -26,6 +26,11 @@ performanceExclusions: []
 
 rewards:
   - category: grocery
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: supermarket
     label: 선택 업종 1 - 5% 캐시백
     type: cashback
@@ -40,8 +45,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "10대 업종 중 고객이 직접 선택한 2개 업종에 한해 5% 캐시백. 연 2회 변경 가능."
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: online_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     subcategory: general
     label: 선택 업종 2 - 5% 캐시백
     type: cashback
@@ -56,8 +69,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "10대 선택 업종: 대형할인점, 온라인쇼핑, 백화점, 병의원/약국, 숙박, 슈퍼, 통신, 스포츠/레저, 홈쇼핑, 커피 중 2개 선택."
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: user_choice"
 
   - category: public_transit
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: 후불교통 건당 100원 청구할인
     type: discount
     tiers:
@@ -72,6 +93,9 @@ rewards:
         perTransactionCap: 100
     conditions:
       note: "전월 체크 실적 10만원 이상 시 버스·지하철 건당 100원 청구할인, 월 20회(2,000원) 한도"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: transaction_amount; unmodeled eligibility: occurrence_limit"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

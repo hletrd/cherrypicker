@@ -33,7 +33,13 @@ performanceExclusions:
   - gift_card_purchase
 
 rewards:
-  - category: "fuel"
+  - category: transportation
+    subcategory: fuel
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "국내 주유소 할인"
     type: discount
     tiers:
@@ -49,7 +55,16 @@ rewards:
         unit: "won_per_liter"
         monthlyCap: 15000
         perTransactionCap: null
-  - category: "fuel"
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
+  - category: transportation
+    subcategory: fuel
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "국내 충전소 (LPG) 할인"
     type: discount
     tiers:
@@ -65,7 +80,15 @@ rewards:
         unit: "won_per_liter"
         monthlyCap: 15000
         perTransactionCap: null
+    support:
+      status: unsupported
+      reason: "ambiguous overlapping reward rules"
   - category: "transportation"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "정비소 (스피드메이트/오토오아시스/블루핸즈/오토큐) 할인"
     type: discount
     tiers:
@@ -79,7 +102,15 @@ rewards:
         fixedAmount: 20000
         monthlyCap: 40000
         perTransactionCap: 20000
-  - category: "parking"
+    support:
+      status: supported
+  - category: transportation
+    subcategory: parking
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "국내 주차장 할인"
     type: discount
     tiers:
@@ -93,6 +124,8 @@ rewards:
         fixedAmount: 2000
         monthlyCap: 4000
         perTransactionCap: 2000
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

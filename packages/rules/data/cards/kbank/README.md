@@ -2,7 +2,9 @@
 
 > 마지막 업데이트: 2026-03-24
 
-## 카드 목록
+> 이 디렉터리에는 총 5개 카드 YAML이 있습니다. 아래 표는 대표 상품만 요약합니다.
+
+## 대표 카드
 
 | 카드명 | 연회비 | 주요 혜택 | 전월실적 |
 |--------|--------|-----------|----------|
@@ -17,3 +19,17 @@
   - VIP: 전월 50만원 이상 시 오프라인/쿠팡 추가 2%
 - MY 체크카드: 영역별 건당 300~500원 정액 캐시백 + K-패스 대중교통 환급 기능
 - 모두의 카드: 대중교통 무제한 정액패스 (2026년 적용)
+
+<!-- BEGIN GENERATED CARD INDEX -->
+## 전체 카드 인덱스
+
+> YAML 기준 **5개** · 최신 업데이트: `2026-03-25`
+
+| 카드명 | 유형 | YAML |
+|---|---:|---|
+| 케이뱅크 ALPHA 청소년 체크카드 | 체크 | [alpha-youth-check.yaml](./alpha-youth-check.yaml) |
+| 케이뱅크 MY 체크카드 (K-패스) | 체크 | [my-check.yaml](./my-check.yaml) |
+| 케이뱅크 ONE K-패스 체크카드 | 체크 | [k-pass-check.yaml](./k-pass-check.yaml) |
+| 케이뱅크 ONE 체크카드 | 체크 | [one-check.yaml](./one-check.yaml) |
+| 플러스 체크카드 | 체크 | [plus-check.yaml](./plus-check.yaml) |
+<!-- END GENERATED CARD INDEX -->

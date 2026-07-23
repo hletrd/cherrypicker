@@ -25,7 +25,12 @@ performanceExclusions:
   - annual_fee
 
 rewards:
-  - category: "uncategorized"
+  - category: '*'
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "국내 전 가맹점 1% 빅포인트 적립"
     type: points
     tiers:
@@ -33,7 +38,16 @@ rewards:
         rate: 1.0
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
   - category: "uncategorized"
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "특별 가맹점 1.5% 빅포인트 적립"
     type: points
     tiers:
@@ -47,7 +61,15 @@ rewards:
         - 면세점
         - 골프장
         - 호텔
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
   - category: "dining"
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     label: "스타벅스 할인"
     type: discount
     tiers:
@@ -58,7 +80,14 @@ rewards:
     conditions:
       specificMerchants:
         - 스타벅스
+    support:
+      status: supported
   - category: "subscription"
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     label: "디지털 콘텐츠 할인"
     type: discount
     tiers:
@@ -71,6 +100,9 @@ rewards:
         - 넷플릭스
         - 유튜브프리미엄
         - 애플TV
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

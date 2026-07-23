@@ -26,6 +26,11 @@ performanceExclusions: []
 
 rewards:
   - category: telecom
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -41,8 +46,16 @@ rewards:
         - SKT
         - KT
         - LG유플러스
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: entertainment
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -63,8 +76,16 @@ rewards:
         - 수영장
         - 헬스클럽
       note: "레저업종 1% 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: medical
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -77,8 +98,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "종합병원, 병·의원, 한의원, 치과, 약국 1% 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: dining
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: cafe
     type: discount
     tiers:
@@ -92,8 +121,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "A영역(커피&백화점) - 이용금액 최대 영역 자동 적용 시"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: grocery
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: supermarket
     type: discount
     tiers:
@@ -107,8 +144,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "B영역(마트&슈퍼마켓) - 이용금액 최대 영역 자동 적용 시"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
   - category: online_shopping
+    id: reward-006
+    priority: 6
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-006
     subcategory: general
     type: discount
     tiers:
@@ -122,6 +167,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "C영역(온라인쇼핑) - 이용금액 최대 영역 자동 적용 시"
+    support:
+      status: unsupported
+      reason: "unmodeled_global_constraints"
 
 globalConstraints:
   monthlyTotalDiscountCap: null

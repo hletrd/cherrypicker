@@ -33,6 +33,11 @@ performanceExclusions:
 
 rewards:
   - category: sports
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: 골프장/골프연습장 캐시백
     type: cashback
     tiers:
@@ -52,6 +57,9 @@ rewards:
       specificMerchants:
         - 골프장
         - 골프연습장
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 50000

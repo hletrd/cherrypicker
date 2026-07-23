@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: online_shopping
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: discount
     tiers:
       - performanceTier: tier0
@@ -42,8 +47,17 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "올원페이·카카오페이·삼성페이 등 간편결제 온라인 3% 할인"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: payment_method"
 
-  - category: beauty
+  - category: offline_shopping
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
+    subcategory: beauty
     type: discount
     tiers:
       - performanceTier: tier0
@@ -58,8 +72,16 @@ rewards:
       specificMerchants:
         - 올리브영
         - 랄라블라
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
   - category: dining
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     subcategory: cafe
     type: discount
     tiers:
@@ -76,8 +98,15 @@ rewards:
         - 스타벅스
         - 투썸플레이스
         - 커피빈
+    support:
+      status: supported
 
   - category: entertainment
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: streaming
     type: discount
     tiers:
@@ -95,6 +124,9 @@ rewards:
         - 유튜브프리미엄
         - 애플앱스토어
         - 구글플레이스토어
+    support:
+      status: unsupported
+      reason: "merchant category is not reachable by the canonical matcher"
 
 globalConstraints:
   monthlyTotalDiscountCap: 8000

@@ -30,6 +30,11 @@ performanceExclusions:
 
 rewards:
   - category: "travel"
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     label: "해외 이용금액 포인트 적립 (수수료 1.18% 면제 포함)"
     type: points
     tiers:
@@ -37,7 +42,16 @@ rewards:
         rate: 1.7
         monthlyCap: null
         perTransactionCap: null
-  - category: "uncategorized"
+    conditions:
+      paymentType: overseas
+    support:
+      status: supported
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     label: "국내 전 가맹점 포인트 적립"
     type: points
     tiers:
@@ -49,6 +63,10 @@ rewards:
         rate: 0.7
         monthlyCap: null
         perTransactionCap: null
+    conditions:
+      paymentType: domestic
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: null

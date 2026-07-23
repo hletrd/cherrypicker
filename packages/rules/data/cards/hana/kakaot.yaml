@@ -34,7 +34,12 @@ performanceExclusions:
   - gift_card
 
 rewards:
-  - category: transportation
+  - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     subcategory: taxi
     type: discount
     tiers:
@@ -54,8 +59,16 @@ rewards:
       specificMerchants:
         - 카카오T
       note: "카카오T 택시 10% 청구할인"
+    support:
+      status: supported
 
-  - category: apartment_mgmt
+  - category: utilities
+    subcategory: apartment_mgmt
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: discount
     tiers:
       - performanceTier: tier0
@@ -70,8 +83,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: medical
+    id: reward-003
+    priority: 3
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-003
     type: discount
     tiers:
       - performanceTier: tier0
@@ -86,8 +106,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: transportation
+    id: reward-004
+    priority: 4
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-004
     subcategory: fuel
     type: discount
     tiers:
@@ -103,8 +130,15 @@ rewards:
         rate: 10.0
         monthlyCap: 10000
         perTransactionCap: null
+    support:
+      status: supported
 
   - category: dining
+    id: reward-005
+    priority: 5
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-005
     subcategory: cafe
     type: discount
     tiers:
@@ -123,6 +157,8 @@ rewards:
     conditions:
       specificMerchants:
         - 스타벅스
+    support:
+      status: supported
 
 globalConstraints:
   monthlyTotalDiscountCap: 30000

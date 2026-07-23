@@ -28,6 +28,11 @@ performanceExclusions:
 
 rewards:
   - category: public_transit
+    id: reward-001
+    priority: 1
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-001
     type: cashback
     tiers:
       - performanceTier: tier0
@@ -40,8 +45,16 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "K-패스 대중교통 이용금액 20% 환급 (월 15회 이상 이용 시). 청년 30%, 저소득층 53%"
+    support:
+      status: unsupported
+      reason: "unmodeled eligibility: occurrence_limit"
 
-  - category: uncategorized
+  - category: '*'
+    id: reward-002
+    priority: 2
+    combination: exclusive
+    stackingGroup: base
+    capGroup: reward-002
     type: points
     tiers:
       - performanceTier: tier0
@@ -54,6 +67,9 @@ rewards:
         perTransactionCap: null
     conditions:
       note: "에코포인트 적립 - 친환경 소비 혜택"
+    support:
+      status: unsupported
+      reason: "unverified_merchant_scope"
 
 globalConstraints:
   monthlyTotalDiscountCap: null
