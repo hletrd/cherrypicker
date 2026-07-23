@@ -1,180 +1,205 @@
-# Aggregate Review — CherryPicker Review/Plan/Fix Cycle 3
+# Aggregate Review - CherryPicker Review/Plan/Fix Cycle 4
 
 **Date:** 2026-07-23
-**Cycle:** 3 / 100
+**Cycle:** 4 / 100
+**Baseline:** `555c56a633f988254854f4110ddf3e3a612c4eb9`
 **Branch:** `codex/review-plan-fix-no-deploy-20260723`
-**Reviewers:** code-reviewer, critic, code-simplifier, verifier,
-document-specialist, security-reviewer, tracer, debugger, test-engineer,
-qa-tester, perf-reviewer, architect, dependency-expert, designer
+**Reviewers:** code-reviewer, critic, architect, perf-reviewer,
+security-reviewer, tracer, debugger, verifier, test-engineer,
+document-specialist, designer, implementation auditor, final diff auditor
 **Deploy mode:** none
 
 ## Executive summary
 
-The 14 role reports contain 36 raw findings. Cross-role deduplication and the
-required final independent sweep produced **28 unique findings**: 4 High, 18
-Medium, and 6 Low. Plans 79–83 implemented and verified every finding in this
-cycle; there are no Cycle 3 deferrals.
+The five initial review bundles cover all 11 requested roles and contain 24
+raw findings. Cross-role deduplication initially produced 22 unique findings.
+The first read-only implementation audit found two additional contract
+defects, and the final diff audit found three more. Cycle 4 therefore contains
+**27 unique findings**: 1 High, 21 Medium, and 5 Low. The two
+analysis-replacement defects were each reproduced by two independent reviewer
+bundles; those four raw reports map to two unique findings.
 
-Seven test-engineer findings and two QA findings correlate with production
-defects rather than inflating the unique count. The final sweep added three
-independently reproduced misses: occurrence limits consumed by unsupported
-transactions, long valid JSON misdetected as CSV, and report placeholder
-strings being reinterpreted during sequential template replacement.
+The highest-severity defect is a dashboard breakpoint collision that clips
+spending and category values and creates up to 117 px of root horizontal
+overflow at tablet widths. The remaining findings cover exact-money
+boundaries, optimizer and calculator consistency, schema-valid fractional
+mileage execution and decimal precision, persisted optimization integrity,
+parser parity and browser worker ownership, atomic analysis replacement,
+strict CLI and terminal boundaries, deterministic browser coverage, mobile
+focus ownership, and catalog/report usability.
 
-The completed implementation now fails closed on non-finite facts and incomplete
-scraper input, derives publication identity from all generated projections,
-uses a content-authenticated SheetJS archive, carries report qualifications
-into durable HTML, terminates canceled browser work, keeps replacement state
-atomic, and blocks UI focus/reflow/visual regressions. The six pre-existing
-untracked Cycle 42 artifacts remained outside this review and were neither
-edited nor committed.
+The implementation audits reconciled each new defect with its schema, runtime,
+consumer, and browser-test paths before final gates. The six pre-existing
+untracked Cycle 42 artifacts stayed outside this review and were neither edited
+nor included.
 
 | Severity | Unique findings |
 |---|---:|
-| High | 4 |
-| Medium | 18 |
-| Low | 6 |
-| **Total** | **28** |
+| High | 1 |
+| Medium | 21 |
+| Low | 5 |
+| **Total** | **27** |
 
 ## Unique findings
 
-### Domain, parser, and type correctness
+### Domain and optimizer correctness
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C3-001 | High | High | An unbounded statement `fuelVolumeLiters` fact can overflow a supported won-per-liter reward to `Infinity`, corrupting totals and optimizer comparisons. | C3-CR-001 |
-| C3-002 | Medium | High | The browser category artifact is accepted after only array/nonempty checks and cast to `CategoryNode[]`; malformed nodes fail later inside `MerchantMatcher` and poison the session cache. | C3-CR-002 |
-| C3-003 | Medium | High | JSON transaction arrays silently discard non-objects and objects missing date/amount, so most rows can disappear while partial success reports zero warnings. | C3-CT-002 |
-| C3-004 | Medium | High | `maxUses` occurrence counters advance before tier/unit/fact validation, so an unsupported transaction can consume the only use and suppress a later executable reward. | Final independent sweep |
-| C3-005 | Medium | High | Web format sniffing parses only the first 1,024 characters of a 2,048-character prefix, so valid long JSON with an unknown/mismatched extension is classified as CSV. | Final independent sweep |
-| C3-006 | Low | High | Server and browser own separate copies of the complete JSON grammar and different test matrices, allowing future parser behavior to diverge. | C3-CS-002 |
-| C3-007 | Low | High | The Svelte store mirrors six public core result interfaces instead of importing them, allowing persistence/UI contracts to drift without a compile-time failure. | C3-CS-003 |
+| C4-001 | Medium | High | Individually safe transaction amounts can overflow monthly and performance aggregates, while direct reward and persisted aggregate boundaries accept unsafe integers. | C4-VTD-001 |
+| C4-002 | Medium | High | Reward schema, calculator, and generated projections disagree when a positive fixed reward coexists with a zero rate, publishing the LOCA 365 rule as zero percent despite its fixed reward. | C4-CCA-004 |
+| C4-003 | Medium | High | A valid reward that floors to zero consumes `maxUses` and can suppress a later positive reward. | C4-DBG-001 |
+| C4-004 | Medium | High | All-zero optimization leaves `bestSingleCard` with empty identity fields even though real cards were evaluated and assigned. | C4-DBG-002 |
+| C4-005 | Medium | High | The optimizer assigns and totals positive non-KRW transactions that the calculator explicitly skips, producing contradictory spending totals. | C4-DBG-003 |
+| C4-023 | Medium | High | The reward schema accepts fractional mileage rates, but the calculator rejects them before its mileage branch and returns zero for a schema-valid rule. | C4-IA-001 |
+| C4-024 | Medium | High | Persisted optimization validation accepts malformed containers and partial nested entries, allowing crashable or internally inconsistent state to restore. | C4-IA-002 |
+| C4-025 | Medium | High | Binary floating-point multiplication can floor a schema-valid decimal mileage rate below its exact value, such as 0.29 times 100 blocks yielding 28 instead of 29 miles. | C4-FA-001 |
 
-### Runtime, publication, scraper, and dependency boundaries
-
-| ID | Severity | Confidence | Finding | Raw sources |
-|---|---|---|---|---|
-| C3-008 | High | High | Publication identity hashes source inputs but not normalized artifact bytes or the generator/schema contract, so old and new projections can share a `sourceHash` and pass mixed-generation checks. | C3-ARCH-001 |
-| C3-009 | Medium | High | Default CLI optimize/report reparses all 683 authoring YAML files instead of the canonical compiled optimizer catalog, creating web/CLI contract drift plus roughly 300 ms and 185 MiB startup cost. | C3-PERF-002, C3-ARCH-002 |
-| C3-010 | Medium | High | CSV “worker” parsing still decodes the full file, scans all bank signatures, counts replacement characters, and clones the string on the main thread before worker parsing. | C3-PERF-001 |
-| C3-011 | Medium | High | Scraper input beyond 40,000 UTF-16 units is silently omitted from the model-visible source while the caller and written catalog still receive an ordinary success result. | C3-TR-001, C3-TE-005 |
-| C3-012 | Medium | High | The scraper imports Zod directly without declaring it, so isolated or strict workspace installation cannot resolve a production dependency. | C3-DEP-002 |
-| C3-013 | High | High | The SheetJS runtime tarball is locked by HTTPS URL without a content-integrity digest; frozen resolution does not authenticate changed bytes at that URL. | C3-DEP-001 |
-| C3-014 | Low | High | Seven heavy direct dependencies have no production consumer, retaining unnecessary install, update, and supply-chain surface. | C3-DEP-003 |
-
-### CLI and standalone report integrity
+### Parser and performance boundaries
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C3-015 | High | High | The durable CLI HTML report omits parse/calendar exclusions, previous-spending basis, and unsupported-rule limitations that were disclosed only in the generating terminal. | C3-CT-001 |
-| C3-016 | Medium | High | The report escape helper pre-decodes unbounded numeric entities with `String.fromCodePoint`, so invalid or oversized entities crash report generation. | C3-CS-001, C3-DBG-002, C3-TE-003 |
-| C3-017 | Medium | High | Sequential `replaceAll` calls reinterpret user data matching later template placeholders; a card named `{{CARD_COMPARISON}}`, for example, injects a second report table. | Final independent sweep |
-| C3-018 | Medium | High | Catalog/taxonomy strings reach visualization tables and optimization disclosures without the existing terminal sanitizer, preserving OSC, CSI, control, and bidi payloads. | C3-SEC-001, C3-TE-001 |
-| C3-019 | Medium | High | Report output validation uses the input-style `mustExist: false` path and then follows an existing final-component symlink, truncating its target. | C3-SEC-002, C3-TE-002 |
-| C3-020 | Medium | High | Subcommand `--help` is treated as a statement path, and report usage omits correctness-critical catalog, bank, category, and previous-spending options. | C3-DOC-001 |
-| C3-021 | Low | High | Analyze, optimize, and report silently ignore unknown, stray, incomplete, or invalidly typed options, allowing typos to select defaults without failing. | C3-DBG-004 |
+| C4-006 | Medium | High | Multi-file analysis spreads an entire parsed transaction array into `push`, which can exceed the engine argument limit for a valid statement above roughly 125,000 rows. | C4-PERF-001 |
+| C4-007 | Medium | High | JSON, OFX, and HTML worker paths materialize and structured-clone full strings on the window side instead of transferring the admitted file buffer. | C4-PERF-002 |
+| C4-008 | Low | High | The nominal 30-line delimiter sample splits, trims, and filters the entire CSV in both browser and package implementations. | C4-PERF-003 |
+| C4-009 | Medium | High | Browser JSON-prefix sniffing misclassifies valid brace- or bracket-prefixed CSV and diverges from the server path. | C4-CCA-003 |
+| C4-010 | Low | High | The browser OFX parser retains a transaction after reporting its invalid date, while the server parser rejects that row. | C4-CCA-005 |
 
-### Web lifecycle, UI, and release regression coverage
+### Web replacement and regression integrity
 
 | ID | Severity | Confidence | Finding | Raw sources |
 |---|---|---|---|---|
-| C3-022 | Medium | High | The analysis abort signal stops parser work but is not threaded through category/catalog waits or optimizer execution, so canceled runs retain downstream network/validation/CPU work. | C3-TR-002, C3-TE-006 |
-| C3-023 | Medium | High | A failed replacement analysis clears the in-memory result but leaves the prior `sessionStorage` entry, which reload/navigation resurrects as if it were current. | C3-DBG-001, C3-TE-004, C3-QA-001 |
-| C3-024 | Medium | High | Dropping a new file during the 1.2-second success countdown does not cancel the old navigation timer, so the new selection is discarded by navigation to the prior result. | C3-DBG-003, C3-TE-007, C3-QA-002 |
-| C3-025 | Medium | High | Entering card detail from the keyboard removes the grid and leaves focus on `<body>`; returning likewise does not restore focus to the originating card. | C3-DES-001 |
-| C3-026 | Medium | High | The home hero’s `-mx-6` exceeds the mobile container padding and widens a 375 px document to 383 px, producing horizontal page overflow. | C3-DES-002 |
-| C3-027 | Low | High | The Korean card-detail navigation landmark exposes the untranslated accessible name “breadcrumb.” | C3-DES-003 |
-| C3-028 | Low | High | Screenshot tests only capture PNGs and are excluded from the release gate; no stable visual baseline or diff can fail on covered CSS/layout regressions. | C3-QA-003 |
+| C4-011 | Medium | High | An already-stale caller can begin a replacement and erase committed in-memory and persisted analysis before its ownership is checked. | C4-VTD-002, C4-CCA-001 |
+| C4-012 | Medium | High | A failed persisted-analysis clear is treated as a warning, allowing old persisted A to survive failed replacement B and return after reload. | C4-VTD-003, C4-CCA-002 |
+| C4-013 | Medium | High | Card search and detail E2E cases can pass without proving their named behavior and depend on fixed two-second waits for readiness and error observation. | C4-VTD-004 |
+
+### CLI, scraper, and documentation boundaries
+
+| ID | Severity | Confidence | Finding | Raw sources |
+|---|---|---|---|---|
+| C4-014 | Medium | High | LLM-controlled scraper text reaches inherited terminal sinks without the repository's control-sequence and bidi sanitizer. | C4-SEC-001 |
+| C4-015 | Medium | High | The `scrape` command remains outside the strict generated-help option contract and silently accepts last-wins duplicate singleton options. | C4-CLI-001 |
+| C4-016 | Low | High | `validateFilePath` documents null-byte rejection but removes the byte only for validation and lets callers continue with the original path. | C4-VTD-006 |
+| C4-017 | Low | High | Live user and maintainer documentation names removed parser/chart dependencies and obsolete keyword conflict behavior. | C4-VTD-005 |
+
+### UI and interaction correctness
+
+| ID | Severity | Confidence | Finding | Raw sources |
+|---|---|---|---|---|
+| C4-018 | High | High | Dashboard children switch to desktop-density layouts inside half-width tablet containers, clipping key values and widening the 768 px document to 885 px. | D4-01 |
+| C4-019 | Medium | High | Focusing a category disclosure opens it, so the user's first Enter or pointer activation closes it instead of opening it. | D4-02 |
+| C4-020 | Medium | High | Credit and prepaid type badges fall below 4.5:1 small-text contrast in dark mode, with the same failing blue pair reused for transaction confidence. | D4-03 |
+| C4-021 | Medium | High | Mobile pagination is available only after 24 issuer filters and 36 cards, placing it more than 7,100 px down a 320 px catalog page. | D4-04 |
+| C4-022 | Low | High | A direct report visit without analysis still exposes and executes the print/PDF action for the empty-state prompt. | D4-05 |
+| C4-026 | Medium | High | Selecting a mobile issuer collapses the options panel while focus remains on its newly hidden child button instead of returning to the visible toggle. | C4-FA-002 |
+| C4-027 | Medium | High | Runtime-error browser tests assert immediately after readiness, so a next-frame error can occur after the assertion and still false-pass. | C4-FA-003 |
 
 ## Raw-finding coverage matrix
 
-Every raw role finding maps to at least one unique aggregate finding.
+Every raw finding maps to one unique aggregate finding.
 
-| Review | Raw IDs → aggregate IDs |
+| Review bundle | Raw IDs to aggregate IDs |
 |---|---|
-| code-reviewer | C3-CR-001→C3-001; C3-CR-002→C3-002 |
-| critic | C3-CT-001→C3-015; C3-CT-002→C3-003 |
-| code-simplifier | C3-CS-001→C3-016; C3-CS-002→C3-006; C3-CS-003→C3-007 |
-| verifier | verification matrix→C3-001,C3-002,C3-003,C3-006,C3-007,C3-015,C3-016,C3-020 |
-| document-specialist | C3-DOC-001→C3-020 |
-| security-reviewer | C3-SEC-001→C3-018; C3-SEC-002→C3-019 |
-| tracer | C3-TR-001→C3-011; C3-TR-002→C3-022 |
-| debugger | C3-DBG-001→C3-023; C3-DBG-002→C3-016; C3-DBG-003→C3-024; C3-DBG-004→C3-021 |
-| test-engineer | C3-TE-001→C3-018; C3-TE-002→C3-019; C3-TE-003→C3-016; C3-TE-004→C3-023; C3-TE-005→C3-011; C3-TE-006→C3-022; C3-TE-007→C3-024 |
-| qa-tester | C3-QA-001→C3-023; C3-QA-002→C3-024; C3-QA-003→C3-028 |
-| perf-reviewer | C3-PERF-001→C3-010; C3-PERF-002→C3-009 |
-| architect | C3-ARCH-001→C3-008; C3-ARCH-002→C3-009 |
-| dependency-expert | C3-DEP-001→C3-013; C3-DEP-002→C3-012; C3-DEP-003→C3-014 |
-| designer | C3-DES-001→C3-025; C3-DES-002→C3-026; C3-DES-003→C3-027 |
-| final independent sweep | premature occurrence accounting→C3-004; long-JSON detection reproduction→C3-005; report placeholder-collision reproduction→C3-017 |
+| perf-reviewer | C4-PERF-001 to C4-006; C4-PERF-002 to C4-007; C4-PERF-003 to C4-008 |
+| verifier, test-engineer, document-specialist | C4-VTD-001 to C4-001; C4-VTD-002 to C4-011; C4-VTD-003 to C4-012; C4-VTD-004 to C4-013; C4-VTD-005 to C4-017; C4-VTD-006 to C4-016 |
+| code-reviewer, critic, architect | C4-CCA-001 to C4-011; C4-CCA-002 to C4-012; C4-CCA-003 to C4-009; C4-CCA-004 to C4-002; C4-CCA-005 to C4-010 |
+| security-reviewer, tracer, debugger | C4-SEC-001 to C4-014; C4-CLI-001 to C4-015; C4-DBG-001 to C4-003; C4-DBG-002 to C4-004; C4-DBG-003 to C4-005 |
+| designer | D4-01 to C4-018; D4-02 to C4-019; D4-03 to C4-020; D4-04 to C4-021; D4-05 to C4-022 |
+| implementation auditor | C4-IA-001 to C4-023; C4-IA-002 to C4-024 |
+| final diff auditor | C4-FA-001 to C4-025; C4-FA-002 to C4-026; C4-FA-003 to C4-027 |
 
-## Independent reproduction evidence
+## Cross-review agreement
 
-- `maxUses: 1` fuel fixture, missing facts first and valid 10-liter
-  transaction second: `totalReward: 0`, one unsupported issue. The valid
-  transaction should receive the only use.
-- A 6,508-character valid JSON transaction wrapper named `statement.txt`:
-  `detectFormatFromFile()` returned `csv`.
-- A report whose best-card name is `{{CARD_COMPARISON}}`: the generated HTML
-  contained two “카드별 혜택 비교” table captions.
+- C4-011 was independently reproduced by the verifier/test/document bundle and
+  the code/critic/architect bundle. Both traced the destructive work before the
+  first caller-ownership check.
+- C4-012 was independently reproduced by those same bundles. Both confirmed
+  that a failed storage clear permits stale persisted bytes to outlive a failed
+  replacement.
+- C4-013 and D4-01 through D4-05 were checked against existing browser
+  coverage. The current suite lacks deterministic assertions for the named
+  failures and tablet geometry.
+- C4-023 and C4-024 were found by an independent read-only audit after the
+  initial implementation. Both were promoted into Plan 84 before final gates
+  instead of being deferred.
+- C4-025 through C4-027 were found by a fresh read-only audit after the first
+  green gate run. They were promoted into Plans 84 and 88 and required another
+  complete gate run instead of being waived.
 
 ## Plan coverage
 
-Every Cycle 3 finding is scheduled. There are no Cycle 3 deferrals.
+Every Cycle 4 finding is scheduled. There are no Cycle 4 deferrals.
 
 | Plan | Scheduled findings |
 |---|---|
-| 79 — Domain and parser correctness | C3-001 through C3-007 |
-| 80 — Publication, runtime, and dependency boundaries | C3-008 through C3-014 |
-| 81 — CLI and standalone report integrity | C3-015 through C3-021 |
-| 82 — Web cancellation and state transitions | C3-022 through C3-024 |
-| 83 — UI focus, reflow, localization, and visual regressions | C3-025 through C3-028 |
+| 84 - Core domain consistency | C4-001 through C4-005, C4-023 through C4-025 |
+| 85 - Parser and worker performance | C4-006 through C4-010 |
+| 86 - Analysis replacement atomicity | C4-011, C4-012 |
+| 87 - CLI, scraper, and documentation boundaries | C4-014 through C4-017 |
+| 88 - UI and browser regressions | C4-013, C4-018 through C4-022, C4-026, C4-027 |
 
-Plans 73–78 were already fully implemented and verified in Cycle 2 and were
-archived before Cycle 3 implementation. Plan 72 remains active only as the
-historical home for its explicitly recorded Cycle 1 deferrals.
+Plans 79 through 83 were fully completed and verified in Cycle 3 and were
+archived before Cycle 4 implementation planning. Historical deferrals remain
+owned by their existing records; no Cycle 4 finding was added to them.
 
-## Implementation closure
+## Implementation closure and final gates
 
-| Plan | Status | Findings |
-|---|---|---|
-| 79 — Domain and parser correctness | completed | C3-001 through C3-007 |
-| 80 — Publication, runtime, and dependency boundaries | completed | C3-008 through C3-014 |
-| 81 — CLI and standalone report integrity | completed | C3-015 through C3-021 |
-| 82 — Web cancellation and state transitions | completed | C3-022 through C3-024 |
-| 83 — UI focus, reflow, localization, and visual regressions | completed | C3-025 through C3-028 |
+All 27 unique findings were implemented in Plans 84 through 88. The final diff
+audit added decimal-exact mileage multiplication, visible focus restoration
+after mobile issuer collapse, and a controlled post-settle runtime-error
+observation window. No Cycle 4 finding was deferred.
 
-All 28 findings have implementation and regression evidence in their owning
-plan. No Cycle 3 item was deferred or silently dropped.
+The reward normalization transform was also adjusted to preserve the existing
+`rate` key position. Regenerating through `bun run data:build` reduced roughly
+20,000 lines of property-order-only catalog churn to the intended LOCA 365
+semantic change and deterministic catalog identity updates.
 
-## Verification and process notes
+| Gate | Final result |
+|---|---|
+| `bun run lint` | 7 packages passed; web checked 97 files with 0 errors, warnings, or hints |
+| `bun run typecheck` | 7 packages passed; web checked 97 files with 0 errors, warnings, or hints |
+| `bun run build` | 7/7 packages and 5 Astro pages passed without warnings |
+| `bun run test` | 12/12 workspace tasks passed: 2,402 package tests and 55 root-script tests |
+| `bun run test:bun` | 1,684/1,684 passed |
+| `bunx vitest run` | 91/91 files and 2,394/2,394 tests passed |
+| `bun run test:e2e` | 93/93 passed in the exact repository-owned runner |
 
-- Required gates passed: repository lint, typecheck, and build; Turbo test;
-  `bun run test:bun` (1,660 tests); `bunx vitest run` (2,290 tests); and
-  `bun run test:e2e` (90 browser tests).
-- Data build/check published 683 cards across 24 issuer shards with identity
-  `392b610e498cc3fc793b41c8cfc572c1f75b50ae853f967433568b829c2cbffd`.
-- Dependency policy, catalog publication/parity, fresh-process CLI budgets,
-  scoped Astro diagnostics, and `git diff --check` passed.
-- The first E2E run identified a report-fixture contract omission and the
-  loading/detail-focus timing race; both were fixed. The first Vitest run also
-  identified one Bun-only process-contract file crossing the Node runner
-  boundary; it is now explicitly owned by the Bun suite. A Vite
-  static/dynamic import warning was removed by using one static card-catalog
-  boundary.
-- The two committed visual baselines passed after inspection. A deliberate
-  temporary test-only border change failed exactly those two assertions and
-  emitted inspectable diff artifacts; the change was removed afterward.
-- The first security/trace reviewer attempt was blocked by an automated content
-  classifier. The single permitted retry was narrowed to defensive local
-  correctness/error-path/test review and completed all five assigned reports.
-  No other reviewer failed.
-- Designer review used only the isolated
-  `AGENT_BROWSER_SESSION=c3-cherrypicker-designer` and port 43217. Its browser
-  and preview were closed; repository E2E ownership is clean and ports 43217
-  and 4173 are clear. Unrelated Travelback and xylolabs process trees were not
-  signalled.
-- Every managed browser run was preceded and followed by a repository-scoped
-  ownership audit. Port 4173 was clear after cleanup, and unrelated Travelback
-  and xylolabs process trees were not signalled.
-- No deployment was performed. Deploy mode remains `none`.
+Data generation/checks verified 683 cards across 24 issuers. Dependency,
+migration, and documentation checks also passed.
+
+Seven distinct gate root causes were repaired during implementation:
+
+1. Astro 6.0.8 emitted its known unused integration re-export warning; the
+   workspace now resolves Astro 6.1.4.
+2. A scraper process test used Bun-specific spawning under Vitest; the test now
+   uses a portable process boundary.
+3. Five browser cases used an impossible island-geometry hydration condition;
+   they now wait for component-specific readiness.
+4. The tablet assertion selected a responsive copy hidden at that breakpoint;
+   it now selects the visible category value inside the real panel.
+5. The mobile issuer assertion retained a locator whose accessible role
+   disappeared after collapse; it now uses a DOM-stable selected control.
+6. The E2E runner forwarded inherited `NO_COLOR` into Playwright's
+   `FORCE_COLOR` process tree; Playwright-owned commands now omit it.
+7. A replacement-runtime fixture retained an empty `bestSingleCard` identity
+   after strict persistence validation; it now uses a valid card identity.
+
+## Review and cleanup evidence
+
+- All 11 requested review roles and both implementation audits completed. No
+  reviewer failed or timed out.
+- Performance, core, parser, CLI, rules, data, dependency, lint, type, and
+  build probes reported by the role bundles passed on the review baseline.
+- The designer inspected the production build at 320, 767, 768, 900, 1024,
+  1100, and 1440 px, light and dark themes, keyboard and pointer interaction,
+  restored and empty states, and print behavior.
+- The designer's isolated agent-browser session, Chrome helper tree, crashpad
+  processes, and Astro preview were closed. An independent audit confirmed no
+  owned E2E run, no listener on TCP 4173, and no repository-owned browser or
+  preview process.
+- The final 93-test browser postflight again confirmed no owned run, listener,
+  browser, or preview process. The six protected Cycle 42 artifacts retained
+  their baseline hashes and remained outside staging.
+- Interactive Chrome, Codex, Travelback, xylolabs, and other-workspace process
+  trees were not signalled.
+- No deployment was performed.
