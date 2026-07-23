@@ -14,6 +14,9 @@ import {
   validateCardCatalog,
   validateCardRuleSet,
 } from '../src/index.js';
+import {
+  collectCardRuleIssues as collectBrowserCardRuleIssues,
+} from '../src/browser.js';
 import type { CardRuleSet } from '../src/types.js';
 
 const dataDir = join(import.meta.dir, '../data');
@@ -658,5 +661,78 @@ describe('catalog semantic validation', () => {
     expect(() => validateCardRuleSet(invalid, registry)).toThrow(
       /same scope, conditions/,
     );
+  });
+
+  test.each([
+    ['different numeric caps', 100, 1_000],
+    ['uncapped versus capped', null, 1_000],
+  ])(
+    'shared cap groups reject %s for the same performance tier',
+    (_label, firstCap, secondCap) => {
+      const source = cards.find(
+        (card) => card.card.id === 'shinhan-simple-plan',
+      )!;
+      const first = structuredClone(source.rewards[0]!);
+      first.id = 'shared-dining';
+      first.category = 'dining';
+      first.label = undefined;
+      first.conditions = undefined;
+      first.stackingGroup = 'shared-dining';
+      first.capGroup = 'shared-monthly';
+      first.tiers[0]!.monthlyCap = firstCap;
+      const second = structuredClone(first);
+      second.id = 'shared-grocery';
+      second.category = 'grocery';
+      second.stackingGroup = 'shared-grocery';
+      second.tiers[0]!.monthlyCap = secondCap;
+      const invalid: CardRuleSet = {
+        ...source,
+        rewards: [first, second],
+      };
+
+      const conflict = collectCardRuleIssues(invalid, registry).find(
+        ({ code }) => code === 'incoherent_cap_group',
+      );
+      expect(conflict).toEqual({
+        code: 'incoherent_cap_group',
+        cardId: invalid.card.id,
+        path: 'rewards.1.tiers.0.monthlyCap',
+        message:
+          `cap group "shared-monthly" defines monthlyCap ${String(secondCap)} ` +
+          `for performance tier "tier0", but ` +
+          `rewards.0.tiers.0.monthlyCap defines ${String(firstCap)}`,
+      });
+      expect(() => validateCardRuleSet(invalid, registry)).toThrow(
+        /cap group "shared-monthly".*performance tier "tier0"/,
+      );
+    },
+  );
+
+  test('coherent shared groups remain valid through the browser-safe validator export', () => {
+    const source = cards.find(
+      (card) => card.card.id === 'shinhan-simple-plan',
+    )!;
+    const first = structuredClone(source.rewards[0]!);
+    first.id = 'shared-dining';
+    first.category = 'dining';
+    first.label = undefined;
+    first.conditions = undefined;
+    first.stackingGroup = 'shared-dining';
+    first.capGroup = 'shared-monthly';
+    first.tiers[0]!.monthlyCap = 1_000;
+    const second = structuredClone(first);
+    second.id = 'shared-grocery';
+    second.category = 'grocery';
+    second.stackingGroup = 'shared-grocery';
+    const coherent: CardRuleSet = {
+      ...source,
+      rewards: [first, second],
+    };
+
+    expect(
+      collectBrowserCardRuleIssues(coherent, registry)
+        .some(({ code }) => code === 'incoherent_cap_group'),
+    ).toBe(false);
+    expect(() => validateCardRuleSet(coherent, registry)).not.toThrow();
   });
 });

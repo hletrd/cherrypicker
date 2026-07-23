@@ -59,8 +59,7 @@ function assertUniqueRewardTierReferences(rules: RewardRule[]): void {
     rule.tiers.forEach((tier, tierIndex) => {
       const firstIndex = firstTierIndex.get(tier.performanceTier);
       if (firstIndex !== undefined) {
-        const ruleId = rule.id ??
-          `${buildCategoryKey(rule.category, rule.subcategory)}#${ruleIndex}`;
+        const ruleId = buildRuleExecutionKey(rule, ruleIndex);
         throw new Error(
           `duplicate performance tier reference "${tier.performanceTier}" ` +
           `in reward rule "${ruleId}" at tiers.${tierIndex} ` +
@@ -68,6 +67,55 @@ function assertUniqueRewardTierReferences(rules: RewardRule[]): void {
         );
       }
       firstTierIndex.set(tier.performanceTier, tierIndex);
+    });
+  });
+}
+
+function assertCoherentCapGroupMonthlyCaps(rules: RewardRule[]): void {
+  const capGroupDefinitions = new Map<
+    string,
+    Map<
+      string,
+      {
+        ruleIndex: number;
+        tierIndex: number;
+        monthlyCap: number | null;
+      }
+    >
+  >();
+
+  rules.forEach((rule, ruleIndex) => {
+    if (rule.support?.status === 'unsupported') return;
+    const capGroup = buildCapGroupKey(rule, ruleIndex);
+    let definitionsByTier = capGroupDefinitions.get(capGroup);
+    if (!definitionsByTier) {
+      definitionsByTier = new Map();
+      capGroupDefinitions.set(capGroup, definitionsByTier);
+    }
+    rule.tiers.forEach((tier, tierIndex) => {
+      const existing = definitionsByTier.get(tier.performanceTier);
+      if (!existing) {
+        definitionsByTier.set(tier.performanceTier, {
+          ruleIndex,
+          tierIndex,
+          monthlyCap: tier.monthlyCap,
+        });
+        return;
+      }
+      // Duplicate tier references are rejected before this coherence check.
+      if (
+        existing.ruleIndex === ruleIndex ||
+        existing.monthlyCap === tier.monthlyCap
+      ) {
+        return;
+      }
+      throw new Error(
+        `cap group "${capGroup}" defines monthlyCap ` +
+        `${String(tier.monthlyCap)} for performance tier ` +
+        `"${tier.performanceTier}", but rewards.${existing.ruleIndex}.` +
+        `tiers.${existing.tierIndex}.monthlyCap defines ` +
+        `${String(existing.monthlyCap)}`,
+      );
     });
   });
 }
@@ -85,8 +133,13 @@ export function isRewardEligibleTransaction(
   );
 }
 
-function buildRuleKey(rule: RewardRule, ruleIndex: number): string {
-  return rule.capGroup ?? rule.id ?? `${buildCategoryKey(rule.category, rule.subcategory)}#${ruleIndex}`;
+function buildRuleExecutionKey(rule: RewardRule, ruleIndex: number): string {
+  return rule.id ??
+    `${buildCategoryKey(rule.category, rule.subcategory)}#${ruleIndex}`;
+}
+
+function buildCapGroupKey(rule: RewardRule, ruleIndex: number): string {
+  return rule.capGroup ?? buildRuleExecutionKey(rule, ruleIndex);
 }
 
 interface ConditionResult {
@@ -231,7 +284,7 @@ interface RuleSelection {
 
 interface RuleSelectionState {
   tierId: string;
-  ruleMonthUsed: Map<string, number>;
+  capGroupMonthUsed: Map<string, number>;
   dayRewardTracker: Set<string>;
   globalRemaining: number | null;
 }
@@ -267,15 +320,17 @@ function previewRuleAvailability(
   const tierRate = findTierRate(rule, state.tierId);
   if (!tierRate) return { status: 'inapplicable' };
 
-  const rewardKey = buildRuleKey(rule, ruleIndex);
-  const currentRuleMonthUsed = state.ruleMonthUsed.get(rewardKey) ?? 0;
+  const ruleExecutionKey = buildRuleExecutionKey(rule, ruleIndex);
+  const capGroupKey = buildCapGroupKey(rule, ruleIndex);
+  const currentCapGroupMonthUsed =
+    state.capGroupMonthUsed.get(capGroupKey) ?? 0;
   const monthlyCap = tierRate.monthlyCap;
   const perTransactionCap = tierRate.perTransactionCap;
   let capExhausted =
     state.globalRemaining !== null && state.globalRemaining <= 0;
   if (monthlyCap !== null) {
     assertSafeNonnegativeInteger(monthlyCap, 'monthly reward cap');
-    if (currentRuleMonthUsed >= monthlyCap) {
+    if (currentCapGroupMonthUsed >= monthlyCap) {
       capExhausted = true;
     }
   }
@@ -317,7 +372,7 @@ function previewRuleAvailability(
   const fixed = calculateFixedReward(
     tx,
     rewardValue,
-    rewardKey,
+    ruleExecutionKey,
     new Set(state.dayRewardTracker),
   );
   if (fixed.unsupportedReason) {
@@ -342,7 +397,8 @@ function projectRuleExecution(
   const tierRate = findTierRate(rule, state.tierId);
   if (!tierRate) return;
 
-  const rewardKey = buildRuleKey(rule, ruleIndex);
+  const ruleExecutionKey = buildRuleExecutionKey(rule, ruleIndex);
+  const capGroupKey = buildCapGroupKey(rule, ruleIndex);
   const rewardValue = rewardValueForTier(tierRate);
   let uncappedReward = 0;
   if (rewardValue.kind === 'percentage' && rewardValue.amount > 0) {
@@ -363,7 +419,7 @@ function projectRuleExecution(
     const fixed = calculateFixedReward(
       tx,
       rewardValue,
-      rewardKey,
+      ruleExecutionKey,
       state.dayRewardTracker,
     );
     if (fixed.unsupportedReason) return;
@@ -373,17 +429,18 @@ function projectRuleExecution(
   const perTransactionReward = tierRate.perTransactionCap === null
     ? uncappedReward
     : Math.min(uncappedReward, tierRate.perTransactionCap);
-  const currentRuleMonthUsed = state.ruleMonthUsed.get(rewardKey) ?? 0;
+  const currentCapGroupMonthUsed =
+    state.capGroupMonthUsed.get(capGroupKey) ?? 0;
   const ruleResult = applyMonthlyCap(
     perTransactionReward,
     tierRate.monthlyCap,
-    currentRuleMonthUsed,
+    currentCapGroupMonthUsed,
   );
   const appliedReward = state.globalRemaining === null
     ? ruleResult.reward
     : Math.min(ruleResult.reward, state.globalRemaining);
-  state.ruleMonthUsed.set(
-    rewardKey,
+  state.capGroupMonthUsed.set(
+    capGroupKey,
     ruleResult.newMonthUsed - (ruleResult.reward - appliedReward),
   );
   if (state.globalRemaining !== null) {
@@ -418,7 +475,7 @@ function findRules(
       if (!tx.subcategory && rule.subcategory) continue;
     }
 
-    const ruleId = rule.id ?? `${buildCategoryKey(rule.category, rule.subcategory)}#${ruleIndex}`;
+    const ruleId = buildRuleExecutionKey(rule, ruleIndex);
     const condition = ruleConditionsMatch(rule, tx, ruleId, occurrenceUses);
     if (condition.status === 'unsupported') {
       unsupported.push({
@@ -440,7 +497,7 @@ function findRules(
 
   const projectedState: RuleSelectionState = {
     tierId: state.tierId,
-    ruleMonthUsed: new Map(state.ruleMonthUsed),
+    capGroupMonthUsed: new Map(state.capGroupMonthUsed),
     dayRewardTracker: new Set(state.dayRewardTracker),
     globalRemaining: state.globalRemaining,
   };
@@ -692,6 +749,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
 
   const { card, performanceTiers, rewards: rewardRules, globalConstraints } = cardRule;
   assertUniqueRewardTierReferences(rewardRules);
+  assertCoherentCapGroupMonthlyCaps(rewardRules);
 
   // 1. Determine performance tier
   const tier = selectTier(performanceTiers, previousMonthSpending);
@@ -706,8 +764,9 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
     // zero rewards rather than receiving side-effect console output.
   }
 
-  // 2. Track monthly caps per rule and global while accumulating per-category outputs
-  const ruleMonthUsed = new Map<string, number>();
+  // 2. Track monthly caps per shared group and global while accumulating
+  // per-category outputs.
+  const capGroupMonthUsed = new Map<string, number>();
   const dayRewardTracker = new Set<string>();
   const occurrenceUses = new Map<string, number>();
   let globalMonthUsed = 0;
@@ -750,7 +809,7 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
       ? { rules: [], unsupported: [] as UnsupportedRule[] }
       : findRules(card.id, rewardRules, tx, occurrenceUses, {
           tierId,
-          ruleMonthUsed,
+          capGroupMonthUsed,
           dayRewardTracker,
           globalRemaining:
             globalCap === null ? null : Math.max(0, globalCap - globalMonthUsed),
@@ -788,187 +847,200 @@ export function calculateRewards(input: CalculationInput): CalculationOutput {
 
     for (const selectedRule of selection.rules) {
       const { rule, ruleIndex, occurrenceKey } = selectedRule;
-      const rewardKey = buildRuleKey(rule, ruleIndex);
-      const ruleId =
-        rule.id ??
-        `${buildCategoryKey(rule.category, rule.subcategory)}#${ruleIndex}`;
-      const capGroup = rewardKey;
-    const tierRate = findTierRate(rule, tierId);
-    if (!tierRate) {
-      bucket.rewardType = rule.type;
-      continue;
-    }
-
-    const rewardValue = rewardValueForTier(tierRate);
-    const perTxCap = tierRate.perTransactionCap;
-    const monthlyCap = tierRate.monthlyCap;
-    const currentRuleMonthUsed = ruleMonthUsed.get(rewardKey) ?? 0;
-
-    let rawReward = 0;
-    let uncappedReward = 0;
-    let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
-    const hasFixedReward =
-      rewardValue.kind !== 'percentage' && rewardValue.amount > 0;
-    if (rewardValue.kind === 'percentage' && rewardValue.amount > 0) {
-      if (tierRate.unit !== null && tierRate.unit !== undefined) {
-        unsupportedRules.push({
-          cardId: card.id,
-          transactionId: tx.id,
-          ruleId: rule.id ?? rewardKey,
-          category: categoryKey,
-          reason: 'unsupported_reward_unit',
-          detail: `rate-based reward carries unit ${tierRate.unit}`,
-        });
+      const ruleExecutionKey = buildRuleExecutionKey(rule, ruleIndex);
+      const ruleId = ruleExecutionKey;
+      const capGroup = buildCapGroupKey(rule, ruleIndex);
+      const tierRate = findTierRate(rule, tierId);
+      if (!tierRate) {
+        bucket.rewardType = rule.type;
         continue;
       }
-      assertKnownRewardType(rule.type);
-      const exactReward = floorSafeIntegerDecimalProduct(
-        tx.amount,
-        rewardValue.amount,
-        100,
-      );
-      if (exactReward === null) {
-        throw new Error(
-          `calculated reward is not safely representable for percentage-point rate ${rewardValue.amount}`,
+
+      const rewardValue = rewardValueForTier(tierRate);
+      const perTxCap = tierRate.perTransactionCap;
+      const monthlyCap = tierRate.monthlyCap;
+      const currentCapGroupMonthUsed = capGroupMonthUsed.get(capGroup) ?? 0;
+
+      let rawReward = 0;
+      let uncappedReward = 0;
+      let ruleResult: { reward: number; newMonthUsed: number; capReached: boolean };
+      const hasFixedReward =
+        rewardValue.kind !== 'percentage' && rewardValue.amount > 0;
+      if (rewardValue.kind === 'percentage' && rewardValue.amount > 0) {
+        if (tierRate.unit !== null && tierRate.unit !== undefined) {
+          unsupportedRules.push({
+            cardId: card.id,
+            transactionId: tx.id,
+            ruleId,
+            category: categoryKey,
+            reason: 'unsupported_reward_unit',
+            detail: `rate-based reward carries unit ${tierRate.unit}`,
+          });
+          continue;
+        }
+        assertKnownRewardType(rule.type);
+        const exactReward = floorSafeIntegerDecimalProduct(
+          tx.amount,
+          rewardValue.amount,
+          100,
+        );
+        if (exactReward === null) {
+          throw new Error(
+            `calculated reward is not safely representable for percentage-point rate ${rewardValue.amount}`,
+          );
+        }
+        uncappedReward = exactReward;
+        rawReward = perTxCap !== null ? Math.min(uncappedReward, perTxCap) : uncappedReward;
+        ruleResult = applyMonthlyCap(
+          rawReward,
+          monthlyCap,
+          currentCapGroupMonthUsed,
+        );
+      } else if (hasFixedReward) {
+        const fixed = calculateFixedReward(
+          tx,
+          rewardValue,
+          ruleExecutionKey,
+          dayRewardTracker,
+        );
+        if (fixed.unsupportedReason) {
+          unsupportedRules.push({
+            cardId: card.id,
+            transactionId: tx.id,
+            ruleId,
+            category: categoryKey,
+            reason: fixed.unsupportedReason,
+            detail: fixed.detail,
+          });
+          continue;
+        }
+        uncappedReward = fixed.reward;
+        rawReward = perTxCap !== null
+          ? Math.min(uncappedReward, perTxCap)
+          : uncappedReward;
+        ruleResult = applyMonthlyCap(
+          rawReward,
+          monthlyCap,
+          currentCapGroupMonthUsed,
+        );
+      } else {
+        // Rule has neither rate nor fixed amount — produces 0 reward.
+        // Wildcard rules (category === '*') legitimately have no rate.
+        rawReward = 0;
+        ruleResult = applyMonthlyCap(
+          0,
+          monthlyCap,
+          currentCapGroupMonthUsed,
         );
       }
-      uncappedReward = exactReward;
-      rawReward = perTxCap !== null ? Math.min(uncappedReward, perTxCap) : uncappedReward;
-      ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
-    } else if (hasFixedReward) {
-      const fixed = calculateFixedReward(
-        tx,
-        rewardValue,
-        rewardKey,
-        dayRewardTracker,
-      );
-      if (fixed.unsupportedReason) {
-        unsupportedRules.push({
-          cardId: card.id,
-          transactionId: tx.id,
-          ruleId: rule.id ?? rewardKey,
-          category: categoryKey,
-          reason: fixed.unsupportedReason,
-          detail: fixed.detail,
-        });
-        continue;
+
+      assertSafeNonnegativeInteger(uncappedReward, 'uncapped reward');
+      assertSafeNonnegativeInteger(rawReward, 'per-transaction reward');
+
+      // Consume an occurrence only after the tier and reward facts have produced
+      // an executable reward. Cap clipping happens later and still counts.
+      if (occurrenceKey && uncappedReward > 0) {
+        occurrenceUses.set(
+          occurrenceKey,
+          addSafeNonnegativeIntegers(
+            occurrenceUses.get(occurrenceKey) ?? 0,
+            1,
+            `occurrence count for ${occurrenceKey}`,
+          ),
+        );
       }
-      uncappedReward = fixed.reward;
-      rawReward = perTxCap !== null
-        ? Math.min(uncappedReward, perTxCap)
-        : uncappedReward;
-      ruleResult = applyMonthlyCap(rawReward, monthlyCap, currentRuleMonthUsed);
-    } else {
-      // Rule has neither rate nor fixed amount — produces 0 reward.
-      // Wildcard rules (category === '*') legitimately have no rate.
-      rawReward = 0;
-      ruleResult = applyMonthlyCap(0, monthlyCap, currentRuleMonthUsed);
-    }
 
-    assertSafeNonnegativeInteger(uncappedReward, 'uncapped reward');
-    assertSafeNonnegativeInteger(rawReward, 'per-transaction reward');
-
-    // Consume an occurrence only after the tier and reward facts have produced
-    // an executable reward. Cap clipping happens later and still counts.
-    if (occurrenceKey && uncappedReward > 0) {
-      occurrenceUses.set(
-        occurrenceKey,
-        addSafeNonnegativeIntegers(
-          occurrenceUses.get(occurrenceKey) ?? 0,
-          1,
-          `occurrence count for ${occurrenceKey}`,
-        ),
-      );
-    }
-
-    if (perTxCap !== null && uncappedReward > perTxCap) {
-      capsHit.push({
-        category: categoryKey,
-        capType: 'per_transaction',
-        capAmount: perTxCap,
-        actualReward: uncappedReward,
-        appliedReward: rawReward,
-        ruleId,
-        capGroup,
-      });
-      bucket.capReached = true;
-    }
-
-    ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed);
-
-    const rewardAfterMonthlyCap = ruleResult.reward;
-    let appliedReward = rewardAfterMonthlyCap;
-    if (globalCap !== null) {
-      const globalRemaining = Math.max(0, globalCap - globalMonthUsed);
-      appliedReward = Math.min(rewardAfterMonthlyCap, globalRemaining);
-      const wasClipped = rewardAfterMonthlyCap > appliedReward;
-      const nextGlobalMonthUsed = addSafeNonnegativeIntegers(
-        globalMonthUsed,
-        appliedReward,
-        'global monthly reward total',
-      );
-      const reachedGlobalCap =
-        rewardAfterMonthlyCap > 0 &&
-        (wasClipped || nextGlobalMonthUsed === globalCap);
-      if (reachedGlobalCap) {
+      if (perTxCap !== null && uncappedReward > perTxCap) {
         capsHit.push({
           category: categoryKey,
-          capType: 'monthly_total',
-          capAmount: globalCap,
-          actualReward: rewardAfterMonthlyCap,
-          appliedReward,
+          capType: 'per_transaction',
+          capAmount: perTxCap,
+          actualReward: uncappedReward,
+          appliedReward: rawReward,
+          ruleId,
+          capGroup,
         });
         bucket.capReached = true;
       }
-      if (wasClipped) {
-        // When the global cap clips a reward, the rule-level tracker was
-        // advanced by the full pre-clip amount (rewardAfterMonthlyCap).
-        // We must roll it back to reflect only what was actually applied,
-        // so subsequent transactions see the correct remaining rule-level
-        // cap relative to the global constraint.
-        const overcount = rewardAfterMonthlyCap - appliedReward;
-        ruleMonthUsed.set(rewardKey, ruleResult.newMonthUsed - overcount);
-      }
-      globalMonthUsed = nextGlobalMonthUsed;
-    }
 
-    bucket.reward = addSafeNonnegativeIntegers(
-      bucket.reward,
-      appliedReward,
-      `category reward for ${categoryKey}`,
-    );
-    // Accumulate reward per rewardType so we can determine the dominant
-    // type (highest cumulative reward) at the end of the loop, rather than
-    // unconditionally overwriting with the last transaction's type.
-    const typeMap = rewardTypeAccum.get(categoryKey) ?? new Map<string, number>();
-    typeMap.set(
-      rule.type,
-      addSafeNonnegativeIntegers(
-        typeMap.get(rule.type) ?? 0,
+      capGroupMonthUsed.set(capGroup, ruleResult.newMonthUsed);
+
+      const rewardAfterMonthlyCap = ruleResult.reward;
+      let appliedReward = rewardAfterMonthlyCap;
+      if (globalCap !== null) {
+        const globalRemaining = Math.max(0, globalCap - globalMonthUsed);
+        appliedReward = Math.min(rewardAfterMonthlyCap, globalRemaining);
+        const wasClipped = rewardAfterMonthlyCap > appliedReward;
+        const nextGlobalMonthUsed = addSafeNonnegativeIntegers(
+          globalMonthUsed,
+          appliedReward,
+          'global monthly reward total',
+        );
+        const reachedGlobalCap =
+          rewardAfterMonthlyCap > 0 &&
+          (wasClipped || nextGlobalMonthUsed === globalCap);
+        if (reachedGlobalCap) {
+          capsHit.push({
+            category: categoryKey,
+            capType: 'monthly_total',
+            capAmount: globalCap,
+            actualReward: rewardAfterMonthlyCap,
+            appliedReward,
+          });
+          bucket.capReached = true;
+        }
+        if (wasClipped) {
+          // When the global cap clips a reward, the cap-group tracker was
+          // advanced by the full pre-clip amount (rewardAfterMonthlyCap).
+          // We must roll it back to reflect only what was actually applied,
+          // so subsequent transactions see the correct remaining group-level
+          // cap relative to the global constraint.
+          const overcount = rewardAfterMonthlyCap - appliedReward;
+          capGroupMonthUsed.set(
+            capGroup,
+            ruleResult.newMonthUsed - overcount,
+          );
+        }
+        globalMonthUsed = nextGlobalMonthUsed;
+      }
+
+      bucket.reward = addSafeNonnegativeIntegers(
+        bucket.reward,
         appliedReward,
-        `reward type total for ${rule.type}`,
-      ),
-    );
-    rewardTypeAccum.set(categoryKey, typeMap);
-    const finalRuleMonthUsed = ruleMonthUsed.get(rewardKey) ?? 0;
-    const reachedRuleCap =
-      ruleResult.capReached &&
-      monthlyCap !== null &&
-      finalRuleMonthUsed === monthlyCap;
-    if (reachedRuleCap) {
-      bucket.capReached = true;
-      capsHit.push({
-        category: categoryKey,
-        capType: 'monthly_category',
-        capAmount: monthlyCap,
-        actualReward: rawReward,
-        appliedReward: rewardAfterMonthlyCap,
-        ruleId,
-        capGroup,
-      });
-    }
-    // No need for categoryRewards.set() here — the bucket was registered
-    // immediately after creation and mutations are reflected by reference (C8-02).
+        `category reward for ${categoryKey}`,
+      );
+      // Accumulate reward per rewardType so we can determine the dominant
+      // type (highest cumulative reward) at the end of the loop, rather than
+      // unconditionally overwriting with the last transaction's type.
+      const typeMap = rewardTypeAccum.get(categoryKey) ?? new Map<string, number>();
+      typeMap.set(
+        rule.type,
+        addSafeNonnegativeIntegers(
+          typeMap.get(rule.type) ?? 0,
+          appliedReward,
+          `reward type total for ${rule.type}`,
+        ),
+      );
+      rewardTypeAccum.set(categoryKey, typeMap);
+      const finalCapGroupMonthUsed = capGroupMonthUsed.get(capGroup) ?? 0;
+      const reachedRuleCap =
+        ruleResult.capReached &&
+        monthlyCap !== null &&
+        finalCapGroupMonthUsed === monthlyCap;
+      if (reachedRuleCap) {
+        bucket.capReached = true;
+        capsHit.push({
+          category: categoryKey,
+          capType: 'monthly_category',
+          capAmount: monthlyCap,
+          actualReward: rawReward,
+          appliedReward: rewardAfterMonthlyCap,
+          ruleId,
+          capGroup,
+        });
+      }
+      // No need for categoryRewards.set() here — the bucket was registered
+      // immediately after creation and mutations are reflected by reference (C8-02).
     }
   }
 

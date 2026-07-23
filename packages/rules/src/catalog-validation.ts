@@ -34,6 +34,7 @@ export type CatalogIssueCode =
   | 'unreachable_merchant'
   | 'missing_rule_contract'
   | 'unmodeled_restriction'
+  | 'incoherent_cap_group'
   | 'ambiguous_rule_group';
 
 export interface CatalogValidationIssue {
@@ -401,6 +402,60 @@ function collectCardRuleIssuesWithContext(
         }
       }
     }
+  });
+
+  const capGroupDefinitions = new Map<
+    string,
+    Map<
+      string,
+      {
+        ruleIndex: number;
+        tierIndex: number;
+        monthlyCap: number | null;
+      }
+    >
+  >();
+  cardRule.rewards.forEach((rule, ruleIndex) => {
+    if (
+      rule.support?.status === 'unsupported' ||
+      !rule.capGroup
+    ) {
+      return;
+    }
+    let definitionsByTier = capGroupDefinitions.get(rule.capGroup);
+    if (!definitionsByTier) {
+      definitionsByTier = new Map();
+      capGroupDefinitions.set(rule.capGroup, definitionsByTier);
+    }
+    rule.tiers.forEach((tier, tierIndex) => {
+      const existing = definitionsByTier.get(tier.performanceTier);
+      if (!existing) {
+        definitionsByTier.set(tier.performanceTier, {
+          ruleIndex,
+          tierIndex,
+          monthlyCap: tier.monthlyCap,
+        });
+        return;
+      }
+      // A duplicate tier within one rule already has its own diagnostic.
+      if (
+        existing.ruleIndex === ruleIndex ||
+        existing.monthlyCap === tier.monthlyCap
+      ) {
+        return;
+      }
+      issues.push({
+        code: 'incoherent_cap_group',
+        cardId,
+        path: `rewards.${ruleIndex}.tiers.${tierIndex}.monthlyCap`,
+        message:
+          `cap group "${rule.capGroup}" defines monthlyCap ` +
+          `${String(tier.monthlyCap)} for performance tier ` +
+          `"${tier.performanceTier}", but rewards.${existing.ruleIndex}.` +
+          `tiers.${existing.tierIndex}.monthlyCap defines ` +
+          `${String(existing.monthlyCap)}`,
+      });
+    });
   });
 
   const hasUnmodeledGlobalConstraints =
