@@ -13,7 +13,7 @@ const reportUrl = buildPageUrl('report');
 
 <Layout title="추천 결과">
   <!-- Back link -->
-  <div class="mb-6">
+  <div class="mb-6 print:hidden" data-print-control>
     <a
       href={homeUrl}
       class="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary-fg)]"
@@ -28,11 +28,38 @@ const reportUrl = buildPageUrl('report');
   <!-- Page header -->
   <div class="mb-8 animate-[slideUp_0.4s_ease_both]">
     <h1 class="text-3xl font-extrabold tracking-tight">카드 추천 결과</h1>
-    <p class="mt-2 text-[var(--color-text-muted)]">카드를 잘 골라 쓰면 이만큼 아낄 수 있어요</p>
+    <p class="mt-2 text-[var(--color-text-muted)]">연회비 차감 전 월간 총혜택과 카드 조합을 보여줘요</p>
+    <p id="results-status" class="sr-only" role="status" aria-live="polite">분석 결과를 확인하는 중이에요</p>
+  </div>
+
+  <!-- Stable readiness shell while persisted analysis is restored -->
+  <div
+    id="results-loading-state"
+    class="flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center"
+    aria-busy="true"
+  >
+    <span class="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary-fg)]" aria-hidden="true"></span>
+    <p class="text-sm font-medium text-[var(--color-text-muted)]">저장된 추천 결과를 확인하고 있어요</p>
+  </div>
+
+  <!-- Error state when persisted or current analysis cannot be read -->
+  <div
+    id="results-error-state"
+    class="hidden flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--color-danger-fg)]/30 bg-[var(--color-surface)] px-8 py-16 text-center"
+    role="alert"
+  >
+    <p class="text-base font-semibold text-[var(--color-danger-fg)]">추천 결과를 불러오지 못했어요</p>
+    <p class="max-w-lg text-sm text-[var(--color-text-muted)]" data-analysis-error-message>분석 결과를 표시하지 못했어요.</p>
+    <a
+      href={homeUrl}
+      class="mt-2 inline-flex items-center rounded-xl bg-[var(--color-primary-fill)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-fill-hover)]"
+    >
+      명세서 다시 올리기
+    </a>
   </div>
 
   <!-- Empty state when no data -->
-  <div id="results-empty-state" class="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center">
+  <div id="results-empty-state" class="hidden flex flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="48" height="48" class="text-[var(--color-text-muted)] opacity-40" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
     </svg>
@@ -59,7 +86,7 @@ const reportUrl = buildPageUrl('report');
       <p class="mt-2 text-2xl font-bold text-[var(--color-text)]" id="stat-total-spending">—</p>
     </div>
     <div class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center shadow-[var(--shadow-card)]">
-      <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]" id="stat-savings-label">예상 절약액</p>
+      <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]" id="stat-savings-label">단일 카드 대비 월간 추가 혜택 (연회비 차감 전)</p>
       <p class="mt-2 text-2xl font-bold text-[var(--color-success-fg)]" id="stat-total-savings">—</p>
     </div>
     <div class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center shadow-[var(--shadow-card)]">
@@ -73,6 +100,7 @@ const reportUrl = buildPageUrl('report');
     class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.1s_ease_both]"
     style="opacity:0;animation-fill-mode:forwards;"
   >
+    <h2 class="mb-4 text-lg font-bold">연회비 차감 전 월간 총혜택 비교</h2>
     <SavingsComparison client:load />
   </div>
 
@@ -85,12 +113,11 @@ const reportUrl = buildPageUrl('report');
     <OptimalCardMap client:load />
   </div>
 
-  <VisibilityToggle client:load dataContentId="results-data-content" emptyStateId="results-empty-state" />
-
   <!-- Action buttons -->
   <div
-    class="mt-8 flex flex-wrap gap-4 animate-[slideUp_0.4s_0.15s_ease_both]"
+    class="mt-8 flex flex-wrap gap-4 print:hidden animate-[slideUp_0.4s_0.15s_ease_both]"
     style="opacity:0;animation-fill-mode:forwards;"
+    data-print-control
   >
     <a
       href={reportUrl}
@@ -130,4 +157,13 @@ const reportUrl = buildPageUrl('report');
     </a>
   </div>
   </div>
+
+  <VisibilityToggle
+    client:load
+    dataContentId="results-data-content"
+    emptyStateId="results-empty-state"
+    loadingStateId="results-loading-state"
+    errorStateId="results-error-state"
+    statusTextId="results-status"
+  />
 </Layout>

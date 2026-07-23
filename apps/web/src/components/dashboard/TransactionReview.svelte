@@ -1,61 +1,214 @@
+<script module lang="ts">
+  export interface TransactionTaxonomyNode {
+    id: string;
+    labelKo: string;
+    subcategories?: readonly TransactionTaxonomyNode[];
+  }
+
+  export interface CategoryGroup {
+    label: string;
+    options: { id: string; label: string }[];
+  }
+
+  export interface TransactionTaxonomy {
+    options: { id: string; label: string }[];
+    groups: CategoryGroup[];
+    labels: Map<string, string>;
+    subcategoryToParent: Map<string, string>;
+    canonicalize(selection: string): {
+      category: string;
+      subcategory: string | undefined;
+    };
+  }
+
+  /**
+   * Build every transaction-editor taxonomy view from the same hierarchy.
+   * Fully qualified option IDs are UI-only; edits are converted back to the
+   * canonical { category: parent, subcategory: child } pair before storage.
+   */
+  export function buildTransactionTaxonomy(
+    nodes: readonly TransactionTaxonomyNode[],
+  ): TransactionTaxonomy {
+    const options: { id: string; label: string }[] = [];
+    const groups: CategoryGroup[] = [];
+    const labels = new Map<string, string>();
+    const subcategoryToParent = new Map<string, string>();
+
+    for (const node of nodes) {
+      const groupOptions = [{
+        id: node.id,
+        label: node.id === 'uncategorized' ? node.labelKo : `${node.labelKo} 전체`,
+      }];
+
+      options.push({ id: node.id, label: node.labelKo });
+      labels.set(node.id, node.labelKo);
+
+      for (const subcategory of node.subcategories ?? []) {
+        const qualifiedId = `${node.id}.${subcategory.id}`;
+        const option = { id: qualifiedId, label: subcategory.labelKo };
+        options.push(option);
+        groupOptions.push(option);
+        labels.set(qualifiedId, subcategory.labelKo);
+        subcategoryToParent.set(qualifiedId, node.id);
+      }
+
+      groups.push({ label: node.labelKo, options: groupOptions });
+    }
+
+    return {
+      options,
+      groups,
+      labels,
+      subcategoryToParent,
+      canonicalize(selection) {
+        const parent = subcategoryToParent.get(selection);
+        return parent
+          ? {
+              category: parent,
+              subcategory: selection.slice(parent.length + 1),
+            }
+          : { category: selection, subcategory: undefined };
+      },
+    };
+  }
+
+  // Keep this label-only fallback aligned with the published category
+  // hierarchy. It is available before hydration and when the artifact fails.
+  export const FALLBACK_TRANSACTION_CATEGORIES: readonly TransactionTaxonomyNode[] = [
+    {
+      id: 'dining',
+      labelKo: '외식',
+      subcategories: [
+        { id: 'restaurant', labelKo: '일반음식점' },
+        { id: 'cafe', labelKo: '카페' },
+        { id: 'fast_food', labelKo: '패스트푸드' },
+        { id: 'delivery', labelKo: '배달' },
+        { id: 'bakery', labelKo: '베이커리' },
+      ],
+    },
+    {
+      id: 'grocery',
+      labelKo: '식료품/마트',
+      subcategories: [
+        { id: 'supermarket', labelKo: '대형마트' },
+        { id: 'traditional_market', labelKo: '전통시장' },
+        { id: 'online_grocery', labelKo: '온라인식품' },
+        { id: 'local_shopping', labelKo: '지역상점' },
+      ],
+    },
+    { id: 'convenience_store', labelKo: '편의점' },
+    {
+      id: 'public_transit',
+      labelKo: '대중교통',
+      subcategories: [
+        { id: 'bus', labelKo: '버스' },
+        { id: 'subway', labelKo: '지하철' },
+        { id: 'taxi', labelKo: '택시' },
+      ],
+    },
+    {
+      id: 'transportation',
+      labelKo: '교통/주유',
+      subcategories: [
+        { id: 'fuel', labelKo: '주유' },
+        { id: 'parking', labelKo: '주차' },
+        { id: 'toll', labelKo: '고속도로통행료' },
+        { id: 'ev_charging', labelKo: '전기차 충전' },
+        { id: 'car_maintenance', labelKo: '차량정비' },
+        { id: 'shared_mobility', labelKo: '공유 모빌리티' },
+        { id: 'rental', labelKo: '렌탈' },
+      ],
+    },
+    {
+      id: 'online_shopping',
+      labelKo: '온라인쇼핑',
+      subcategories: [
+        { id: 'general', labelKo: '종합쇼핑몰' },
+        { id: 'fashion', labelKo: '패션' },
+        { id: 'simple_pay', labelKo: '간편결제' },
+        { id: 'home_shopping', labelKo: '홈쇼핑' },
+      ],
+    },
+    {
+      id: 'offline_shopping',
+      labelKo: '오프라인쇼핑',
+      subcategories: [
+        { id: 'department_store', labelKo: '백화점' },
+        { id: 'beauty', labelKo: '미용' },
+        { id: 'electronics', labelKo: '전자제품' },
+        { id: 'home_living', labelKo: '홈/리빙' },
+        { id: 'daiso', labelKo: '다이소' },
+      ],
+    },
+    { id: 'telecom', labelKo: '통신' },
+    { id: 'insurance', labelKo: '보험' },
+    {
+      id: 'medical',
+      labelKo: '의료',
+      subcategories: [
+        { id: 'hospital', labelKo: '병원' },
+        { id: 'pharmacy', labelKo: '약국' },
+      ],
+    },
+    {
+      id: 'education',
+      labelKo: '교육',
+      subcategories: [
+        { id: 'academy', labelKo: '학원' },
+        { id: 'books', labelKo: '도서' },
+        { id: 'language_exam', labelKo: '어학/시험' },
+      ],
+    },
+    {
+      id: 'entertainment',
+      labelKo: '여가/문화',
+      subcategories: [
+        { id: 'movie', labelKo: '영화' },
+        { id: 'streaming', labelKo: '스트리밍' },
+        { id: 'gaming', labelKo: '게임' },
+      ],
+    },
+    {
+      id: 'sports',
+      labelKo: '스포츠',
+      subcategories: [{ id: 'golf', labelKo: '골프' }],
+    },
+    {
+      id: 'travel',
+      labelKo: '여행',
+      subcategories: [
+        { id: 'airline', labelKo: '항공' },
+        { id: 'hotel', labelKo: '호텔/숙박' },
+        { id: 'travel_agency', labelKo: '여행사' },
+      ],
+    },
+    { id: 'subscription', labelKo: '구독' },
+    {
+      id: 'utilities',
+      labelKo: '공과금',
+      subcategories: [
+        { id: 'electricity', labelKo: '전기요금' },
+        { id: 'gas', labelKo: '가스요금' },
+        { id: 'water', labelKo: '수도요금' },
+        { id: 'apartment_mgmt', labelKo: '관리비' },
+      ],
+    },
+    { id: 'uncategorized', labelKo: '기타' },
+  ];
+</script>
+
 <script lang="ts">
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatWon } from '../../lib/formatters.js';
   import Icon from '../ui/Icon.svelte';
   import type { CategorizedTx } from '../../lib/analyzer.js';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { loadCategories } from '../../lib/cards.js';
 
-  // Category options loaded dynamically from categories.yaml taxonomy
-  let categoryOptions = $state<{ id: string; label: string }[]>([]);
-
-  // Grouped category options for rendering with <optgroup> in the select
-  // dropdown. Each group has a label (parent category) and a list of
-  // options including the parent itself and its subcategories. This
-  // replaces the flat leading-space indentation which is trimmed by some
-  // mobile browsers, making subcategories visually indistinguishable
-  // from parent categories (C86-08).
-  interface CategoryGroup {
-    label: string;
-    options: { id: string; label: string }[];
-  }
-  let categoryGroups = $state<CategoryGroup[]>([]);
-
-  // Fallback used if categories fail to load. Uses grouped format so
-  // the optgroup rendering works even in fallback mode (C74-01).
-  const FALLBACK_GROUPS: CategoryGroup[] = [
-    { label: '외식', options: [{ id: 'dining', label: '전체' }, { id: 'dining.restaurant', label: '일반음식점' }, { id: 'dining.cafe', label: '카페' }, { id: 'dining.fast_food', label: '패스트푸드' }, { id: 'dining.delivery', label: '배달' }] },
-    { label: '식료품/마트', options: [{ id: 'grocery', label: '전체' }, { id: 'grocery.supermarket', label: '대형마트' }, { id: 'grocery.traditional_market', label: '전통시장' }, { id: 'grocery.online_grocery', label: '온라인식품' }, { id: 'grocery.convenience_store', label: '편의점' }] },
-    { label: '대중교통', options: [{ id: 'public_transit', label: '전체' }, { id: 'public_transit.bus', label: '버스' }, { id: 'public_transit.subway', label: '지하철' }, { id: 'public_transit.taxi', label: '택시' }] },
-    { label: '교통/주유', options: [{ id: 'transportation', label: '전체' }, { id: 'transportation.fuel', label: '주유' }, { id: 'transportation.parking', label: '주차' }, { id: 'transportation.toll', label: '고속도로통행료' }] },
-    { label: '통신', options: [{ id: 'telecom', label: '전체' }] },
-    { label: '보험', options: [{ id: 'insurance', label: '전체' }] },
-    { label: '온라인쇼핑', options: [{ id: 'online_shopping', label: '전체' }, { id: 'online_shopping.general', label: '종합쇼핑몰' }, { id: 'online_shopping.fashion', label: '패션' }] },
-    { label: '오프라인쇼핑', options: [{ id: 'offline_shopping', label: '전체' }, { id: 'offline_shopping.department_store', label: '백화점' }] },
-    { label: '의료', options: [{ id: 'medical', label: '전체' }, { id: 'medical.hospital', label: '병원' }, { id: 'medical.pharmacy', label: '약국' }] },
-    { label: '교육', options: [{ id: 'education', label: '전체' }, { id: 'education.academy', label: '학원' }, { id: 'education.books', label: '도서' }] },
-    { label: '여가/문화', options: [{ id: 'entertainment', label: '전체' }, { id: 'entertainment.movie', label: '영화' }, { id: 'entertainment.streaming', label: '스트리밍' }] },
-    { label: '여행', options: [{ id: 'travel', label: '전체' }, { id: 'travel.airline', label: '항공' }, { id: 'travel.hotel', label: '호텔/숙박' }, { id: 'travel.travel_agency', label: '여행사' }] },
-    { label: '구독', options: [{ id: 'subscription', label: '전체' }] },
-    { label: '공과금', options: [{ id: 'utilities', label: '전체' }, { id: 'utilities.electricity', label: '전기요금' }, { id: 'utilities.gas', label: '가스요금' }, { id: 'utilities.water', label: '수도요금' }, { id: 'utilities.apartment_mgmt', label: '관리비' }] },
-    { label: '기타', options: [{ id: 'uncategorized', label: '기타' }] },
-  ];
-
-  // Flat fallback list for categoryMap construction (all IDs + labels)
-  const FALLBACK_CATEGORIES = FALLBACK_GROUPS.flatMap(g => g.options);
-
-  // Include bare subcategory IDs (e.g. 'convenience_store') in the map for
-  // backward compatibility with saved data that used bare IDs before the
-  // hierarchy fix (C3-01). These map to the same label as their dot-notation
-  // counterparts.
-  let categoryMap = $state<Map<string, string>>(new Map([
-    ...FALLBACK_CATEGORIES.map(c => [c.id, c.label] as [string, string]),
-    ['convenience_store', '편의점'],
-  ]));
-
-  // Maps subcategory IDs to their parent category IDs for correct
-  // category/subcategory assignment when the user selects a subcategory.
-  let subcategoryToParent = $state<Map<string, string>>(new Map());
+  const fallbackTaxonomy = buildTransactionTaxonomy(FALLBACK_TRANSACTION_CATEGORIES);
+  // Seed a complete option set synchronously. The fetched artifact replaces the
+  // whole object atomically rather than updating groups and maps independently.
+  let taxonomy = $state<TransactionTaxonomy>(fallbackTaxonomy);
 
   let expanded = $state(false);
   let editedTxs = $state<CategorizedTx[]>([]);
@@ -73,47 +226,14 @@
     (async () => {
       try {
         const nodes = await loadCategories(controller.signal);
-        // Guard against empty categories — loadCategories() returns [] on
-        // AbortError. Using empty categories would produce an empty dropdown,
-        // so fall back to the hardcoded list (C73-02).
-        if (nodes.length === 0) {
-          categoryOptions = FALLBACK_CATEGORIES;
-          categoryGroups = FALLBACK_GROUPS;
-          categoryMap = new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label]));
-          return;
-        }
-        const options: { id: string; label: string }[] = [];
-        const groups: CategoryGroup[] = [];
-        const parentMap = new Map<string, string>();
-        for (const node of nodes) {
-          const groupOptions: { id: string; label: string }[] = [
-            { id: node.id, label: '전체' },
-          ];
-          options.push({ id: node.id, label: node.labelKo });
-          if (node.subcategories) {
-            for (const sub of node.subcategories) {
-              // Use fully-qualified IDs (e.g. "dining.cafe") for subcategories
-              // to avoid duplicate option values when a subcategory ID also
-              // exists as a standalone top-level category.
-              const fqId = `${node.id}.${sub.id}`;
-              options.push({ id: fqId, label: sub.labelKo });
-              groupOptions.push({ id: fqId, label: sub.labelKo });
-              parentMap.set(fqId, node.id);
-            }
-          }
-          groups.push({ label: node.labelKo, options: groupOptions });
-        }
-        subcategoryToParent = parentMap;
-        categoryOptions = options;
-        categoryGroups = groups;
-        categoryMap = new Map(options.map(c => [c.id, c.label]));
+        // loadCategories() returns [] when its request was aborted. Preserve the
+        // already visible fallback instead of replacing it with an empty list.
+        if (nodes.length === 0) return;
+        taxonomy = buildTransactionTaxonomy(nodes);
       } catch (error) {
         if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) return;
         if (typeof console !== 'undefined') console.debug('[cherrypicker] Category options fetch failed, using fallback list');
-        // Fall back to hardcoded list
-        categoryOptions = FALLBACK_CATEGORIES;
-        categoryGroups = FALLBACK_GROUPS;
-        categoryMap = new Map(FALLBACK_CATEGORIES.map(c => [c.id, c.label]));
+        taxonomy = fallbackTaxonomy;
       }
     })();
     return () => controller.abort();
@@ -158,10 +278,10 @@
         if (tx.merchant.toLowerCase().includes(q)) return true;
         // Also match against category and subcategory labels (Korean)
         // e.g. searching "카페" or "cafe" finds all cafe-categorized transactions
-        const catLabel = categoryMap.get(tx.category)?.toLowerCase() ?? '';
+        const catLabel = taxonomy.labels.get(tx.category)?.toLowerCase() ?? '';
         if (catLabel.includes(q)) return true;
         if (tx.subcategory) {
-          const subLabel = categoryMap.get(`${tx.category}.${tx.subcategory}`)?.toLowerCase() ?? '';
+          const subLabel = taxonomy.labels.get(`${tx.category}.${tx.subcategory}`)?.toLowerCase() ?? '';
           if (subLabel.includes(q)) return true;
         }
         return false;
@@ -174,29 +294,56 @@
     editedTxs.filter(tx => tx.category === 'uncategorized' || tx.confidence < 0.5).length
   );
 
-  function changeCategory(txId: string, newCategory: string) {
+  async function changeCategory(
+    txId: string,
+    newCategory: string,
+    selectElement: HTMLSelectElement,
+  ) {
     const idx = editedTxs.findIndex(t => t.id === txId);
     if (idx !== -1) {
       const tx = editedTxs[idx];
       if (tx) {
-        const parentCategory = subcategoryToParent.get(newCategory);
-        let updated: CategorizedTx;
-        if (parentCategory) {
-          // User selected a subcategory (fully-qualified ID like "dining.cafe")
-          // — set both parent category and subcategory. Clear rawCategory since
-          // the manual override no longer corresponds to the bank-provided
-          // classification (C79-01).
-          const subId = newCategory.includes('.') ? newCategory.split('.')[1] ?? newCategory : newCategory;
-          updated = { ...tx, category: parentCategory, subcategory: subId, confidence: 1.0, rawCategory: undefined };
-        } else {
-          // User selected a top-level category
-          updated = { ...tx, category: newCategory, subcategory: undefined, confidence: 1.0, rawCategory: undefined };
-        }
+        const visibleTxIds = displayTxs.map(visibleTx => visibleTx.id);
+        const visibleIndex = visibleTxIds.indexOf(txId);
+        const hadFocus = document.activeElement === selectElement;
+        const panel = selectElement.closest<HTMLElement>('[data-testid="tx-review-panel"]');
+        const categoryPair = taxonomy.canonicalize(newCategory);
+        // Fully qualified option IDs are converted back to the analyzer's
+        // parent/subcategory fields. Manual edits no longer correspond to the
+        // original bank-provided classification, so clear rawCategory.
+        const updated: CategorizedTx = {
+          ...tx,
+          ...categoryPair,
+          confidence: 1.0,
+          rawCategory: undefined,
+        };
         // Svelte 5 $state tracks array index mutations — editedTxs[idx] = updated
         // is both correct and more performant than the previous editedTxs.map(...)
         // pattern which created an O(n) array copy per edit (C22-05/C39-02).
         editedTxs[idx] = updated;
         hasEdits = true;
+
+        // A category/search filter can remove the edited keyed row immediately.
+        // If its select owned focus, move to the next visible row, then the
+        // previous row, and finally the newly available apply action.
+        if (hadFocus && panel) {
+          await tick();
+          if (!selectElement.isConnected) {
+            const candidates = [
+              ...visibleTxIds.slice(visibleIndex + 1),
+              ...visibleTxIds.slice(0, Math.max(visibleIndex, 0)).reverse(),
+            ];
+            const remainingSelects = Array.from(
+              panel.querySelectorAll<HTMLSelectElement>('[data-tx-category-select]'),
+            );
+            const nextSelect = candidates
+              .map(candidateId => remainingSelects.find(
+                candidate => candidate.dataset.txId === candidateId,
+              ))
+              .find((candidate): candidate is HTMLSelectElement => candidate !== undefined);
+            (nextSelect ?? panel.querySelector<HTMLButtonElement>('[data-testid="tx-apply-edits"]'))?.focus();
+          }
+        }
       }
     }
   }
@@ -262,6 +409,7 @@
             <button
               onclick={applyEdits}
               disabled={reoptimizing}
+              data-testid="tx-apply-edits"
               class="rounded-lg bg-[var(--color-primary-fill)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-primary-fill-hover)] disabled:opacity-50 transition-colors"
             >
               {reoptimizing ? '재계산 중' : '변경 적용'}
@@ -271,7 +419,19 @@
 
         <!-- Transaction list — overflow-x-auto lets narrow viewports scroll
              horizontally instead of overflowing the dashboard (C6UI-26). -->
-        <div class="max-h-[400px] overflow-x-auto overflow-y-auto">
+        <p id="tx-review-scroll-hint" class="px-3 pt-3 text-xs text-[var(--color-text-muted)] sm:hidden">
+          표를 좌우로 스크롤할 수 있어요
+        </p>
+        <!-- The overflow region needs direct focus so keyboard users can scroll it. -->
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+        <div
+          class="max-h-[400px] overflow-x-auto overflow-y-auto focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--color-focus)]"
+          role="region"
+          aria-label="거래 내역 분류 표"
+          aria-describedby="tx-review-scroll-hint"
+          tabindex="0"
+          data-testid="tx-review-scroll-region"
+        >
           <table class="w-full min-w-max text-xs">
             <thead class="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
               <tr class="text-left text-[var(--color-text-muted)]">
@@ -300,11 +460,13 @@
                       value={tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category}
                       aria-label={tx.merchant + " 카테고리"}
                       data-testid={`tx-category-select-${tx.id}`}
-                      onchange={(e) => changeCategory(tx.id, (e.target as HTMLSelectElement).value)}
+                      data-tx-category-select
+                      data-tx-id={tx.id}
+                      onchange={(e) => changeCategory(tx.id, e.currentTarget.value, e.currentTarget)}
                       class="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-xs outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)] cursor-pointer
                         {tx.category === 'uncategorized' ? 'border-red-300 bg-red-50 text-red-700' : tx.confidence < 0.5 ? 'border-amber-300 bg-amber-50 text-amber-700' : ''}"
                     >
-                      {#each categoryGroups as group}
+                      {#each taxonomy.groups as group}
                         <optgroup label={group.label}>
                           {#each group.options as opt}
                             <option value={opt.id}>{opt.label}</option>

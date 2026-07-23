@@ -43,8 +43,36 @@ const resultsUrl = buildPageUrl('results');
       </div>
     </div>
 
+    <p id="report-status" class="sr-only" role="status" aria-live="polite">분석 결과를 확인하는 중이에요</p>
+
+    <!-- Stable readiness shell while persisted analysis is restored -->
+    <div
+      id="report-loading-state"
+      class="flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center print:hidden"
+      aria-busy="true"
+    >
+      <span class="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary-fg)]" aria-hidden="true"></span>
+      <p class="text-sm font-medium text-[var(--color-text-muted)]">저장된 분석 리포트를 확인하고 있어요</p>
+    </div>
+
+    <!-- Error state when persisted or current analysis cannot be read -->
+    <div
+      id="report-error-state"
+      class="hidden flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--color-danger-fg)]/30 bg-[var(--color-surface)] px-8 py-16 text-center print:hidden"
+      role="alert"
+    >
+      <p class="text-base font-semibold text-[var(--color-danger-fg)]">리포트를 불러오지 못했어요</p>
+      <p class="max-w-lg text-sm text-[var(--color-text-muted)]" data-analysis-error-message>분석 결과를 표시하지 못했어요.</p>
+      <a
+        href={homeUrl}
+        class="mt-2 inline-flex items-center rounded-xl bg-[var(--color-primary-fill)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-fill-hover)]"
+      >
+        명세서 다시 올리기
+      </a>
+    </div>
+
     <!-- Empty state when no data -->
-    <div id="report-empty-state" class="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center">
+    <div id="report-empty-state" class="hidden flex flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="48" height="48" class="text-[var(--color-text-muted)] opacity-40" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
       </svg>
@@ -72,6 +100,9 @@ const resultsUrl = buildPageUrl('results');
       client:load
       dataContentId="report-data-content"
       emptyStateId="report-empty-state"
+      loadingStateId="report-loading-state"
+      errorStateId="report-error-state"
+      statusTextId="report-status"
       dataControlId="report-print-action"
     />
   </div>

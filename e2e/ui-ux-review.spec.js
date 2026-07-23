@@ -31,6 +31,15 @@ async function waitForCardCatalog(page) {
   );
 }
 
+async function submitAndOpenDashboard(page) {
+  await page.getByRole('button', { name: /^분석 시작/ }).click();
+  const dashboardAction = page.getByRole('button', { name: '대시보드 보기' });
+  await expect(dashboardAction).toBeVisible({ timeout: 30_000 });
+  await expect(dashboardAction).toBeFocused();
+  await dashboardAction.click();
+  await page.waitForURL('**/dashboard', { timeout: 30_000 });
+}
+
 async function readFilteredCardCount(page) {
   const text = await page.getByTestId('card-grid-filtered-count').innerText();
   const match = text.match(/^([\d,]+)개 카드$/);
@@ -205,12 +214,26 @@ test.describe('Dark mode', () => {
   test('clicking toggle switches dark mode class', async ({ page }) => {
     await page.goto(BASE);
     const toggle = page.locator('#theme-toggle');
-    // Initial state: no dark class
     const hasDarkInitially = await page.evaluate(() => document.documentElement.classList.contains('dark'));
+    await expect(toggle).toHaveAttribute(
+      'aria-pressed',
+      String(hasDarkInitially),
+    );
+    await expect(toggle).toHaveAttribute(
+      'aria-label',
+      hasDarkInitially ? '밝은 테마로 전환' : '어두운 테마로 전환',
+    );
     await toggle.click();
-    // After click, dark class should be toggled
     const hasDarkAfter = await page.evaluate(() => document.documentElement.classList.contains('dark'));
     expect(hasDarkAfter).toBe(!hasDarkInitially);
+    await expect(toggle).toHaveAttribute('aria-pressed', String(hasDarkAfter));
+    await expect(toggle).toHaveAttribute(
+      'aria-label',
+      hasDarkAfter ? '밝은 테마로 전환' : '어두운 테마로 전환',
+    );
+    expect(
+      await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme),
+    ).toBe(hasDarkAfter ? 'dark' : 'light');
   });
 
   test('dark mode persists in localStorage', async ({ page }) => {
@@ -260,8 +283,7 @@ test.describe('Upload flow', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
     await expect(page.getByRole('heading', { name: '내 지출 분석' })).toBeVisible();
   });
 
@@ -303,19 +325,20 @@ test.describe('Dashboard', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
   });
 
   test('shows spending summary cards', async ({ page }) => {
     // `.first()` on each label in case a downstream component echoes the
-    // same copy inside the dashboard (e.g. 실효 혜택률 appears in the
+    // same copy inside the dashboard (e.g. 월간 총혜택률 appears in the
     // card-summary header AND in the per-card row sub-text) (C7E-bucket-A).
     await expect(page.getByText('최근 월 지출').first()).toBeVisible();
     await expect(page.getByText('거래 건수').first()).toBeVisible();
     await expect(page.getByText('분석 기간').first()).toBeVisible();
     await expect(page.getByText('최다 지출 카테고리').first()).toBeVisible();
-    await expect(page.getByText('실효 혜택률').first()).toBeVisible();
+    await expect(
+      page.getByText('월간 총혜택률 (연회비 차감 전)').first(),
+    ).toBeVisible();
   });
 
   test('shows category breakdown with bars', async ({ page }) => {
@@ -330,7 +353,12 @@ test.describe('Dashboard', () => {
   });
 
   test('shows savings comparison', async ({ page }) => {
-    await expect(page.getByText('절약 비교')).toBeVisible();
+    await expect(
+      page.getByRole('heading', {
+        name: '연회비 차감 전 월간 총혜택 비교',
+        exact: true,
+      }),
+    ).toBeVisible();
     // "체리피킹" / "카드 한 장" render both as bar labels and card headers
     // inside SavingsComparison.svelte; use .first() to resolve ambiguity
     // (C7E-bucket-A).
@@ -366,6 +394,58 @@ test.describe('Dashboard', () => {
     expect(optionCount).toBeGreaterThan(5);
   });
 
+  test('filtered edits hand focus forward and keep the transaction scroller keyboard-reachable', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(BASE);
+    await page.waitForFunction(() =>
+      Boolean(document.querySelector('astro-island:not([ssr])'),
+    ));
+    await page.getByLabel('파일 선택', { exact: true }).setInputFiles({
+      name: 'focus-handoff.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(
+        [
+          '날짜,가맹점,금액',
+          '2026-04-01,완전히알수없는가맹점xyz가,10000',
+          '2026-04-02,완전히알수없는가맹점xyz나,20000',
+        ].join('\n'),
+      ),
+    });
+    await page.getByRole('spinbutton').fill('300000');
+    await submitAndOpenDashboard(page);
+    await page.getByTestId('tx-review-toggle').click();
+
+    const panel = page.getByTestId('tx-review-panel');
+    await panel.getByLabel('미분류만 보기').check();
+    const categorySelects = panel.locator('[data-tx-category-select]');
+    await expect(categorySelects).toHaveCount(2);
+
+    const scrollRegion = page.getByTestId('tx-review-scroll-region');
+    await scrollRegion.focus();
+    await expect(scrollRegion).toBeFocused();
+    const initialScroll = await scrollRegion.evaluate((element) => ({
+      left: element.scrollLeft,
+      overflow: element.scrollWidth - element.clientWidth,
+    }));
+    expect(initialScroll.overflow).toBeGreaterThan(0);
+    await scrollRegion.press('ArrowRight');
+    await expect
+      .poll(() => scrollRegion.evaluate((element) => element.scrollLeft))
+      .toBeGreaterThan(initialScroll.left);
+
+    const firstSelect = categorySelects.first();
+    await firstSelect.focus();
+    await firstSelect.selectOption('dining');
+    await expect(categorySelects).toHaveCount(1);
+    await expect(categorySelects.first()).toBeFocused();
+
+    await categorySelects.first().selectOption('dining');
+    await expect(categorySelects).toHaveCount(0);
+    await expect(page.getByTestId('tx-apply-edits')).toBeFocused();
+  });
+
   test('optimal card map shows assignments', async ({ page }) => {
     await expect(page.getByText('항목별 추천 카드')).toBeVisible();
   });
@@ -390,8 +470,7 @@ test.describe('Results page', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
     await page.getByRole('link', { name: '추천 결과 보기' }).click();
     await page.waitForURL('**/results', { timeout: 15_000 });
   });
@@ -403,7 +482,12 @@ test.describe('Results page', () => {
   });
 
   test('savings comparison shows bar chart', async ({ page }) => {
-    await expect(page.getByText('혜택 비교')).toBeVisible();
+    await expect(
+      page.getByRole('heading', {
+        name: '연회비 차감 전 월간 총혜택 비교',
+        exact: true,
+      }),
+    ).toBeVisible();
     // "체리피킹" matches both the bar label and the card header (C7E-bucket-A).
     await expect(page.getByText('체리피킹').first()).toBeVisible();
   });
@@ -445,8 +529,7 @@ test.describe('Report page', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
     await page.goto(BASE + 'report');
     await page.waitForLoadState('networkidle');
     // Report should load from sessionStorage
@@ -524,6 +607,54 @@ test.describe('Cards page', () => {
     expect(filtered).toBeLessThan(baseline);
     await expect(page.getByTestId('card-grid-card')).toHaveCount(1);
     await expect(page.getByTestId('card-grid-card-name')).toHaveText('픽E');
+  });
+
+  test('bottom pagination moves focus and context to the new result page', async ({
+    page,
+  }) => {
+    await page.goto(BASE + 'cards');
+    await waitForCardCatalog(page);
+
+    const bottomPager = page.getByRole('navigation', {
+      name: '카드 목록 하단 페이지',
+      exact: true,
+    });
+    await bottomPager.getByRole('button', { name: '다음 페이지' }).click();
+
+    const resultPage = page.getByTestId('card-grid-page');
+    await expect(resultPage).toBeFocused();
+    await expect(resultPage).toHaveAttribute(
+      'aria-label',
+      '카드 검색 결과 2페이지',
+    );
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('page'))
+      .toBe('2');
+  });
+
+  test('discontinued cards stay labeled and same-issuer navigation preserves its filter', async ({
+    page,
+  }) => {
+    await page.goto(BASE + 'cards');
+    await waitForCardCatalog(page);
+    await page.getByLabel('카드 검색', { exact: true }).fill('GOAT BC');
+
+    const card = page.getByTestId('card-grid-card').filter({
+      has: page.getByText('GOAT BC 바로카드', { exact: true }),
+    });
+    await expect(card.getByTestId('card-discontinued-badge')).toHaveText(
+      '단종 · 신규 발급 불가',
+    );
+    await card.click();
+    await expect(
+      page.getByTestId('card-detail-discontinued-badge'),
+    ).toHaveText('단종 · 신규 발급 불가');
+
+    await page.getByTestId('same-issuer-cards').click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('issuer'))
+      .toBe('bc');
+    await expect(page).not.toHaveURL(/#bc-goat$/);
   });
 
   test('clicking a card opens detail view', async ({ page }) => {
@@ -631,8 +762,7 @@ test.describe('Accessibility', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
     // Expand transaction review
     await page.getByText('거래 내역 확인').click();
     // Select should be focusable
@@ -678,8 +808,7 @@ test.describe('Responsive layout', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
     // Spending summary should stack vertically on mobile
     const gridItems = page.locator('.grid-cols-2');
     await expect(gridItems.first()).toBeVisible();
@@ -720,8 +849,7 @@ test.describe('CSP and runtime errors', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
     const dashboardContent = page.locator('#dashboard-data-content');
     await expect(dashboardContent).toBeVisible();
     await expect(page.locator('#dashboard-empty-state')).toBeHidden();
@@ -745,8 +873,7 @@ test.describe('Session persistence', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
 
     const persisted = await page.evaluate(() =>
       JSON.parse(sessionStorage.getItem('cherrypicker:analysis') || 'null')
@@ -761,8 +888,7 @@ test.describe('Session persistence', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
 
     // Navigate directly to results
     await page.goto(BASE + 'results');
@@ -779,8 +905,7 @@ test.describe('Data integrity', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
 
     const data = await page.evaluate(() =>
       JSON.parse(sessionStorage.getItem('cherrypicker:analysis') || 'null')
@@ -795,8 +920,7 @@ test.describe('Data integrity', () => {
     await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
     await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
     await page.getByRole('spinbutton').fill('300000');
-    await page.getByRole('button', { name: /^분석 시작/ }).click();
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await submitAndOpenDashboard(page);
 
     const data = await page.evaluate(() =>
       JSON.parse(sessionStorage.getItem('cherrypicker:analysis') || 'null')

@@ -43,6 +43,10 @@ async function analyze(page, fixture = normalFixture) {
     .getByLabel('전월 카드 이용액', { exact: true })
     .fill('300000');
   await page.getByRole('button', { name: /^분석 시작/ }).click();
+  const dashboardAction = page.getByRole('button', { name: '대시보드 보기' });
+  await expect(dashboardAction).toBeVisible({ timeout: 30_000 });
+  await expect(dashboardAction).toBeFocused();
+  await dashboardAction.click();
   await page.waitForURL('**/dashboard', { timeout: 30_000 });
   await expect(page.locator('#dashboard-data-content')).toBeVisible();
 }
@@ -726,6 +730,7 @@ test('computed hero, theme, status, issuer, and semantic badge pairs meet WCAG A
   page,
 }) => {
   await page.goto(appUrl());
+  await waitForIsland(page);
   const heroPairs = await page
     .locator('[data-testid="hero-subtitle"], [data-testid="hero-privacy"]')
     .evaluateAll((elements) =>
@@ -776,6 +781,23 @@ test('computed hero, theme, status, issuer, and semantic badge pairs meet WCAG A
       document.documentElement.classList.toggle('dark', enabled);
     }, dark);
     await expectOpaqueContrast(page, footerText);
+    await expectOpaqueContrast(page, page.getByTestId('step-number-2'));
+  }
+
+  await page.getByLabel('파일 선택', { exact: true }).setInputFiles({
+    name: 'unsupported.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('unsupported'),
+  });
+  const retryAction = page.getByRole('button', {
+    name: '다시 시도',
+    exact: true,
+  });
+  for (const dark of [false, true]) {
+    await page.evaluate((enabled) => {
+      document.documentElement.classList.toggle('dark', enabled);
+    }, dark);
+    await expectOpaqueContrast(page, retryAction);
   }
 
   await page.goto(appUrl('cards'));
@@ -876,6 +898,18 @@ test('light/dark print preparation and narrow report alternatives preserve dense
   await page.emulateMedia({ media: 'print' });
   await expect(page.getByTestId('optimal-card-table')).toBeVisible();
   await expect(page.getByTestId('optimal-card-mobile-list')).toBeHidden();
+  for (const control of await page.locator('[data-print-control]').all()) {
+    await expect(control).toBeHidden();
+  }
+  await expect(
+    page.locator('button[aria-controls="card-benefit-breakdown"]'),
+  ).toBeHidden();
+  await expect(page.locator('#card-benefit-breakdown')).toBeVisible();
+  for (const disclosure of await page.locator(
+    'button[aria-controls^="desktop-alternatives-"]',
+  ).all()) {
+    await expect(disclosure).toBeHidden();
+  }
   expect(
     await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
   ).toBe('rgb(255, 255, 255)');

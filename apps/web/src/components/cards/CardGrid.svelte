@@ -35,7 +35,8 @@
   let sortOrder = $state<CardGridSortOrder>('name');
   let issuerFilter = $state('');
   let issuersExpanded = $state(false);
-  let issuerFilterToggle: HTMLButtonElement | null = null;
+  let issuerFilterToggle = $state<HTMLButtonElement | null>(null);
+  let cardPageRegion = $state<HTMLDivElement | null>(null);
   let currentPage = $state(1);
   let queryReady = $state(false);
   let requestController: AbortController | null = null;
@@ -169,8 +170,20 @@
     sortOrder = value;
   }
 
-  function setPage(value: number) {
-    currentPage = clampCardGridPage(value, filteredCards.length);
+  async function setPage(value: number, position: 'top' | 'bottom') {
+    const nextPage = clampCardGridPage(value, filteredCards.length);
+    if (nextPage === currentPage) return;
+    currentPage = nextPage;
+    if (position !== 'bottom') return;
+
+    await tick();
+    cardPageRegion?.focus({ preventScroll: true });
+    cardPageRegion?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+      block: 'start',
+    });
   }
 
   function restoreCardFocus(node: HTMLElement, cardId: string) {
@@ -243,7 +256,7 @@
         class="min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="이전 페이지"
         disabled={pageInfo.page === 1}
-        onclick={() => setPage(pageInfo.page - 1)}
+        onclick={() => setPage(pageInfo.page - 1, position)}
       >
         이전
       </button>
@@ -256,7 +269,7 @@
               : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-focus)]'}"
           aria-label={`${pageNumber}페이지`}
           aria-current={pageInfo.page === pageNumber ? 'page' : undefined}
-          onclick={() => setPage(pageNumber)}
+          onclick={() => setPage(pageNumber, position)}
         >
           {pageNumber}
         </button>
@@ -266,7 +279,7 @@
         class="min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="다음 페이지"
         disabled={pageInfo.page === pageInfo.totalPages}
-        onclick={() => setPage(pageInfo.page + 1)}
+        onclick={() => setPage(pageInfo.page + 1, position)}
       >
         다음
       </button>
@@ -433,7 +446,14 @@
   {:else}
     {@render paginationControls('top')}
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="card-grid-page">
+    <div
+      class="grid scroll-mt-24 gap-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] sm:grid-cols-2 lg:grid-cols-3"
+      data-testid="card-grid-page"
+      role="region"
+      aria-label={`카드 검색 결과 ${pageInfo.page}페이지`}
+      tabindex="-1"
+      bind:this={cardPageRegion}
+    >
       {#each pageInfo.items as card}
         {@const issuerColor = getIssuerColor(card.issuer)}
         <button
@@ -445,22 +465,32 @@
           class="group relative overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg w-full cursor-pointer"
           style="border-left: 4px solid {issuerColor};"
         >
-          <!-- Card type badge -->
-          <span
-            class="absolute right-3 top-3 rounded-full px-2 py-0.5 text-xs font-medium
-              {card.type === 'credit'
-                ? 'semantic-badge-credit'
-                : card.type === 'check'
-                  ? 'semantic-badge-check'
-                  : 'semantic-badge-prepaid'}"
-            data-testid="card-type-badge"
-          >
-            {card.type === 'credit' ? '신용' : card.type === 'check' ? '체크' : '선불'}
-          </span>
-
-          <IssuerBadge issuer={card.issuer} compact />
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <IssuerBadge issuer={card.issuer} compact />
+            <div class="flex flex-wrap justify-end gap-1.5">
+              <span
+                class="rounded-full px-2 py-0.5 text-xs font-medium
+                  {card.type === 'credit'
+                    ? 'semantic-badge-credit'
+                    : card.type === 'check'
+                      ? 'semantic-badge-check'
+                      : 'semantic-badge-prepaid'}"
+                data-testid="card-type-badge"
+              >
+                {card.type === 'credit' ? '신용' : card.type === 'check' ? '체크' : '선불'}
+              </span>
+              {#if card.discontinued}
+                <span
+                  class="rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-800 dark:border-red-700 dark:bg-red-950 dark:text-red-200"
+                  data-testid="card-discontinued-badge"
+                >
+                  단종 · 신규 발급 불가
+                </span>
+              {/if}
+            </div>
+          </div>
           <div
-            class="mt-1 pr-10 break-keep [overflow-wrap:anywhere] text-base font-semibold leading-snug"
+            class="mt-2 break-keep [overflow-wrap:anywhere] text-base font-semibold leading-snug"
             data-testid="card-grid-card-name"
           >{card.nameKo}</div>
           <div class="mt-0.5 text-xs text-[var(--color-text-muted)] truncate">{card.name}</div>

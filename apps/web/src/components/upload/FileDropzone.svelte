@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { analysisStore } from '../../lib/store.svelte.js';
   import { formatFileSize, buildPageUrl } from '../../lib/formatters.js';
   import { detectBankFromText } from '../../lib/parser/detect.js';
@@ -22,13 +22,10 @@
     MAX_UPLOAD_TOTAL_BYTES,
     admitUploadFiles,
   } from '../../lib/upload-admission.js';
-  import { PendingNavigation } from '../../lib/pending-navigation.js';
   import Icon from '../ui/Icon.svelte';
 
   const analysisRuns = new LatestFileParseRun();
-  const pendingNavigation = new PendingNavigation();
   onDestroy(() => {
-    pendingNavigation.cancel();
     analysisRuns.cancel();
     analysisStore.cancelAnalysis();
   });
@@ -69,14 +66,19 @@
       if (dragCount <= 0) { dragCount = 0; isDragOver = false; }
     }
     function onDragOver(e: DragEvent) { if (!active) return; e.preventDefault(); }
-    function onPageDrop(e: DragEvent) {
+    async function onPageDrop(e: DragEvent) {
       if (!active) return;
       e.preventDefault();
       dragCount = 0;
       isDragOver = false;
       const files = e.dataTransfer?.files;
       if (files && files.length > 0) {
-        addFiles(Array.from(files));
+        const hasErrors = addFiles(Array.from(files));
+        if (hasErrors) {
+          await focusRetryAction();
+        } else {
+          await focusFileAction(Math.max(0, uploadedFiles.length - 1));
+        }
       }
     }
     document.addEventListener('dragenter', onDragEnter);
@@ -94,14 +96,19 @@
 
   let isDragOver = $state(false);
   let uploadedFiles = $state<File[]>([]);
+  let uploadRootEl = $state<HTMLDivElement | null>(null);
   let primaryFileInputEl = $state<HTMLInputElement | null>(null);
   let addFileInputEl = $state<HTMLInputElement | null>(null);
+  let submitButtonEl = $state<HTMLButtonElement | null>(null);
+  let retryButtonEl = $state<HTMLButtonElement | null>(null);
+  let dashboardButtonEl = $state<HTMLButtonElement | null>(null);
   let uploadStatus = $state<'idle' | 'uploading' | 'success' | 'error'>('idle');
   let analysisProgress = $state<FileParseProgress>({ completed: 0, total: 0 });
   let errorMessages = $state<string[]>([]);
   let bank = $state('');
   let previousSpending = $state<string>('');
   let previousSpendingError = $state<string | null>(null);
+  let previousSpendingTouched = $state(false);
   let previousSpendingInputEl = $state<HTMLInputElement | null>(null);
   let showAllBanks = $state(false);
   let detectedBankId = $state<BankId | null>(null);
@@ -117,6 +124,23 @@
     if (uploadStatus === 'uploading') return 3;
     if (uploadedFiles.length > 0) return 2;
     return 1;
+  });
+  let uploadStatusMessage = $derived.by(() => {
+    if (uploadStatus === 'uploading') {
+      return `파일을 분석하는 중이에요. ${analysisProgress.completed}/${analysisProgress.total} 완료`;
+    }
+    if (uploadStatus === 'success') {
+      return analysisStore.result?.parseErrors.length
+        ? '분석이 끝났어요. 확인할 항목이 있어요. 대시보드 보기 버튼을 눌러 결과를 확인하세요.'
+        : '분석이 끝났어요. 대시보드 보기 버튼을 눌러 결과를 확인하세요.';
+    }
+    if (uploadStatus === 'error') {
+      return `파일을 처리하지 못했어요. ${errorMessages.join(' ')}`;
+    }
+    if (uploadedFiles.length > 0) {
+      return `${uploadedFiles.length}개 파일을 선택했어요. 분석 설정을 확인하세요.`;
+    }
+    return '분석할 카드 명세서 파일을 선택하세요.';
   });
 
   const STEPS = ['파일 선택', '카드사 선택', '분석 중', '완료'];
@@ -161,7 +185,6 @@
   }
 
   function invalidateAnalysisOwnership(): void {
-    pendingNavigation.cancel();
     analysisRuns.cancel();
     analysisStore.cancelAnalysis();
     analysisProgress = { completed: 0, total: 0 };
@@ -200,12 +223,12 @@
     }
   }
 
-  function addFiles(newFiles: File[]) {
+  function addFiles(newFiles: File[]): boolean {
     const admission = admitUploadFiles(uploadedFiles, newFiles);
     // Add valid files first
     if (admission.accepted.length > 0) {
       // Admission is the mutation boundary. It invalidates both the analysis
-      // run and any old success countdown before the selected files change.
+      // run before the selected files change.
       beginAdmittedFileMutation();
       uploadedFiles = [...uploadedFiles, ...admission.accepted];
       uploadStatus = 'idle';
@@ -242,15 +265,34 @@
       errorMessages = errorParts;
       uploadStatus = 'error';
     }
+    return errorParts.length > 0;
   }
 
-  function removeFile(index: number) {
+  async function focusFileAction(index: number): Promise<void> {
+    await tick();
+    const removeButtons = uploadRootEl?.querySelectorAll<HTMLButtonElement>(
+      '[data-upload-file-remove]',
+    );
+    if (removeButtons?.length) {
+      removeButtons[Math.min(index, removeButtons.length - 1)]?.focus();
+    } else {
+      primaryFileInputEl?.focus();
+    }
+  }
+
+  async function focusRetryAction(): Promise<void> {
+    await tick();
+    retryButtonEl?.focus();
+  }
+
+  async function removeFile(index: number) {
     beginAdmittedFileMutation();
     uploadedFiles = uploadedFiles.filter((_, i) => i !== index);
     if (uploadedFiles.length === 0) {
       uploadStatus = 'idle';
       errorMessages = [];
       previousSpendingError = null;
+      previousSpendingTouched = false;
       bank = '';
       previousSpending = '';
       detectedBankId = null;
@@ -259,34 +301,45 @@
     } else {
       detectBankFromFile();
     }
+    await focusFileAction(index);
   }
 
-  function clearAllFiles() {
+  async function clearAllFiles() {
     beginAdmittedFileMutation();
     uploadedFiles = [];
     uploadStatus = 'idle';
     errorMessages = [];
     previousSpendingError = null;
+    previousSpendingTouched = false;
     bank = '';
     previousSpending = '';
     detectedBankId = null;
     if (primaryFileInputEl) primaryFileInputEl.value = '';
     if (addFileInputEl) addFileInputEl.value = '';
+    await tick();
+    primaryFileInputEl?.focus();
   }
 
-  function handleFileInput(e: Event) {
+  async function handleFileInput(e: Event) {
     const target = e.target as HTMLInputElement;
-    const files = target.files;
-    if (files && files.length > 0) {
-      addFiles(Array.from(files));
+    const selectedFiles = target.files ? Array.from(target.files) : [];
+    let hasErrors = false;
+    if (selectedFiles.length > 0) {
+      hasErrors = addFiles(selectedFiles);
     }
     // Reset input so same file can be re-added after removal
     target.value = '';
+    if (hasErrors) {
+      await focusRetryAction();
+    } else if (selectedFiles.length > 0) {
+      await focusFileAction(Math.max(0, uploadedFiles.length - 1));
+    }
   }
 
   async function handleUpload(event?: SubmitEvent) {
     event?.preventDefault();
     if (uploadedFiles.length === 0) return;
+    previousSpendingTouched = true;
     const previousSpendingValidation = validatePreviousSpending(previousSpending);
     if (!previousSpendingValidation.valid) {
       previousSpendingError = previousSpendingValidation.message;
@@ -295,7 +348,6 @@
     }
     previousSpendingError = null;
     const files = [...uploadedFiles];
-    pendingNavigation.cancel();
     const run = analysisRuns.begin();
     analysisProgress = { completed: 0, total: files.length };
     uploadStatus = 'uploading';
@@ -325,45 +377,22 @@
       if (analysisStore.error) {
         errorMessages = [analysisStore.error];
         uploadStatus = 'error';
+        await tick();
+        retryButtonEl?.focus();
       } else {
         uploadStatus = 'success';
-        pendingNavigation.schedule(async (owner) => {
-          if (
-            !pendingNavigation.isCurrent(owner) ||
-            !run.isCurrent() ||
-            uploadStatus !== 'success'
-          ) return;
-          // Use Astro client-side navigation to preserve in-memory store
-          // state instead of a full page reload (C62-15). Fall back to
-          // full reload if View Transitions are not enabled.
-          try {
-            const { navigate } = await import('astro:transitions/client');
-            if (
-              !pendingNavigation.isCurrent(owner) ||
-              !run.isCurrent() ||
-              uploadStatus !== 'success'
-            ) return;
-            navigate(buildPageUrl('dashboard'));
-          } catch {
-            if (
-              !pendingNavigation.isCurrent(owner) ||
-              !run.isCurrent() ||
-              uploadStatus !== 'success'
-            ) return;
-            if (typeof console !== 'undefined') console.debug('[cherrypicker] Astro View Transitions not available, falling back to full page reload');
-            window.location.href = buildPageUrl('dashboard');
-          }
-        }, 1200);
+        await tick();
+        dashboardButtonEl?.focus();
       }
     } catch (e) {
       if (!run.isCurrent()) return;
       errorMessages = [e instanceof Error ? e.message : '분석 실패'];
       uploadStatus = 'error';
+      await tick();
+      retryButtonEl?.focus();
     } finally {
-      // Clear the navigation block — success path hands off to the navigate
-      // timer, error path shows the error card. Neither should block future
-      // navigation (C6UI-16). The listener itself stays on window and checks
-      // the flag, so it survives Astro View Transition remounts.
+      // Clear the navigation block once analysis settles. Success now waits
+      // for the explicit dashboard action instead of auto-navigating.
       if (run.isCurrent()) {
         isBlockingNavigation = false;
       }
@@ -372,6 +401,7 @@
 
   function handlePreviousSpendingInvalid(event: Event) {
     event.preventDefault();
+    previousSpendingTouched = true;
     const validation = validatePreviousSpending(previousSpending);
     previousSpendingError = validation.valid
       ? '전월 카드 이용액을 원 단위 정수로 입력해 주세요.'
@@ -379,14 +409,76 @@
     queueMicrotask(() => previousSpendingInputEl?.focus());
   }
 
-  function handleRetry() {
+  function updatePreviousSpendingError(): void {
+    const validation = validatePreviousSpending(previousSpending);
+    previousSpendingError = validation.valid ? null : validation.message;
+  }
+
+  function handlePreviousSpendingInput(): void {
+    if (previousSpendingTouched || previousSpendingError !== null) {
+      updatePreviousSpendingError();
+    }
+  }
+
+  function handlePreviousSpendingBlur(): void {
+    previousSpendingTouched = true;
+    updatePreviousSpendingError();
+  }
+
+  async function revealAllBanks(): Promise<void> {
+    showAllBanks = true;
+    await tick();
+    const firstAdditionalBank = ALL_BANKS[TOP_BANKS.length];
+    if (!firstAdditionalBank) return;
+    uploadRootEl
+      ?.querySelector<HTMLButtonElement>(
+        `[data-testid="bank-pill-${firstAdditionalBank.value}"]`,
+      )
+      ?.focus();
+  }
+
+  async function handleRetry() {
     invalidateAnalysisOwnership();
     uploadStatus = 'idle';
     errorMessages = [];
+    await tick();
+    if (uploadedFiles.length > 0) {
+      submitButtonEl?.focus();
+    } else {
+      primaryFileInputEl?.focus();
+    }
+  }
+
+  async function openDashboard(): Promise<void> {
+    const dashboardUrl = buildPageUrl('dashboard');
+    try {
+      const { navigate } = await import('astro:transitions/client');
+      await navigate(dashboardUrl);
+    } catch {
+      if (typeof console !== 'undefined') {
+        console.debug(
+          '[cherrypicker] Astro View Transitions not available, falling back to full page reload',
+        );
+      }
+      window.location.href = dashboardUrl;
+    }
   }
 </script>
 
-<div class="flex flex-col gap-5" aria-busy={uploadStatus === 'uploading'}>
+<div
+  class="flex flex-col gap-5"
+  aria-busy={uploadStatus === 'uploading'}
+  bind:this={uploadRootEl}
+>
+  <p
+    class="sr-only"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    data-testid="upload-status"
+  >
+    {uploadStatusMessage}
+  </p>
 
   <!-- Step indicator — a stepper is an ordered list with aria-current="step"
        on the active item per WAI-ARIA APG; role="progressbar" was incorrect
@@ -405,7 +497,8 @@
                 ? 'bg-green-500 text-white'
                 : isActive
                   ? 'bg-[var(--color-primary-fill)] text-white shadow-md'
-                  : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'}"
+                  : 'bg-[var(--color-border)] text-[var(--color-text)]'}"
+            data-testid={`step-number-${stepNum}`}
           >
             {#if isDone}
               <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -465,7 +558,15 @@
         </p>
         <!-- text-green-700 on white is 5.09:1 (passes WCAG AA 4.5:1);
              text-green-600 was 3.77:1 (fails) — C6UI-31. -->
-        <p class="text-sm text-green-700 dark:text-green-300">대시보드로 이동할게요</p>
+        <p class="text-sm text-green-700 dark:text-green-300">결과를 확인할 준비가 됐어요</p>
+        <button
+          type="button"
+          class="mt-1 rounded-xl bg-[var(--color-primary-fill)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-primary-fill-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] focus:ring-offset-2"
+          onclick={openDashboard}
+          bind:this={dashboardButtonEl}
+        >
+          대시보드 보기
+        </button>
       </div>
     {:else if uploadedFiles.length > 0}
       <!-- File list -->
@@ -484,6 +585,7 @@
               class="shrink-0 rounded-lg p-1 text-[var(--color-text-muted)] hover:bg-red-50 hover:text-red-500 transition-colors"
               onclick={() => removeFile(i)}
               aria-label={`${file.name} 제거`}
+              data-upload-file-remove
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -527,6 +629,13 @@
   <!-- Bank selector + Upload (shown after file selected, before success) -->
   {#if uploadedFiles.length > 0 && uploadStatus !== 'success'}
     <form class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-4" onsubmit={handleUpload}>
+      <fieldset
+        class="space-y-4 disabled:cursor-wait disabled:opacity-70"
+        disabled={uploadStatus === 'uploading'}
+        aria-busy={uploadStatus === 'uploading'}
+        data-testid="analysis-options"
+      >
+        <legend class="sr-only">분석 설정</legend>
       <div>
         <p class="mb-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">카드사를 고르면 더 정확해요</p>
         <div class="flex flex-wrap gap-2" role="group" aria-label="카드사 선택">
@@ -567,7 +676,7 @@
             <button
               type="button"
               class="rounded-full border border-dashed border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:border-[var(--color-focus)] hover:text-[var(--color-primary-fg)] transition-all"
-              onclick={() => (showAllBanks = true)}
+              onclick={revealAllBanks}
             >
               더보기 ({ALL_BANKS.length - TOP_BANKS.length})
             </button>
@@ -585,9 +694,10 @@
             inputmode="numeric"
             bind:value={previousSpending}
             bind:this={previousSpendingInputEl}
-            oninput={() => (previousSpendingError = null)}
+            oninput={handlePreviousSpendingInput}
+            onblur={handlePreviousSpendingBlur}
             oninvalid={handlePreviousSpendingInvalid}
-            placeholder="500,000"
+            placeholder="500000"
             min="0"
             max={MAX_PREVIOUS_SPENDING_KRW}
             step="1"
@@ -610,19 +720,21 @@
           <p id="previous-spending-help" class="mt-1 text-xs text-[var(--color-text-muted)]">입력하지 않고 정확한 전월 명세서도 없으면 전월실적을 0원으로 가정해요.</p>
         {/if}
       </div>
+      </fieldset>
 
       <!-- Upload button -->
       <button
         type="submit"
         disabled={uploadStatus === 'uploading'}
         aria-busy={uploadStatus === 'uploading'}
+        bind:this={submitButtonEl}
         class="w-full rounded-xl py-3 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed disabled:opacity-60
           {uploadStatus === 'uploading'
             ? 'bg-[var(--color-primary-fill)]/80'
             : 'bg-[var(--color-primary-fill)] hover:bg-[var(--color-primary-fill-hover)] shadow-sm hover:shadow-md'}"
       >
         {#if uploadStatus === 'uploading'}
-          <span class="flex items-center justify-center gap-2" aria-live="polite">
+          <span class="flex items-center justify-center gap-2">
             <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -654,8 +766,9 @@
         </ul>
       </div>
       <button
-        class="shrink-0 rounded-lg border border-red-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 transition-colors"
+        class="shrink-0 rounded-lg border border-red-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950 dark:hover:text-red-200 transition-colors"
         onclick={handleRetry}
+        bind:this={retryButtonEl}
       >
         다시 시도
       </button>

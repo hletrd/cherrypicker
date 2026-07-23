@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { readFile } from 'node:fs/promises';
 import {
   STATEMENT_FILE_ACCEPT,
   SUPPORTED_STATEMENT_FORMAT_LABELS,
@@ -100,5 +101,63 @@ describe('previous-spending validation', () => {
       expect(result.valid).toBe(false);
       if (!result.valid) expect(result.message.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('upload interaction wiring', () => {
+  test('locks analysis inputs and keeps touched previous-spending validation current', async () => {
+    const source = await readFile(
+      new URL('../src/components/upload/FileDropzone.svelte', import.meta.url),
+      'utf8',
+    );
+
+    expect(source).toContain('data-testid="analysis-options"');
+    expect(source).toContain("disabled={uploadStatus === 'uploading'}");
+    expect(source).toContain("aria-busy={uploadStatus === 'uploading'}");
+    expect(source).toContain('placeholder="500000"');
+    expect(source).not.toContain('placeholder="500,000"');
+    expect(source).toContain('oninput={handlePreviousSpendingInput}');
+    expect(source).toContain('onblur={handlePreviousSpendingBlur}');
+    expect(source).toContain(
+      'if (previousSpendingTouched || previousSpendingError !== null)',
+    );
+  });
+
+  test('uses one persistent live status and deterministic focus destinations', async () => {
+    const source = await readFile(
+      new URL('../src/components/upload/FileDropzone.svelte', import.meta.url),
+      'utf8',
+    );
+
+    expect(source).toContain('data-testid="upload-status"');
+    expect(source).toContain('aria-live="polite"');
+    expect(source).toContain('{uploadStatusMessage}');
+    expect(source).toContain('data-upload-file-remove');
+    expect(source).toContain('await focusFileAction(index)');
+    expect(source).toContain('retryButtonEl?.focus()');
+    expect(source).toContain('submitButtonEl?.focus()');
+    expect(source).toContain('dashboardButtonEl?.focus()');
+    expect(source).toContain('async function revealAllBanks()');
+    expect(source).toContain(
+      '`[data-testid="bank-pill-${firstAdditionalBank.value}"]`',
+    );
+    expect(source).toContain('onclick={revealAllBanks}');
+    expect(source).toContain('대시보드 보기');
+    expect(source).not.toContain('PendingNavigation');
+    expect(source).not.toContain('successNavigation');
+  });
+
+  test('uses verified foregrounds for inactive steps and dark retry state', async () => {
+    const source = await readFile(
+      new URL('../src/components/upload/FileDropzone.svelte', import.meta.url),
+      'utf8',
+    );
+
+    expect(source).toContain(
+      "'bg-[var(--color-border)] text-[var(--color-text)]'",
+    );
+    expect(source).toContain('dark:text-red-300');
+    expect(source).toContain('dark:border-red-700');
+    expect(source).toContain('dark:hover:text-red-200');
   });
 });

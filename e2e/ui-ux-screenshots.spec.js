@@ -41,6 +41,9 @@ async function analyzeFixture(page) {
   await expect(page.getByRole('button', { name: /^분석 시작/ })).toBeVisible();
   await page.getByRole('spinbutton').fill('300000');
   await page.getByRole('button', { name: /^분석 시작/ }).click();
+  const dashboardAction = page.getByRole('button', { name: '대시보드 보기' });
+  await expect(dashboardAction).toBeVisible({ timeout: 30_000 });
+  await dashboardAction.click();
   await page.waitForURL('**/dashboard', { timeout: 30_000 });
   await expect(page.locator('#dashboard-data-content')).toBeVisible();
   await expect(page.getByRole('heading', { name: '지출 요약' })).toBeVisible();
@@ -145,6 +148,7 @@ test('capture dark mode dashboard', async ({ page }) => {
   await page.locator('input[type="file"]').first().setInputFiles(FIXTURE);
   await page.getByRole('spinbutton').fill('300000');
   await page.getByRole('button', { name: /^분석 시작/ }).click();
+  await page.getByRole('button', { name: '대시보드 보기' }).click();
   await page.waitForURL('**/dashboard', { timeout: 30_000 });
   await expect(page.locator('#dashboard-data-content')).toBeVisible();
   await expect(page.locator('html')).toHaveClass(/dark/);

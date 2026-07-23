@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { getCardDetail } from '../../lib/api.js';
   import type { CardDetail, RewardTier } from '../../lib/api.js';
-  import { formatWon, formatCatalogReward, getCategoryIconName, getIssuerColor, buildPageUrl } from '../../lib/formatters.js';
+  import { formatWon, formatCatalogReward, getCategoryIconName, getIssuerColor } from '../../lib/formatters.js';
   import { loadCategories } from '../../lib/cards.js';
   import { buildCategoryLabelMap, FALLBACK_CATEGORY_LABELS } from '../../lib/category-labels.js';
   import {
@@ -10,6 +10,10 @@
     partitionCatalogRewards,
   } from '../../lib/catalog-reward-display.js';
   import { safeExternalHref } from '../../lib/external-url.js';
+  import {
+    buildIssuerCatalogUrl,
+    formatPerformanceExclusion,
+  } from '../../lib/card-detail-display.js';
   import Icon from '../ui/Icon.svelte';
   import IssuerBadge from '../ui/IssuerBadge.svelte';
 
@@ -63,6 +67,21 @@
 
   function formatRewardRate(tier: RewardTier): string {
     return formatCatalogReward(tier);
+  }
+
+  async function openIssuerCatalog(issuer: string): Promise<void> {
+    const target = buildIssuerCatalogUrl(issuer);
+    try {
+      const { navigate } = await import('astro:transitions/client');
+      await navigate(target);
+    } catch {
+      if (typeof console !== 'undefined') {
+        console.debug(
+          '[cherrypicker] Astro View Transitions not available in CardDetail, falling back to full page reload',
+        );
+      }
+      window.location.href = target;
+    }
   }
 
   function focusDetailHeading(node: HTMLElement) {
@@ -195,7 +214,7 @@
         style="background-color: {issuerColor};"
       ></div>
       <div class="pl-2">
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <IssuerBadge issuer={card.issuer} />
           <span
             class="rounded-full px-2.5 py-0.5 text-xs font-medium
@@ -208,6 +227,14 @@
           >
             {card.type === 'credit' ? '신용카드' : card.type === 'check' ? '체크카드' : '선불카드'}
           </span>
+          {#if card.discontinued}
+            <span
+              class="rounded-full border border-red-300 bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-800 dark:border-red-700 dark:bg-red-950 dark:text-red-200"
+              data-testid="card-detail-discontinued-badge"
+            >
+              단종 · 신규 발급 불가
+            </span>
+          {/if}
         </div>
         <h1
           class="mt-1.5 text-2xl font-bold tracking-tight"
@@ -286,6 +313,7 @@
         <p id="card-rewards-scroll-hint" class="print-scroll-hint mt-2 text-xs text-[var(--color-text-muted)] md:hidden">
           표를 좌우로 스크롤할 수 있어요
         </p>
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
         <div
           data-testid="card-rewards-scroll-region"
           class="mt-2 overflow-x-auto rounded-xl border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] sm:mt-3"
@@ -378,7 +406,7 @@
           {#each card.performanceExclusions as exclusion}
             <li class="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
               <span class="mt-0.5 shrink-0 text-[var(--color-text-muted)]">•</span>
-              {exclusion}
+              {formatPerformanceExclusion(exclusion)}
             </li>
           {/each}
         </ul>
@@ -393,20 +421,10 @@
       <button
         type="button"
         class="mt-2 inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary-fg)] hover:underline cursor-pointer"
-        onclick={async () => {
-          // Use Astro client-side navigation to preserve in-memory store
-          // state instead of a full page reload (C62-15). Fall back to
-          // full reload if View Transitions are not enabled.
-          try {
-            const { navigate } = await import('astro:transitions/client');
-            navigate(buildPageUrl('cards'));
-          } catch {
-            if (typeof console !== 'undefined') console.debug('[cherrypicker] Astro View Transitions not available in CardDetail, falling back to full page reload');
-            window.location.href = buildPageUrl('cards');
-          }
-        }}
+        onclick={() => openIssuerCatalog(card.issuer)}
+        data-testid="same-issuer-cards"
       >
-        카드 목록으로 돌아가기
+        같은 카드사 카드 보기
       </button>
     </div>
   </div>

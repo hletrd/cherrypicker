@@ -4,6 +4,15 @@ const { expect, test } = require('@playwright/test');
 const uploadFixture = path.join(__dirname, 'fixtures', 'regression-upload.csv');
 const homeUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/cherrypicker/';
 
+async function submitAndOpenDashboard(page) {
+  await page.getByRole('button', { name: /^분석 시작/ }).click();
+  const dashboardAction = page.getByRole('button', { name: '대시보드 보기' });
+  await expect(dashboardAction).toBeVisible({ timeout: 30_000 });
+  await expect(dashboardAction).toBeFocused();
+  await dashboardAction.click();
+  await page.waitForURL('**/dashboard', { timeout: 30_000 });
+}
+
 // CSP now includes 'unsafe-inline' for script-src, so Playwright should
 // enforce it and surface any real CSP violations in production.
 
@@ -23,9 +32,7 @@ test('browser flow classifies regression merchants and renders dashboard/results
 
   await page.locator('input[type="file"]').first().setInputFiles(uploadFixture);
   await page.getByRole('spinbutton').fill('300000');
-  await page.getByRole('button', { name: /^분석 시작/ }).click();
-
-  await page.waitForURL('**/dashboard', { timeout: 30_000 });
+  await submitAndOpenDashboard(page);
   await expect(page.getByRole('heading', { name: '내 지출 분석' })).toBeVisible();
   await expect(page.getByText('공과금').first()).toBeVisible();
   await expect(page.getByText('오프라인쇼핑').first()).toBeVisible();
@@ -78,47 +85,24 @@ test('browser flow classifies regression merchants and renders dashboard/results
   expect(pageErrors).toEqual([]);
 });
 
-test('a page-wide file drop owns the UI and cancels the old success countdown', async ({
+test('completed analysis waits for its explicit destination and a new drop owns the UI', async ({
   page,
 }) => {
   await page.goto(homeUrl);
   await page.waitForFunction(() =>
     Boolean(document.querySelector('astro-island:not([ssr])')),
   );
-  await page.clock.install();
-  await page.evaluate(() => {
-    const nativeSetTimeout = globalThis.setTimeout.bind(globalThis);
-    const nativeClearTimeout = globalThis.clearTimeout.bind(globalThis);
-    const activeCountdowns = new Set();
-    globalThis.__countdownTimerProbe = {
-      scheduled: 0,
-      cleared: 0,
-      activeCountdowns,
-    };
-    globalThis.setTimeout = (handler, delay, ...args) => {
-      const handle = nativeSetTimeout(handler, delay, ...args);
-      if (delay === 1_200) {
-        globalThis.__countdownTimerProbe.scheduled++;
-        activeCountdowns.add(handle);
-      }
-      return handle;
-    };
-    globalThis.clearTimeout = (handle) => {
-      if (activeCountdowns.delete(handle)) {
-        globalThis.__countdownTimerProbe.cleared++;
-      }
-      nativeClearTimeout(handle);
-    };
-  });
   await page.locator('input[type="file"]').first().setInputFiles(uploadFixture);
   await page.getByRole('button', { name: /^분석 시작/ }).click();
   await expect(page.getByText(/^분석 완료/)).toBeVisible({
     timeout: 30_000,
   });
-  expect(await page.evaluate(() => ({
-    scheduled: globalThis.__countdownTimerProbe.scheduled,
-    active: globalThis.__countdownTimerProbe.activeCountdowns.size,
-  }))).toEqual({ scheduled: 1, active: 1 });
+  const dashboardAction = page.getByRole('button', {
+    name: '대시보드 보기',
+  });
+  await expect(dashboardAction).toBeVisible();
+  await expect(dashboardAction).toBeFocused();
+  expect(new URL(page.url()).pathname).toBe(new URL(homeUrl).pathname);
 
   await page.evaluate(() => {
     const transfer = new DataTransfer();
@@ -139,16 +123,13 @@ test('a page-wide file drop owns the UI and cancels the old success countdown', 
 
   await expect(page.getByText('countdown-replacement.csv')).toBeVisible();
   await expect(page.getByText(/^분석 완료/)).not.toBeVisible();
-  expect(await page.evaluate(() => ({
-    cleared: globalThis.__countdownTimerProbe.cleared,
-    active: globalThis.__countdownTimerProbe.activeCountdowns.size,
-  }))).toEqual({ cleared: 1, active: 0 });
-
-  // Cross the production 1.2-second deadline: the prior callback must remain
-  // inert and the newly admitted file must still own the upload screen.
-  await page.clock.fastForward(1_400);
+  await expect(
+    page.getByRole('button', {
+      name: 'countdown-replacement.csv 제거',
+      exact: true,
+    }),
+  ).toBeFocused();
   expect(new URL(page.url()).pathname).toBe(new URL(homeUrl).pathname);
-  await expect(page.getByText('countdown-replacement.csv')).toBeVisible();
   await expect(page.getByRole('button', { name: /^분석 시작/ })).toBeVisible();
 });
 
@@ -160,8 +141,7 @@ test('built app bounds persisted-state migration and recovers safely', async ({ 
   await page.waitForFunction(() => Boolean(document.querySelector('astro-island:not([ssr])')));
   await page.locator('input[type="file"]').first().setInputFiles(uploadFixture);
   await page.getByRole('spinbutton').fill('300000');
-  await page.getByRole('button', { name: /^분석 시작/ }).click();
-  await page.waitForURL('**/dashboard', { timeout: 30_000 });
+  await submitAndOpenDashboard(page);
   await expect(page.locator('#dashboard-data-content')).toBeVisible();
 
   await page.evaluate(() => {
@@ -184,7 +164,8 @@ test('built app bounds persisted-state migration and recovers safely', async ({ 
   });
   await page.reload();
 
-  await expect(page.locator('#dashboard-empty-state')).toBeVisible();
+  await expect(page.locator('#dashboard-error-state')).toBeVisible();
+  await expect(page.locator('#dashboard-empty-state')).toBeHidden();
   expect(
     await page.evaluate(() => sessionStorage.getItem('cherrypicker:analysis')),
   ).toBeNull();

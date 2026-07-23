@@ -112,6 +112,17 @@ describe('CardGrid production wiring', () => {
     expect(source).toContain('aria-controls="issuer-filter-options"');
     expect(source).toContain('readCardGridQuery(window.location.search)');
     expect(source).toContain('writeCardGridQuery(');
+    expect(source).toContain("async function setPage(value: number, position: 'top' | 'bottom')");
+    expect(source).toContain("if (position !== 'bottom') return");
+    expect(source).toContain('cardPageRegion?.focus({ preventScroll: true })');
+    expect(source).toContain("window.matchMedia('(prefers-reduced-motion: reduce)').matches");
+    expect(source).toContain('cardPageRegion?.scrollIntoView({');
+    expect(source).toContain('role="region"');
+    expect(source).toContain('aria-label={`카드 검색 결과 ${pageInfo.page}페이지`}');
+    expect(source).toContain('tabindex="-1"');
+    expect(source).toContain('{#if card.discontinued}');
+    expect(source).toContain('data-testid="card-discontinued-badge"');
+    expect(source).toContain('단종 · 신규 발급 불가');
   });
 
   test('resets pagination whenever a result-reducing filter changes', async () => {

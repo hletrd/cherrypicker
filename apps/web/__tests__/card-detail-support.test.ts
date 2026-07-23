@@ -4,6 +4,11 @@ import {
   catalogRewardCategoryKey,
   partitionCatalogRewards,
 } from '../src/lib/catalog-reward-display.js';
+import {
+  PERFORMANCE_EXCLUSION_LABELS,
+  buildIssuerCatalogUrl,
+  formatPerformanceExclusion,
+} from '../src/lib/card-detail-display.js';
 
 describe('catalog reward display boundary', () => {
   test('keeps unsupported rewards for disclosure but out of the exact table', () => {
@@ -76,5 +81,59 @@ describe('catalog reward display boundary', () => {
     expect(gridSource).toContain('use:restoreCardFocus={card.id}');
     expect(gridSource).toContain('node.focus()');
     expect(gridSource).toContain('onFocusRestored?.()');
+  });
+});
+
+describe('card detail labels and issuer navigation', () => {
+  test('localizes every shipped exclusion and humanizes future identifiers', async () => {
+    const catalog = JSON.parse(
+      await readFile(
+        new URL('../public/data/cards-optimizer.json', import.meta.url),
+        'utf8',
+      ),
+    ) as {
+      cards: { performanceExclusions: string[] }[];
+    };
+    const shippedExclusions = new Set(
+      catalog.cards.flatMap(card => card.performanceExclusions),
+    );
+
+    for (const exclusion of shippedExclusions) {
+      expect(PERFORMANCE_EXCLUSION_LABELS[exclusion]).toBeTruthy();
+      expect(formatPerformanceExclusion(exclusion)).not.toContain('_');
+    }
+    expect(formatPerformanceExclusion('future_program-fee')).toBe(
+      'future program fee',
+    );
+    expect(formatPerformanceExclusion('   ')).toBe('기타 실적 제외 항목');
+  });
+
+  test('preserves and safely encodes the issuer catalog query', async () => {
+    const target = new URL(
+      buildIssuerCatalogUrl('신한 & 공동', '/cards'),
+      'https://example.test',
+    );
+    expect(target.pathname).toBe('/cards');
+    expect(target.searchParams.get('issuer')).toBe('신한 & 공동');
+
+    const source = await readFile(
+      new URL('../src/components/cards/CardDetail.svelte', import.meta.url),
+      'utf8',
+    );
+    expect(source).toContain('buildIssuerCatalogUrl(issuer)');
+    expect(source).toContain('onclick={() => openIssuerCatalog(card.issuer)}');
+    expect(source).toContain('data-testid="same-issuer-cards"');
+  });
+
+  test('labels discontinued details as unavailable for new issuance', async () => {
+    const source = await readFile(
+      new URL('../src/components/cards/CardDetail.svelte', import.meta.url),
+      'utf8',
+    );
+    expect(source).toContain('{#if card.discontinued}');
+    expect(source).toContain(
+      'data-testid="card-detail-discontinued-badge"',
+    );
+    expect(source).toContain('단종 · 신규 발급 불가');
   });
 });

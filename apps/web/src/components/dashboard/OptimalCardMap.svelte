@@ -63,7 +63,7 @@
     <div class="text-sm text-[var(--color-text-muted)]">
       총 <strong class="text-[var(--color-text)]">{uniqueCardCount}장</strong>의 카드면 충분해요
     </div>
-    <div class="flex flex-wrap items-center gap-1 text-xs" role="group" aria-label="추천 카드 정렬">
+    <div class="flex flex-wrap items-center gap-1 text-xs print:hidden" role="group" aria-label="추천 카드 정렬" data-print-control>
       <span class="mr-1 text-[var(--color-text-muted)]">정렬:</span>
       {#each ([['spending', '지출순'], ['rate', '혜택률순'], ['reward', '혜택액순']] as const) as [key, label]}
         <button
@@ -139,7 +139,7 @@
         <th scope="col" class="pb-3 font-medium">추천 카드</th>
         <th scope="col" class="pb-3 text-right font-medium">혜택률</th>
         <th scope="col" class="pb-3 text-right font-medium">월 예상 혜택</th>
-        <th scope="col" class="pb-3 text-center font-medium">대안</th>
+        <th scope="col" class="pb-3 text-center font-medium print:hidden">대안</th>
       </tr>
     </thead>
     <tbody>
@@ -167,7 +167,7 @@
             </div>
           </td>
           <td class="py-3 text-right font-mono">{formatWon(a.reward)}</td>
-          <td class="py-3 text-center">
+          <td class="py-3 text-center print:hidden">
             <button
               type="button"
               class="rounded-lg p-2 text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)]"
@@ -180,7 +180,7 @@
             </button>
           </td>
         </tr>
-        <tr id={`desktop-alternatives-${a.category}`} class="border-b border-[var(--color-border)] bg-[var(--color-bg)] {isExpanded ? 'table-row' : 'hidden'}">
+        <tr id={`desktop-alternatives-${a.category}`} class="border-b border-[var(--color-border)] bg-[var(--color-bg)] print:hidden {isExpanded ? 'table-row' : 'hidden'}">
           <td colspan="5" class="px-6 py-3">
             {#if a.alternatives?.length}
               <p class="mb-2 text-xs font-medium text-[var(--color-text-muted)]">대안 카드</p>

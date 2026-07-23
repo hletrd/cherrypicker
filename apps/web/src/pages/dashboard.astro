@@ -30,11 +30,37 @@ const resultsUrl = buildPageUrl('results');
   <!-- Page header -->
   <div class="mb-8 animate-[slideUp_0.4s_ease_both]">
     <h1 class="text-3xl font-extrabold tracking-tight">내 지출 분석</h1>
-    <p id="dashboard-status" class="mt-2 text-[var(--color-text-muted)]" role="status" aria-live="polite">명세서를 올리면 분석 결과를 보여줘요</p>
+    <p id="dashboard-status" class="mt-2 text-[var(--color-text-muted)]" role="status" aria-live="polite">분석 결과를 확인하는 중이에요</p>
+  </div>
+
+  <!-- Stable readiness shell while persisted analysis is restored -->
+  <div
+    id="dashboard-loading-state"
+    class="flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center"
+    aria-busy="true"
+  >
+    <span class="h-8 w-8 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary-fg)]" aria-hidden="true"></span>
+    <p class="text-sm font-medium text-[var(--color-text-muted)]">저장된 분석 결과를 확인하고 있어요</p>
+  </div>
+
+  <!-- Error state when persisted or current analysis cannot be read -->
+  <div
+    id="dashboard-error-state"
+    class="hidden flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--color-danger-fg)]/30 bg-[var(--color-surface)] px-8 py-16 text-center"
+    role="alert"
+  >
+    <p class="text-base font-semibold text-[var(--color-danger-fg)]">분석 결과를 불러오지 못했어요</p>
+    <p class="max-w-lg text-sm text-[var(--color-text-muted)]" data-analysis-error-message>분석 결과를 표시하지 못했어요.</p>
+    <a
+      href={homeUrl}
+      class="mt-2 inline-flex items-center rounded-xl bg-[var(--color-primary-fill)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-primary-fill-hover)]"
+    >
+      명세서 다시 올리기
+    </a>
   </div>
 
   <!-- Empty state when no data -->
-  <div id="dashboard-empty-state" class="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center">
+  <div id="dashboard-empty-state" class="hidden flex flex-col items-center gap-4 rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-16 text-center">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="48" height="48" class="text-[var(--color-text-muted)] opacity-40" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
     </svg>
@@ -54,7 +80,7 @@ const resultsUrl = buildPageUrl('results');
     <!-- Top row: summary + breakdown -->
     <div class="grid grid-cols-1 gap-6 min-[1100px]:grid-cols-2">
       <div
-        class="card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.05s_ease_both]"
+        class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.05s_ease_both]"
         style="opacity:0;animation-fill-mode:forwards;"
         data-testid="spending-summary-panel"
       >
@@ -68,7 +94,7 @@ const resultsUrl = buildPageUrl('results');
       </div>
 
       <div
-        class="card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.1s_ease_both]"
+        class="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.1s_ease_both]"
         style="opacity:0;animation-fill-mode:forwards;"
         data-testid="category-breakdown-panel"
       >
@@ -84,14 +110,14 @@ const resultsUrl = buildPageUrl('results');
 
       <!-- Savings comparison: full width -->
       <div
-        class="col-span-full card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.15s_ease_both]"
+        class="col-span-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.15s_ease_both]"
         style="opacity:0;animation-fill-mode:forwards;"
       >
         <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="20" height="20" class="text-[var(--color-primary-fg)]" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z"/>
           </svg>
-          절약 비교
+          연회비 차감 전 월간 총혜택 비교
         </h2>
         <SavingsComparison client:load />
       </div>
@@ -103,7 +129,7 @@ const resultsUrl = buildPageUrl('results');
 
       <!-- Optimal card map: full width -->
       <div
-        class="col-span-full card-transition rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.2s_ease_both]"
+        class="col-span-full rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] sm:p-6 animate-[slideUp_0.4s_0.2s_ease_both]"
         style="opacity:0;animation-fill-mode:forwards;"
       >
         <h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">
@@ -127,5 +153,12 @@ const resultsUrl = buildPageUrl('results');
     </div>
   </div>
 
-  <VisibilityToggle client:load dataContentId="dashboard-data-content" emptyStateId="dashboard-empty-state" statusTextId="dashboard-status" />
+  <VisibilityToggle
+    client:load
+    dataContentId="dashboard-data-content"
+    emptyStateId="dashboard-empty-state"
+    loadingStateId="dashboard-loading-state"
+    errorStateId="dashboard-error-state"
+    statusTextId="dashboard-status"
+  />
 </Layout>

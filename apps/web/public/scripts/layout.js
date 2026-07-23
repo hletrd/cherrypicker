@@ -10,12 +10,19 @@
     }
   }
 
-  function syncThemeIcons() {
+  function syncThemeControls() {
     var isDark = document.documentElement.classList.contains('dark');
     document.getElementById('theme-icon-sun')?.classList.toggle('hidden', !isDark);
     document.getElementById('theme-icon-moon')?.classList.toggle('hidden', isDark);
     document.getElementById('theme-icon-sun-mobile')?.classList.toggle('hidden', !isDark);
     document.getElementById('theme-icon-moon-mobile')?.classList.toggle('hidden', isDark);
+    var actionLabel = isDark ? '밝은 테마로 전환' : '어두운 테마로 전환';
+    [document.getElementById('theme-toggle'), document.getElementById('theme-toggle-mobile')]
+      .forEach(function (button) {
+        if (!button) return;
+        button.setAttribute('aria-label', actionLabel);
+        button.setAttribute('aria-pressed', String(isDark));
+      });
   }
 
   function toggleTheme() {
@@ -25,7 +32,7 @@
     } catch {
       // Theme remains active for this page even when it cannot be persisted.
     }
-    syncThemeIcons();
+    syncThemeControls();
   }
 
   function setMenuOpen(open, returnFocus) {
@@ -80,7 +87,7 @@
     }
 
     setupCurrentPage();
-    syncThemeIcons();
+    syncThemeControls();
   }
 
   applyStoredTheme();
