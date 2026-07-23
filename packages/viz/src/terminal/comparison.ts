@@ -1,5 +1,6 @@
 import Table from 'cli-table3';
 import type { OptimizationResult } from '@cherrypicker/core';
+import { sanitizeTerminalText } from './sanitize.js';
 
 function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
@@ -26,8 +27,8 @@ export function printOptimizationResult(result: OptimizationResult): void {
 
   for (const a of result.assignments) {
     assignTable.push([
-      a.categoryNameKo,
-      a.assignedCardName,
+      sanitizeTerminalText(a.categoryNameKo),
+      sanitizeTerminalText(a.assignedCardName),
       formatRate(a.rate),
       formatWon(a.reward),
     ]);
@@ -42,7 +43,7 @@ export function printOptimizationResult(result: OptimizationResult): void {
   console.log(`  총 예상 혜택:       ${formatWon(result.totalReward)}`);
   console.log(`  유효 혜택률:        ${formatRate(result.effectiveRate)}`);
   console.log(
-    `  단일 최적 카드:     ${result.bestSingleCard.cardName} (${formatWon(result.bestSingleCard.totalReward)})`,
+    `  단일 최적 카드:     ${sanitizeTerminalText(result.bestSingleCard.cardName)} (${formatWon(result.bestSingleCard.totalReward)})`,
   );
   console.log(
     `  다카드 추가 혜택:   ${formatWon(result.savingsVsSingleCard)} (${result.savingsVsSingleCard >= 0 ? '+' : ''}${formatRate(result.totalSpending > 0 ? result.savingsVsSingleCard / result.totalSpending : 0)})`,
@@ -58,7 +59,7 @@ export function printOptimizationResult(result: OptimizationResult): void {
     for (const cap of allCaps) {
       const lost = cap.actualReward - cap.appliedReward;
       console.log(
-        `  [${cap.cardName}] ${cap.category}: 한도 ${formatWon(cap.capAmount)} 도달 — ${formatWon(lost)} 혜택 손실`,
+        `  [${sanitizeTerminalText(cap.cardName)}] ${sanitizeTerminalText(cap.category)}: 한도 ${formatWon(cap.capAmount)} 도달 — ${formatWon(lost)} 혜택 손실`,
       );
     }
   }
@@ -70,9 +71,9 @@ export function printOptimizationResult(result: OptimizationResult): void {
     for (const a of result.assignments) {
       if (a.alternatives.length === 0) continue;
       const altStr = a.alternatives
-        .map((alt) => `${alt.cardName} ${formatWon(alt.reward)} (${formatRate(alt.rate)})`)
+        .map((alt) => `${sanitizeTerminalText(alt.cardName)} ${formatWon(alt.reward)} (${formatRate(alt.rate)})`)
         .join(', ');
-      console.log(`  ${a.categoryNameKo}: ${altStr}`);
+      console.log(`  ${sanitizeTerminalText(a.categoryNameKo)}: ${altStr}`);
     }
   }
 

@@ -1,6 +1,7 @@
 import Table from 'cli-table3';
 import type { CategorizedTransaction } from '@cherrypicker/core';
 import type { CardRewardResult } from '@cherrypicker/core';
+import { sanitizeTerminalText } from './sanitize.js';
 
 function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
@@ -59,7 +60,12 @@ export function printSpendingSummary(transactions: CategorizedTransaction[], cat
 
   for (const row of rows) {
     const pct = grandTotal > 0 ? ((row.total / grandTotal) * 100).toFixed(1) : '0.0';
-    table.push([row.labelKo, formatWon(row.total), String(row.count), `${pct}%`]);
+    table.push([
+      sanitizeTerminalText(row.labelKo),
+      formatWon(row.total),
+      String(row.count),
+      `${pct}%`,
+    ]);
   }
 
   // Total row — use includedCount instead of transactions.length so the count
@@ -83,10 +89,10 @@ export function printCardComparison(results: CardRewardResult[]): void {
 
   for (const r of sorted) {
     table.push([
-      r.cardName,
+      sanitizeTerminalText(r.cardName),
       formatWon(r.totalReward),
       formatRate(r.effectiveRate),
-      r.performanceTier,
+      sanitizeTerminalText(r.performanceTier),
     ]);
   }
 
@@ -102,7 +108,7 @@ export function printCardComparison(results: CardRewardResult[]): void {
       for (const cap of r.capsHit) {
         const lost = cap.actualReward - cap.appliedReward;
         console.log(
-          `  [${r.cardName}] ${cap.category}: 한도 ${formatWon(cap.capAmount)} 도달 (${formatWon(lost)} 손실)`,
+          `  [${sanitizeTerminalText(r.cardName)}] ${sanitizeTerminalText(cap.category)}: 한도 ${formatWon(cap.capAmount)} 도달 (${formatWon(lost)} 손실)`,
         );
       }
     }

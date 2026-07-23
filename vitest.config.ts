@@ -36,6 +36,7 @@ export default defineConfig({
       'tools/cli/__tests__/**/*.test.ts',
       'tools/scraper/__tests__/**/*.test.ts',
     ],
+    exclude: ['tools/cli/__tests__/command-process.test.ts'],
     // Test files that use Bun-only APIs beyond bun:test + import.meta.dir
     // (readFileSync with Bun paths, loadCardRule, etc.) may still fail
     // under vitest and only run under `bun test`.

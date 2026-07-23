@@ -2,6 +2,7 @@ import type {
   OptimizationResult,
   PreviousSpendingBasis,
 } from '@cherrypicker/core';
+import { sanitizeTerminalText } from '@cherrypicker/viz';
 
 type CliPreviousSpending =
   | number
@@ -37,22 +38,22 @@ export function buildOptimizationDisclosures(
   result: OptimizationResult,
   previousSpending: CliPreviousSpending,
 ): string[] {
-  const messages = [previousSpendingMessage(previousSpending)];
+  const messages = [sanitizeTerminalText(previousSpendingMessage(previousSpending))];
 
   const unsupported = result.unsupportedRules ?? [];
   if (unsupported.length > 0) {
-    messages.push(
+    messages.push(sanitizeTerminalText(
       `계산 제한: 거래 정보나 지원되지 않는 규칙 때문에 ` +
         `${unsupported.length}건의 혜택을 정확히 계산하지 못했습니다.`,
-    );
+    ));
     for (const issue of unsupported.slice(0, 3)) {
-      messages.push(
+      messages.push(sanitizeTerminalText(
         `  - ${issue.cardId}/${issue.ruleId} (${issue.reason})` +
           `${issue.detail ? `: ${issue.detail}` : ''}`,
-      );
+      ));
     }
     if (unsupported.length > 3) {
-      messages.push(`  - 그 외 ${unsupported.length - 3}건`);
+      messages.push(sanitizeTerminalText(`  - 그 외 ${unsupported.length - 3}건`));
     }
   }
 

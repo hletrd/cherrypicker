@@ -59,6 +59,26 @@ test.beforeAll(async () => {
     optimization,
     transactions,
     new Map([['uncategorized', '미분류']]),
+    {
+      latestStatementPeriod: {
+        start: '2026-02-01',
+        end: '2026-02-01',
+      },
+      fullStatementPeriod: {
+        start: '2026-02-01',
+        end: '2026-02-01',
+      },
+      latestTransactionCount: 1,
+      fullTransactionCount: 1,
+      parserExclusions: [],
+      calendarExclusions: [],
+      previousSpendingBasis: {
+        kind: 'missing-calendar-month',
+        month: '2026-01',
+        assumedAmount: 0,
+      },
+      unsupportedIssues: [],
+    },
   );
 });
 

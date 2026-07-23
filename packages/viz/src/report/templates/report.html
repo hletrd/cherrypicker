@@ -74,6 +74,43 @@
       border-bottom: 1px solid var(--color-border);
     }
 
+    .scope-section {
+      border: 2px solid var(--color-warning);
+      background: var(--color-warning-light);
+    }
+
+    .scope-section h2 {
+      color: var(--color-danger);
+      border-bottom-color: var(--color-warning);
+    }
+
+    .scope-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .scope-grid > div {
+      background: var(--color-surface);
+      border: 1px solid var(--color-warning);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+    }
+
+    .scope-grid p,
+    .limitation-list {
+      font-size: 0.875rem;
+    }
+
+    .limitation-list + .limitation-list {
+      margin-top: 0.75rem;
+    }
+
+    .limitation-list ul {
+      margin: 0.25rem 0 0 1.25rem;
+    }
+
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -182,6 +219,12 @@
       <h1>CherryPicker 분석 보고서</h1>
       <p class="subtitle">생성일: {{GENERATED_DATE}}</p>
     </header>
+
+    <!-- Durable scope and limitation disclosures -->
+    <div class="section scope-section">
+      <h2>분석 범위와 제한</h2>
+      {{ANALYSIS_LIMITATIONS}}
+    </div>
 
     <!-- Summary metrics -->
     <div class="section">

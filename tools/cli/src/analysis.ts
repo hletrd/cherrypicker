@@ -22,6 +22,12 @@ export interface PreparedCliAnalysis {
   performanceIssues: CalculationIssue[];
 }
 
+export interface CalendarScopeExclusion {
+  kind: 'invalid-date' | 'outside-latest-month';
+  count: number;
+  message: string;
+}
+
 export function categorizeRawTransactions(
   transactions: readonly RawTransaction[],
   matcher: CategoryMatcher,
@@ -79,18 +85,32 @@ export function prepareCliAnalysis(
 export function calendarScopeWarnings(
   context: AnalysisContext<CategorizedTransaction>,
 ): string[] {
-  const warnings = context.invalidDateTransactions.map(
-    (transaction) =>
-      `날짜를 확인할 수 없어 추천에서 제외했습니다: ` +
-      `${transaction.date || '(빈 날짜)'} / ${transaction.merchant}`,
+  return calendarScopeExclusions(context).map(({ message }) => message);
+}
+
+export function calendarScopeExclusions(
+  context: AnalysisContext<CategorizedTransaction>,
+): CalendarScopeExclusion[] {
+  const exclusions = context.invalidDateTransactions.map(
+    (transaction): CalendarScopeExclusion => ({
+      kind: 'invalid-date',
+      count: 1,
+      message:
+        `날짜를 확인할 수 없어 추천에서 제외했습니다: ` +
+        `${transaction.date || '(빈 날짜)'} / ${transaction.merchant}`,
+    }),
   );
   if (context.validTransactions.length > context.latestTransactions.length) {
-    warnings.push(
-      `월별 한도를 정확히 적용하기 위해 최신 명세서 월 ` +
-      `${context.latestMonth}의 ${context.latestTransactions.length}건만 추천에 사용합니다.`,
-    );
+    exclusions.push({
+      kind: 'outside-latest-month',
+      count:
+        context.validTransactions.length - context.latestTransactions.length,
+      message:
+        `월별 한도를 정확히 적용하기 위해 최신 명세서 월 ` +
+        `${context.latestMonth}의 ${context.latestTransactions.length}건만 추천에 사용합니다.`,
+    });
   }
-  return warnings;
+  return exclusions;
 }
 
 export function attachPerformanceIssues(

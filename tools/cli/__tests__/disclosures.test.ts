@@ -67,4 +67,34 @@ describe('optimization disclosures', () => {
     });
     expect(messages).toEqual([expect.stringContaining('전월실적 기준')]);
   });
+
+  test('removes terminal controls from every optimization disclosure field', () => {
+    const control =
+      '\u001b]8;;https://example.invalid\u0007LINK\u001b]8;;\u0007' +
+      '\u001b]52;c;Y2xpcGJvYXJk\u0007' +
+      '\u001b[31mCOLOR\u001b[0m\r\n\u009b31m\u202e';
+    const messages = buildOptimizationDisclosures(
+      result([
+        {
+          cardId: control,
+          transactionId: 'tx',
+          ruleId: control,
+          category: 'shopping',
+          reason: control,
+          detail: control,
+        },
+      ]),
+      {
+        kind: 'statement-month',
+        month: control as `${number}-${string}`,
+      },
+    );
+    const output = messages.join('\n');
+
+    expect(output).not.toContain('https://example.invalid');
+    expect(output).not.toContain('Y2xpcGJvYXJk');
+    expect(output).not.toMatch(/[\u001b\r\u009b\u202e]/);
+    expect(output).toContain('LINK');
+    expect(output).toContain('COLOR');
+  });
 });
