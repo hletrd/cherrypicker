@@ -1,249 +1,287 @@
-# Aggregate Review — CherryPicker Review/Plan/Fix Cycle 11
+# Aggregate Review — CherryPicker Review/Plan/Fix Cycle 12
 
 **Date:** 2026-07-24
-**Cycle:** 11 / 100
-**Baseline:** `5a8e636c0c66136ed3fff0396de226f77758a1bd`
+**Cycle:** 12 / 100
+**Baseline:** `e72a4c69f7c0eab7053c61a587c2d040760c236c`
 **Branch:** `codex/review-plan-fix-no-deploy-20260723`
 **Deploy mode:** none
+**Prompt 1 status:** complete
+**Prompt 2 status:** complete
+**Prompt 3 status:** complete
 
 ## Executive summary
 
-Cycle 11 completed all eleven required review lenses: code reviewer,
+Cycle 12 completed all eleven required review lenses: code reviewer,
 performance reviewer, security reviewer, critic, verifier, test engineer,
 tracer, architect, debugger, document specialist, and designer. The repository
-contains an Astro/Svelte UI, so the designer performed one bounded production
-browser inspection after reading the complete available agent-browser skill
-family. No custom reviewer definitions exist under `.claude/agents`.
+also contains established dependency-expert and QA-tester reviewer styles, so
+both were run as additional lanes. No custom reviewer definitions exist under
+`.claude/agents`.
 
-The role reports contain **4 concrete raw findings**, which map one-to-one to
-**4 unique retained findings**. The verifier independently confirmed all four
-and rejected none.
+The specialist reports produced **10 concrete raw candidates**. Cross-report
+deduplication and independent verifier reproduction retained **9 unique
+findings** and rejected **1 historical duplicate**.
 
 | Severity | Unique findings |
 |---|---:|
-| Medium | 3 |
-| Low | 1 |
-| **Total** | **4** |
+| Medium | 6 |
+| Low | 3 |
+| **Total** | **9** |
+
+Every retained finding has High confidence. Prompt 1 made no source, test,
+configuration, generated-data, plan, staging, commit, push, deployment, or
+external-system change. The only repository writes were Cycle 12 review
+artifacts and this aggregate.
 
 ## Unique findings
 
 | ID | Severity | Confidence | Finding | Raw source |
 |---|---|---|---|---|
-| C11-001 | Low | High | Combining a native or full-width leading minus with the supported Korean-minus or trailing-minus notation is negated twice. Accepted refunds such as `-1000-` and `마이너스-1000` silently become positive spending. | `C11-CR-001` |
-| C11-002 | Medium | High | The Cycle 10 merchant-boundary predicate recomputes immutable edge metadata with two regular-expression tests before every `indexOf`. A unique full miss performs about 50,132 such tests and materially blocks main-thread categorization. | `RPF11-PERF-001` |
-| C11-003 | Medium | High | The calculator can correctly emit two rule-level monthly caps for one category, but `CategoryReward` retains one overwritten `capAmount`. Web coherence then rejects the optimizer's valid plural-cap result. | `C11-CT-001` |
-| C11-004 | Medium | High | Canonical `manual` and `web` card records contain at least 26 clear aggregator, news, or wiki destinations, but every safe `card.url` is presented as an issuer-official card page. | `RPF11-DOC-001` |
+| C12-001 | Medium | High | `capGroup` is used both as a shared monthly-cap bucket and as rule execution identity. Differing caps become transaction-order dependent, and independent same-day fixed rewards in one group suppress each other. Catalog validation accepts both states. | `C12-CR-001` |
+| C12-002 | Low | High | Standalone HTML reports label every cap as `월 한도`, including real `per_transaction` events. | `C12-CR-002` |
+| C12-003 | Low | High | The scraper accepts the first existing content selector before trimming it. A whitespace-only `<main>` blocks a populated later selector and sends empty content to extraction. | `C12-CR-003` |
+| C12-004 | Medium | High | The CLI consent boundary eagerly reads and copies every statement before ordinary local parsing, creating multiple statement-sized buffers even when remote fallback is disabled. | `RPF12-PERF-001` |
+| C12-005 | Medium | High | The 14 px source hostname uses a muted foreground on issuer-tinted headers and fails the 4.5:1 normal-text contrast threshold in the light theme. | `RPF12-D-001` |
+| C12-006 | Medium | High | The root `parse` script executes an export-only barrel, consumes no input, produces no parse result, and exits zero even for a nonexistent statement. | `RPF12-DOC-001` |
+| C12-007 | Low | High | The scraper system prompt and schema-contract test falsely say the trusted boundary records `url`; runtime deliberately deletes model-authored URL data and stamps only issuer, date, and source. | `RPF12-DOC-002` |
+| C12-008 | Medium | High | Dashboard, results, and the in-app/print report preserve `cardResults[].capsHit` but never render cap-hit or lost-benefit explanations. | `C12-CT-001` |
+| C12-009 | Medium | High | Automated verification and browser regression run only after a change reaches `main` or on manual dispatch. Pull requests receive no automated pre-merge status, and workflow contract tests do not inspect triggers. | `RPF12-TE-001` |
 
 ## Evidence and downstream reach
 
-### C11-001 — sign composition
+### C12-001 — shared-cap identity and coherence
 
-The shared amount kernel currently returns positive `1000` for `-1000-`,
-`마이너스-1000`, and equivalent full-width compositions while each individual
-negative notation remains negative. Generic CSV and JSON entry points produce
-a positive transaction with no diagnostic. The same canonical kernel is used
-by server, CLI, browser, XLSX, HTML, PDF, and OFX paths, so downstream refund
-filters receive an apparently valid positive safe integer.
+`buildRuleKey` prefers `capGroup`, then uses that one key for monthly
+accumulation, daily fixed-reward tracking, availability preview, and cap
+telemetry. A schema-valid two-rule fixture with differing monthly caps produced
+200 or 100 Won after transaction order reversal. A coherent-cap fixture with
+two independent `fixed_per_day` rules produced only 100 or 200 Won instead of
+the independent 300 Won total. The catalog validator checks each rule in
+isolation and does not enforce shared-group tier-cap coherence. This begins
+before Cycle 11's plural cap telemetry repair and is therefore distinct.
 
-This is distinct from the fixed Cycle 40–42 `(-1234)` case. Archived Plan 69
-covered leading, Korean, trailing, and full-width negative forms separately,
-but not their non-parenthesized composition.
+### C12-002 — standalone cap-period wording
 
-### C11-002 — repeated boundary work
+A real `per_transaction` cap event renders as `월 한도 ... 도달`. The amount
+and calculated lost benefit are correct, but the period is false and can make
+later purchases appear ineligible. This is distinct from C12-008: the
+standalone sink renders an event with incorrect wording, while browser sinks
+render no event.
 
-The live matcher contains 12,047 static substring entries and 324 taxonomy
-keywords. A complete uncached miss invokes the boundary helper about 25,066
-times and performs about 50,132 edge regular-expression tests. Independent
-equal-output probes measured current boundary-aware comparisons between
-2.17× and 4.48× slower than precompiled/index-first controls. Real
-`MerchantMatcher` probes consistently showed linear synchronous cost, and a
-2,000-row application-level probe delayed a zero-delay timer by about 1.5
-seconds.
+### C12-003 — scraper selector fallback
 
-This finding is limited to the new constant-factor cost introduced by Cycle
-10 boundary correctness. Deferred item `D-C1-041` still owns eliminating the
-older full-corpus scan architecture.
+Cheerio returns whitespace text for an existing empty `<main>`. The current
+loop treats that raw string as selected content and stops before `#content`;
+normalization then reduces it to an empty string. The CLI does not reject the
+empty result, so the LLM request still occurs. Publication quarantine remains
+intact, but it cannot recover the discarded source content or request cost.
 
-### C11-003 — plural cap telemetry
+### C12-004 — statement-buffer ownership
 
-The current `kb-all` rule set has a specific 5% overseas online-shopping rule
-with a 5,000 Won monthly cap and a general 10% online-shopping rule with a
-10,000 Won cap. With 500,000 Won previous spending, two 100,000 Won overseas
-Amazon purchases correctly exhaust the first rule and fall back to the
-second:
+The local-first wrapper converts the full read result with `Buffer.from`, then
+returns another `Buffer.from` to the parser and a copied prefix. An 8 MiB
+identity probe confirmed separate backing buffers; the performance reviewer
+measured 417.2 MiB maximum RSS for a 128 MiB input versus a 161.5 MiB control.
+All analyze, optimize, and report commands use this path, and no statement-size
+limit bounds the amplification. Consent must remain bound to the exact bytes,
+but ordinary local parsing does not require eager remote-consent capture.
 
-```text
-category reward:                15,000
-CategoryReward.capAmount:       10,000
-monthly_category capsHit:       [5,000, 10,000]
-isAnalysisResultCoherent():     false
-```
+### C12-005 — source-hostname contrast
 
-The one-transaction 5,000 Won control validates. The two-transaction result is
-financially balanced, but the web validator requires every cap event to equal
-the one last-written category field and throws before state can commit. A
-default-catalog trace reproduced the same failure without a private card
-filter.
+The hostname foreground is `#64748b`. It reaches about 3.67:1 on the strongest
+declared Shinhan tint and 3.89:1–3.95:1 on sampled production pixels, below the
+4.5:1 requirement for normal 14 px text. The tracer extended the deterministic
+calculation across all 24 issuer tint colors and confirmed the same failure
+class. The hostname is the destination/provenance cue added after Plan 128, so
+the finding has no earlier owner.
 
-### C11-004 — source identity
+### C12-006 — no-op root parse command
 
-A complete conservative catalog query found 26 reviewed third-party URLs:
-15 Banksalad, 5 Card Gorilla, 2 Namu Wiki, and 4 news sites. The canonical
-records comprise 25 `manual` and 1 `web` source. Examples include KB NEED Edu
-linking to Financial Post, Lotte LOCA for Auto and IBK CEO linking to Card
-Gorilla, and Samsung & POINT linking to Banksalad.
+`bun run parse -- ./definitely-not-a-statement.csv` exits zero without reading
+the missing path. The script targets `packages/parser/src/index.ts`, an
+export-only module, instead of a real CLI entry point. The result is a
+successful command that performs no advertised parsing and masks bad input.
 
-The schema proves only reviewed provenance for `manual` and `web`; the
-last-mile guard proves only safe absolute HTTP(S) syntax. Neither proves
-issuer ownership. This begins after Cycle 10 Plan 122's fixed model-authority
-boundary and is therefore a separate field/copy semantics failure.
+### C12-007 — false scraper trust-boundary wording
+
+The system instruction tells the model not to provide `url` because the
+scraper records it. Runtime instead removes model-authored URLs and stamps only
+issuer, `lastUpdated`, and `source`, matching the safer Cycle 10 boundary. The
+current test preserves the false sentence rather than the true contract.
+
+### C12-008 — browser cap disclosure
+
+Cap events survive calculator, optimizer, worker, persistence, coherence, and
+store boundaries. A real `bc-baro-on-off` transaction produced an uncapped
+2,000 Won dining reward clipped to 1,000 Won by a supported per-purchase cap.
+Dashboard, results, and `ReportContent` show the correct 1,000 Won outcome but
+not the 1,000 Won clip or its period. Terminal and standalone output already
+disclose these events, proving the data is available at the browser sinks.
+
+### C12-009 — missing pre-merge verification
+
+The sole GitHub Actions workflow declares only `push` to `main` and
+`workflow_dispatch`. Its existing workflow-contract tests cover permissions,
+pins, toolchains, commands, order, and E2E configuration but omit the trigger
+map. Deferred item `D-05` required quality commands inside the deploy workflow;
+the present `verify` step satisfies that older requirement. The missing
+pre-merge boundary is therefore genuinely new.
+
+The safe repair shape is a read-only `pull_request` path, never
+`pull_request_target`. Pages artifact upload and Pages/OIDC deployment must
+remain restricted to trusted `main` pushes or explicit manual dispatch. This
+cycle's no-deploy constraint prohibits dispatching or otherwise exercising the
+deployment job.
 
 ## Cross-agent agreement and severity decision
 
 | Aggregate ID | Independent confirmation | Resolution |
 |---|---|---|
-| C11-001 | test engineer, critic, debugger, tracer, verifier | Preserved at Low/High. The code reviewer, test engineer, and tracer recommended Medium because the false purchase reaches rewards and persistence. The critic and verifier recommended Low because every known trigger redundantly encodes negativity twice and matches the historical `(-1234)` likelihood precedent. The aggregate adopts the verifier's explicit Low rating while retaining the financial consequence. |
-| C11-002 | critic, test engineer, debugger, tracer, verifier | Preserved at Medium/High. Multiple operation counts and equal-output differentials isolate the Cycle 10 constant-factor regression without closing or relabeling `D-C1-041`. |
-| C11-003 | debugger, tracer, verifier | Preserved at Medium/High. Independent real-card one- and two-transaction controls prove a valid producer result is rejected by a singular cross-layer contract. |
-| C11-004 | debugger, tracer, verifier | Preserved at Medium/High. Independent complete-corpus queries reproduce the 26 destinations and distinguish reviewed-source semantics from Cycle 10 model authority. |
+| C12-001 | critic, debugger, tracer, verifier, QA | Retained Medium/High. Independent fixtures reproduce both order dependence and fixed-per-day suppression. |
+| C12-002 | critic, debugger, tracer, verifier, QA | Retained Low/High. The financial amount is correct, but the cap period is false. |
+| C12-003 | critic, debugger, tracer, verifier, QA | Retained Low/High. Empty input is quarantined from direct publication but still discards valid content and spends extraction work. |
+| C12-004 | critic, debugger, tracer, verifier, QA | Retained Medium/High. Byte-binding is valid; ownership and eager-copy behavior are not. |
+| C12-005 | critic, debugger, tracer, verifier, QA | Retained Medium/High. Live and deterministic contrast probes agree. |
+| C12-006 | critic, debugger, tracer, verifier, QA | Retained Medium/High. Nonexistent input exits zero because the target is not executable. |
+| C12-007 | critic, debugger, tracer, verifier, QA | Retained Low/High. Runtime remains safe, while instructions and tests state a false trust contract. |
+| C12-008 | debugger, tracer, verifier, QA | Retained Medium/High. A real supported card reproduces unexplained cap clipping on every browser results surface. |
+| C12-009 | critic, debugger, tracer, verifier, dependency expert, QA | Retained Medium/High. Full history distinguishes trigger timing from the resolved workflow-content debt. |
 
-Every concrete raw ID maps to exactly one aggregate item. Repeated same-cycle
-confirmations do not inflate the count. No fifth finding was silently omitted.
+Repeated confirmations do not inflate the count. Every raw ID maps either to
+one aggregate item or to the explicit rejection below.
 
 ## Rejected, qualified, and deduplicated hypotheses
 
+- `RPF12-D-002`, the unnamed CardGrid search SVG, is real but not a new Cycle
+  12 finding. It predates the Cycle 9 snapshot and has the same root cause,
+  assistive-technology failure, and exact repair as `C9-D-01` / `C9-011` and
+  archived Plan 119. The tracer found a dashboard CTA residual with the same
+  history. Both must be reopened under the historical owner, not counted here.
 - The leading-NUL/prefixed-XLSX inflation hypothesis remains rejected.
-  Non-`PK` input follows SheetJS's plaintext/PRN route and does not enter ZIP
-  inflation.
-- The underlying linear merchant-matcher architecture remains deferred as
-  `D-C1-041`; only the newly repeated edge-metadata work is counted here.
-- Instrumented repeated optimizer sorting consumed only 0.2% of a real run
-  and 3.2% under equal-amount stress, so it did not clear a separate finding
-  threshold.
-- The designer deduplicated previously recorded contrast, generic axe-gate,
-  dashboard-region, and AAA target-size items. No new current UI defect was
-  created from those observations.
-- Current scraper, worker, persistence, output-writer, dependency, workflow,
-  and credential boundaries produced no new security finding.
-- Multiple rule caps are not assumed to fail merely because they share a
-  broad category. The retained reproduction uses the real same-key Amazon
-  taxonomy result and actual specific-rule exhaustion followed by general-rule
-  fallback.
+  Non-byte-zero `PK` input does not enter ZIP inflation. No reviewer found new
+  evidence that changes that admission precondition.
+- Architect, debugger, security, tracer, dependency-expert, and QA lanes found
+  no distinct additional root defect.
+- Existing deferred broad coverage, full-corpus matcher architecture,
+  build-stats fallback, mixed runner, E2E temporary-path, and generic
+  accessibility-gate items were not relabeled as Cycle 12 findings.
 
 ## Review verification
 
-Role-level non-browser checks included:
+Role-level non-browser evidence included:
 
-- 2,607 direct core/parser/web tests plus the root test command;
-- 390 debugger-focused tests;
-- 294 verifier-focused tests;
-- dependency, data, documentation, and toolchain checks; and
-- executable parser, matcher, cap, schema, publication, and href probes.
+- 3,060 debugger tests;
+- 2,977 unit-only test-engineer tests and 8 workflow-contract tests;
+- 311 tracer tests;
+- 456 QA tests;
+- 12 dependency/workflow tests with 61 expectations;
+- 282 critic-focused tests; and
+- bounded executable probes for shared-cap ordering, cap copy, report wording,
+  scraper selection, root command execution, contrast, trust-boundary stamping,
+  real-card cap disclosure, and workflow trigger parsing.
 
-These baseline suites remained green because they do not yet express
-redundant sign composition, boundary-metadata ownership, a real plural-cap
-producer result, or reviewed-source destination semantics.
+Green baseline suites are consistent with the findings because the missing
+oracles do not assert shared identity, period-specific copy, non-empty selector
+fallback, buffer ownership, tinted-host contrast, root command execution,
+truthful prompt wording, browser cap disclosure, or PR triggers.
 
 ## Designer evidence and cleanup
 
-The accepted production preview sampled home, upload validation and success,
-dashboard disclosures, keyboard focus, ARIA state, dark/light theme behavior,
-desktop and 375 px layouts, overflow, console/page errors, resource loading,
-layout shift, and local interaction timing. No genuinely new actionable UI/UX
-defect was found.
+The designer read and used the complete available agent-browser skill family,
+then inspected the production build at 1,440 × 1,000 and 375 × 812. Coverage
+included all routes, keyboard/focus behavior, navigation, disclosures, source
+links, validation and persisted-state flows, responsive overflow, light/dark
+themes, motion rules, console/page errors, network resources, and bounded
+performance diagnostics.
 
-The first development-preview attempt was rejected because Astro's development
-toolbar polluted the accessibility tree. Its exact session, preview process
-group, and temporary profile were closed before the one production retry.
-The accepted retry used session
-`cherrypicker-c11-designer-prod-5a8e636c`, browser roots `73095/73097`,
-preview PGID `67651` with listener `67745`, and profile
-`/tmp/cherrypicker-c11-designer-prod-5a8e636c.pJpnWa`. Cleanup closed the
-exact session, terminated only the owned preview group, and removed only that
-profile after confirming it was unused.
-
-Final checks reported no owned E2E run, TCP 4173 free, no active designer
-session or attributed process, and no remaining profile. An unrelated
-Travelback browser tree was observed before launch, never signaled or changed,
-and exited independently.
+The initial browser attempt was rejected after a wait failure. Its exact
+profile and daemon/Chrome process group were closed and removed before retry.
+The accepted session `cycle12-designer`, profile
+`/tmp/cycle12-designer.K1du6v/profile2.OvkKCW`, browser PGID `63134`, and
+preview PID/PGID `37650/37650` were all closed by exact ownership. The cycle
+temporary root was removed. `bun scripts/run-e2e.ts status --assert-clean`
+passed; TCP 4173 was free; no attributable session, repository process, or
+profile remained. Unrelated browser processes were not signaled or changed.
 
 ## Agent execution notes
 
-All eleven required role reports completed. Concurrency limits were handled
-through four reusable reviewer threads:
+All thirteen selected role reports completed. Concurrency limits were handled
+through reusable reviewer threads:
 
 - code reviewer → critic → tracer;
-- performance reviewer → architect → debugger;
+- performance reviewer → architect → debugger → QA-tester;
 - security reviewer → document specialist → verifier; and
-- designer → test engineer.
+- designer → test engineer → dependency expert.
 
-The designer's report-only finalization initially encountered model capacity
-after exact cleanup. A report-only retry wrote the saved evidence without
-relaunching a browser or server. There are no unrecovered role failures.
+There were no unrecovered role failures. The six protected untracked Cycle 42
+artifacts remained byte-identical, untracked, and unstaged.
 
 ## Prompt 2 plan coverage
 
-Prompt 2 archived completed Cycle 10 Plans 120–124 and created four Cycle 11
-plans. Every unique finding is scheduled exactly once:
+Prompt 2 verified that completed Cycle 11 Plans 125–128 already contained
+completion evidence, then moved only those four files into
+`.context/plans/_archive/`. It created nine Cycle 12 plans, with every retained
+finding scheduled exactly once:
 
 | Plan | Finding | Scope |
 |---|---|---|
-| 125 | C11-001 | One shared amount-sign polarity rule and parser boundary regressions |
-| 126 | C11-002 | Compile-once merchant boundary metadata and index-first matching |
-| 127 | C11-003 | Rule/cap-group identity with authoritative plural cap telemetry |
-| 128 | C11-004 | Neutral reviewed-source link copy with visible destination identity |
+| 129 | C12-001 | Separate rule/cap identities and validate shared-group coherence |
+| 130 | C12-002 | Render period-accurate standalone cap copy |
+| 131 | C12-003 | Select normalized non-empty scraper content and reject empty extraction |
+| 132 | C12-004 | Remove ordinary-local eager statement copies while preserving byte-bound consent |
+| 133 | C12-005 | Use a tint-safe source-host foreground with a complete contrast matrix |
+| 134 | C12-006 | Route the root `parse` shortcut to supported CLI behavior |
+| 135 | C12-007 | Align scraper prompt/test wording with URL deletion and trusted stamping |
+| 136 | C12-008 | Disclose authoritative plural cap events on all browser result surfaces |
+| 137 | C12-009 | Add read-only PR verification and keep Pages publication trusted-only |
 
-No Cycle 11 finding is deferred, rejected, or silently dropped. The requested
-`ralph` skill is not registered in the available skill roots, so each plan
-records the approved manual test-first fallback.
+No retained Cycle 12 finding is deferred, rejected, or silently dropped. The
+requested `ralph` skill is not registered in the available skill roots, so
+every plan records the approved manual test-first plan→implement→verify
+fallback.
 
-## Prompt 3 completion
+## Prompt 3 remediation
 
-All four plans were implemented with the approved manual test-first fallback.
-Every retained finding has one completed plan and one fine-grained signed
-repair commit:
+All nine retained findings were implemented test-first and closed without
+deployment:
 
-| Plan | Finding | Expected red | Focused green | Commit |
-|---|---|---|---|---|
-| 125 | C11-001 | 6 failures exposed positive composed negatives and admitted refunds | 260 tests, 437 expectations | `c848436` |
-| 126 | C11-002 | Missing compiled-term contract | 57 tests, 853 expectations; unique-miss median 707.1 → 261.6 ms | `5cd3853` |
-| 127 | C11-003 | 14 plural-cap/identity contract failures | 276 focused; 268 core; 829 web; 23 visualization tests | `c0bebe8` |
-| 128 | C11-004 | Missing neutral helper and obsolete official-link contract | 58 tests, 372 expectations | `52fc999` |
+| Finding | Plan | Signed commit | Verified outcome |
+|---|---:|---|---|
+| C12-001 | 129 | `2812cea6bcbf568d5caf3b89bc00a71d01171095` | Rule execution identity is independent of shared cap-ledger identity; incoherent groups fail validation. |
+| C12-002 | 130 | `6ab9416a539b50fdc31079440fa53988ec0c4642` | Standalone cap copy distinguishes per-purchase, category-monthly, and card-monthly periods. |
+| C12-003 | 131 | `3a22cbef8267c481dda8e5a6a392935df292c5f1` | Selector fallback skips normalized-empty candidates and empty source fails before extraction. |
+| C12-004 | 132 | `8c0e119ffef3b8f9832c0a6c77139ca3d9cf3e40` | Ordinary local parsing performs no consent snapshot read; remote consent retains one exact owned snapshot. |
+| C12-005 | 133 | `ca4a9cd041bb93b8280f911a2d5476770624601a` | All 24 issuer tints meet AA source-host contrast in light and dark themes. |
+| C12-006 | 134 | `087f2e5dfc209ac2407dec0c1d77a8b988569f51` | Root `parse` routes to supported CLI analysis and rejects invalid input. |
+| C12-007 | 135 | `3a22cbef8267c481dda8e5a6a392935df292c5f1` | Prompt and tests now describe URL deletion and the actual trusted metadata set. |
+| C12-008 | 136 | `c1126fd9c89efae2049cc4e2b56be025a56a4774` | Dashboard, results, and report render every ordered cap event with applied and lost reward. |
+| C12-009 | 137 | `a8a8276da2b0b79484fc1a5e3289fa295b2b690e` | Pull requests run verification/E2E while Pages upload and deploy stay trusted-only. |
 
-The parser now applies one negative polarity to composed markers. Merchant
-edge metadata compiles once and miss paths defer boundary inspection until an
-occurrence exists. Rule-scoped cap telemetry is plural and identity-bearing
-while v4 legacy payloads remain readable. Card links identify reviewed source
-hosts without claiming issuer ownership.
+The implementation was split into eight fine-grained, GPG-signed commits.
+Each commit was pushed immediately to
+`codex/review-plan-fix-no-deploy-20260723`. No workflow was dispatched and no
+deployment action was taken.
 
-`D-C1-041` remains open: Plan 126 removed only the Cycle 10 constant-factor
-regression and did not claim to replace the older linear full-corpus scan.
-No Cycle 11 finding was deferred or dropped.
+## Prompt 3 verification
 
-## Final verification
+The source head passed the complete required matrix before review-artifact
+closure:
 
-The complete required matrix passed on closure-documentation HEAD
-`0b76ebb8538e66921203bc714d060e299dbb1282`:
+| Gate | Result |
+|---|---|
+| `bun run lint` | Passed across all seven workspaces; Astro reported zero errors, warnings, or hints. |
+| `bun run typecheck` | Passed across all seven workspaces; Astro reported zero diagnostics in 125 files. |
+| `bun run build` | Passed all seven tasks and generated all five static routes. |
+| `bun run test` | Passed every workspace and script test suite. |
+| `bun run test:bun` | 1,641 tests and 3,319 expectations passed. |
+| `bunx vitest run` | 124 files and 2,996 tests passed. |
+| `bun run test:e2e` | 96 browser tests passed. |
 
-- `bun run lint`: all seven workspaces passed; the web checker reported zero
-  errors, warnings, or hints across 123 files.
-- `bun run typecheck`: all seven workspaces passed; the web checker again
-  reported zero diagnostics across 123 files.
-- `bun run build`: 7 of 7 package builds passed and Astro generated all five
-  static routes.
-- `bun run test`: all workspace and script tests passed.
-- `bun run test:bun`: 1,635 of 1,635 tests passed.
-- `bunx vitest run`: 2,977 of 2,977 tests passed across 122 files.
-- `bun run test:e2e`: 96 of 96 Playwright tests passed.
+The repository-owned E2E status assertion passed both before and after the
+browser run; there were no owned runs and TCP 4173 was available. An
+independent integration review also passed the focused 164-test matrix and
+caught one missing applied-reward presentation assertion before closure.
 
-The exact E2E status assertion passed before and after the browser run. TCP
-4173 was free at both boundaries, and no repository-owned preview, browser,
-run record, or temporary profile remained. No gate repair was required.
-
-The same seven commands are rerun after the signed documentation-only commit
-containing this section. The cycle handoff records that final-HEAD result,
-because a commit cannot truthfully contain the outcome of tests run after its
-own creation.
-
-The six protected untracked Cycle 42 artifacts remain byte-identical,
-untracked, and unstaged at their recorded SHA-256 values.
+Plans 129–137 are complete. Plans 125–128 were archived only after their prior
+completion evidence was checked. The six protected Cycle 42 artifacts remain
+byte-identical, untracked, and unstaged. Deploy mode remained `none`.

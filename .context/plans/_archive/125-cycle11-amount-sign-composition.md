@@ -3,6 +3,7 @@
 **Findings:** C11-001 (Low/High)
 **Status:** completed
 **Deploy mode:** none
+**Archived:** 2026-07-24 during Cycle 12 Prompt 2
 
 ## Evidence
 
