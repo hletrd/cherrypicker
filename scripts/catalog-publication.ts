@@ -111,13 +111,15 @@ function canonicalize(value: unknown): unknown {
 }
 
 /**
- * Derive identity from the complete normalized runtime payload set, before
- * any identity field is injected. Keying every projection (including each
- * detail shard) prevents a generator-only projection change from reusing an
- * older publication identity while source YAML stays unchanged.
+ * Derive identity from the complete normalized publication payload set,
+ * before any identity field is injected. Keying every projection (including
+ * each detail shard and caller-owned supplemental payload) prevents a
+ * generator-only projection change from reusing an older publication
+ * identity while source YAML stays unchanged.
  */
 export function computePublicationSourceHash(
   artifacts: IdentityFreeWebCatalogArtifacts,
+  supplementalPayloads: Readonly<Record<string, unknown>>,
 ): string {
   const canonicalPayloadSet = canonicalize({
     categories: artifacts.categories,
@@ -126,6 +128,7 @@ export function computePublicationSourceHash(
       .map(([issuerId, payload]) => ({ issuerId, payload })),
     optimizer: artifacts.optimizer,
     summary: artifacts.summary,
+    supplementalPayloads,
   });
   return createHash('sha256')
     .update(JSON.stringify(canonicalPayloadSet))
@@ -405,6 +408,6 @@ export function buildWebCatalogArtifacts(
   );
   return injectPublicationIdentity(
     identityFree,
-    computePublicationSourceHash(identityFree),
+    computePublicationSourceHash(identityFree, {}),
   );
 }

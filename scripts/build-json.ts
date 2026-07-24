@@ -29,7 +29,9 @@ import type {
 } from '../packages/rules/src/index.js';
 import {
   bestRewardTiersByComparisonGroup,
-  buildWebCatalogArtifacts,
+  buildIdentityFreeWebCatalogArtifacts,
+  computePublicationSourceHash,
+  injectPublicationIdentity,
   isIndexableReward,
   parsePublicationCard,
   sortAndLimitRewardComparisons,
@@ -296,9 +298,7 @@ const noMinSpend = cards.filter((c) => {
   );
 }).map((c) => c.card.id);
 
-const publicationVersion = '1.0.0';
-const publicationMeta = {
-  version: publicationVersion,
+const publicationFacts = {
   generatedAt: `${cards
     .map((entry) => entry.card.lastUpdated)
     .sort()
@@ -307,24 +307,95 @@ const publicationMeta = {
   totalCards: cards.length,
   categories: categoryRegistry.canonicalKeys().sort(),
 };
-const webCatalog = buildWebCatalogArtifacts(
-  publicationMeta,
+const browserPublicationMeta = {
+  version: '1.0.0',
+  ...publicationFacts,
+};
+const legacyPublicationMeta = {
+  version: '2.0.0',
+  ...publicationFacts,
+};
+const legacyIndex: OrganizedOutput['index'] = {
+  byCategory: byCategoryIndex,
+  byType: { credit: creditCards, check: checkCards, prepaid: prepaidCards },
+  noMinSpend,
+};
+const identityFreeLegacyFull = {
+  meta: legacyPublicationMeta,
+  issuers: issuersOutput,
+  categories: categoriesRaw.categories,
+  index: legacyIndex,
+};
+const identityFreeLegacyCompact = {
+  meta: legacyPublicationMeta,
+  issuers: issuersOutput.map((issuer) => ({
+    id: issuer.id,
+    nameKo: issuer.nameKo,
+    nameEn: issuer.nameEn,
+    website: issuer.website,
+    cardCount: issuer.cardCount,
+    cards: issuer.cards.map((card) => ({
+      id: card.card.id,
+      name: card.card.name,
+      nameKo: card.card.nameKo,
+      type: card.card.type,
+      annualFee: card.card.annualFee.domestic,
+      topRewards: sortAndLimitRewardComparisons(
+        card.rewards
+          .filter(isIndexableReward)
+          .flatMap((reward) =>
+            bestRewardTiersByComparisonGroup(reward.tiers).map(
+              ({ tier, comparison }) => ({
+                rewardId: reward.id,
+                category: reward.subcategory
+                  ? `${reward.category}.${reward.subcategory}`
+                  : reward.category,
+                type: reward.type,
+                bestValue: comparison.amount,
+                bestValueKind: comparison.legacyKind,
+                valueKind: comparison.valueKind,
+                comparisonGroup: comparison.comparisonGroup,
+                performanceTier: tier.performanceTier,
+                unit: comparison.unit,
+              }),
+            )
+          ),
+        (reward) => ({
+          amount: reward.bestValue,
+          comparisonGroup: reward.comparisonGroup,
+        }),
+        5,
+      ),
+    })),
+  })),
+  index: legacyIndex,
+};
+const identityFreeWebCatalog = buildIdentityFreeWebCatalogArtifacts(
+  browserPublicationMeta,
   issuersOutput,
   categoriesRaw.categories,
 );
-const { sourceHash } = webCatalog;
+const sourceHash = computePublicationSourceHash(identityFreeWebCatalog, {
+  legacyFull: identityFreeLegacyFull,
+  legacyCompact: identityFreeLegacyCompact,
+});
+const webCatalog = injectPublicationIdentity(
+  identityFreeWebCatalog,
+  sourceHash,
+);
 
 const output: OrganizedOutput = {
+  ...identityFreeLegacyFull,
   meta: {
-    ...publicationMeta,
+    ...legacyPublicationMeta,
     sourceHash,
   },
-  issuers: issuersOutput,
-  categories: categoriesRaw.categories,
-  index: {
-    byCategory: byCategoryIndex,
-    byType: { credit: creditCards, check: checkCards, prepaid: prepaidCards },
-    noMinSpend,
+};
+const compactOutput = {
+  ...identityFreeLegacyCompact,
+  meta: {
+    ...legacyPublicationMeta,
+    sourceHash,
   },
 };
 
@@ -383,51 +454,6 @@ console.log(`   ${noMinSpend.length} cards with no minimum spend`);
 console.log(`   ${Object.keys(byCategoryIndex).length} categories indexed`);
 
 // Also write a compact version without the full card data (just the index)
-const compactOutput = {
-  meta: output.meta,
-  issuers: issuersOutput.map((i) => ({
-    id: i.id,
-    nameKo: i.nameKo,
-    nameEn: i.nameEn,
-    website: i.website,
-    cardCount: i.cardCount,
-    cards: i.cards.map((c) => ({
-      id: c.card.id,
-      name: c.card.name,
-      nameKo: c.card.nameKo,
-      type: c.card.type,
-      annualFee: c.card.annualFee.domestic,
-      topRewards: sortAndLimitRewardComparisons(
-        c.rewards
-          .filter(isIndexableReward)
-          .flatMap((reward) =>
-            bestRewardTiersByComparisonGroup(reward.tiers).map(
-              ({ tier, comparison }) => ({
-                rewardId: reward.id,
-                category: reward.subcategory
-                  ? `${reward.category}.${reward.subcategory}`
-                  : reward.category,
-                type: reward.type,
-                bestValue: comparison.amount,
-                bestValueKind: comparison.legacyKind,
-                valueKind: comparison.valueKind,
-                comparisonGroup: comparison.comparisonGroup,
-                performanceTier: tier.performanceTier,
-                unit: comparison.unit,
-              }),
-            )
-          ),
-        (reward) => ({
-          amount: reward.bestValue,
-          comparisonGroup: reward.comparisonGroup,
-        }),
-        5,
-      ),
-    })),
-  })),
-  index: output.index,
-};
-
 const compactPath = join(OUTPUT_DIR, 'cards-compact.json');
 await publish(compactPath, JSON.stringify(compactOutput, null, 2));
 console.log(`   ${compactPath} (compact index)`);

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { readFile, readdir } from 'node:fs/promises';
 import {
   bestRewardTiersByComparisonGroup,
   buildIdentityFreeWebCatalogArtifacts,
@@ -59,6 +60,10 @@ function cardWithUrl(url: string) {
 
 type PublicationRewardTier =
   ReturnType<typeof parsePublicationCard>['rewards'][number]['tiers'][number];
+
+async function readJson<T>(url: URL): Promise<T> {
+  return JSON.parse(await readFile(url, 'utf8')) as T;
+}
 
 function parsedRewardTier(
   valueKind: PublicationRewardTier['value']['kind'],
@@ -605,9 +610,9 @@ describe('catalog publication boundary', () => {
       },
     };
 
-    const originalHash = computePublicationSourceHash(identityFree);
-    const reorderedHash = computePublicationSourceHash(reordered);
-    const changedHash = computePublicationSourceHash(projectionChanged);
+    const originalHash = computePublicationSourceHash(identityFree, {});
+    const reorderedHash = computePublicationSourceHash(reordered, {});
+    const changedHash = computePublicationSourceHash(projectionChanged, {});
 
     expect(originalHash).toMatch(/^[a-f0-9]{64}$/);
     expect(reorderedHash).toBe(originalHash);
@@ -617,7 +622,7 @@ describe('catalog publication boundary', () => {
       detailChanged,
       categoriesChanged,
     ]) {
-      expect(computePublicationSourceHash(changedProjection)).not.toBe(
+      expect(computePublicationSourceHash(changedProjection, {})).not.toBe(
         originalHash,
       );
     }
@@ -642,6 +647,152 @@ describe('catalog publication boundary', () => {
     expect(original.summary.meta.sourceHash).not.toBe(
       changed.optimizer.sourceHash,
     );
+  });
+
+  test('covers keyed legacy projections in the publication identity', () => {
+    const card = parsePublicationCard(
+      cardWithUrl('https://example.com/card'),
+      'fixture-card.yaml',
+    );
+    const identityFree = buildIdentityFreeWebCatalogArtifacts(
+      {
+        version: '1.0.0',
+        generatedAt: '2026-07-24T00:00:00.000Z',
+        totalIssuers: 1,
+        totalCards: 1,
+        categories: ['uncategorized'],
+      },
+      [{
+        id: 'fixture',
+        nameKo: '픽스처',
+        nameEn: 'Fixture',
+        website: 'https://example.com',
+        cardCount: 1,
+        cards: [card],
+      }],
+      [{ id: 'uncategorized', keywords: [] }],
+    );
+    const supplemental = {
+      legacyFull: {
+        meta: { version: '2.0.0' },
+        index: { byCategory: { uncategorized: ['fixture-safe-card'] } },
+      },
+      legacyCompact: {
+        meta: { version: '2.0.0' },
+        issuers: [{ id: 'fixture', topRewards: ['reward-001'] }],
+      },
+    };
+    const reorderedKeys = {
+      legacyCompact: supplemental.legacyCompact,
+      legacyFull: supplemental.legacyFull,
+    };
+    const fullChanged = {
+      ...supplemental,
+      legacyFull: {
+        ...supplemental.legacyFull,
+        index: { byCategory: { uncategorized: ['changed-card'] } },
+      },
+    };
+    const compactChanged = {
+      ...supplemental,
+      legacyCompact: {
+        ...supplemental.legacyCompact,
+        issuers: [{ id: 'fixture', topRewards: ['changed-reward'] }],
+      },
+    };
+
+    const originalHash = computePublicationSourceHash(
+      identityFree,
+      supplemental,
+    );
+
+    expect(originalHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(
+      computePublicationSourceHash(identityFree, reorderedKeys),
+    ).toBe(originalHash);
+    expect(
+      computePublicationSourceHash(identityFree, fullChanged),
+    ).not.toBe(originalHash);
+    expect(
+      computePublicationSourceHash(identityFree, compactChanged),
+    ).not.toBe(originalHash);
+  });
+
+  test('publishes one complete identity with an explicit legacy version', async () => {
+    type LegacyArtifact = {
+      meta: { version: string; sourceHash: string };
+    };
+    type SourceHashArtifact = { sourceHash: string };
+    const detailsUrl = new URL(
+      '../../apps/web/public/data/card-details/',
+      import.meta.url,
+    );
+    const detailNames = (await readdir(detailsUrl))
+      .filter((name) => name.endsWith('.json'))
+      .sort();
+    const [
+      rulesFull,
+      rulesCompact,
+      publicFull,
+      summary,
+      optimizer,
+      categories,
+      details,
+    ] = await Promise.all([
+      readJson<LegacyArtifact>(
+        new URL('../../packages/rules/data/cards.json', import.meta.url),
+      ),
+      readJson<LegacyArtifact>(
+        new URL(
+          '../../packages/rules/data/cards-compact.json',
+          import.meta.url,
+        ),
+      ),
+      readJson<LegacyArtifact>(
+        new URL('../../apps/web/public/data/cards.json', import.meta.url),
+      ),
+      readJson<LegacyArtifact>(
+        new URL(
+          '../../apps/web/public/data/cards-summary.json',
+          import.meta.url,
+        ),
+      ),
+      readJson<SourceHashArtifact>(
+        new URL(
+          '../../apps/web/public/data/cards-optimizer.json',
+          import.meta.url,
+        ),
+      ),
+      readJson<SourceHashArtifact>(
+        new URL(
+          '../../apps/web/public/data/categories.json',
+          import.meta.url,
+        ),
+      ),
+      Promise.all(
+        detailNames.map((name) =>
+          readJson<SourceHashArtifact>(new URL(name, detailsUrl))
+        ),
+      ),
+    ]);
+    const hashes = [
+      rulesFull.meta.sourceHash,
+      rulesCompact.meta.sourceHash,
+      publicFull.meta.sourceHash,
+      summary.meta.sourceHash,
+      optimizer.sourceHash,
+      categories.sourceHash,
+      ...details.map((detail) => detail.sourceHash),
+    ];
+
+    expect(detailNames).toHaveLength(24);
+    expect([
+      rulesFull.meta.version,
+      rulesCompact.meta.version,
+      publicFull.meta.version,
+    ]).toEqual(['2.0.0', '2.0.0', '2.0.0']);
+    expect(summary.meta.version).toBe('1.0.0');
+    expect(new Set(hashes)).toEqual(new Set([summary.meta.sourceHash]));
   });
 
   test('finds only stale generated JSON shards in stable order', () => {

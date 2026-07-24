@@ -1,6 +1,6 @@
 {
   "meta": {
-    "version": "1.0.0",
+    "version": "2.0.0",
     "generatedAt": "2026-03-26T00:00:00.000Z",
     "totalIssuers": 24,
     "totalCards": 683,
@@ -67,7 +67,7 @@
       "utilities.gas",
       "utilities.water"
     ],
-    "sourceHash": "ad1edfe624495c7380b86255de27a29091eacc09e325d82a9533034ad2279b58"
+    "sourceHash": "125970f582c040a0c6aa728cab49dea1173c1e7fbd96fc297876c5197291c200"
   },
   "issuers": [
     {
