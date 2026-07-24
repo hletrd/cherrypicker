@@ -28,7 +28,7 @@ deduplication. Confirmations from later roles do not inflate the count:
 All four findings are High confidence and confirmed. The review phase changed
 no product source, test, generated artifact, dependency, manifest, plan,
 workflow, deployment state, or external system. Its repository writes are the
-thirteen role reports, the dated Cycle 17 aggregate, and this current
+thirteen role reports, this named aggregate, and the current `_aggregate.md`
 projection.
 
 ## Unique findings
