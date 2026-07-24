@@ -1,7 +1,7 @@
 # Plan 138: Cycle 13 Post-Cap Loss Telemetry
 
 **Finding:** C13-001 (`C13-CR-001`, Medium/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -87,24 +87,24 @@ assigned card results.
 
 ## Acceptance
 
-- [ ] Exact cap exhaustion followed by later eligible spend records the exact
+- [x] Exact cap exhaustion followed by later eligible spend records the exact
       positive net portfolio loss.
-- [ ] An exact hit on the final eligible transaction still records zero lost
+- [x] An exact hit on the final eligible transaction still records zero lost
       reward.
-- [ ] Monthly and global post-exhaustion events identify the real blocking cap
+- [x] Monthly and global post-exhaustion events identify the real blocking cap
       and preserve deterministic order.
-- [ ] Exclusive fallback reward selection and total reward remain unchanged.
-- [ ] Mutually exclusive alternatives are not counted as simultaneous losses.
-- [ ] A 5,000 Won suppressed candidate with a 2,000 Won fallback reports
+- [x] Exclusive fallback reward selection and total reward remain unchanged.
+- [x] Mutually exclusive alternatives are not counted as simultaneous losses.
+- [x] A 5,000 Won suppressed candidate with a 2,000 Won fallback reports
       exactly 3,000 Won, and a 3,000 Won other-card reward also reduces the
       portfolio loss to exactly 2,000 Won.
-- [ ] Equal or better replacement reward produces no net-loss record.
-- [ ] Independent additive losses remain independently represented.
-- [ ] Zero-reward unassigned transactions can carry loss without violating
+- [x] Equal or better replacement reward produces no net-loss record.
+- [x] Independent additive losses remain independently represented.
+- [x] Zero-reward unassigned transactions can carry loss without violating
       assignment/card-result coherence.
-- [ ] Dashboard, results, in-app report, terminal, and standalone report no
+- [x] Dashboard, results, in-app report, terminal, and standalone report no
       longer claim no loss for the reproduced analysis.
-- [ ] Existing telemetry, optimizer, persistence, and legacy compatibility
+- [x] Existing telemetry, optimizer, persistence, and legacy compatibility
       tests remain green.
 
 ## Verification
@@ -122,3 +122,31 @@ The requested `ralph` capability is unavailable. Prompt 3 will use the approved
 manual disciplined fallback: add a focused failing regression, implement the
 smallest root fix, run focused green verification, and then run every required
 repository gate. No deployment is permitted.
+
+## Completion evidence
+
+Completed in signed commit
+`d7ffac339159187b57b827f9fe5d1b7518289786`.
+
+- The calculator now carries typed transaction-level suppression causes while
+  preserving the existing assignment-scoped `capsHit` contract.
+- The optimizer publishes a duplicate-safe top-level
+  `portfolioCapLosses` array only when reconciliation is exact. `undefined`
+  means unknown; `[]` means known zero.
+- Ordered `maxUses` and fixed-per-day counterfactuals are replayed
+  deterministically. Hidden or cross-card state interactions, negative
+  offsets, unsafe arithmetic, and cap-free winner ties fail closed to unknown
+  instead of publishing a positive-only overstatement.
+- Dashboard, results, in-app report, terminal, and standalone report share the
+  Korean net-loss copy and remain silent for unknown or known-zero telemetry.
+- Worker decoding, current/legacy persistence, duplicate transaction
+  occurrences, stable transaction editing, and the 4 MiB persistence bound
+  have focused regressions. Oversized loss telemetry is omitted as a whole so
+  reload preserves unknown; an irreducibly oversized snapshot fails before a
+  storage write.
+- Independent final audit exercised 13,120 randomized/exhaustive two-card
+  state/cap/rate/date/card-ID cases and 2,000 prepared replay/projection cases
+  with zero known-loss or visible-output mismatches.
+- Final verification passed core 312/312, web 905/905, visualization 24/24,
+  `test:bun` 1,641/1,641, Vitest 3,105/3,105, the repository `verify` gate,
+  and E2E 97/97. The E2E runner finished clean with TCP 4173 free.

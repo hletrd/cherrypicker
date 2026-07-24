@@ -7,7 +7,7 @@
 **Deploy mode:** none
 **Prompt 1 status:** complete
 **Prompt 2 status:** complete
-**Prompt 3 status:** pending
+**Prompt 3 status:** complete
 
 ## Executive summary
 
@@ -180,3 +180,49 @@ The requested `ralph` capability is unavailable in this environment, so every
 plan records the approved manual disciplined fallback: add a failing
 regression, implement the smallest root fix, run focused green verification,
 then run every required repository gate. Deployment remains none.
+
+## Prompt 3 completion
+
+All three retained findings were fixed test-first and pushed as signed commits:
+
+- Plan 139 / C13-002:
+  `4fa1385a3ba5f1b2f5104d0d3e100ae2eb16264b`
+- Plan 140 / C13-003:
+  `b25b462ec08082d4ce6dc5d3c04ae175c4ed65c0`
+- Plan 138 / C13-001:
+  `d7ffac339159187b57b827f9fe5d1b7518289786`
+
+Plan 138 now distinguishes exact, known-zero portfolio loss from unknown
+telemetry, reconciles cap suppression against the real cap-free winner, and
+keeps every dashboard, result, in-app report, terminal, standalone report,
+worker, persistence, and duplicate-transaction path coherent. An independent
+final audit exercised 13,120 randomized/exhaustive two-card cases and 2,000
+prepared replay/projection cases with zero known-loss or visible-output
+mismatches. A 12,000-transaction persistence probe remained under the 4 MiB
+limit by omitting oversized telemetry as unknown.
+
+The prepared calculation path removes repeated structural rule validation
+without weakening the public calculator boundary. Nine samples per revision
+over 683 cards found the 90- and 100-transaction paths 18–20 percent faster
+than the Cycle 12 baseline, with exact JSON parity after normalizing only the
+new telemetry. The dependency repair removed Astro's stale optional peer and
+added package-path-aware, fail-closed peer validation.
+
+After the implementation freeze, sequential final verification passed:
+
+- `bun run lint`
+- `bun run typecheck`
+- `bun run build` (7/7)
+- `bun run test`
+- `bun run test:bun` (1,641/1,641; 3,319 assertions)
+- `bunx vitest run` (126 files; 3,105/3,105)
+- `bun run verify`
+- `bun run test:e2e` (97/97)
+
+An initial concurrent gate attempt starved the scraper subprocess and produced
+a five-second timeout in both Bun and Vitest. Sequential reruns completed
+green; the isolated subprocess took 554 ms, so no product fix was required.
+The E2E runner ended clean, TCP 4173 was free, and no owned browser, preview,
+Playwright, or runner process remained. The six protected untracked Cycle 42
+artifacts stayed byte-identical, untracked, unstaged, and uncommitted.
+Deployment was not performed.

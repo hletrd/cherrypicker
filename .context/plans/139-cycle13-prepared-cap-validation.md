@@ -1,7 +1,7 @@
 # Plan 139: Cycle 13 Prepared Cap Validation
 
 **Finding:** C13-002 (`RPF13-PERF-001`, Medium/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -72,21 +72,21 @@ cap groups.
 
 ## Acceptance
 
-- [ ] Each retained executable optimizer card entry performs exactly one
+- [x] Each retained executable optimizer card entry performs exactly one
       combined structural preparation per optimization run.
-- [ ] Direct calculator calls still validate every supplied rule input.
-- [ ] Malformed shared cap groups fail closed through both public entry points.
-- [ ] Malformed zero-transaction optimizer input fails before kernel replay.
-- [ ] Prepared and direct calculation produce byte-identical supported-card
+- [x] Direct calculator calls still validate every supplied rule input.
+- [x] Malformed shared cap groups fail closed through both public entry points.
+- [x] Malformed zero-transaction optimizer input fails before kernel replay.
+- [x] Prepared and direct calculation produce byte-identical supported-card
       results.
-- [ ] Marginal, alternative, card-result, and best-single paths all use the
+- [x] Marginal, alternative, card-result, and best-single paths all use the
       prepared value.
-- [ ] Reusing or mutating the same objects across calls cannot reuse validation.
-- [ ] Runtime numeric, unsupported-rule, and checked-arithmetic guards remain
+- [x] Reusing or mutating the same objects across calls cannot reuse validation.
+- [x] Runtime numeric, unsupported-rule, and checked-arithmetic guards remain
       active on prepared replays.
-- [ ] No process-wide mutable-input cache or publicly forgeable unchecked path
+- [x] No process-wide mutable-input cache or publicly forgeable unchecked path
       is introduced.
-- [ ] A bounded real-catalog comparison shows the repeated-map cost removed
+- [x] A bounded real-catalog comparison shows the repeated-map cost removed
       without changing optimizer output.
 
 ## Verification
@@ -103,3 +103,19 @@ The requested `ralph` capability is unavailable. Prompt 3 will use the approved
 manual disciplined fallback: create the deterministic failing regression,
 make the smallest lifecycle change, run focused green and parity checks, and
 then run every repository gate. No deployment is permitted.
+
+## Completion evidence
+
+Completed in signed commit
+`4fa1385a3ba5f1b2f5104d0d3e100ae2eb16264b`.
+
+- Optimizer entries are prepared once per invocation behind an opaque internal
+  capability. Direct calculator calls still validate arbitrary and mutable
+  rule input on every call.
+- Focused regressions cover exact preparation counts, repeated invocations,
+  mutation after validation, malformed zero-transaction input, runtime
+  guards, output parity, and the public-export boundary.
+- A nine-sample-per-revision benchmark over 683 cards found the current
+  90- and 100-transaction paths 18–20 percent faster than the Cycle 12
+  baseline. Normalizing only the new telemetry produced exact JSON parity.
+- Final repository and E2E gates passed after the implementation freeze.

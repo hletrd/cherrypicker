@@ -1,7 +1,7 @@
 # Plan 140: Cycle 13 Optional Peer Validation
 
 **Finding:** C13-003 (`RPF13-DEP-001`, Low/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -64,17 +64,17 @@ optional peers may be absent, but are rejected when present and incompatible.
 
 ## Acceptance
 
-- [ ] The current frozen graph has no peer mismatch.
-- [ ] Astro's optional peer is absent or resolves compatibly at `7.2.1`.
-- [ ] The unused optional peer is not added as a direct web dependency.
-- [ ] Present incompatible optional peers fail with an actionable diagnostic.
-- [ ] Absent optional peers pass.
-- [ ] Missing or incompatible required peers fail.
-- [ ] Nearest nested, parent-sibling, root fallback, workspace, and scoped peer
+- [x] The current frozen graph has no peer mismatch.
+- [x] Astro's optional peer is absent or resolves compatibly at `7.2.1`.
+- [x] The unused optional peer is not added as a direct web dependency.
+- [x] Present incompatible optional peers fail with an actionable diagnostic.
+- [x] Absent optional peers pass.
+- [x] Missing or incompatible required peers fail.
+- [x] Nearest nested, parent-sibling, root fallback, workspace, and scoped peer
       resolution is correct.
-- [ ] Malformed and unsupported lock identities fail deterministically.
-- [ ] The lockfile changes only as required for the optional-peer repair.
-- [ ] Existing import, remote-reference, vendor-integrity, and dependency
+- [x] Malformed and unsupported lock identities fail deterministically.
+- [x] The lockfile changes only as required for the optional-peer repair.
+- [x] Existing import, remote-reference, vendor-integrity, and dependency
       checks remain green.
 
 ## Verification
@@ -93,3 +93,20 @@ The requested `ralph` capability is unavailable. Prompt 3 will use the approved
 manual disciplined fallback: add failing lock-policy fixtures, implement the
 smallest compatible parser and graph repair, run focused green verification,
 and then run every required repository gate. No deployment is permitted.
+
+## Completion evidence
+
+Completed in signed commit
+`b25b462ec08082d4ce6dc5d3c04ae175c4ed65c0`.
+
+- The stale unused optional peer was removed from the lock graph without
+  adding a direct dependency or enabling Astro's dormant Markdown path.
+- The dependency gate parses JSONC, evaluates package and workspace peer
+  contracts, resolves the nearest valid peer location, checks exact and range
+  compatibility, and fails closed for malformed or unsupported identities.
+- Focused fixtures cover optional absence, required absence, incompatibility,
+  nesting, parent siblings, root fallback, workspaces, scoped names, OR
+  ranges, and prereleases.
+- The lock graph contracted from 632 to 567 package rows; frozen installation,
+  dependency checks, typecheck, build, repository verification, and E2E all
+  passed.
