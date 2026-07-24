@@ -73,7 +73,11 @@ export interface CalculationOutput {
   totalSpending: number;
   capsHit: CapInfo[];
   capSuppressions: TransactionCapSuppression[];
-  /** False when an exact diagnostic would exceed safe-integer arithmetic. */
+  /**
+   * False when `capSuppressions` is partial because the ordered cap-free
+   * result cannot be represented or reconciled exactly. Rows may still be
+   * present and must not be treated as a complete suppression total.
+   */
   capSuppressionsComplete: boolean;
   skippedTransactions: SkippedTransaction[];
   unsupportedRules: UnsupportedRule[];
