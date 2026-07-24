@@ -902,15 +902,18 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
       : undefined,
     previousSpendingBasis: restoredPreviousSpendingBasis,
   };
-  if (
-    !isAnalysisResultCoherent(
+  let coherent: boolean;
+  try {
+    coherent = isAnalysisResultCoherent(
       data,
       truncatedTxCount === null
         ? undefined
         : { truncatedTransactionCount: truncatedTxCount },
-    ) ||
-    version < STORAGE_VERSION
-  ) {
+    );
+  } catch {
+    return invalidResult();
+  }
+  if (!coherent || version < STORAGE_VERSION) {
     return invalidResult();
   }
 

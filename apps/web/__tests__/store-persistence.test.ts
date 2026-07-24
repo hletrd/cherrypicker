@@ -643,6 +643,29 @@ describe('production persistence parser', () => {
     expect(deserializeAnalysis(JSON.stringify(zeroCount)).data).toBeNull();
   });
 
+  test('fails closed for a truncated current-version calendar underflow', () => {
+    const payload = JSON.parse(
+      persistedFixture(),
+    ) as Record<string, unknown>;
+    delete payload.transactions;
+    payload._truncatedTxCount = 1;
+    payload.monthlyBreakdown = [
+      { month: '0000-01', spending: 10_000, transactionCount: 1 },
+    ];
+    payload.previousSpendingBasis = {
+      kind: 'missing-calendar-month',
+      month: '0000-01',
+      assumedAmount: 0,
+    };
+
+    expect(deserializeAnalysis(JSON.stringify(payload))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
   test('rejects isolated and coordinated current-version basis deletion', () => {
     const isolated = JSON.parse(persistedFixture()) as Record<string, unknown>;
     delete isolated.previousSpendingBasis;
