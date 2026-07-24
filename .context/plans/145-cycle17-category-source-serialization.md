@@ -1,7 +1,7 @@
 # Plan 145: Cycle 17 Category Source Serialization
 
 **Finding:** C17-002 (Medium/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -37,15 +37,30 @@
 
 ## Acceptance
 
-- [ ] Authored category strings never cross a handwritten source-code
+- [x] Authored category strings never cross a handwritten source-code
       delimiter.
-- [ ] Generated TypeScript parses and type-checks for all source-significant
+- [x] Generated TypeScript parses and type-checks for all source-significant
       fixtures.
-- [ ] The evaluated map exactly preserves keys, labels, alias rules, and
+- [x] The evaluated map exactly preserves keys, labels, alias rules, and
       order.
-- [ ] Current catalog behavior and generated-data checks remain unchanged
+- [x] Current catalog behavior and generated-data checks remain unchanged
       except for deterministic safe serialization.
-- [ ] The helper is generator-owned and does not add runtime browser weight.
+- [x] The helper is generator-owned and does not add runtime browser weight.
+
+## Completion evidence
+
+The requested `ralph` capability was unavailable, so Prompt 3 used the
+approved disciplined manual fallback. Category tuple projection and module
+generation now live in `scripts/category-label-publication.ts`. The complete
+tuple array crosses `JSON.stringify` once, U+2028/U+2029 are escaped, and only
+the serialized data enters a fixed module template.
+
+The focused regression passed with eight expectations. Its generated module
+passed TypeScript semantic diagnostics and evaluation from a JavaScript data
+module while preserving quotes, slashes, line breaks, Unicode separators,
+template-marker text, closing-tag-like text, bare and qualified aliases,
+insertion order, and duplicate-key `Map` semantics. Canonical generation and
+drift checking passed.
 
 ## Verification
 

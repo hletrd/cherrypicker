@@ -6,6 +6,8 @@
 **Branch:** `codex/review-plan-fix-no-deploy-20260723`
 **Deploy mode:** none
 **Prompt 1 status:** complete
+**Prompt 2 status:** complete
+**Prompt 3 status:** complete
 
 ## Executive summary
 
@@ -270,3 +272,43 @@ c3fbf7a4ec5628902bce36af73f9d7c6b223c82e6d1360bac44e80d7612a3e9f  .context/revie
 ```
 
 Prompt 1 final count: **4 genuinely new findings**.
+
+## Prompt 2 planning result
+
+Verified completed Plan 143 moved byte-for-byte to
+`.context/plans/_archive/143-cycle16-large-worksheet-metadata-bounds.md`; its
+SHA-256 remained
+`dba85519721172d215dce1888427b13a49ec29cb10f5ec735bc496eff9c8803e`.
+Exactly four new durable plans were created, one for each retained root:
+
+- Plan 144 — single-proof analysis date projection;
+- Plan 145 — structured category-label source serialization;
+- Plan 146 — homogeneous legacy reward comparison groups; and
+- Plan 147 — test/config dependency ownership.
+
+No finding was deferred, merged away, or silently dropped. Prompt 2 final
+count: **4 new plans**.
+
+## Prompt 3 implementation result
+
+The requested `ralph` capability was unavailable, so implementation used the
+approved disciplined manual plan-to-test fallback.
+
+- Analysis context now validates and projects each row once, with one
+  synchronous proof-count regression and semantic parity coverage.
+- Category fallback generation serializes the complete tuple array as data
+  before inserting it into a fixed module template.
+- Legacy category and compact reward indexes compare only exact canonical
+  kind-and-unit groups and apply compact limits per group.
+- Web test code owns `iconv-lite` directly, while the repository checker now
+  enforces production versus test/config dependency ownership.
+
+Focused implementation tests, strict generator compilation, catalog
+generation/drift checks, generated ordering invariants, the dependency policy,
+and the web bundle budget all passed. The implementation is divided across
+four signed, plan-scoped fix commits following the signed review and planning
+commits. No deployment or gate-triggered repair occurred.
+
+The final required repository and E2E gates run after the plan-progress
+commit, so they evaluate the final Cycle 17 HEAD rather than an intermediate
+tree. Their results and exact cleanup evidence belong to the cycle handoff.

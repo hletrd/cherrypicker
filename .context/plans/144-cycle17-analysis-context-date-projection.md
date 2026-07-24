@@ -1,7 +1,7 @@
 # Plan 144: Cycle 17 Analysis Context Date Projection
 
 **Finding:** C17-001 (Medium/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -38,14 +38,26 @@
 
 ## Acceptance
 
-- [ ] Every input row receives exactly one strict ISO calendar proof.
-- [ ] Invalid dates remain in `invalidTransactions` and never enter a monthly
+- [x] Every input row receives exactly one strict ISO calendar proof.
+- [x] Invalid dates remain in `invalidTransactions` and never enter a monthly
       bucket.
-- [ ] Accepted transaction references and sorted order are unchanged.
-- [ ] Latest and previous month selection is unchanged at year boundaries.
-- [ ] Monthly totals, periods, provenance, and safe-integer failures match
+- [x] Accepted transaction references and sorted order are unchanged.
+- [x] Latest and previous month selection is unchanged at year boundaries.
+- [x] Monthly totals, periods, provenance, and safe-integer failures match
       current semantics.
-- [ ] Browser and CLI callers require no contract change.
+- [x] Browser and CLI callers require no contract change.
+
+## Completion evidence
+
+The requested `ralph` capability was unavailable, so Prompt 3 used the
+approved disciplined manual fallback. The pre-fix operation-count regression
+observed 18 `Date.UTC` calls for five rows. The completed implementation
+observes exactly five calls, including one rejected calendar date, and keeps
+the spy inside one synchronous `try`/`finally` scope.
+
+The focused core suite passed 13 tests and 36 expectations. The combined core
+and browser analysis-context matrix passed 331 tests and 1,640 expectations,
+and the core workspace typecheck passed.
 
 ## Verification
 

@@ -1,7 +1,7 @@
 # Plan 146: Cycle 17 Legacy Reward Comparison Groups
 
 **Finding:** C17-003 (Low/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -40,14 +40,31 @@
 
 ## Acceptance
 
-- [ ] No raw amount comparison crosses an exact kind-and-unit boundary.
-- [ ] All five canonical value kinds receive explicit regression coverage.
-- [ ] Within-group best-tier selection and ordering are deterministic.
-- [ ] A size limit in one group never removes an entry from another group.
-- [ ] Legacy/public artifacts expose enough metadata to interpret every
+- [x] No raw amount comparison crosses an exact kind-and-unit boundary.
+- [x] All five canonical value kinds receive explicit regression coverage.
+- [x] Within-group best-tier selection and ordering are deterministic.
+- [x] A size limit in one group never removes an entry from another group.
+- [x] Legacy/public artifacts expose enough metadata to interpret every
       homogeneous group.
-- [ ] The active optimizer artifact and calculator behavior remain
+- [x] The active optimizer artifact and calculator behavior remain
       semantically unchanged.
+
+## Completion evidence
+
+The requested `ralph` capability was unavailable, so Prompt 3 used the
+approved disciplined manual fallback. The legacy projections now use exact
+canonical kind plus normalized unit as their comparison key, preserve the
+first tier on equal amounts, sort group keys lexically, and sort amounts only
+inside each group. Compact limits apply independently at five entries per
+group.
+
+Pure regressions cover all five value kinds, both mileage units, zero,
+negative generic-sort values, equal-value stability, multiple tiers, and
+independent group limits. A generated-artifact invariant scan confirmed 1,460
+category entries and 1,441 compact reward entries with correct group-local
+order and a maximum group size of five. The bundle budget passed with the
+compact catalog at 26.8% of the full legacy catalog. Summary, optimizer,
+category, detail-shard, and source-identity artifacts remained unchanged.
 
 ## Verification
 

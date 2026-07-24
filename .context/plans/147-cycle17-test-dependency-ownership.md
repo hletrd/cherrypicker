@@ -1,7 +1,7 @@
 # Plan 147: Cycle 17 Test Dependency Ownership
 
 **Finding:** C17-004 (Low/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -39,17 +39,32 @@
 
 ## Acceptance
 
-- [ ] The web parity test owns `iconv-lite` directly as a development
+- [x] The web parity test owns `iconv-lite` directly as a development
       dependency.
-- [ ] An undeclared package imported only by a test or config file fails the
+- [x] An undeclared package imported only by a test or config file fails the
       repository dependency check.
-- [ ] A declared development dependency is accepted for test/config code.
-- [ ] Production code cannot satisfy ownership through a development-only
+- [x] A declared development dependency is accepted for test/config code.
+- [x] Production code cannot satisfy ownership through a development-only
       declaration.
-- [ ] Existing workspace aliases, builtins, and explicit optional-package
+- [x] Existing workspace aliases, builtins, and explicit optional-package
       policy remain valid.
-- [ ] The lockfile records one compatible package identity without unrelated
+- [x] The lockfile records one compatible package identity without unrelated
       churn.
+
+## Completion evidence
+
+The requested `ralph` capability was unavailable, so Prompt 3 used the
+approved disciplined manual fallback. The web workspace now owns
+`iconv-lite@^0.6.3` as a development dependency, reusing the existing locked
+`iconv-lite@0.6.3` identity.
+
+The checker classifies production, test, and top-level config sources.
+Production accepts runtime ownership only; test/config sources accept runtime
+or development ownership. The sole root-runner exemption is the named
+root-owned `vitest` package. Fixture coverage proves undeclared test/config
+failure, development ownership success, development-only production failure,
+and the narrow exemption. The checker plus web parity matrix passed 62 tests
+and 241 expectations, and the standalone dependency policy passed.
 
 ## Verification
 
