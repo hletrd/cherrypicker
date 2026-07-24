@@ -7,6 +7,7 @@ import ts from 'typescript';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const WORKSPACE_PARENTS = ['apps', 'packages', 'tools'] as const;
+const TEST_SOURCE_DIRECTORIES = ['__tests__', 'test', 'tests'] as const;
 const SOURCE_EXTENSIONS = new Set([
   '.astro',
   '.cjs',
@@ -17,6 +18,8 @@ const SOURCE_EXTENSIONS = new Set([
   '.ts',
   '.tsx',
 ]);
+const CONFIG_SOURCE_PATTERN = /(?:^|\.)config\.[cm]?[jt]sx?$/u;
+const ROOT_OWNED_TEST_RUNNERS = new Set(['vitest']);
 const EXPECTED_VENDOR_DIGESTS = new Map<string, {
   sha256: string;
   sha512: string;
@@ -62,6 +65,7 @@ const SEMVER_HYPHEN_RANGE = new RegExp(
 interface PackageManifest {
   name: string;
   dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
 }
 
 interface LockPeerMetadata {
@@ -84,6 +88,7 @@ export interface UndeclaredImport {
   sourceFile: string;
   specifier: string;
   packageName: string;
+  sourceKind: 'production' | 'test' | 'config';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -439,10 +444,21 @@ export async function findPeerDependencyMismatches(
 }
 
 async function listDirectories(path: string): Promise<string[]> {
-  return (await readdir(path, { withFileTypes: true }))
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => join(path, entry.name))
-    .sort();
+  try {
+    return (await readdir(path, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => join(path, entry.name))
+      .sort();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    ) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 async function listSourceFiles(path: string): Promise<string[]> {
@@ -456,6 +472,35 @@ async function listSourceFiles(path: string): Promise<string[]> {
     }
   }
   return result.sort();
+}
+
+async function listSourceFilesIfPresent(path: string): Promise<string[]> {
+  try {
+    return await listSourceFiles(path);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    ) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function listWorkspaceConfigFiles(
+  workspacePath: string,
+): Promise<string[]> {
+  return (await readdir(workspacePath, { withFileTypes: true }))
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        SOURCE_EXTENSIONS.has(extname(entry.name)) &&
+        CONFIG_SOURCE_PATTERN.test(entry.name),
+    )
+    .map((entry) => join(workspacePath, entry.name))
+    .sort();
 }
 
 function packageNameFromSpecifier(specifier: string): string | null {
@@ -550,19 +595,23 @@ function collectModuleSpecifiers(sourceText: string, fileName: string): string[]
   return [...specifiers].sort();
 }
 
-export async function findUndeclaredProductionImports(
+export async function findUndeclaredWorkspaceImports(
   repoRoot = REPO_ROOT,
 ): Promise<UndeclaredImport[]> {
+  const rootManifest = JSON.parse(
+    await readFile(join(repoRoot, 'package.json'), 'utf8'),
+  ) as PackageManifest;
+  const rootOwnedPackages = new Set([
+    ...Object.keys(rootManifest.dependencies ?? {}),
+    ...Object.keys(rootManifest.devDependencies ?? {}),
+  ]);
   const issues: UndeclaredImport[] = [];
   for (const parent of WORKSPACE_PARENTS) {
     for (const workspacePath of await listDirectories(join(repoRoot, parent))) {
       const manifestPath = join(workspacePath, 'package.json');
-      const sourcePath = join(workspacePath, 'src');
       let manifest: PackageManifest;
-      let sourceFiles: string[];
       try {
         manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as PackageManifest;
-        sourceFiles = await listSourceFiles(sourcePath);
       } catch (error) {
         if (
           error instanceof Error &&
@@ -574,25 +623,73 @@ export async function findUndeclaredProductionImports(
         throw error;
       }
 
-      const declared = new Set(Object.keys(manifest.dependencies ?? {}));
-      declared.add(manifest.name);
-      for (const sourceFile of sourceFiles) {
+      const runtimeDeclared = new Set(Object.keys(manifest.dependencies ?? {}));
+      runtimeDeclared.add(manifest.name);
+      const developmentDeclared = new Set([
+        ...runtimeDeclared,
+        ...Object.keys(manifest.devDependencies ?? {}),
+      ]);
+      const sourceFiles = [
+        ...(await listSourceFilesIfPresent(join(workspacePath, 'src'))).map(
+          (sourceFile) =>
+            ({ sourceFile, sourceKind: 'production' }) as const,
+        ),
+        ...(
+          await Promise.all(
+            TEST_SOURCE_DIRECTORIES.map((directory) =>
+              listSourceFilesIfPresent(join(workspacePath, directory)),
+            ),
+          )
+        )
+          .flat()
+          .map(
+            (sourceFile) => ({ sourceFile, sourceKind: 'test' }) as const,
+          ),
+        ...(await listWorkspaceConfigFiles(workspacePath)).map(
+          (sourceFile) => ({ sourceFile, sourceKind: 'config' }) as const,
+        ),
+      ];
+
+      for (const { sourceFile, sourceKind } of sourceFiles) {
+        const declared =
+          sourceKind === 'production' ? runtimeDeclared : developmentDeclared;
         const sourceText = await readFile(sourceFile, 'utf8');
         for (const specifier of collectModuleSpecifiers(sourceText, sourceFile)) {
           const packageName = packageNameFromSpecifier(specifier);
-          if (packageName && !declared.has(packageName)) {
+          const usesRootOwnedTestRunner =
+            sourceKind === 'test' &&
+            ROOT_OWNED_TEST_RUNNERS.has(packageName ?? '') &&
+            rootOwnedPackages.has(packageName ?? '');
+          if (
+            packageName &&
+            !declared.has(packageName) &&
+            !usesRootOwnedTestRunner
+          ) {
             issues.push({
               workspace: manifest.name,
               sourceFile: relative(repoRoot, sourceFile),
               specifier,
               packageName,
+              sourceKind,
             });
           }
         }
       }
     }
   }
-  return issues;
+  return issues.sort(
+    (left, right) =>
+      left.sourceFile.localeCompare(right.sourceFile) ||
+      left.specifier.localeCompare(right.specifier),
+  );
+}
+
+export async function findUndeclaredProductionImports(
+  repoRoot = REPO_ROOT,
+): Promise<UndeclaredImport[]> {
+  return (await findUndeclaredWorkspaceImports(repoRoot)).filter(
+    ({ sourceKind }) => sourceKind === 'production',
+  );
 }
 
 export async function digest(
@@ -700,7 +797,7 @@ export async function checkDependencies(repoRoot = REPO_ROOT): Promise<string[]>
     remoteReferences,
     vendorReferenceMismatches,
   ] = await Promise.all([
-    findUndeclaredProductionImports(repoRoot),
+    findUndeclaredWorkspaceImports(repoRoot),
     findVendorDigestMismatches(repoRoot),
     findPeerDependencyMismatches(repoRoot),
     findRemoteDependencyReferences(repoRoot),
@@ -708,8 +805,16 @@ export async function checkDependencies(repoRoot = REPO_ROOT): Promise<string[]>
   ]);
   return [
     ...undeclared.map(
-      (issue) =>
-        `${issue.sourceFile}: ${issue.specifier} is not a direct production dependency of ${issue.workspace}`,
+      (issue) => {
+        const ownership =
+          issue.sourceKind === 'production'
+            ? 'runtime dependency'
+            : 'runtime or development dependency';
+        return (
+          `${issue.sourceFile}: ${issue.specifier} is not a direct ` +
+          `${ownership} of ${issue.workspace}`
+        );
+      },
     ),
     ...digestMismatches,
     ...peerDependencyMismatches,

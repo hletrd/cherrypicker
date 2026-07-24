@@ -1,4 +1,7 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   checkDependencies,
   digest,
@@ -6,6 +9,7 @@ import {
   findPeerDependencyMismatchesInLock,
   findRemoteDependencyReferences,
   findUndeclaredProductionImports,
+  findUndeclaredWorkspaceImports,
   findVendorDigestMismatches,
   findVendorReferenceMismatches,
 } from '../check-dependencies.js';
@@ -14,6 +18,74 @@ const EXPECTED_XLSX_SHA256 =
   '8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8';
 const EXPECTED_XLSX_SHA512 =
   'a0b0eade3c3b01c2ea2961f60210a9553665f267fa5f661178ff8d7a1d12254cd5fc1759623b61f78b46e6da22301d4f3eb62dc4e09f6a850292fb6e1fedc024';
+const fixtureRoots: string[] = [];
+
+interface WorkspaceImportFixture {
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  rootDevDependencies?: Record<string, string>;
+  productionSource?: string;
+  testSource?: string;
+  configSource?: string;
+}
+
+async function workspaceImportFixture(
+  fixture: WorkspaceImportFixture,
+): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), 'cherrypicker-dependencies-'));
+  fixtureRoots.push(root);
+  const workspacePath = join(root, 'apps', 'fixture');
+  await Promise.all([
+    mkdir(join(workspacePath, 'src'), { recursive: true }),
+    mkdir(join(workspacePath, '__tests__'), { recursive: true }),
+    mkdir(join(root, 'packages'), { recursive: true }),
+    mkdir(join(root, 'tools'), { recursive: true }),
+  ]);
+  await Promise.all([
+    writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({
+        name: 'fixture-root',
+        private: true,
+        devDependencies: fixture.rootDevDependencies ?? {},
+      }),
+    ),
+    writeFile(
+      join(workspacePath, 'package.json'),
+      JSON.stringify({
+        name: '@fixture/app',
+        private: true,
+        dependencies: fixture.dependencies ?? {},
+        devDependencies: fixture.devDependencies ?? {},
+      }),
+    ),
+    writeFile(
+      join(workspacePath, 'src', 'index.ts'),
+      fixture.productionSource ?? 'export {};\n',
+    ),
+  ]);
+  if (fixture.testSource !== undefined) {
+    await writeFile(
+      join(workspacePath, '__tests__', 'fixture.test.ts'),
+      fixture.testSource,
+    );
+  }
+  if (fixture.configSource !== undefined) {
+    await writeFile(
+      join(workspacePath, 'fixture.config.ts'),
+      fixture.configSource,
+    );
+  }
+  return root;
+}
+
+afterEach(async () => {
+  await Promise.all(
+    fixtureRoots
+      .splice(0)
+      .map((root) => rm(root, { recursive: true, force: true })),
+  );
+});
 
 interface LockMetadata {
   optionalPeers?: string[];
@@ -42,9 +114,12 @@ function lockFixture(
 }
 
 describe('dependency policy', () => {
-  test('every production package import is declared by its workspace', async () => {
-    expect(await findUndeclaredProductionImports()).toEqual([]);
-  });
+  test(
+    'every workspace import is owned for its production or test/config context',
+    async () => {
+      expect(await findUndeclaredWorkspaceImports()).toEqual([]);
+    },
+  );
 
   test('does not resolve packages from unauthenticated remote URLs', async () => {
     expect(await findRemoteDependencyReferences()).toEqual([]);
@@ -63,6 +138,90 @@ describe('dependency policy', () => {
 
   test('passes the combined blocking dependency policy', async () => {
     expect(await checkDependencies()).toEqual([]);
+  });
+});
+
+describe('workspace import ownership policy', () => {
+  test('rejects undeclared packages imported only by tests or config', async () => {
+    const root = await workspaceImportFixture({
+      testSource: "import 'test-only-package';\n",
+      configSource: "import 'config-only-package';\n",
+    });
+
+    expect(await findUndeclaredWorkspaceImports(root)).toEqual([
+      {
+        workspace: '@fixture/app',
+        sourceFile: 'apps/fixture/__tests__/fixture.test.ts',
+        specifier: 'test-only-package',
+        packageName: 'test-only-package',
+        sourceKind: 'test',
+      },
+      {
+        workspace: '@fixture/app',
+        sourceFile: 'apps/fixture/fixture.config.ts',
+        specifier: 'config-only-package',
+        packageName: 'config-only-package',
+        sourceKind: 'config',
+      },
+    ]);
+  });
+
+  test('accepts runtime and development dependencies in tests and config', async () => {
+    const root = await workspaceImportFixture({
+      dependencies: { 'runtime-package': '1.0.0' },
+      devDependencies: { 'development-package': '1.0.0' },
+      testSource:
+        "import 'runtime-package';\nimport 'development-package';\n",
+      configSource: "import 'development-package';\n",
+    });
+
+    expect(await findUndeclaredWorkspaceImports(root)).toEqual([]);
+  });
+
+  test('does not let production source use a development-only dependency', async () => {
+    const root = await workspaceImportFixture({
+      devDependencies: { 'development-package': '1.0.0' },
+      productionSource: "import 'development-package';\n",
+    });
+
+    expect(await findUndeclaredWorkspaceImports(root)).toEqual([
+      {
+        workspace: '@fixture/app',
+        sourceFile: 'apps/fixture/src/index.ts',
+        specifier: 'development-package',
+        packageName: 'development-package',
+        sourceKind: 'production',
+      },
+    ]);
+    expect(await findUndeclaredProductionImports(root)).toEqual([
+      {
+        workspace: '@fixture/app',
+        sourceFile: 'apps/fixture/src/index.ts',
+        specifier: 'development-package',
+        packageName: 'development-package',
+        sourceKind: 'production',
+      },
+    ]);
+  });
+
+  test('exempts only the named root-owned workspace test runner', async () => {
+    const root = await workspaceImportFixture({
+      rootDevDependencies: {
+        vitest: '4.1.10',
+        'other-root-package': '1.0.0',
+      },
+      testSource: "import 'vitest';\nimport 'other-root-package';\n",
+    });
+
+    expect(await findUndeclaredWorkspaceImports(root)).toEqual([
+      {
+        workspace: '@fixture/app',
+        sourceFile: 'apps/fixture/__tests__/fixture.test.ts',
+        specifier: 'other-root-package',
+        packageName: 'other-root-package',
+        sourceKind: 'test',
+      },
+    ]);
   });
 });
 
