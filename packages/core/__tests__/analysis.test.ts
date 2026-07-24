@@ -1,4 +1,4 @@
-import { describe, expect, spyOn, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   buildAnalysisContext,
   calculatePerformanceSpending,
@@ -31,15 +31,20 @@ describe('analysis calendar context', () => {
       januaryEarly,
       december,
     ];
-    // Keep the global spy inside one synchronous callback: Bun cannot
-    // interleave another test in this isolate before the finally restores it.
-    const utc = spyOn(Date, 'UTC');
+    // Keep the global wrapper inside one synchronous callback: the runner
+    // cannot interleave another test in this isolate before it is restored.
+    const originalUtc = Date.UTC;
+    const utcCalls: Array<Parameters<typeof Date.UTC>> = [];
+    Date.UTC = (...args: Parameters<typeof Date.UTC>) => {
+      utcCalls.push(args);
+      return originalUtc(...args);
+    };
 
     try {
       const context = buildAnalysisContext(input)!;
 
-      expect(utc).toHaveBeenCalledTimes(input.length);
-      expect(utc.mock.calls).toEqual([
+      expect(utcCalls).toHaveLength(input.length);
+      expect(utcCalls).toEqual([
         [2026, 0, 20],
         [2026, 1, 30],
         [2024, 1, 29],
@@ -85,7 +90,7 @@ describe('analysis calendar context', () => {
         { month: '2026-01', spending: 70_000, transactionCount: 2 },
       ]);
     } finally {
-      utc.mockRestore();
+      Date.UTC = originalUtc;
     }
   });
 
