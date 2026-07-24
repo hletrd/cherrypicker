@@ -893,7 +893,7 @@ function hasCoherentPortfolioLossCategories(
 function hasExactPreviousSpendingBasis(
   result: AnalysisResult,
   latestMonth: YearMonth,
-  hasPreviousStatementMonth: boolean,
+  hasStatementMonth: (month: YearMonth) => boolean,
 ): boolean {
   const basis = result.previousSpendingBasis;
   const option = result.previousMonthSpendingOption;
@@ -907,15 +907,19 @@ function hasExactPreviousSpendingBasis(
   }
   if (option !== undefined) return false;
 
-  const previousMonth = previousCalendarMonth(latestMonth);
+  const previousMonth =
+    latestMonth === '0000-01'
+      ? null
+      : previousCalendarMonth(latestMonth);
+  if (previousMonth === null) return false;
   if (basis.kind === 'statement-month') {
-    return basis.month === previousMonth && hasPreviousStatementMonth;
+    return basis.month === previousMonth && hasStatementMonth(previousMonth);
   }
   return (
     basis.kind === 'missing-calendar-month' &&
     basis.month === previousMonth &&
     basis.assumedAmount === 0 &&
-    !hasPreviousStatementMonth
+    !hasStatementMonth(previousMonth)
   );
 }
 
@@ -961,7 +965,6 @@ function hasCoherentTruncatedFacts(
   if (!latest) return false;
 
   const categoryTotals = categorySummaryTotals(result.categoryBreakdown);
-  const previousMonth = previousCalendarMonth(latest.month);
   return (
     Number.isSafeInteger(truncatedTransactionCount) &&
     (truncatedTransactionCount ?? 0) > 0 &&
@@ -976,7 +979,7 @@ function hasCoherentTruncatedFacts(
     hasExactPreviousSpendingBasis(
       result,
       latest.month,
-      (months.get(previousMonth) ?? 0) > 0,
+      (month) => (months.get(month) ?? 0) > 0,
     )
   );
 }
@@ -1087,11 +1090,10 @@ export function isAnalysisResultCoherent(
     return false;
   }
 
-  const previousMonth = previousCalendarMonth(facts.latestMonth);
   return hasExactPreviousSpendingBasis(
     result,
     facts.latestMonth,
-    facts.months.has(previousMonth),
+    (month) => facts.months.has(month),
   );
 }
 

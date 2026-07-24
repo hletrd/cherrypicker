@@ -59,9 +59,18 @@ describe('strict calendar helpers', () => {
   });
 
   test('rejects the non-representable predecessor of 0000-01', () => {
-    expect(() =>
-      previousCalendarMonth(parseYearMonth('0000-01')),
-    ).toThrow('YearMonth 0000-01 has no representable previous month');
+    let thrown: unknown;
+    try {
+      previousCalendarMonth(parseYearMonth('0000-01'));
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(RangeError);
+    expect(thrown).toHaveProperty(
+      'message',
+      'YearMonth 0000-01 has no representable previous month',
+    );
   });
 });
 

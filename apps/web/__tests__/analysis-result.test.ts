@@ -137,6 +137,26 @@ function cloneResult(): AnalysisResult {
   return structuredClone(coherentResult());
 }
 
+function truncatedResultAt(month: string): AnalysisResult {
+  const result = cloneResult();
+  result.transactions = undefined;
+  result.statementPeriod = {
+    start: `${month}-23`,
+    end: `${month}-23`,
+  };
+  result.fullStatementPeriod = result.statementPeriod;
+  result.transactionCount = 1;
+  result.totalTransactionCount = 1;
+  result.monthlyBreakdown = [
+    {
+      month: parseYearMonth(month),
+      spending: 10_000,
+      transactionCount: 1,
+    },
+  ];
+  return result;
+}
+
 type PortfolioCapLoss =
   NonNullable<AnalysisResult['optimization']['portfolioCapLosses']>[number];
 
@@ -690,6 +710,87 @@ describe('analysis result coherence', () => {
     expect(
       isAnalysisResultCoherent(truncated, { truncatedTransactionCount: 2 }),
     ).toBe(false);
+  });
+
+  test('accepts a truncated user-total at the lower calendar bound', () => {
+    const result = truncatedResultAt('0000-01');
+    result.previousMonthSpendingOption = 300_000;
+    result.previousSpendingBasis = {
+      kind: 'user-total',
+      amount: 300_000,
+    };
+
+    expect(
+      isAnalysisResultCoherent(result, { truncatedTransactionCount: 1 }),
+    ).toBe(true);
+  });
+
+  test.each([
+    'statement-month',
+    'missing-calendar-month',
+  ] as const)(
+    'rejects a truncated %s basis with no representable predecessor',
+    (kind) => {
+      const result = truncatedResultAt('0000-01');
+      result.previousSpendingBasis =
+        kind === 'statement-month'
+          ? {
+              kind,
+              month: parseYearMonth('0000-01'),
+            }
+          : {
+              kind,
+              month: parseYearMonth('0000-01'),
+              assumedAmount: 0,
+            };
+
+      let coherent: boolean | undefined;
+      expect(() => {
+        coherent = isAnalysisResultCoherent(result, {
+          truncatedTransactionCount: 1,
+        });
+      }).not.toThrow();
+      expect(coherent).toBe(false);
+    },
+  );
+
+  test('accepts 0000-01 as the predecessor of truncated 0000-02 facts', () => {
+    const result = truncatedResultAt('0000-02');
+    result.monthlyBreakdown = [
+      {
+        month: parseYearMonth('0000-01'),
+        spending: 2_000,
+        transactionCount: 1,
+      },
+      ...(result.monthlyBreakdown ?? []),
+    ];
+    result.totalTransactionCount = 2;
+    result.previousSpendingBasis = {
+      kind: 'statement-month',
+      month: parseYearMonth('0000-01'),
+    };
+
+    expect(
+      isAnalysisResultCoherent(result, { truncatedTransactionCount: 2 }),
+    ).toBe(true);
+  });
+
+  test('rejects full transaction facts in year 0000 without throwing', () => {
+    const result = cloneResult();
+    const currentTransaction = result.transactions?.[1];
+    if (!currentTransaction) throw new Error('missing current transaction');
+    result.transactions = [
+      {
+        ...currentTransaction,
+        date: '0000-01-23',
+      },
+    ];
+
+    let coherent: boolean | undefined;
+    expect(() => {
+      coherent = isAnalysisResultCoherent(result);
+    }).not.toThrow();
+    expect(coherent).toBe(false);
   });
 
   test('accepts an explicit no-benefit result with all spending unassigned', () => {
