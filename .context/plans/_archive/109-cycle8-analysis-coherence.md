@@ -1,7 +1,7 @@
 # Plan 109 — Cycle 8 Analysis DTO and Persistence Coherence
 
 **Findings:** C8-001 (Medium/High), C8-008 (Medium/High)
-**Status:** reopened for Cycle 20 historical completion gap C20-B-001
+**Status:** archived (completed, including Cycle 20 C20-B-001)
 **Deploy mode:** none
 
 The Cycle 8 closure below remains historical evidence. Cycle 20 reproduced one
@@ -91,7 +91,7 @@ checked arithmetic helpers, and focused runtime round-trip tests.
 **Review obligation:** C20-B-001
 **Severity / confidence:** Low / High
 **Novelty:** historical Plan 109 completion gap; not a new Cycle 20 root
-**Status:** planned
+**Status:** completed
 
 ### Current evidence
 
@@ -132,51 +132,88 @@ preserved. This is a correctness/integrity obligation and is not deferred.
 
 ### Implementation
 
-- [ ] Change the per-entry count condition in
+- [x] Change the per-entry count condition in
       `hasCoherentTruncatedFacts()` to require a positive safe integer.
-- [ ] Change persistence monthly-breakdown admission to require the same
+- [x] Change persistence monthly-breakdown admission to require the same
       positive safe-integer count.
-- [ ] Keep zero spending valid for a positive count.
-- [ ] Avoid a new helper unless it eliminates real duplicated domain logic
+- [x] Keep zero spending valid for a positive count.
+- [x] Avoid a new helper unless it eliminates real duplicated domain logic
       without widening the patch or dependency graph.
-- [ ] Do not add suppressions, relax a gate, widen types, or mask the state in
+- [x] Do not add suppressions, relax a gate, widen types, or mask the state in
       presentation code.
 
 ### Deterministic regressions
 
-- [ ] Add a pure-coherence test that inserts a positive-spending,
+- [x] Add a pure-coherence test that inserts a positive-spending,
       zero-transaction prior bucket into an otherwise valid truncated result
       and requires `false`.
-- [ ] Add a current-version deserializer test for the same witness and require
+- [x] Add a current-version deserializer test for the same witness and require
       the standard corrupted/removal result.
-- [ ] Add a valid prior bucket with `spending: 0` and
+- [x] Add a valid prior bucket with `spending: 0` and
       `transactionCount: 1`, a matching statement-month basis, and coherent
       represented/truncated totals.
-- [ ] Preserve an ordinary honest truncated round trip and the existing full
+- [x] Preserve an ordinary honest truncated round trip and the existing full
       transaction-backed month-map controls.
-- [ ] Assert the invalid payload never becomes a renderable restored result;
+- [x] Assert the invalid payload never becomes a renderable restored result;
       no new E2E case is required unless the source repair unexpectedly
       changes the UI recovery path.
 
 ### Validation and closure
 
-- [ ] Run focused analysis-result and persistence suites.
-- [ ] Run `bun run lint`.
-- [ ] Run `bun run typecheck`.
-- [ ] Run `bun run build`.
-- [ ] Run `bun run test`.
-- [ ] Run `bun run test:bun`.
-- [ ] Run `bunx vitest run`.
-- [ ] Run one owned `bun run test:e2e` attempt through the repository wrapper
+- [x] Run focused analysis-result and persistence suites.
+- [x] Run `bun run lint`.
+- [x] Run `bun run typecheck`.
+- [x] Run `bun run build`.
+- [x] Run `bun run test`.
+- [x] Run `bun run test:bun`.
+- [x] Run `bunx vitest run`.
+- [x] Run one owned `bun run test:e2e` attempt through the repository wrapper
       with exact pre/post session, profile, PID/PGID, process-tree, and port
       cleanup proof, including cleanup after failure.
-- [ ] Preserve unrelated interactive Chrome PID/PGID `1368/1368` and all
+- [x] Preserve unrelated interactive Chrome PID/PGID `1368/1368` and all
       unrelated repository/browser processes.
-- [ ] Record disciplined manual fallback because `ralph` is unavailable.
-- [ ] Update both canonical and dated Cycle 20 plan provenance with exact
+- [x] Record disciplined manual fallback because `ralph` is unavailable.
+- [x] Update both canonical and dated Cycle 20 plan provenance with exact
       completion evidence.
-- [ ] Archive the completed canonical and dated plan documents.
-- [ ] Do not deploy, release, publish, or invoke the deployment workflow.
+- [x] Archive the completed canonical and dated plan documents.
+- [x] Do not deploy, release, publish, or invoke the deployment workflow.
+
+### Cycle 20 completion evidence
+
+- `ralph` was unavailable, so Prompt 3 used the planned disciplined manual
+  fallback with two exact implementation scopes and independent focused
+  verification.
+- `aec765824b744149b6bafa6706860fc38633791c` enforces the positive
+  monthly-count invariant in pure truncated coherence and adds the invalid
+  phantom-bucket plus valid zero-spending controls.
+- `774d896979627bbbf1187f40dd2b95df26139d76` enforces the same invariant at
+  persistence admission and adds exact corrupted/removal and valid
+  zero-spending restoration coverage.
+- The focused analysis-result and persistence matrix passed 218 tests with 547
+  expectations.
+- `bun run lint` and `bun run typecheck` passed all seven workspaces; Astro
+  reported 126 files with zero errors, warnings, or hints.
+- `bun run build` passed all seven workspaces and generated all five Astro
+  pages.
+- `bun run test` passed all twelve Turbo tasks; the changed web suite reported
+  938 tests and 4,365 expectations, and script tests reported 96 tests and
+  1,032 expectations. The first full attempt had one transient 5-second
+  timeout in the tracked-file product-identity scan. That exact test passed
+  twice immediately afterward, and the complete gate rerun passed without a
+  source or threshold change.
+- `bun run test:bun` passed 1,641 tests with 3,319 expectations.
+- `bunx vitest run` passed 128 files and 3,146 tests.
+- The single owned E2E run
+  `1784874046149-11f1e27a-a295-48de-bb7c-636e7d523654` selected port 4173
+  and passed all 97 tests. Postflight checks found no owned metadata,
+  profile, browser/session/process tree, or listener; ports 4173-4175 were
+  free and `bun scripts/run-e2e.ts status --assert-clean` passed.
+- Interactive Chrome PID/PGID `1368/1368` remained running, all six protected
+  Cycle 42 artifact hashes remained exact, and no unrelated process was
+  terminated.
+- No gate required a corrective source change, so `GATE_FIXES = 0`.
+- Deploy mode remained `none`; no deploy, release, publication, or deployment
+  workflow action occurred.
 
 ### Acceptance
 
