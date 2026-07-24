@@ -111,25 +111,46 @@ export function buildAnalysisContext<T extends DatedAmount>(
     throw new Error('previousMonthSpending must be a non-negative safe integer');
   }
 
-  const validTransactions: T[] = [];
+  const projectedTransactions: { transaction: T; month: YearMonth }[] = [];
   const invalidDateTransactions: T[] = [];
   for (const transaction of transactions) {
-    (isValidIsoDate(transaction.date)
-      ? validTransactions
-      : invalidDateTransactions
-    ).push(transaction);
+    const month = yearMonthOfDate(transaction.date);
+    if (month === null) {
+      invalidDateTransactions.push(transaction);
+    } else {
+      projectedTransactions.push({ transaction, month });
+    }
   }
-  if (validTransactions.length === 0) return null;
+  if (projectedTransactions.length === 0) return null;
 
-  validTransactions.sort((left, right) => left.date.localeCompare(right.date));
-  const latestMonth = yearMonthOfDate(validTransactions.at(-1)!.date)!;
-  const latestTransactions = validTransactions.filter(
-    ({ date }) => yearMonthOfDate(date) === latestMonth,
+  projectedTransactions.sort((left, right) =>
+    left.transaction.date.localeCompare(right.transaction.date),
   );
+  const latestMonth = projectedTransactions.at(-1)!.month;
   const previousMonth = previousCalendarMonth(latestMonth);
-  const previousTransactions = validTransactions.filter(
-    ({ date }) => yearMonthOfDate(date) === previousMonth,
-  );
+  const validTransactions: T[] = [];
+  const latestTransactions: T[] = [];
+  const previousTransactions: T[] = [];
+  const monthly = new Map<
+    YearMonth,
+    { spending: number; transactionCount: number }
+  >();
+  for (const { transaction, month } of projectedTransactions) {
+    validTransactions.push(transaction);
+    if (month === latestMonth) latestTransactions.push(transaction);
+    if (month === previousMonth) previousTransactions.push(transaction);
+
+    const current = monthly.get(month) ?? { spending: 0, transactionCount: 0 };
+    if (transaction.amount > 0) {
+      current.spending = addSafeNonnegativeIntegers(
+        current.spending,
+        transaction.amount,
+        `monthly spending for ${month}`,
+      );
+    }
+    current.transactionCount += 1;
+    monthly.set(month, current);
+  }
 
   const previousSpendingBasis: PreviousSpendingBasis =
     explicitPreviousMonthSpending !== undefined
@@ -142,23 +163,6 @@ export function buildAnalysisContext<T extends DatedAmount>(
             assumedAmount: 0,
           };
 
-  const monthly = new Map<
-    YearMonth,
-    { spending: number; transactionCount: number }
-  >();
-  for (const transaction of validTransactions) {
-    const month = yearMonthOfDate(transaction.date)!;
-    const current = monthly.get(month) ?? { spending: 0, transactionCount: 0 };
-    if (transaction.amount > 0) {
-      current.spending = addSafeNonnegativeIntegers(
-        current.spending,
-        transaction.amount,
-        `monthly spending for ${month}`,
-      );
-    }
-    current.transactionCount += 1;
-    monthly.set(month, current);
-  }
   const monthlyBreakdown = [...monthly]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([month, values]) => ({ month, ...values }));
