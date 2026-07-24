@@ -1,7 +1,7 @@
 # Plan 148: Cycle 18 YearMonth Domain Closure
 
 **Finding:** C18-001 (Low/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -62,15 +62,37 @@
 
 ## Acceptance
 
-- [ ] Raw strings rejected by `isYearMonth()` are not assignable to the
+- [x] Raw strings rejected by `isYearMonth()` are not assignable to the
       public `YearMonth` type without parsing/narrowing.
-- [ ] Every successfully returned predecessor passes `isYearMonth()`.
-- [ ] Same-year predecessors in 0100–0999 retain all four year digits.
-- [ ] `1000-01` returns `0999-12` and selects a present December-0999 row.
-- [ ] `0000-01` fails with the explicit lower-bound error.
-- [ ] Modern parser, browser, CLI, coherence, disclosure, and persistence
+- [x] Every successfully returned predecessor passes `isYearMonth()`.
+- [x] Same-year predecessors in 0100–0999 retain all four year digits.
+- [x] `1000-01` returns `0999-12` and selects a present December-0999 row.
+- [x] `0000-01` fails with the explicit lower-bound error.
+- [x] Modern parser, browser, CLI, coherence, disclosure, and persistence
       behavior remains unchanged.
-- [ ] The deterministic one-proof-per-row regression still passes.
+- [x] The deterministic one-proof-per-row regression still passes.
+
+## Completion evidence
+
+The public contract is now a branded string constructed by
+`parseYearMonth()` or narrowed by `isYearMonth()`. `yearMonthOfDate()` and
+`previousCalendarMonth()` cross that same checked boundary without any
+`as YearMonth` assertion. Same-year predecessors preserve the original year
+text; January predecessors use four-digit padding; and `0000-01` throws the
+documented range error.
+
+The pre-fix regression failed because the constructor export was absent and
+the December-0999 row was omitted. After the repair:
+
+- 33 focused core/web calendar tests passed with 80 expectations;
+- the widened fixture matrix passed 262 tests with 730 expectations;
+- core `tsc --noEmit` passed; and
+- web `astro check` reported 0 errors, 0 warnings, and 0 hints, including the
+  static malformed-literal contract assertions.
+
+Supported parser year policy remains 1900–2100. No parser, persistence schema,
+CLI contract, or generated data changed. The signed plan-scoped implementation
+commit is `9cb5bfe`.
 
 ## Verification
 

@@ -2,7 +2,7 @@
 
 **Findings:** C3-008, C3-009, C3-010, C3-011, C3-012, C3-013, C3-014
 **Deploy mode:** none
-**Status:** reopened for the Cycle 18 C3-008 regression
+**Status:** completed after the Cycle 18 C3-008 regression repair
 
 ## Outcome
 
@@ -109,30 +109,54 @@ set, which bounds current impact.
 
 ### Reopened tasks
 
-- [ ] Extend the publication identity with a canonical keyed supplemental
+- [x] Extend the publication identity with a canonical keyed supplemental
       payload set.
-- [ ] Construct identity-free legacy full and compact projections before
+- [x] Construct identity-free legacy full and compact projections before
       computing or injecting `sourceHash`.
-- [ ] Include both legacy projections under stable, distinct keys.
-- [ ] Keep the browser schema at `1.0.0` and mark the changed legacy contract
+- [x] Include both legacy projections under stable, distinct keys.
+- [x] Keep the browser schema at `1.0.0` and mark the changed legacy contract
       as `2.0.0`.
-- [ ] Add regressions proving a legacy-full-only or compact-only mutation
+- [x] Add regressions proving a legacy-full-only or compact-only mutation
       changes identity while supplemental key reordering does not.
-- [ ] Regenerate all affected JSON through `bun run data:build`; never edit
+- [x] Regenerate all affected JSON through `bun run data:build`; never edit
       generated catalogs by hand.
-- [ ] Prove every browser and legacy artifact carries one complete-publication
+- [x] Prove every browser and legacy artifact carries one complete-publication
       hash and that active readers/bundle budgets remain unchanged.
 
 ### Reopened acceptance
 
-- [ ] Every supported published byte set contributes to its advertised
+- [x] Every supported published byte set contributes to its advertised
       identity.
-- [ ] No identity input contains an already injected `sourceHash`.
-- [ ] Legacy full and compact artifacts advertise version `2.0.0`.
-- [ ] Browser summary, optimizer, categories, all detail shards, and both
+- [x] No identity input contains an already injected `sourceHash`.
+- [x] Legacy full and compact artifacts advertise version `2.0.0`.
+- [x] Browser summary, optimizer, categories, all detail shards, and both
       legacy catalogs carry the same new hash.
-- [ ] Canonical generation, drift checking, focused publication tests, and
+- [x] Canonical generation, drift checking, focused publication tests, and
       every required repository gate pass.
+
+### Cycle 18 completion evidence
+
+`build-json.ts` now constructs identity-free split, legacy-full, and
+legacy-compact projections before calling the canonical publication hasher.
+The two legacy payloads enter under stable distinct keys; only afterward is
+the resulting identity injected across all outputs. Browser schema version
+remains `1.0.0`; all three legacy copies advertise `2.0.0`.
+
+Canonical generation produced one hash across 30 advertised identities
+(three legacy copies, summary, optimizer, categories, and 24 detail shards):
+
+```text
+125970f582c040a0c6aa728cab49dea1173c1e7fbd96fc297876c5197291c200
+```
+
+After removing the expected hash fields and normalizing the intended legacy
+version change, all 30 generated artifacts were byte-equivalent to their
+previous projections. Focused identity coverage passed 21 tests and 62
+expectations, including independent full/compact mutations, supplemental key
+reordering, tracked version checks, and common-identity checks.
+`data:build`, `data:check`, 30 browser/CLI/rules reader tests, and the web
+bundle budget passed. The signed plan-scoped implementation commit is
+`9415b1b`.
 
 ### Cycle 18 implementation protocol
 

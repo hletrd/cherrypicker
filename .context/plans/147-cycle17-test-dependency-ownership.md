@@ -1,7 +1,7 @@
 # Plan 147: Cycle 17 Test Dependency Ownership
 
 **Finding:** C17-004 (Low/High)
-**Status:** reopened for Cycle 18 preventive completion
+**Status:** completed after Cycle 18 preventive completion
 **Deploy mode:** none
 
 ## Evidence
@@ -97,31 +97,46 @@ gap:
 
 ### Reopened tasks
 
-- [ ] Add `.mts` and `.cts` to the shared source-extension inventory.
-- [ ] Replace the separate config-name grammar with an
+- [x] Add `.mts` and `.cts` to the shared source-extension inventory.
+- [x] Replace the separate config-name grammar with an
       `isConfigSourceFile()` decision derived from the admitted extension and
       a `config` / `*.config` stem.
-- [ ] Parameterize production, nested-test, and config fixture filenames
+- [x] Parameterize production, nested-test, and config fixture filenames
       while preserving their current defaults.
-- [ ] Add exact `.mts` and `.cts` fixtures for all three source kinds,
+- [x] Add exact `.mts` and `.cts` fixtures for all three source kinds,
       undeclared-package rejection, and correct direct ownership acceptance.
-- [ ] Preserve deterministic diagnostics, the narrow root Vitest exception,
+- [x] Preserve deterministic diagnostics, the narrow root Vitest exception,
       builtins, relative imports, workspace aliases, vendor integrity, and
       peer checks.
-- [ ] Avoid manifest or lockfile churn unless the expanded current-tree scan
+- [x] Avoid manifest or lockfile churn unless the expanded current-tree scan
       demonstrates a real ownership failure.
 
 ### Reopened acceptance
 
-- [ ] `.mts` and `.cts` production, nested-test, and config files all reach
+- [x] `.mts` and `.cts` production, nested-test, and config files all reach
       import classification.
-- [ ] Undeclared imports produce exact deterministic diagnostics.
-- [ ] Runtime ownership satisfies production and runtime/development
+- [x] Undeclared imports produce exact deterministic diagnostics.
+- [x] Runtime ownership satisfies production and runtime/development
       ownership satisfies test/config.
-- [ ] The current tree remains clean without unrelated manifest or lockfile
+- [x] The current tree remains clean without unrelated manifest or lockfile
       changes.
-- [ ] The focused policy suite, standalone dependency check, and all required
+- [x] The focused policy suite, standalone dependency check, and all required
       repository gates pass.
+
+### Cycle 18 completion evidence
+
+The shared extension set now admits `.mts` and `.cts`. Config admission uses
+the same extension set plus a `config` / `*.config` stem instead of an
+independent regular expression. The fixture helper accepts explicit
+production, nested-test, and config names, and table-driven cases cover both
+module-TypeScript extensions across all three source kinds.
+
+The pre-fix cases returned no diagnostics for either extension. After the
+repair, the focused policy suite passed 23 tests and 43 expectations,
+including exact undeclared diagnostics and direct runtime/development
+ownership. The standalone dependency gate passed. The expanded current-tree
+scan required no manifest or lockfile change. The signed plan-scoped
+implementation commit is `1876350`.
 
 ### Cycle 18 implementation protocol
 

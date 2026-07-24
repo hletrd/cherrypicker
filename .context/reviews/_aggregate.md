@@ -6,7 +6,7 @@
 **Deploy mode:** none
 **Prompt 1:** complete
 **Prompt 2:** complete
-**Prompt 3:** pending
+**Prompt 3:** complete
 
 ## Deduplicated result
 
@@ -49,6 +49,23 @@ three active plans record the approved disciplined manual fallback and the
 complete gate/E2E requirements.
 
 Prompt 2 final count: **3 created or materially reopened plans**.
+
+## Implementation result
+
+Prompt 3 used the documented manual fallback because `ralph` was unavailable.
+Three separate signed and pushed repairs now:
+
+- brand and validate `YearMonth`, preserve four-digit predecessors, and
+  reject the `0000-01` underflow explicitly;
+- discover `.mts` and `.cts` production/test/config imports through one
+  extension-derived contract; and
+- hash identity-free split and legacy projections before injection, with
+  browser schema `1.0.0`, legacy schema `2.0.0`, and one common hash
+  `125970f582c040a0c6aa728cab49dea1173c1e7fbd96fc297876c5197291c200`.
+
+Focused calendar/type, dependency, publication/data, reader-parity, web-build,
+and bundle-budget verification passed. The final whole-repository and E2E
+gate matrix runs against the closure state. No deployment will occur.
 
 ## Agreement and provenance
 

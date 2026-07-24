@@ -7,7 +7,7 @@
 **Deploy mode:** none
 **Prompt 1 status:** complete
 **Prompt 2 status:** complete
-**Prompt 3 status:** pending
+**Prompt 3 status:** complete
 
 ## Executive summary
 
@@ -288,4 +288,42 @@ Prompt 2 final count: **3 created or materially reopened plans**.
 
 ## Prompt 3 implementation result
 
-Pending. No deployment will be performed.
+The requested `ralph` capability was unavailable, so implementation used the
+approved disciplined manual plan-to-test fallback. Each repair received a
+pre-fix regression, the smallest root-cause implementation, focused
+verification, a plan-scoped signed semantic/gitmoji commit, and an immediate
+push with signature and remote-parity verification.
+
+- `YearMonth` is now an opaque runtime-refined string. One exported
+  constructor owns exact `YYYY-MM` validation; predecessor derivation
+  preserves/pads four-digit years and explicitly rejects the unrepresentable
+  predecessor of `0000-01`. Low-year context and static contract regressions
+  pass.
+- Dependency discovery now admits `.mts` and `.cts` across production,
+  nested-test, and config sources. Config admission is derived from the shared
+  extension set, and exact ownership fixtures cover both extensions without
+  manifest or lockfile churn.
+- Publication identity now hashes identity-free split, legacy-full, and
+  legacy-compact payloads under stable keys before injection. Legacy
+  projection mutations change identity, key order is canonical, browser
+  schema remains `1.0.0`, and legacy schema is explicit at `2.0.0`.
+
+Canonical publication now carries hash
+`125970f582c040a0c6aa728cab49dea1173c1e7fbd96fc297876c5197291c200`
+across all 30 advertised artifact identities. Normalized generated comparison
+found no projection change beyond the intended hash and legacy-version
+metadata.
+
+Focused verification passed:
+
+- 262 core/web calendar, coherence, disclosure, and persistence tests;
+- core and web typechecks with 0 diagnostics;
+- 23 dependency-policy tests and the standalone dependency gate;
+- 21 publication tests, canonical data build/check, and 30 catalog-reader
+  parity tests; and
+- the production web build and bundle budgets.
+
+The three signed implementation commits are `9cb5bfe`, `1876350`, and
+`9415b1b`. The final required repository and E2E gates run after the closure
+documentation commit so they evaluate the complete Cycle 18 state. No
+deployment will be performed.
