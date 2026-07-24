@@ -3,6 +3,7 @@
 **Finding:** C17-004 (Low/High)
 **Status:** completed after Cycle 18 preventive completion
 **Deploy mode:** none
+**Archived:** Cycle 19 planning pass after completion verification
 
 ## Evidence
 

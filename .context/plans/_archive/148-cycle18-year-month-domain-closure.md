@@ -3,6 +3,7 @@
 **Finding:** C18-001 (Low/High)
 **Status:** completed
 **Deploy mode:** none
+**Archived:** Cycle 19 planning pass after completion verification
 
 ## Evidence
 

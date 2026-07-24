@@ -3,6 +3,7 @@
 **Findings:** C3-008, C3-009, C3-010, C3-011, C3-012, C3-013, C3-014
 **Deploy mode:** none
 **Status:** completed after the Cycle 18 C3-008 regression repair
+**Archived:** Cycle 19 planning pass after completion verification
 
 ## Outcome
 
