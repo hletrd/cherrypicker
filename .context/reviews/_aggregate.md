@@ -6,7 +6,7 @@
 **Branch:** `codex/review-plan-fix-no-deploy-20260723`
 **Deploy mode:** none
 **Prompt 1 status:** complete
-**Prompt 2 status:** pending
+**Prompt 2 status:** complete
 **Prompt 3 status:** pending
 
 ## Executive summary
@@ -160,9 +160,20 @@ byte-identical, untracked, unstaged, and untouched.
 None. All thirteen roles returned successfully; no wording-filter retry was
 needed.
 
-## Prompt 2 and Prompt 3
+## Prompt 2 plan coverage
 
-Pending. Prompt 2 must archive completed Plans 141–142 and create one
-implementation plan for C16-001. Prompt 3 must use the approved disciplined
-manual fallback because the requested `ralph` capability is unavailable.
-Deployment remains none.
+Prompt 2 verified completed Plans 141–142 and moved them byte-identically to
+`.context/plans/_archive/`. It created one plan for the one retained root:
+
+| Plan | Finding | Scope |
+| --- | --- | --- |
+| `143-cycle16-large-worksheet-metadata-bounds.md` | C16-001 | Shared metadata policy, pre-conversion validation, stable parser result, row-interval merge index, and bounded parity regressions |
+
+Plan 143 defines every numeric limit, all four parser adapters, both direct
+HTML-sheet entry points, browser exports, error parity, existing merge
+semantics, small-fixture TDD, focused checks, and every required repository
+gate. No finding was deferred, rejected, downgraded, or silently dropped.
+
+Prompt 3 remains pending. It must use the approved disciplined manual fallback
+because the requested `ralph` capability is unavailable. Deployment remains
+none.
