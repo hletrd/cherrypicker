@@ -1,29 +1,67 @@
-# Cycle 5 — Performance Reviewer
+# Current performance review — Cycle 19
 
-**Review target:** `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715` on `codex/review-plan-fix-no-deploy-20260723`
-**Mode:** read-only full-repository performance review
+## Review identity
 
-## Inventory and method
+- Date: 2026-07-24
+- Revision: `fcc89801451d1c1a31bb9881d213e117fc4ca923`
+- Role: performance, concurrency, CPU, memory, bundle, and UI responsiveness
+- Disposition: no genuinely new actionable performance finding
+- Detailed immutable report:
+  `.context/reviews/2026-07-24-cycle19-perf-reviewer.md`
 
-The inventory started from all 2,133 tracked paths. I inspected the current runtime, worker, parser, rules, CLI, scraper, build, publication, persistence, component, test, E2E, and workflow paths. The 683 declarative card files across 24 issuers were covered by the canonical schema/publication gates and full-data queries. Generated and historical review artifacts were treated as evidence, not manually reviewed as production source.
+## Complete inventory
 
-The sweep traced initial-load assets, worker payload ownership, full-file parsing, catalog loading and caching, optimizer loops, component mount work, storage serialization, async fan-out, timers/listeners, and build budgets. Cycle 4 closures were checked first. Known deferred optimizer candidate rescanning (`D-C1-040`) and linear merchant-keyword matching (`D-C1-041`) are intentionally not re-reported.
+The review began with all 2,409 tracked paths and classified every path before
+inspection: 362 source/test paths, 739 rule and publication-data paths, 1,237
+historical review/plan paths used for novelty reconciliation, and 71
+manifests, configs, docs, workflow files, fixtures, and other assets.
 
-## Finding
+The performance pass covered core categorization, reward calculation,
+telemetry and optimizer replay; all server and browser parsing paths; the web
+workers, bounded parse queue, caches, persistence, and Svelte derived state;
+rules, visualization, CLI and scraper services; generation and dependency
+scripts; E2E source; and all generated catalog projections. Cross-file flows
+were followed from input admission to rendering and persistence, and from
+YAML validation through publication to browser readers.
 
-### C5-PERF-001 — Every `Icon` instance reconstructs the complete SVG path lookup table
+## Current assessment
 
-- **Severity:** Low
-- **Confidence:** High
-- **Status:** confirmed
-- **Location:** `apps/web/src/components/ui/Icon.svelte:1-41`; repeated-list consumers `apps/web/src/components/upload/FileDropzone.svelte:476` and `apps/web/src/components/cards/CardDetail.svelte:317`
-- **Concrete scenario:** A maximum-size upload selection renders 50 file rows, each with an `Icon`, or a card detail renders many reward rows. Hydration/mounting constructs the same 27-property lookup object once per icon instance even though its values are immutable application constants.
-- **Evidence:** `icons` is declared in the component's ordinary instance `<script>`, not module scope. The source component is 10,054 bytes and contains 27 path entries. Direct Svelte compilation and the production `Icon.*.js` chunk both place `const o = { ...all paths... }` inside the generated component function, confirming fresh object/property initialization for every instance. This is not a duplicate-download finding—the chunk is loaded once—but it is avoidable repeated allocation and initialization on dense screens.
-- **Suggested fix:** Move the immutable map into `<script module lang="ts">` or a separate module and reference it from instances. A later typed-icon/component conversion could also avoid `{@html}` parsing, but module-scoping the existing map is the narrow fix. Add a compiler-output or mount regression check only if the project wants to prevent this class of component-local static table from returning.
+Cycle 18's calendar-domain repair adds only a bounded predicate at construction
+and does not add a new per-row pass. Complete catalog hashing remains an
+offline build operation over already-resident data. `.mts` / `.cts` admission
+adds two entries to a small extension set and does not change current scan
+cardinality because no such tracked consumer currently exists.
 
-## Verification and final missed-issue sweep
+Known costs remain historically owned:
 
-- `bun run web:build:check` passed: 17 initial files, 194.8 KiB decoded / 66.5 KiB gzip, with compact catalog, optimizer, and detail-shard budgets passing.
-- `bun run test:e2e` passed 93/93 tests in 37.0 seconds. `bun scripts/run-e2e.ts status --assert-clean` then confirmed no owned runs and port 4173 available.
-- Parser `ArrayBuffer` transfer, bounded delimiter sampling, compiled CLI catalog loading, worker concurrency, lazy parser chunks, cancellation, and publication caching were rechecked and retain their Cycle 4 fixes.
-- Final searches covered synchronous/full-file operations, large-array spread, unbounded `Promise.all`, worker transfer lists, storage copies, component-local static maps, generated-data loading, and listener cleanup. No other non-deferred performance issue met the evidence threshold.
+- greedy marginal scoring replay;
+- matcher keyword-scan scale;
+- browser/server parser duplication;
+- the deliberately published legacy compatibility artifact; and
+- existing date-range copies and sorts.
+
+No current change altered their reachability, asymptotic behavior, or exit
+criteria. The separate lower-bound `YearMonth` exception reported by the
+correctness roles is not a performance regression and is not duplicated here.
+
+## Read-only verification
+
+- `bun run dependencies:check`: passed.
+- `bun run typecheck`: all workspaces passed; Astro reported no diagnostics.
+- `bun run test`: passed; the script suite reported 96 tests and 1,032
+  expectations.
+- `bunx vitest run --reporter=dot`: 128 files and 3,137 tests passed.
+- `bun scripts/check-web-bundles.ts`: passed with 16 initial files, 172.4 KiB
+  decoded / 59.7 KiB gzip, and all publication budgets within limits.
+
+No E2E, browser, Chrome, preview-server, deployment, source, plan, or generated
+artifact mutation was performed by this reviewer.
+
+## Final disposition
+
+The final sweep rechecked repeated parsing and validation, nested loops,
+sorting and allocation, promise fan-out, worker lifecycle, cancellation,
+cache invalidation, initial/deferred bundle graphs, generated payload
+cardinality, and historical ownership.
+
+Final new performance finding count: **0**.

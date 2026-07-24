@@ -1,41 +1,74 @@
-# Cycle 5 — Verifier
+# Cycle 19 verifier review
 
-**Review target:** `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715`
-**Lens:** independently execute proposed failures, challenge competing explanations, and verify current gates and prior closures
+Date: 2026-07-24
+Baseline: `fcc89801451d1c1a31bb9881d213e117fc4ca923`
+Full provenance: `.context/reviews/2026-07-24-cycle19-verifier.md`
 
-## Inventory and baseline
+## Result
 
-The verification used the complete 2,133-path inventory and current code rather than trusting historical review prose. Declarative/generated coverage used the repository's canonical gates over all 683 cards and 24 issuers. Baseline results:
+**1 genuinely new finding: C19-VR-001 (Low / High confidence).**
 
-| Gate | Result |
-|---|---|
-| `bun run toolchain:check` | expected local-environment failure: host Bun 1.3.12, repository pin 1.2.6 |
-| `bun run migrations:check` | pass |
-| `bun run dependencies:check` | pass |
-| `bun run data:check` | pass; 683 cards / 24 issuers and generated/readme drift clean |
-| `npm run lint` | pass across all workspaces; Astro 0 errors/warnings/hints |
-| `npm run typecheck` | pass across all workspaces; Astro 0 errors/warnings/hints |
-| `bun run test` | pass |
-| focused parser/rules/core/scraper/CLI suite | 194 pass, 0 fail, 3,175 assertions across 9 files |
-| `bun run web:build:check` | pass, including all bundle/catalog budgets |
-| `bun run test:e2e` | 93 pass, 0 fail in 37.0 seconds |
-| E2E ownership postflight | clean; no owned runs and port 4173 available |
+The Cycle 18 catalog and dependency repairs verify cleanly. The new finding is
+the same root independently retained by the debugger and must be deduplicated
+once in the aggregate.
 
-Because the host Bun differs from the pin, passing results are supporting evidence and not a claim that the exact pinned CI toolchain was reproduced.
+## Inventory and executed evidence
 
-## Independent verification matrix
+All 2,409 tracked paths and the complete 66-path Cycle 18 delta were included.
+The protected untracked Cycle 42 paths were excluded.
 
-| Primary finding | Verdict | Executed or inspected evidence |
-|---|---|---|
-| `C5-PERF-001` | confirmed | Counted 27 immutable entries in the 10,054-byte component and compiled it. Both direct compiler output and the production chunk place the lookup object inside the generated `Icon` function. Repeated call sites include the 50-file upload list and reward-row loop. |
-| `C5-ARCH-001` | confirmed | A supported Simple Plan clone with `rate: 10` and `annualCap: 1000` passed canonical schema and semantic validation. Two 10,000-won transactions returned 2,000 reward, no cap hits, and no unsupported rules. Full-data search found the only current positive annual cap is manually unsupported, explaining why `data:check` remains green. |
-| `C5-DBG-001` | confirmed | Both server and browser OFX parsers transformed `20241340120000[0:GMT]` into the apparently valid `2025-02-09`, returned the transaction, and emitted no error. Source tracing shows the invalid components enter normalizing `Date.UTC()`. |
-| `C5-DBG-002` | confirmed | Both parsers accepted a transaction with amount/name but no `DTPOSTED` as `{date: "", amount: 1000}` with no error. A date/name row with no `TRNAMT` yielded neither transaction nor error. Downstream calendar context excludes blank dates or fails when no valid date remains. |
+- 77 focused tests passed with 185 expectations.
+- Core `tsc --noEmit` passed.
+- Web `astro check` reported zero errors, warnings, and hints.
+- Dependency and data/document drift gates passed.
+- Data check covered 683 cards, 24 issuers, and 551 executable cards.
+- `bun audit --json` returned an empty advisory result.
+- One publication hash appears at all 30 advertised identity sites.
+- All six Cycle 18 commits have good signatures; local/remote parity is exact.
 
-## Why the green suite misses these paths
+No browser, E2E, deployment, publication, or source mutation was used.
 
-- Server and browser OFX tests exercise valid timezone timestamps and a bare invalid `20241340`, but not out-of-range components in the timestamp-plus-timezone branch or independently missing required fields (`packages/parser/__tests__/ofx.test.ts:129-190,223-235`; `apps/web/__tests__/parser-ofx.test.ts:190-223`; conformance test `packages/parser/__tests__/conformance/parser-conformance.test.ts:73-92`).
-- Rules/calculator/scraper tests preserve the `annualCap` field shape but do not assert that a positive value is either executed or rejected for a supported rule.
-- Existing UI/E2E coverage validates observable flows, not whether component-local immutable tables are instantiated per child mount.
+## C19-VR-001 — lower-bound exception escapes truncated validation
 
-No independent runtime finding remained after deduplicating these verified issues against the primary lens reports. The final missed-issues sweep re-ran focused searches over required-field guards, normalizing date constructors, canonical fields unused by execution, worker transfer/cancellation, and static data inside component instance scopes.
+- Severity: **Low**
+- Confidence: **High**
+- Status: **confirmed** by source trace and current-baseline probes
+- Constructor/error: `packages/core/src/analysis/context.ts:77-114`
+- Coherence path: `apps/web/src/lib/analysis-result.ts:893-981`
+- Persistence path: `apps/web/src/lib/persistence.ts:522-547,677-708,720-922`
+- Store recovery: `apps/web/src/lib/store.svelte.ts:117-148`
+
+`isYearMonth()` admits `0000-01`, while `previousCalendarMonth()` deliberately
+throws because no representable predecessor exists. The truncated coherence
+path validates the month, selects it as latest, and unconditionally computes
+its predecessor. It does this even for a `user-total` basis that needs no
+calendar predecessor.
+
+An otherwise internally balanced truncated snapshot reproduced the exact
+`RangeError` through `isAnalysisResultCoherent()`. A structurally admitted
+current-version persisted form reproduced it through `deserializeAnalysis()`,
+which should instead return an ordinary corrupted result. The store catches
+the exception, deletes the entry, and reports a generic storage-access problem,
+so user impact is bounded and recovery exists.
+
+Root fix:
+
+1. Do not derive a predecessor for `user-total`.
+2. Treat a non-representable predecessor as false coherence for calendar-based
+   bases, not as an escaping exception.
+3. Add no-throw/fail-closed coherence and persistence regressions for
+   `0000-01`; retain the public helper's deliberate `RangeError`.
+
+Before Cycle 18, this boundary produced a malformed string and coherence
+returned false. The escaping exception was introduced by `9cb5bfe`, so this is
+a new regression rather than a re-report of the leading-zero root.
+
+## Other Cycle 18 repairs
+
+The branded month type, successful predecessor closure, January-1000 context,
+`.mts`/`.cts` production/test/config admission, direct ownership rules,
+identity-free legacy projections, version split, mutation tests, and common
+30-site publication hash all verify as intended. No second candidate survived
+the final history and missed-issue sweep.
+
+Confirmed findings: **1**; likely: **0**; manual-only promoted: **0**.

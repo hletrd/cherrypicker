@@ -1,31 +1,78 @@
-# Cycle 5 — Architect
+# Current architecture review — Cycle 19
 
-**Review target:** `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715`
-**Lens:** canonical contracts, capability ownership, runtime/build parity, authoring boundaries, and failure containment
+## Review identity
 
-## Inventory and boundary map
+- Date: 2026-07-24
+- Revision: `fcc89801451d1c1a31bb9881d213e117fc4ca923`
+- Role: boundaries, ownership, coupling, layering, and architectural drift
+- Disposition: one genuinely new Low-severity, High-confidence finding
+- Detailed immutable report:
+  `.context/reviews/2026-07-24-cycle19-architect.md`
 
-The review began with all 2,133 tracked paths and traced these current cross-package contracts:
+## Complete inventory
 
-1. Statement input → server/browser parser → facts and calendar scope → calculator/optimizer → persistence and reports.
-2. Rule YAML/scraper output → canonical schema → semantic validation → generated runtime artifacts → web and CLI consumers.
-3. UI events → parse/analysis workers → operation ownership → result replacement and navigation.
-4. Workspace manifests/exports → root gates → build/E2E/deploy workflow.
+All 2,409 tracked paths were classified before inspection: 362 source/test
+paths, 739 rule and publication-data paths, 1,237 historical review/plan
+paths, and 71 manifests, configs, docs, workflow files, fixtures, and other
+assets. The architecture pass covered package exports and dependency
+direction, runtime-specific imports, domain and DTO ownership, generated
+source/publication boundaries, workers and caches, persistence, output sinks,
+network/filesystem services, CI authority, and the full Cycle 18 delta.
 
-All current source and test files in the web, core, parser, rules, CLI, scraper, visualization, scripts, and workflow surfaces were inspected or content-scanned. The 683 card YAML files were covered through schema/publication validation and complete-field queries. Cycle 4 fixes and the documented deferred optimizer/matcher/parser-consolidation work were excluded before evaluating new candidates.
+## C19-A-001 — a partial domain operation leaks through total validation APIs
 
-## Finding
+- Severity: Low
+- Confidence: High
+- Partial domain operation:
+  `packages/core/src/analysis/context.ts:96-109`
+- Total boolean boundary:
+  `apps/web/src/lib/analysis-result.ts:893-981,988-1095`
+- Total persistence boundary:
+  `apps/web/src/lib/persistence.ts:677-708,720-742,822-915`
+- Last-resort store recovery:
+  `apps/web/src/lib/store.svelte.ts:117-148`
 
-### C5-ARCH-001 — `annualCap` is a canonical supported field without either runtime semantics or a capability gate
+The `YearMonth` domain correctly permits `0000-01`, while predecessor
+construction correctly rejects it because the representable four-digit domain
+has no earlier month. That makes `previousCalendarMonth()` intentionally
+partial. Two older architectural boundaries still model their downstream
+validation as total:
 
-- **Severity:** Medium
-- **Confidence:** High
-- **Status:** confirmed
-- **Location:** `packages/rules/src/types.ts:14-23`; `packages/rules/src/schema.ts:89-175`; `packages/rules/src/catalog-validation.ts:229-256,293-309`; `packages/core/src/calculator/reward.ts:632-783`; `packages/rules/src/loader.ts:32-53`; `tools/cli/src/card-catalog.ts:27-52`; `tools/scraper/src/rule-contract.ts:53-100`; `tools/scraper/src/validators.ts:23-63`
-- **Concrete failure scenario:** A custom `--cards` catalog or newly scraped card marks a 10% tier as supported with `annualCap: 1000`. Two eligible 10,000-won transactions produce 2,000 won in reported reward, with no cap hit and no unsupported-rule disclosure, even though the canonical rule says the reward stops at 1,000 won.
-- **Evidence:** The canonical type/schema accepts and preserves `annualCap`, while semantic validation checks tier references and executable units but never rejects a positive annual cap on a supported rule. The calculator reads `perTransactionCap` and `monthlyCap` only. An executable probe cloned the tracked Simple Plan rule, set a supported tier to 10% plus `annualCap: 1000`, and passed both `cardRuleSetSchema.parse()` and `validateCardRuleSet()`. `calculateRewards()` then returned `{"totalReward":2000,"capsHit":[],"unsupportedRules":[]}` for two 10,000-won domestic transactions. The CLI authoring path calls schema-only `loadAllCardRules()`, and the scraper derives this field from the canonical schema before calling the same semantic validator, so both entry points can admit the shape. A complete catalog query found one current positive annual cap, `packages/rules/data/cards/hyundai/three-body-a.yaml:43-57`; it is safe only because that individual rule is manually marked unsupported.
-- **Suggested fix:** Until the runtime owns year-to-date reward usage, make canonical semantic validation reject every positive `annualCap` on a supported rule and ensure the CLI authoring path runs that validation. The scraper should receive the same diagnostic and emit `support.status: unsupported`. If annual caps are implemented instead, extend the analysis contract with year-to-date facts or explicit accrued usage—accumulating only the current latest-month transaction slice is insufficient—then enforce/report the cap in the calculator. Add schema → semantic validation → scraper/CLI → calculator contract tests, including a regression that the tracked explicitly unsupported rule remains publishable.
+- coherence is a boolean predicate whose invalid-data answer should be
+  `false`; and
+- persistence deserialization returns a discriminated invalid/corrupted
+  result.
 
-## Final boundary sweep
+A structurally valid truncated current-v4 snapshot at `0000-01` crosses both
+boundaries as a `RangeError`. The store's broader recovery catch prevents a
+route crash, but conflates deterministic invalid data with storage access.
+Direct consumers of the exported boundaries receive the exception.
 
-Publication identity, compiled CLI/web catalog parity, parser-worker ownership, result replacement atomicity, package exports, cache identity, and deploy gate directionality retain the Cycle 4 closures. The final sweep also checked every canonical rule field against schema, semantic validation, runtime consumption, UI/report disclosure, scraper generation, and custom authoring. No additional non-deferred architecture defect met the evidence threshold.
+The architectural repair belongs at the abstraction boundaries, not in the
+domain primitive: keep the helper throw, convert the unrepresentable
+predecessor to `false` in coherence, and add a defensive exception-to-invalid
+translation in deserialization. Tests should preserve the distinct contracts.
+
+Normal parsers constrain statement years to 1900–2100, limiting this to
+constructed, tampered, or stale persisted state and keeping severity Low.
+Historical review found ownership for direct underflow in Plan 148, but none
+for the exception crossing the total validation interfaces.
+
+## Other boundary conclusions
+
+Catalog generation now establishes a complete identity before injecting it
+into projection-specific schemas. `.mts` / `.cts` discovery derives from the
+same extension authority across source and top-level config paths. Package
+dependency direction, parser/worker ownership, catalog cache generations,
+viz output sinks, and scraper service boundaries remain coherent. Known
+parser duplication, optimizer complexity, matcher scale, static-host CSP,
+session storage, and compatibility artifacts retain historical owners.
+
+## Verification and disposition
+
+Dependency ownership, type checking, workspace/script tests, the full Vitest
+suite, and bundle/publication budgets passed. No browser, Chrome, E2E,
+deployment, source, plan, or generated artifact mutation occurred. The final
+boundary sweep found no second novel architectural root.
+
+Final new architecture finding count: **1**.

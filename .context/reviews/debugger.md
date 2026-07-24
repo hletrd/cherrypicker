@@ -1,34 +1,68 @@
-# Cycle 5 — Debugger
+# Cycle 19 debugger review
 
-**Review target:** `e3aa4241bbdc9c9b1dc3abff0df78e0cc9f8d715`
-**Result:** two confirmed Medium defects
+Date: 2026-07-24
+Baseline: `fcc89801451d1c1a31bb9881d213e117fc4ca923`
+Full provenance: `.context/reviews/2026-07-24-cycle19-debugger.md`
 
-## Method
+## Result
 
-I audited current error paths, malformed input handling, date/number normalization, state transitions, cancellation, persistence, async cleanup, and filesystem/process ownership across all production packages and their tests. Candidates were challenged against downstream validation and reproduced through both server and browser implementations where applicable. Historical fixed findings and documented deferred work were removed before the final sweep.
+**1 genuinely new finding: C19-DBG-001 (Low / High confidence).**
 
-## Findings
+This is the same root as `C19-VR-001` and should count once in the Cycle 19
+aggregate.
 
-### C5-DBG-001 — Timezone-bearing OFX timestamps normalize invalid components into a different valid date
+## Inventory
 
-- **Severity:** Medium
-- **Confidence:** High
-- **Status:** confirmed
-- **Location:** `packages/parser/src/ofx/index.ts:86-118,178-184`; mirrored browser implementation `apps/web/src/lib/parser/ofx.ts:55-87,135-139`
-- **Concrete failure scenario:** An OFX transaction contains `DTPOSTED=20241340120000[0:GMT]` (month 13, day 40). Both parsers return the transaction dated `2025-02-09` with no parse error. The malformed statement row can therefore select the wrong analysis month and receive rewards as if that invented date were authoritative.
-- **Evidence:** The regex captures numeric components but validates neither their ranges nor a calendar round-trip. The timezone branch passes them to `Date.UTC()`, whose overflow normalization turns month 13/day 40 into a later year/month; the formatted result then passes `isValidISODate()`. The executable server/browser probe produced identical `{date:"2025-02-09", merchant:"INVALID", amount:1000}` rows and empty error arrays. Existing conformance coverage rejects the bare date `20241340`, but that path uses `parseDateStringToISO()` and never exercises `Date.UTC()`. The [OFX 2.2 specification](https://financialdataexchange.org/common/Uploaded%20files/OFX%20files/OFX%202.2.pdf) defines bounded date/time components rather than overflow normalization.
-- **Suggested fix:** Require a full-string match, validate month/day against the actual calendar and hour/minute/second/offset ranges before constructing a timestamp, then verify the constructed UTC components round-trip. Reject the row with a line-scoped parse error. Add mirrored server/browser tests plus a conformance table for invalid month, day, leap day, hour, minute, second, offset, and trailing junk.
+The debugger sweep included every production, test, configuration,
+generated-data, and workflow family in all 2,409 tracked paths, with exact
+inspection of the 66 changed Cycle 18 paths. It traced date/month derivation,
+full and truncated persistence, parser diagnostics, caught/swallowed
+exceptions, worker/async ownership, filesystem/network cleanup, generator
+phases, and dependency discovery. No browser, E2E, deployment, or source edit
+was performed.
 
-### C5-DBG-002 — The OFX required-field guard reports neither independently missing date nor missing amount
+## C19-DBG-001 — `0000-01` turns a validation verdict into an exception
 
-- **Severity:** Medium
-- **Confidence:** High
-- **Status:** confirmed
-- **Location:** `packages/parser/src/ofx/index.ts:168-203`; mirrored browser implementation `apps/web/src/lib/parser/ofx.ts:127-150`; downstream calendar handling `packages/core/src/analysis/context.ts:100-118`
-- **Concrete failure scenario:** A transaction has `TRNAMT=-1000` and `NAME=MISSING` but no `DTPOSTED`. Both parsers emit `{date:"", amount:1000}` without an error. In a mixed statement the row is later excluded from optimization as an invalid-date transaction; if it is the only row, analysis fails with a generic no-valid-date error instead of identifying the malformed OFX record. Conversely, a row with a date but no `TRNAMT` silently disappears with no transaction and no error.
-- **Evidence:** `if (!dtPosted && !trnAmt) continue` handles only the case where both required values are absent. With only the date absent, `parseOFXDate("")` returns `""`, and `if (!isValidISODate(date) && dateRaw)` is bypassed because `dateRaw` is falsy. With only the amount absent, parsing returns `null`, but the error is conditional on `trnAmt.trim()` being nonempty. Executable probes reproduced both behaviors; server and browser copies agree.
-- **Suggested fix:** Validate `DTPOSTED` and `TRNAMT` independently before parsing. Emit a line-scoped missing-required-field error and skip the row when either is absent; do not use a truthiness guard to suppress diagnostics for empty required values. Add server/browser and conformance tests for each missing field, both missing fields, and a mixed valid/invalid statement so partial-import diagnostics remain visible.
+- Severity: **Low**
+- Confidence: **High**
+- Status: **confirmed**
+- Public domain: `packages/core/src/analysis/context.ts:60-114`
+- Truncated caller: `apps/web/src/lib/analysis-result.ts:922-981`
+- Basis branch: `apps/web/src/lib/analysis-result.ts:893-920`
+- Persistence admission/call:
+  `apps/web/src/lib/persistence.ts:522-547,677-708,822-915`
+- Store catch: `apps/web/src/lib/store.svelte.ts:117-148`
 
-## Final missed-issue sweep
+Failure trace:
 
-The closing pass covered every parser format's required-field behavior, `Date`/numeric normalization, swallowed catches, worker and navigation ownership, stale persistence, timer/listener cleanup, and CLI/report failure surfaces. The OFX implementations are duplicated under a known deferred parser-consolidation item, so this review reports the current behavioral defects and calls for mirrored fixes rather than re-reporting duplication itself. No additional debugger issue met the evidence threshold.
+1. `0000-01` passes `isYearMonth()`.
+2. A truncated snapshot has no transactions, so its month facts are admitted
+   directly from `monthlyBreakdown`.
+3. `hasCoherentTruncatedFacts()` calls
+   `previousCalendarMonth(latest.month)` before basis-kind handling.
+4. The public helper raises the deliberate lower-bound `RangeError`.
+5. `deserializeAnalysis()` does not catch coherence exceptions.
+6. The store's outer catch removes the payload and reports storage access
+   failure instead of corrupted state.
+
+Both the coherence API and deserializer reproduced the exception. A second
+coherence probe with `user-total` also threw, proving the predecessor is
+computed unnecessarily. Normal uploaded statements use a narrower modern date
+domain and the store recovers, which keeps severity Low.
+
+Preserve the public helper error, but make validation total: skip predecessor
+work for `user-total`, convert lower-bound failure to false coherence for
+calendar bases, and add direct plus persisted no-throw tests. Keep
+`0000-02 -> 0000-01` success distinct from the `0000-01` predecessor failure.
+
+The exception escape is new in Cycle 18 commit `9cb5bfe`; historical lower-
+year reports did not own this consumer regression.
+
+## Final sweep
+
+The calendar's other successful paths, publication hash/version phases, and
+module-TypeScript discovery behave as designed. Focused suites passed 77
+tests/185 expectations; data/dependency drift and core/web typechecks passed.
+No second new debugger root survived.
+
+Confirmed findings: **1**; likely: **0**; manual-only promoted: **0**.

@@ -1,46 +1,65 @@
-# Cycle 3 — Dependency Expert
+# Cycle 19 dependency expert review
 
-**Review target:** `614ce5c`
-**Lens:** manifest/import correctness, lock reproducibility, workspace isolation, runtime/toolchain compatibility, unused dependency surface, and build-task dependency flow.
+Date: 2026-07-24
+Baseline: `fcc89801451d1c1a31bb9881d213e117fc4ca923`
+Full provenance:
+`.context/reviews/2026-07-24-cycle19-dependency-expert.md`
 
-## Inventory and method
+## Result
 
-All eight workspace/root `package.json` files, `bun.lock`, `turbo.json`, the shared and package TypeScript configurations, deploy workflow, package exports, and production/test imports were inventoried. The resolved lock graph was reconciled against direct declarations and repo-wide import searches. Cycle 1/2 dependency closures (frozen install, action pinning, toolchain check, statement parser entry, and deterministic catalog validation) remain in place.
+**0 genuinely new dependency findings.** Confidence: High.
 
-## Findings
+## Inventory
 
-### C3-DEP-001 — The SheetJS tarball is locked by URL without an integrity digest
+The review reconciled all eight manifests, eight lock workspace records, 567
+lock package rows, all package exports, production/test/config import families,
+root task/test configuration, the workflow, and vendored SheetJS
+archive/checksum. Checker-owned source counts were 136 web, 45 core, 60 parser,
+21 rules, 11 viz, 26 CLI, and 23 scraper files.
 
-- **Severity:** High
-- **Confidence:** High
-- **Status:** confirmed
-- **Location:** `apps/web/package.json:29`; `packages/parser/package.json:22`; `bun.lock:1380`
-- **Concrete failure scenario:** The bytes served for `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` are replaced or corrupted while the URL remains unchanged. A clean CI/developer install can accept those new bytes even with `--frozen-lockfile`, because the lock entry records the URL and executable mapping but no `sha512` integrity value.
-- **Evidence:** Both runtime packages depend directly on the same HTTPS tarball. Normal registry entries in `bun.lock` carry a final `sha512-…` field; the `xlsx` entry is `["xlsx@https://…tgz", {"bin": …}]` with no digest. Frozen resolution prevents a version-selection change, not content substitution at an unverified mutable URL.
-- **Suggested fix:** Consume an immutable, checksummed source: a registry artifact whose lock entry includes integrity, a commit-pinned source with verified archive hash, or a vendored tarball whose SHA-256/SHA-512 is checked before install. Add a lock-policy gate that rejects non-workspace remote package entries without a content digest.
+The 13 `workspace:*` edges remain acyclic:
 
-### C3-DEP-002 — The scraper imports Zod directly without declaring it
+```text
+web     -> core, parser, rules
+core    -> rules
+viz     -> core, rules
+CLI     -> core, parser, rules, scraper, viz
+scraper -> rules, viz
+```
 
-- **Severity:** Medium
-- **Confidence:** High
-- **Status:** confirmed
-- **Location:** `tools/scraper/src/rule-contract.ts:1-9`; `tools/scraper/__tests__/schema-contract.test.ts:2`; `tools/scraper/package.json:12-22`
-- **Concrete failure scenario:** The scraper workspace is installed, packed, or typechecked under an isolated/strict workspace linker. Its direct `import { z } from 'zod'` cannot be resolved because the package declares only rules, Anthropic, Cheerio, iconv-lite, and YAML; today it succeeds through root/transitive hoisting.
-- **Evidence:** Production source and a contract test import `zod` directly. `@cherrypicker/scraper` has no `zod` entry in dependencies or devDependencies, while the root happens to declare Zod and `@cherrypicker/rules` also brings it transitively. Relying on either violates the workspace’s manifest boundary.
-- **Suggested fix:** Add a direct compatible `zod` dependency to `tools/scraper/package.json`. Add an isolated-workspace resolution/build check (or a dependency-boundary linter) so every non-relative production import must be declared by its owning workspace.
+## Cycle 18 verification
 
-### C3-DEP-003 — Seven heavy direct dependencies have no production consumer
+- `.mts` and `.cts` are in the shared extension set
+  (`scripts/check-dependencies.ts:11-22`).
+- Production/test recursion and config discovery use that set; config stems are
+  exact `config` or `*.config`
+  (`scripts/check-dependencies.ts:465-510,639-658`).
+- Both extensions reach the TypeScript AST import collector
+  (`scripts/check-dependencies.ts:532-603`).
+- Production accepts runtime ownership only; test/config also accepts direct
+  development ownership; the named root-runner exception remains only
+  `vitest` (`scripts/check-dependencies.ts:605-692`).
+- Undeclared and owned production, nested-test, and config fixtures cover both
+  extensions (`scripts/__tests__/check-dependencies.test.ts:241-296`).
 
-- **Severity:** Low
-- **Confidence:** High
-- **Status:** confirmed
-- **Location:** `apps/web/package.json:20,22-26`; `packages/parser/package.json:23`
-- **Concrete failure scenario:** Every clean install and dependency update carries unused packages and their transitive supply-chain/update surface even though they cannot affect the built product. LayerChart also retains a broad D3 graph that obscures which visualization dependencies are actually required.
-- **Evidence:** Repo-wide production-source searches found no imports of the web workspace’s `@cherrypicker/viz`, `d3-array`, `d3-scale`, `d3-shape`, `layerchart`, or `papaparse`. The parser has no source import of `unpdf`; its only mentions are boundary tests asserting that it is not loaded. The direct installed footprints alone are roughly 1.1 MiB for LayerChart, 0.63 MiB across the three listed D3 packages, and 0.27 MiB for Papa Parse, before transitive duplication.
-- **Suggested fix:** Remove the unused declarations and regenerate the lockfile. If any are intentional near-term experiments, move that work to a separate branch/package rather than retaining dormant production dependencies. Add an import-aware unused-dependency check with explicit exemptions for CLI/config-only packages.
+The current tracked tree contains zero `.mts`/`.cts` paths, and the preventive
+repair caused no manifest or lock churn.
 
-## Compatibility and missed-issue sweep
+## Current graph evidence
 
-- The current lock resolves TypeScript 5.9, Zod 4, Astro 6, Svelte 5, and the expected workspace links; no duplicate incompatible Zod major was found.
-- `@types/bun` currently resolves to 1.3.12 while the runtime is pinned to Bun 1.2.6. No web source path using a 1.3-only Bun API was found, so this was recorded as maintenance drift rather than promoted to a separate defect.
-- Package exports, task dependencies, frozen-install workflow, Node 24 action runtime, and parser/server dependency isolation were rechecked. No additional dependency issue met the evidence threshold.
+`dependencies:check` passes with no unowned import, peer mismatch, remote
+locator, vendor digest/reference mismatch, or export-boundary issue.
+`bun audit --json` returns an empty advisory object. Both XLSX consumers retain
+the pinned vendored identity and expected SHA-256/SHA-512
+(`scripts/check-dependencies.ts:24-42,702-797`).
+
+The lower-bound persistence exception reported by the debugger/verifier changes
+no import, package, runtime compatibility, or toolchain contract and is not
+duplicated here.
+
+Focused dependency tests, the combined dependency gate, core/web typechecks,
+and the broader 77-test/185-expectation Cycle 18 matrix passed. All six Cycle
+18 commits have good signatures and remote parity is exact.
+
+Confirmed dependency findings: **0**; likely: **0**; manual-only promoted:
+**0**. No deployment was performed.
