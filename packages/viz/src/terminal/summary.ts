@@ -86,7 +86,8 @@ export function printCardComparison(results: CardRewardResult[]): void {
   // Caps hit warnings
   const capped = sorted.filter((r) => r.capsHit.length > 0);
   if (capped.length > 0) {
-    console.log('\n한도 도달 경고:');
+    console.log('\n혜택 한도 도달 내역:');
+    console.log('  카드별 계산에서 한도에 도달한 거래의 적용 결과입니다.');
     for (const r of capped) {
       for (const cap of r.capsHit) {
         console.log(

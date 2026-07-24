@@ -267,13 +267,15 @@
   });
 
   let displayTxs = $derived.by(() => {
-    let list = editedTxs;
+    let list = editedTxs.map((tx, sourceIndex) => ({ tx, sourceIndex }));
     if (filterUncategorized) {
-      list = list.filter(tx => tx.category === 'uncategorized' || tx.confidence < 0.5);
+      list = list.filter(({ tx }) =>
+        tx.category === 'uncategorized' || tx.confidence < 0.5
+      );
     }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      list = list.filter(tx => {
+      list = list.filter(({ tx }) => {
         // Match against merchant name (English/Korean)
         if (tx.merchant.toLowerCase().includes(q)) return true;
         // Also match against category and subcategory labels (Korean)
@@ -295,16 +297,17 @@
   );
 
   async function changeCategory(
-    txId: string,
+    sourceIndex: number,
     newCategory: string,
     selectElement: HTMLSelectElement,
   ) {
-    const idx = editedTxs.findIndex(t => t.id === txId);
-    if (idx !== -1) {
-      const tx = editedTxs[idx];
+    if (sourceIndex >= 0 && sourceIndex < editedTxs.length) {
+      const tx = editedTxs[sourceIndex];
       if (tx) {
-        const visibleTxIds = displayTxs.map(visibleTx => visibleTx.id);
-        const visibleIndex = visibleTxIds.indexOf(txId);
+        const visibleSourceIndices = displayTxs.map(
+          visibleTx => visibleTx.sourceIndex,
+        );
+        const visibleIndex = visibleSourceIndices.indexOf(sourceIndex);
         const hadFocus = document.activeElement === selectElement;
         const panel = selectElement.closest<HTMLElement>('[data-testid="tx-review-panel"]');
         const categoryPair = taxonomy.canonicalize(newCategory);
@@ -317,10 +320,9 @@
           confidence: 1.0,
           rawCategory: undefined,
         };
-        // Svelte 5 $state tracks array index mutations — editedTxs[idx] = updated
-        // is both correct and more performant than the previous editedTxs.map(...)
-        // pattern which created an O(n) array copy per edit (C22-05/C39-02).
-        editedTxs[idx] = updated;
+        // Svelte 5 $state tracks array index mutations. The source index also
+        // remains unique when a persisted statement contains duplicate IDs.
+        editedTxs[sourceIndex] = updated;
         hasEdits = true;
 
         // A category/search filter can remove the edited keyed row immediately.
@@ -330,15 +332,18 @@
           await tick();
           if (!selectElement.isConnected) {
             const candidates = [
-              ...visibleTxIds.slice(visibleIndex + 1),
-              ...visibleTxIds.slice(0, Math.max(visibleIndex, 0)).reverse(),
+              ...visibleSourceIndices.slice(visibleIndex + 1),
+              ...visibleSourceIndices
+                .slice(0, Math.max(visibleIndex, 0))
+                .reverse(),
             ];
             const remainingSelects = Array.from(
               panel.querySelectorAll<HTMLSelectElement>('[data-tx-category-select]'),
             );
             const nextSelect = candidates
-              .map(candidateId => remainingSelects.find(
-                candidate => candidate.dataset.txId === candidateId,
+              .map(candidateIndex => remainingSelects.find(
+                candidate =>
+                  candidate.dataset.txIndex === String(candidateIndex),
               ))
               .find((candidate): candidate is HTMLSelectElement => candidate !== undefined);
             (nextSelect ?? panel.querySelector<HTMLButtonElement>('[data-testid="tx-apply-edits"]'))?.focus();
@@ -443,7 +448,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each displayTxs as tx (tx.id)}
+              {#each displayTxs as { tx, sourceIndex } (sourceIndex)}
                 <tr class="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)] transition-colors">
                   <td class="px-3 py-2 text-[var(--color-text-muted)] whitespace-nowrap">
                     {tx.date}
@@ -459,10 +464,10 @@
                       disabled={reoptimizing}
                       value={tx.subcategory ? `${tx.category}.${tx.subcategory}` : tx.category}
                       aria-label={tx.merchant + " 카테고리"}
-                      data-testid={`tx-category-select-${tx.id}`}
+                      data-testid={`tx-category-select-${sourceIndex}`}
                       data-tx-category-select
-                      data-tx-id={tx.id}
-                      onchange={(e) => changeCategory(tx.id, e.currentTarget.value, e.currentTarget)}
+                      data-tx-index={sourceIndex}
+                      onchange={(e) => changeCategory(sourceIndex, e.currentTarget.value, e.currentTarget)}
                       class="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-1.5 py-1 text-xs outline-none focus:border-[var(--color-focus)] focus:ring-2 focus:ring-[var(--color-focus)] cursor-pointer
                         {tx.category === 'uncategorized' ? 'border-red-300 bg-red-50 text-red-700' : tx.confidence < 0.5 ? 'border-amber-300 bg-amber-50 text-amber-700' : ''}"
                     >

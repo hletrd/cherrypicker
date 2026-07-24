@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'bun:test';
+import {
+  buildConstraints,
+  greedyOptimize,
+  type CategorizedTransaction,
+} from '@cherrypicker/core';
+import type { CardRuleSet, RewardRule } from '@cherrypicker/rules';
 import type { AnalysisResult } from '../src/lib/analysis-result.js';
-import { resolveReoptimizationPreviousSpending } from '../src/lib/analysis-result.js';
+import {
+  isAnalysisResultCoherent,
+  resolveReoptimizationPreviousSpending,
+} from '../src/lib/analysis-result.js';
 import { describePreviousSpendingBasis } from '../src/lib/analysis-disclosures.js';
 import {
   MAX_PERSISTED_WARNINGS,
@@ -27,6 +36,9 @@ interface MutablePersistenceWitness {
     }>;
   };
 }
+
+type PortfolioCapLoss =
+  NonNullable<AnalysisResult['optimization']['portfolioCapLosses']>[number];
 
 function assignmentFixture(
   overrides: Record<string, unknown> = {},
@@ -74,6 +86,41 @@ function cardResultFixture(
     capsHit: [],
     ...overrides,
   };
+}
+
+function capSuppressionCauseFixture(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    ruleId: 'reward-1',
+    capGroup: 'reward-group',
+    capType: 'monthly_category',
+    capAmount: 300,
+    rewardBeforeCap: 1_000,
+    rewardAfterCap: 300,
+    ...overrides,
+  };
+}
+
+function portfolioCapLossFixture(
+  overrides: Record<string, unknown> = {},
+): PortfolioCapLoss {
+  return {
+    transactionId: 'tx-1',
+    transactionOccurrence: 0,
+    category: 'dining',
+    counterfactualCardId: 'card-2',
+    counterfactualCardName: '카드 2',
+    selectedCardId: 'card-1',
+    selectedCardName: '카드 1',
+    counterfactualReward: 1_000,
+    selectedReward: 500,
+    grossSuppressedReward: 700,
+    replacementReward: 200,
+    netLostReward: 500,
+    causes: [capSuppressionCauseFixture()],
+    ...overrides,
+  } as unknown as PortfolioCapLoss;
 }
 
 function optimizationFixture(
@@ -272,6 +319,158 @@ function cappedAnalysisFixture(merchant = '테스트 식당'): AnalysisResult {
     },
   };
   return analysis;
+}
+
+function producerPercentageRule(
+  id: string,
+  rate: number,
+  options: { category?: string; monthlyCap?: number | null } = {},
+): RewardRule {
+  return {
+    id,
+    category: options.category ?? 'dining',
+    type: 'discount',
+    support: { status: 'supported' },
+    combination: 'exclusive',
+    stackingGroup: 'base',
+    capGroup: id,
+    priority: 0,
+    tiers: [
+      {
+        performanceTier: 'tier0',
+        rate,
+        value: { kind: 'percentage', amount: rate },
+        monthlyCap: options.monthlyCap ?? null,
+        perTransactionCap: null,
+      },
+    ],
+  };
+}
+
+function producerCard(
+  id: string,
+  rewards: RewardRule[],
+): CardRuleSet {
+  return {
+    card: {
+      id,
+      issuer: 'fixture',
+      name: id,
+      nameKo: id,
+      type: 'credit',
+      annualFee: { domestic: 0, international: 0 },
+      url: `https://example.com/${id}`,
+      lastUpdated: '2026-07-24',
+      source: 'manual',
+    },
+    performanceTiers: [
+      {
+        id: 'tier0',
+        label: '무실적',
+        minSpending: 0,
+        maxSpending: null,
+      },
+    ],
+    performanceExclusions: [],
+    rewards,
+    globalConstraints: {
+      monthlyTotalDiscountCap: null,
+      minimumAnnualSpending: null,
+    },
+  };
+}
+
+function freshCapLossAnalysis(
+  mode: 'unassigned' | 'same-card',
+  merchantPadding = '',
+): AnalysisResult {
+  const card = producerCard(
+    `${mode}-card`,
+    [
+      producerPercentageRule('capped-benefit', 10, {
+        monthlyCap: 5_000,
+      }),
+      ...(
+        mode === 'same-card'
+          ? [producerPercentageRule('fallback-benefit', 4, {
+              category: '*',
+            })]
+          : []
+      ),
+    ],
+  );
+  type ProducerTransaction =
+    CategorizedTransaction &
+    NonNullable<AnalysisResult['transactions']>[number];
+  const transactions: ProducerTransaction[] = [
+    {
+      id: 'first',
+      date: '2026-07-23',
+      merchant: 'a-first',
+      amount: 50_000,
+      currency: 'KRW',
+      category: 'dining',
+      subcategory: undefined,
+      confidence: 1,
+    },
+    {
+      id: 'capped',
+      date: '2026-07-23',
+      merchant: `b-capped${merchantPadding}`,
+      amount: 50_000,
+      currency: 'KRW',
+      category: 'dining',
+      subcategory: undefined,
+      confidence: 1,
+    },
+  ];
+  const optimization = greedyOptimize(
+    buildConstraints(
+      transactions,
+      new Map([[card.card.id, 0]]),
+      new Map([['dining', '외식']]),
+    ),
+    [card],
+  );
+  return {
+    success: true,
+    bank: 'fixture',
+    format: 'json',
+    statementPeriod: {
+      start: '2026-07-23',
+      end: '2026-07-23',
+    },
+    transactionCount: 2,
+    fullStatementPeriod: {
+      start: '2026-07-23',
+      end: '2026-07-23',
+    },
+    totalTransactionCount: 2,
+    parseErrors: [],
+    transactions,
+    categoryBreakdown: [
+      {
+        category: 'dining',
+        categoryNameKo: '외식',
+        spending: 100_000,
+        transactionCount: 2,
+      },
+    ],
+    optimization,
+    monthlyBreakdown: [
+      {
+        month: '2026-07',
+        spending: 100_000,
+        transactionCount: 2,
+      },
+    ],
+    previousMonthSpendingOption: 0,
+    cardIdsOption: [card.card.id],
+    previousSpendingBasis: {
+      kind: 'user-total',
+      amount: 0,
+    },
+  };
 }
 
 describe('production persistence parser', () => {
@@ -1000,6 +1199,232 @@ describe('production persistence parser', () => {
     });
   });
 
+  test('accepts legacy v4 cap-loss telemetry absence as unknown', () => {
+    const result = deserializeAnalysis(persistedFixture());
+
+    expect(result.shouldRemove).toBe(false);
+    expect(result.data?.optimization.portfolioCapLosses).toBeUndefined();
+    expect(STORAGE_VERSION).toBe(4);
+  });
+
+  test('accepts a canonical present portfolio cap-loss array', () => {
+    const loss = portfolioCapLossFixture();
+    const result = deserializeAnalysis(
+      persistedFixture({
+        optimization: optimizationFixture({
+          portfolioCapLosses: [loss],
+        }),
+      }),
+    );
+
+    expect(result.shouldRemove).toBe(false);
+    expect(result.data?.optimization.portfolioCapLosses).toEqual([loss]);
+  });
+
+  test.each([
+    ['non-array container', {}],
+    ['malformed entry', [{}]],
+    [
+      'fractional transaction occurrence',
+      [portfolioCapLossFixture({ transactionOccurrence: 0.5 })],
+    ],
+    [
+      'unpaired selected-card identity',
+      [portfolioCapLossFixture({ selectedCardName: null })],
+    ],
+    [
+      'fractional money',
+      [portfolioCapLossFixture({ netLostReward: 1.5 })],
+    ],
+    [
+      'empty cause list',
+      [portfolioCapLossFixture({ causes: [] })],
+    ],
+    [
+      'unknown cap stage',
+      [
+        portfolioCapLossFixture({
+          causes: [capSuppressionCauseFixture({ capType: 'weekly' })],
+        }),
+      ],
+    ],
+    [
+      'non-reducing cap cause',
+      [
+        portfolioCapLossFixture({
+          causes: [
+            capSuppressionCauseFixture({
+              rewardAfterCap: 1_000,
+              capAmount: 1_000,
+            }),
+          ],
+        }),
+      ],
+    ],
+    [
+      'empty cause identity',
+      [
+        portfolioCapLossFixture({
+          causes: [capSuppressionCauseFixture({ ruleId: '' })],
+        }),
+      ],
+    ],
+  ])('rejects malformed portfolio cap-loss telemetry: %s', (_name, losses) => {
+    const result = deserializeAnalysis(
+      persistedFixture({
+        optimization: optimizationFixture({
+          portfolioCapLosses: losses,
+        }),
+      }),
+    );
+
+    expect(result.data).toBeNull();
+    expect(result.warningKind).toBe('corrupted');
+    expect(result.shouldRemove).toBe(true);
+  });
+
+  test.each([
+    [
+      'counterfactual/net arithmetic',
+      [
+        portfolioCapLossFixture({
+          netLostReward: 499,
+          replacementReward: 201,
+        }),
+      ],
+    ],
+    [
+      'gross/replacement arithmetic',
+      [portfolioCapLossFixture({ replacementReward: 201 })],
+    ],
+    [
+      'gross cause reconciliation',
+      [
+        portfolioCapLossFixture({
+          causes: [
+            capSuppressionCauseFixture({
+              rewardBeforeCap: 999,
+            }),
+          ],
+        }),
+      ],
+    ],
+    [
+      'duplicate transaction identity',
+      [portfolioCapLossFixture(), portfolioCapLossFixture()],
+    ],
+    [
+      'selected reward above its assignment',
+      [
+        portfolioCapLossFixture({
+          counterfactualReward: 1_001,
+          selectedReward: 501,
+        }),
+      ],
+    ],
+    [
+      'duplicate cap-cause identity',
+      [
+        portfolioCapLossFixture({
+          causes: [
+            capSuppressionCauseFixture({ rewardBeforeCap: 650 }),
+            capSuppressionCauseFixture({ rewardBeforeCap: 650 }),
+          ],
+        }),
+      ],
+    ],
+    [
+      'cause-sum overflow',
+      [
+        portfolioCapLossFixture({
+          selectedCardId: null,
+          selectedCardName: null,
+          counterfactualReward: Number.MAX_SAFE_INTEGER,
+          selectedReward: 0,
+          grossSuppressedReward: Number.MAX_SAFE_INTEGER,
+          replacementReward: 0,
+          netLostReward: Number.MAX_SAFE_INTEGER,
+          causes: [
+            capSuppressionCauseFixture({
+              ruleId: 'reward-1',
+              capGroup: 'reward-group-1',
+              capAmount: 0,
+              rewardBeforeCap: Number.MAX_SAFE_INTEGER,
+              rewardAfterCap: 0,
+            }),
+            capSuppressionCauseFixture({
+              ruleId: 'reward-2',
+              capGroup: 'reward-group-2',
+              capAmount: 0,
+              rewardBeforeCap: 1,
+              rewardAfterCap: 0,
+            }),
+          ],
+        }),
+      ],
+    ],
+    [
+      'gross suppression above counterfactual',
+      [
+        portfolioCapLossFixture({
+          grossSuppressedReward: 1_100,
+          replacementReward: 600,
+          causes: [
+            capSuppressionCauseFixture({
+              capAmount: 0,
+              rewardBeforeCap: 1_100,
+              rewardAfterCap: 0,
+            }),
+          ],
+        }),
+      ],
+    ],
+    [
+      'missing full-snapshot transaction',
+      [portfolioCapLossFixture({ transactionId: 'missing-tx' })],
+    ],
+    [
+      'mismatched full-snapshot category',
+      [portfolioCapLossFixture({ category: 'grocery' })],
+    ],
+    [
+      'missing selected card',
+      [
+        portfolioCapLossFixture({
+          selectedCardId: 'missing-card',
+          selectedCardName: '없는 카드',
+        }),
+      ],
+    ],
+  ])('rejects incoherent portfolio cap-loss telemetry: %s', (_name, losses) => {
+    const result = deserializeAnalysis(
+      persistedFixture({
+        optimization: optimizationFixture({
+          portfolioCapLosses: losses,
+        }),
+      }),
+    );
+
+    expect(result.data).toBeNull();
+    expect(result.warningKind).toBe('corrupted');
+    expect(result.shouldRemove).toBe(true);
+  });
+
+  test('rejects a counterfactual card outside an explicit selection', () => {
+    const result = deserializeAnalysis(
+      persistedFixture({
+        cardIdsOption: ['card-1'],
+        optimization: optimizationFixture({
+          portfolioCapLosses: [portfolioCapLossFixture()],
+        }),
+      }),
+    );
+
+    expect(result.data).toBeNull();
+    expect(result.warningKind).toBe('corrupted');
+    expect(result.shouldRemove).toBe(true);
+  });
+
   test.each([
     ['missing cardResults', optimizationFixture({ cardResults: undefined })],
     [
@@ -1381,6 +1806,125 @@ describe('production persistence parser', () => {
 });
 
 describe('production persistence serializer', () => {
+  test('round-trips explicit no-loss separately from unknown telemetry', () => {
+    const unknown = analysisFixture();
+    unknown.optimization.portfolioCapLosses = undefined;
+    const unknownSerialized = serializeAnalysis(unknown).serialized;
+    expect(
+      (
+        JSON.parse(unknownSerialized) as AnalysisResult
+      ).optimization.portfolioCapLosses,
+    ).toBeUndefined();
+    expect(
+      deserializeAnalysis(unknownSerialized)
+        .data?.optimization.portfolioCapLosses,
+    ).toBeUndefined();
+
+    const noLoss = analysisFixture();
+    noLoss.optimization.portfolioCapLosses = [];
+    const noLossSerialized = serializeAnalysis(noLoss).serialized;
+    expect(
+      (
+        JSON.parse(noLossSerialized) as AnalysisResult
+      ).optimization.portfolioCapLosses,
+    ).toEqual([]);
+    expect(
+      deserializeAnalysis(noLossSerialized)
+        .data?.optimization.portfolioCapLosses,
+    ).toEqual([]);
+  });
+
+  test('round-trips a duplicate transaction ID by occurrence identity', () => {
+    const analysis = freshCapLossAnalysis('unassigned');
+    analysis.transactions![0]!.id = 'duplicate-id';
+    analysis.transactions![1]!.id = 'duplicate-id';
+    const loss = analysis.optimization.portfolioCapLosses![0]!;
+    loss.transactionId = 'duplicate-id';
+    loss.transactionOccurrence = 1;
+
+    const { serialized } = serializeAnalysis(analysis);
+    const restored = deserializeAnalysis(serialized);
+
+    expect(restored.warningKind).toBeNull();
+    expect(restored.shouldRemove).toBe(false);
+    expect(
+      restored.data?.optimization.portfolioCapLosses?.[0],
+    ).toMatchObject({
+      transactionId: 'duplicate-id',
+      transactionOccurrence: 1,
+    });
+  });
+
+  test.each([
+    ['unassigned', 'full', false],
+    ['unassigned', 'truncated', true],
+    ['same-card', 'full', false],
+    ['same-card', 'truncated', true],
+  ] as const)(
+    'round-trips fresh %s cap-loss output in a %s v4 payload',
+    (mode, _shape, truncated) => {
+      const analysis = freshCapLossAnalysis(
+        mode,
+        truncated ? 'x'.repeat(MAX_PERSIST_SIZE) : '',
+      );
+      const loss = analysis.optimization.portfolioCapLosses?.[0];
+      expect(analysis.optimization.portfolioCapLosses).toHaveLength(1);
+      if (mode === 'unassigned') {
+        expect(loss).toMatchObject({
+          selectedCardId: null,
+          selectedCardName: null,
+          selectedReward: 0,
+          replacementReward: 0,
+          netLostReward: 5_000,
+        });
+      } else {
+        expect(loss).toMatchObject({
+          counterfactualCardId: 'same-card-card',
+          selectedCardId: 'same-card-card',
+          selectedCardName: 'same-card-card',
+          selectedReward: 2_000,
+          replacementReward: 2_000,
+          netLostReward: 3_000,
+        });
+      }
+
+      const { serialized, result } = serializeAnalysis(analysis);
+      expect(result.kind).toBe(truncated ? 'truncated' : null);
+      const persisted = JSON.parse(serialized);
+      expect(persisted._v).toBe(4);
+      expect(persisted.transactions === undefined).toBe(truncated);
+
+      const restored = deserializeAnalysis(serialized);
+      expect(restored.warningKind).toBe(truncated ? 'truncated' : null);
+      expect(restored.shouldRemove).toBe(false);
+      expect(restored.data?.optimization.portfolioCapLosses).toEqual(
+        analysis.optimization.portfolioCapLosses,
+      );
+    },
+  );
+
+  test.each([
+    ['full', '테스트 식당', null],
+    ['truncated', 'x'.repeat(MAX_PERSIST_SIZE), 'truncated'],
+  ] as const)(
+    'round-trips present portfolio cap losses in a %s v4 payload',
+    (_label, merchant, warningKind) => {
+      const analysis = cappedAnalysisFixture(merchant);
+      const loss = portfolioCapLossFixture();
+      analysis.optimization.portfolioCapLosses = [loss];
+
+      const { serialized } = serializeAnalysis(analysis);
+      const persisted = JSON.parse(serialized);
+      expect(persisted._v).toBe(4);
+      expect(persisted.optimization.portfolioCapLosses).toEqual([loss]);
+
+      const restored = deserializeAnalysis(serialized);
+      expect(restored.warningKind).toBe(warningKind);
+      expect(restored.shouldRemove).toBe(false);
+      expect(restored.data?.optimization.portfolioCapLosses).toEqual([loss]);
+    },
+  );
+
   test.each([
     ['full', '테스트 식당', null],
     ['truncated', 'x'.repeat(MAX_PERSIST_SIZE), 'truncated'],
@@ -1567,6 +2111,135 @@ describe('production persistence serializer', () => {
       oversized.categoryBreakdown,
     );
     expect(restored.data?.optimization).toEqual(oversized.optimization);
+  });
+
+  test('bounds a truncated payload when cap-loss telemetry dominates its size', () => {
+    const transactionCount = 12_000;
+    const totalSpending = transactionCount * 10_000;
+    const totalReward = transactionCount;
+    const analysis = analysisFixture();
+    const transaction = {
+      id: 'duplicate-id',
+      date: '2026-07-01',
+      merchant: '테스트 식당',
+      amount: 10_000,
+      category: 'dining',
+      confidence: 1,
+    };
+    analysis.statementPeriod = {
+      start: transaction.date,
+      end: transaction.date,
+    };
+    analysis.fullStatementPeriod = analysis.statementPeriod;
+    analysis.transactionCount = transactionCount;
+    analysis.totalTransactionCount = transactionCount;
+    analysis.transactions = Array(transactionCount).fill(transaction);
+    analysis.parseErrors = [];
+    analysis.categoryBreakdown = [{
+      category: 'dining',
+      categoryNameKo: '외식',
+      spending: totalSpending,
+      transactionCount,
+    }];
+    analysis.monthlyBreakdown = [{
+      month: '2026-07',
+      spending: totalSpending,
+      transactionCount,
+    }];
+    analysis.cardIdsOption = ['card-1'];
+    analysis.optimization = {
+      assignments: [{
+        assignedCardId: 'card-1',
+        assignedCardName: '카드 1',
+        category: 'dining',
+        categoryNameKo: '외식',
+        spending: totalSpending,
+        transactionCount,
+        reward: totalReward,
+        rate: totalReward / totalSpending,
+        alternatives: [],
+      }],
+      cardResults: [{
+        cardId: 'card-1',
+        cardName: '카드 1',
+        totalReward,
+        totalSpending,
+        effectiveRate: totalReward / totalSpending,
+        byCategory: [{
+          category: 'dining',
+          categoryNameKo: '외식',
+          spending: totalSpending,
+          reward: totalReward,
+          rate: totalReward / totalSpending,
+          rewardType: 'discount',
+          capReached: false,
+        }],
+        performanceTier: 'tier0',
+        capsHit: [],
+      }],
+      totalReward,
+      totalSpending,
+      unassignedSpending: 0,
+      unassignedTransactionCount: 0,
+      effectiveRate: totalReward / totalSpending,
+      savingsVsSingleCard: 0,
+      bestSingleCard: {
+        cardId: 'card-1',
+        cardName: '카드 1',
+        totalReward,
+      },
+      portfolioCapLosses: Array.from(
+        { length: transactionCount },
+        (_, transactionOccurrence) =>
+          portfolioCapLossFixture({
+            transactionId: transaction.id,
+            transactionOccurrence,
+            counterfactualCardId: 'card-1',
+            counterfactualCardName: '카드 1',
+            selectedCardId: 'card-1',
+            selectedCardName: '카드 1',
+            counterfactualReward: 2,
+            selectedReward: 1,
+            grossSuppressedReward: 1,
+            replacementReward: 0,
+            netLostReward: 1,
+            causes: [capSuppressionCauseFixture({
+              capAmount: 1,
+              rewardBeforeCap: 2,
+              rewardAfterCap: 1,
+            })],
+          }),
+      ),
+    };
+
+    expect(isAnalysisResultCoherent(analysis)).toBe(true);
+    const { serialized, result } = serializeAnalysis(analysis);
+
+    expect(new TextEncoder().encode(serialized).length).toBeLessThanOrEqual(
+      MAX_PERSIST_SIZE,
+    );
+    expect(result).toEqual({
+      kind: 'truncated',
+      truncatedTxCount: transactionCount,
+    });
+    expect(
+      (
+        JSON.parse(serialized) as AnalysisResult
+      ).optimization.portfolioCapLosses,
+    ).toBeUndefined();
+    const restored = deserializeAnalysis(serialized);
+    expect(restored.warningKind).toBe('truncated');
+    expect(restored.shouldRemove).toBe(false);
+    expect(restored.data?.optimization.portfolioCapLosses).toBeUndefined();
+  });
+
+  test('throws before returning a payload that safe truncation cannot bound', () => {
+    const analysis = analysisFixture();
+    analysis.format = 'x'.repeat(MAX_PERSIST_SIZE);
+
+    expect(() => serializeAnalysis(analysis)).toThrow(
+      'analysis exceeds the persistence budget after safe truncation',
+    );
   });
 
   test('persists a bounded warning summary without raw statement content', () => {

@@ -1,9 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
-import type { CardRewardResult } from '@cherrypicker/core';
+import type {
+  CardRewardResult,
+  PortfolioCapLoss,
+} from '@cherrypicker/core';
 import {
   collectCapDisclosures,
+  collectPortfolioCapLossDisclosures,
   formatCapOutcomeKo,
+  formatPortfolioCapLossOutcomeKo,
 } from '../src/lib/cap-disclosures.js';
 
 const cardResults: CardRewardResult[] = [
@@ -87,8 +92,49 @@ describe('browser cap disclosures', () => {
       10_000,
       20_000,
     ]);
-    expect(formatCapOutcomeKo(disclosures[0]!)).toBe('1,000원 혜택 손실');
-    expect(formatCapOutcomeKo(disclosures[1]!)).toBe('혜택 손실 없음');
+    expect(formatCapOutcomeKo(disclosures[0]!)).toBe(
+      '도달 거래에서 1,000원 미적용',
+    );
+    expect(formatCapOutcomeKo(disclosures[1]!)).toBe(
+      '도달 거래에서 추가 차감 없음',
+    );
+  });
+
+  test('formats authoritative portfolio loss after fallback reconciliation', () => {
+    const losses: PortfolioCapLoss[] = [{
+      transactionId: 'tx-blocked',
+      transactionOccurrence: 0,
+      category: 'dining',
+      counterfactualCardId: 'card-a',
+      counterfactualCardName: '카드 A',
+      selectedCardId: 'card-b',
+      selectedCardName: '카드 B',
+      counterfactualReward: 5_000,
+      selectedReward: 2_000,
+      grossSuppressedReward: 5_000,
+      replacementReward: 2_000,
+      netLostReward: 3_000,
+      causes: [{
+        ruleId: 'reward-a',
+        capGroup: 'reward-a',
+        capType: 'monthly_category',
+        capAmount: 5_000,
+        rewardBeforeCap: 5_000,
+        rewardAfterCap: 0,
+      }],
+    }];
+
+    const disclosures = collectPortfolioCapLossDisclosures(
+      losses,
+      new Map([['dining', '외식']]),
+    );
+    expect(disclosures[0]?.categoryLabel).toBe('외식');
+    expect(formatPortfolioCapLossOutcomeKo(disclosures[0]!)).toBe(
+      '한도로 제한된 혜택 5,000원 · 다른 혜택으로 대체 2,000원 · 최종 3,000원 감소',
+    );
+    expect(
+      collectPortfolioCapLossDisclosures(undefined, new Map()),
+    ).toEqual([]);
   });
 
   test('wires dashboard, results, and report content to the shared component', async () => {
@@ -106,12 +152,18 @@ describe('browser cap disclosures', () => {
     ]);
 
     expect(component).toContain('analysisStore.cardResults');
-    expect(component).toContain('data-testid="cap-disclosures"');
-    expect(component).toContain('혜택 한도 도달 내역');
-    expect(component).toContain('{#each disclosures as disclosure}');
     expect(component).toContain(
-      '적용 혜택 {formatWon(disclosure.appliedReward)}',
+      'analysisStore.optimization?.portfolioCapLosses',
     );
+    expect(component).toContain('data-testid="portfolio-cap-losses"');
+    expect(component).toContain('data-testid="cap-reach-events"');
+    expect(component).toContain('한도로 줄어든 최종 혜택');
+    expect(component).toContain('혜택 한도 도달 내역');
+    expect(component).toContain('{#each reachEvents as disclosure}');
+    expect(component).toContain(
+      '도달 거래 적용 혜택 {formatWon(disclosure.appliedReward)}',
+    );
+    expect(component).not.toContain('혜택 손실 없음');
     expect(dashboard).toContain('<CapDisclosures client:load />');
     expect(results).toContain('<CapDisclosures client:load />');
     expect(report).toContain('<CapDisclosures />');

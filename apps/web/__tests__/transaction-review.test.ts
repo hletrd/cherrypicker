@@ -127,7 +127,16 @@ describe('TransactionReview taxonomy and keyboard contracts', () => {
       "panel.querySelector<HTMLButtonElement>('[data-testid=\"tx-apply-edits\"]')",
     );
     expect(componentSource).toContain('data-tx-category-select');
-    expect(componentSource).toContain('data-tx-id={tx.id}');
+    expect(componentSource).toContain(
+      '{#each displayTxs as { tx, sourceIndex } (sourceIndex)}',
+    );
+    expect(componentSource).toContain('data-tx-index={sourceIndex}');
+    expect(componentSource).toContain(
+      'changeCategory(sourceIndex, e.currentTarget.value, e.currentTarget)',
+    );
+    expect(componentSource).not.toContain(
+      'editedTxs.findIndex(t => t.id === txId)',
+    );
 
     expect(componentSource).toContain('data-testid="tx-review-scroll-region"');
     expect(componentSource).toContain('role="region"');

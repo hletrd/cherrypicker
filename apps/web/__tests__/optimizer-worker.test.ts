@@ -3,6 +3,7 @@ import type {
   CardRuleSet,
   OptimizationConstraints,
   OptimizationResult,
+  PortfolioCapLoss,
 } from '@cherrypicker/core';
 import {
   optimizeWithWorker,
@@ -98,7 +99,51 @@ const optimizationResult: OptimizationResult = {
   savingsVsSingleCard: 0,
   bestSingleCard: null,
   cardResults: [],
+  portfolioCapLosses: [],
 };
+
+const portfolioCapLoss: PortfolioCapLoss = {
+  transactionId: 'tx-capped',
+  transactionOccurrence: 0,
+  category: 'dining',
+  counterfactualCardId: 'capped-card',
+  counterfactualCardName: '한도 카드',
+  selectedCardId: 'fallback-card',
+  selectedCardName: '대체 카드',
+  counterfactualReward: 5_000,
+  selectedReward: 2_000,
+  grossSuppressedReward: 5_000,
+  replacementReward: 2_000,
+  netLostReward: 3_000,
+  causes: [
+    {
+      ruleId: 'dining-benefit',
+      capGroup: 'dining-benefit',
+      capType: 'monthly_category',
+      capAmount: 5_000,
+      rewardBeforeCap: 5_000,
+      rewardAfterCap: 0,
+    },
+  ],
+};
+
+function portfolioLossWith(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    ...portfolioCapLoss,
+    ...overrides,
+  };
+}
+
+function optimizationResultWithPortfolioLosses(
+  losses: unknown[],
+): Record<string, unknown> {
+  return {
+    ...optimizationResult,
+    portfolioCapLosses: losses,
+  };
+}
 
 function optimizationResultWithCap(
   cap: Record<string, unknown>,
@@ -258,6 +303,55 @@ describe('browser optimizer worker ownership', () => {
     expect(worker.terminations).toBe(1);
   });
 
+  test('accepts reconciled portfolio cap loss telemetry', async () => {
+    const worker = new FakeOptimizerWorker();
+    const losses: PortfolioCapLoss[] = [
+      portfolioCapLoss,
+      {
+        ...portfolioCapLoss,
+        transactionOccurrence: 1,
+        selectedCardId: null,
+        selectedCardName: null,
+        counterfactualReward: 5_000,
+        selectedReward: 0,
+        grossSuppressedReward: 5_000,
+        replacementReward: 0,
+        netLostReward: 5_000,
+      },
+    ];
+    const result = optimizationResultWithPortfolioLosses(losses);
+    const optimizing = optimizeWithWorker(
+      constraints,
+      [],
+      undefined,
+      () => worker,
+    );
+
+    worker.respond({ ok: true, result });
+
+    expect((await optimizing).portfolioCapLosses).toEqual(losses);
+    expect(worker.terminations).toBe(1);
+  });
+
+  test('accepts explicit unknown telemetry from an unrepresentable calculation', async () => {
+    const worker = new FakeOptimizerWorker();
+    const result = {
+      ...optimizationResult,
+      portfolioCapLosses: undefined,
+    };
+    const optimizing = optimizeWithWorker(
+      constraints,
+      [],
+      undefined,
+      () => worker,
+    );
+
+    worker.respond({ ok: true, result });
+
+    expect((await optimizing).portfolioCapLosses).toBeUndefined();
+    expect(worker.terminations).toBe(1);
+  });
+
   test.each([
     ['null payload', null],
     ['undefined payload', undefined],
@@ -293,6 +387,214 @@ describe('browser optimizer worker ownership', () => {
           ...optimizationResult,
           totalReward: Number.NaN,
         },
+      },
+    ],
+    [
+      'non-array portfolio cap loss telemetry',
+      {
+        ok: true,
+        result: {
+          ...optimizationResult,
+          portfolioCapLosses: {},
+        },
+      },
+    ],
+    [
+      'portfolio loss with a fractional transaction occurrence',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({ transactionOccurrence: 0.5 }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss with mismatched selected card identity',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({
+            selectedCardName: null,
+          }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss with selected reward but no selected card',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({
+            selectedCardId: null,
+            selectedCardName: null,
+          }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss without a suppression cause',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({ causes: [] }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss with an unknown cap stage',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({
+            causes: [{
+              ...portfolioCapLoss.causes[0],
+              capType: 'annual_total',
+            }],
+          }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss with a non-positive cause delta',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({
+            causes: [{
+              ...portfolioCapLoss.causes[0],
+              rewardAfterCap: 5_000,
+            }],
+          }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss whose cause deltas do not equal gross suppression',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({
+            causes: [{
+              ...portfolioCapLoss.causes[0],
+              rewardBeforeCap: 4_999,
+            }],
+          }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss with a duplicate cap-cause identity',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({
+            causes: [
+              {
+                ...portfolioCapLoss.causes[0],
+                rewardBeforeCap: 2_500,
+                rewardAfterCap: 0,
+              },
+              {
+                ...portfolioCapLoss.causes[0],
+                rewardBeforeCap: 2_500,
+                rewardAfterCap: 0,
+              },
+            ],
+          }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss with a post-cap reward above the cap amount',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({
+            causes: [{
+              ...portfolioCapLoss.causes[0],
+              capAmount: 99,
+              rewardBeforeCap: 5_100,
+              rewardAfterCap: 100,
+            }],
+          }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss whose replacement and net do not reconcile to gross',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({ replacementReward: 1_999 }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss with gross suppression above its counterfactual reward',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({
+            grossSuppressedReward: 6_000,
+            replacementReward: 3_000,
+            causes: [{
+              ...portfolioCapLoss.causes[0],
+              capAmount: 0,
+              rewardBeforeCap: 6_000,
+              rewardAfterCap: 0,
+            }],
+          }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss whose selected and net do not reconcile to counterfactual',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({ counterfactualReward: 4_999 }),
+        ]),
+      },
+    ],
+    [
+      'portfolio loss whose cause sum overflows safe integers',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioLossWith({
+            selectedCardId: null,
+            selectedCardName: null,
+            counterfactualReward: 1,
+            selectedReward: 0,
+            grossSuppressedReward: Number.MAX_SAFE_INTEGER,
+            replacementReward: Number.MAX_SAFE_INTEGER - 1,
+            netLostReward: 1,
+            causes: [
+              {
+                ...portfolioCapLoss.causes[0],
+                rewardBeforeCap: Number.MAX_SAFE_INTEGER,
+                rewardAfterCap: 0,
+              },
+              {
+                ...portfolioCapLoss.causes[0],
+                ruleId: 'other-benefit',
+                capGroup: 'other-benefit',
+                rewardBeforeCap: 1,
+                rewardAfterCap: 0,
+              },
+            ],
+          }),
+        ]),
+      },
+    ],
+    [
+      'duplicate portfolio losses for one transaction',
+      {
+        ok: true,
+        result: optimizationResultWithPortfolioLosses([
+          portfolioCapLoss,
+          portfolioCapLoss,
+        ]),
       },
     ],
     [

@@ -1,6 +1,10 @@
 import type { CategorizedTransaction } from '../models/transaction.js';
 import type { CardRuleSet } from '@cherrypicker/rules';
-import type { CategoryReward, CapInfo } from '../models/result.js';
+import type {
+  CapSuppressionCause,
+  CategoryReward,
+  CapInfo,
+} from '../models/result.js';
 import {
   addSafeNonnegativeIntegers,
   floorSafeIntegerDecimalProduct,
@@ -40,6 +44,27 @@ export interface UnsupportedRule {
   detail?: string;
 }
 
+/**
+ * Calculator-owned, transaction-scoped cap diagnostic.
+ *
+ * counterfactualReward is the reward selected by the card's existing
+ * stacking rules with cap stages removed for this transaction. actualReward
+ * is the unchanged applied contribution. The cause deltas describe gross cap
+ * suppression; replacementReward reconciles an executable same-card fallback.
+ */
+export interface TransactionCapSuppression {
+  transactionId: string;
+  /** Zero-based position in this calculator invocation's transaction input. */
+  transactionIndex: number;
+  category: string;
+  actualReward: number;
+  counterfactualReward: number;
+  grossSuppressedReward: number;
+  replacementReward: number;
+  netSuppressedReward: number;
+  causes: CapSuppressionCause[];
+}
+
 export interface CalculationOutput {
   cardId: string;
   performanceTier: string;
@@ -47,6 +72,9 @@ export interface CalculationOutput {
   totalReward: number;
   totalSpending: number;
   capsHit: CapInfo[];
+  capSuppressions: TransactionCapSuppression[];
+  /** False when an exact diagnostic would exceed safe-integer arithmetic. */
+  capSuppressionsComplete: boolean;
   skippedTransactions: SkippedTransaction[];
   unsupportedRules: UnsupportedRule[];
 }

@@ -76,6 +76,28 @@ const result: OptimizationResult = {
       ],
     },
   ],
+  portfolioCapLosses: [{
+    transactionId: 'cap-transaction',
+    transactionOccurrence: 0,
+    category: 'dining',
+    counterfactualCardId: 'cap-card',
+    counterfactualCardName: '한도 카드',
+    selectedCardId: 'cap-card',
+    selectedCardName: '한도 카드',
+    counterfactualReward: 120,
+    selectedReward: 20,
+    grossSuppressedReward: 120,
+    replacementReward: 20,
+    netLostReward: 100,
+    causes: [{
+      ruleId: 'blocked-rule',
+      capGroup: 'blocked-rule',
+      capType: 'monthly_category',
+      capAmount: 100,
+      rewardBeforeCap: 120,
+      rewardAfterCap: 0,
+    }],
+  }],
 };
 
 const transactions: CategorizedTransaction[] = [
@@ -164,30 +186,31 @@ describe('exact versus clipped cap disclosure', () => {
     );
   });
 
-  test('terminal comparison and optimizer copy never describe an exact hit as zero loss', () => {
+  test('terminal separates portfolio loss from transaction-local reach copy', () => {
     const output = captureConsoleLog(() => {
       printCardComparison(result.cardResults);
       printOptimizationResult(result);
     });
 
     expect(output).toContain(
-      'exact-global: 한도 100원 도달 (혜택 손실 없음)',
+      'exact-global: 한도 100원 도달 (도달 거래에서 추가 차감 없음)',
     );
     expect(output).toContain(
-      'exact-global: 한도 100원 도달 — 혜택 손실 없음',
+      'exact-global: 한도 100원 도달 — 도달 거래에서 추가 차감 없음',
     );
     expect(output).toContain(
-      'exact-rule: 한도 100원 도달 — 혜택 손실 없음',
+      'exact-rule: 한도 100원 도달 — 도달 거래에서 추가 차감 없음',
     );
     expect(output).toContain(
-      'clipped-global: 한도 100원 도달 (20원 혜택 손실)',
+      'clipped-global: 한도 100원 도달 (도달 거래에서 20원 미적용)',
     );
     expect(output).toContain(
-      'clipped-global: 한도 100원 도달 — 20원 혜택 손실',
+      'clipped-global: 한도 100원 도달 — 도달 거래에서 20원 미적용',
     );
-    expect(output).not.toContain(
-      'exact-global: 한도 100원 도달 — 0원 혜택 손실',
+    expect(output).toContain(
+      '한도로 제한된 혜택 120원 · 다른 혜택으로 대체 20원 · 최종 100원 감소',
     );
+    expect(output).not.toContain('혜택 손실 없음');
   });
 
   test('standalone report distinguishes exact reach from discarded reward', () => {
@@ -199,19 +222,41 @@ describe('exact versus clipped cap disclosure', () => {
     );
 
     expect(html).toContain(
-      'clipped-purchase: 건당 한도 100원 도달 — 20원 혜택 손실',
+      'clipped-purchase: 건당 한도 100원 도달 — 도달 거래에서 20원 미적용',
     );
     expect(html).toContain(
-      'exact-global: 카드 월 통합 한도 100원 도달 — 혜택 손실 없음',
+      'exact-global: 카드 월 통합 한도 100원 도달 — 도달 거래에서 추가 차감 없음',
     );
     expect(html).toContain(
-      'exact-rule: 카테고리별 월 한도 100원 도달 — 혜택 손실 없음',
+      'exact-rule: 카테고리별 월 한도 100원 도달 — 도달 거래에서 추가 차감 없음',
     );
     expect(html).toContain(
-      'clipped-global: 카드 월 통합 한도 100원 도달 — 20원 혜택 손실',
+      'clipped-global: 카드 월 통합 한도 100원 도달 — 도달 거래에서 20원 미적용',
     );
-    expect(html).not.toContain(
-      'exact-global: 카드 월 통합 한도 100원 도달 — 0원 혜택 손실',
+    expect(html).toContain(
+      '한도로 제한된 혜택 120원 · 다른 혜택으로 대체 20원 · 최종 100원 감소',
     );
+    expect(html).not.toContain('혜택 손실 없음');
+  });
+
+  test('legacy-unknown and current-empty portfolio telemetry make no no-loss claim', () => {
+    for (const portfolioCapLosses of [undefined, []] as const) {
+      const withoutLoss = structuredClone(result);
+      withoutLoss.portfolioCapLosses = portfolioCapLosses;
+      const output = captureConsoleLog(() => {
+        printOptimizationResult(withoutLoss);
+      });
+      const html = generateHTMLReport(
+        withoutLoss,
+        transactions,
+        new Map([['dining', '외식']]),
+        reportContext,
+      );
+
+      expect(output).not.toContain('한도로 줄어든 최종 혜택');
+      expect(html).not.toContain('한도로 줄어든 최종 혜택');
+      expect(output).not.toContain('혜택 손실 없음');
+      expect(html).not.toContain('혜택 손실 없음');
+    }
   });
 });

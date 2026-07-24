@@ -128,6 +128,39 @@ function cloneResult(): AnalysisResult {
   return structuredClone(coherentResult());
 }
 
+type PortfolioCapLoss =
+  NonNullable<AnalysisResult['optimization']['portfolioCapLosses']>[number];
+
+function portfolioCapLossFixture(
+  overrides: Partial<PortfolioCapLoss> = {},
+): PortfolioCapLoss {
+  return {
+    transactionId: 'tx-current',
+    transactionOccurrence: 0,
+    category: 'dining',
+    counterfactualCardId: 'card-2',
+    counterfactualCardName: '카드 2',
+    selectedCardId: 'card-1',
+    selectedCardName: '카드 1',
+    counterfactualReward: 1_000,
+    selectedReward: 500,
+    grossSuppressedReward: 700,
+    replacementReward: 200,
+    netLostReward: 500,
+    causes: [
+      {
+        ruleId: 'reward-1',
+        capGroup: 'reward-group',
+        capType: 'monthly_category',
+        capAmount: 300,
+        rewardBeforeCap: 1_000,
+        rewardAfterCap: 300,
+      },
+    ],
+    ...overrides,
+  };
+}
+
 async function kbAllAnalysis(
   transactionCount: number,
 ): Promise<AnalysisResult> {
@@ -264,6 +297,292 @@ describe('analysis result coherence', () => {
 
   test('accepts one coherent calculated snapshot', () => {
     expect(isAnalysisResultCoherent(coherentResult())).toBe(true);
+  });
+
+  test('distinguishes legacy-unknown telemetry from a coherent current array', () => {
+    const legacy = cloneResult();
+    expect(legacy.optimization.portfolioCapLosses).toBeUndefined();
+    expect(isAnalysisResultCoherent(legacy)).toBe(true);
+
+    const current = cloneResult();
+    current.cardIdsOption = ['card-1', 'card-2'];
+    current.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture(),
+    ];
+    expect(
+      current.optimization.cardResults.some(
+        ({ cardId }) => cardId === 'card-2',
+      ),
+    ).toBe(false);
+    expect(isAnalysisResultCoherent(current)).toBe(true);
+
+    current.optimization.portfolioCapLosses = [];
+    expect(isAnalysisResultCoherent(current)).toBe(true);
+  });
+
+  test.each([
+    [
+      'transaction occurrence',
+      (loss: PortfolioCapLoss) => {
+        loss.transactionOccurrence = 0.5;
+      },
+    ],
+    [
+      'counterfactual/net arithmetic',
+      (loss: PortfolioCapLoss) => {
+        loss.netLostReward = 499;
+        loss.replacementReward = 201;
+      },
+    ],
+    [
+      'gross/replacement arithmetic',
+      (loss: PortfolioCapLoss) => {
+        loss.replacementReward += 1;
+      },
+    ],
+    [
+      'gross cause reconciliation',
+      (loss: PortfolioCapLoss) => {
+        loss.causes[0]!.rewardBeforeCap = 999;
+      },
+    ],
+    [
+      'strict cap reduction',
+      (loss: PortfolioCapLoss) => {
+        loss.causes = [
+          {
+            ...loss.causes[0]!,
+            capAmount: 1_000,
+            rewardAfterCap: 1_000,
+          },
+          {
+            ruleId: 'reward-2',
+            capGroup: 'reward-group-2',
+            capType: 'monthly_category',
+            capAmount: 0,
+            rewardBeforeCap: 700,
+            rewardAfterCap: 0,
+          },
+        ];
+      },
+    ],
+    [
+      'selected-card nullability',
+      (loss: PortfolioCapLoss) => {
+        loss.selectedCardId = null;
+      },
+    ],
+    [
+      'selected reward without a card',
+      (loss: PortfolioCapLoss) => {
+        loss.selectedCardId = null;
+        loss.selectedCardName = null;
+      },
+    ],
+    [
+      'selected card identity',
+      (loss: PortfolioCapLoss) => {
+        loss.selectedCardId = 'missing-card';
+        loss.selectedCardName = '없는 카드';
+      },
+    ],
+    [
+      'known counterfactual card identity',
+      (loss: PortfolioCapLoss) => {
+        loss.counterfactualCardName = '잘못된 카드 이름';
+      },
+    ],
+    [
+      'same-card name identity',
+      (loss: PortfolioCapLoss) => {
+        loss.counterfactualCardId = 'card-1';
+      },
+    ],
+  ])('rejects incoherent portfolio cap loss %s', (_name, mutate) => {
+    const result = cloneResult();
+    const loss = portfolioCapLossFixture();
+    mutate(loss);
+    result.optimization.portfolioCapLosses = [loss];
+
+    expect(isAnalysisResultCoherent(result)).toBe(false);
+  });
+
+  test('rejects duplicate portfolio loss transaction identities', () => {
+    const result = cloneResult();
+    const loss = portfolioCapLossFixture();
+    result.optimization.portfolioCapLosses = [
+      loss,
+      structuredClone(loss),
+    ];
+
+    expect(isAnalysisResultCoherent(result)).toBe(false);
+  });
+
+  test('bounds grouped selected rewards by their matching assignment', () => {
+    const result = cloneResult();
+    const second = {
+      ...result.transactions![1]!,
+      amount: 1,
+    };
+    result.transactions!.push(second);
+    result.transactionCount = 2;
+    result.totalTransactionCount = 3;
+    result.categoryBreakdown[0]!.spending = 10_001;
+    result.categoryBreakdown[0]!.transactionCount = 2;
+    result.monthlyBreakdown![1]!.spending = 10_001;
+    result.monthlyBreakdown![1]!.transactionCount = 2;
+    const assignment = result.optimization.assignments[0]!;
+    assignment.spending = 10_001;
+    assignment.transactionCount = 2;
+    assignment.rate = 500 / 10_001;
+    assignment.alternatives[0]!.rate = 400 / 10_001;
+    const card = result.optimization.cardResults[0]!;
+    card.totalSpending = 10_001;
+    card.effectiveRate = 500 / 10_001;
+    card.byCategory[0]!.spending = 10_001;
+    card.byCategory[0]!.rate = 500 / 10_001;
+    result.optimization.totalSpending = 10_001;
+    result.optimization.effectiveRate = 500 / 10_001;
+    result.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture({
+        counterfactualReward: 800,
+        selectedReward: 300,
+      }),
+      portfolioCapLossFixture({
+        transactionOccurrence: 1,
+        counterfactualReward: 700,
+        selectedReward: 200,
+      }),
+    ];
+    expect(isAnalysisResultCoherent(result)).toBe(true);
+
+    result.optimization.portfolioCapLosses[1]!.counterfactualReward = 800;
+    result.optimization.portfolioCapLosses[1]!.selectedReward = 300;
+    expect(isAnalysisResultCoherent(result)).toBe(false);
+  });
+
+  test('rejects duplicate cap-cause identities with balanced arithmetic', () => {
+    const result = cloneResult();
+    const duplicatedCause = {
+      ...portfolioCapLossFixture().causes[0]!,
+      rewardBeforeCap: 650,
+    };
+    result.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture({
+        causes: [duplicatedCause, structuredClone(duplicatedCause)],
+      }),
+    ];
+
+    expect(isAnalysisResultCoherent(result)).toBe(false);
+  });
+
+  test('rejects gross suppression above the counterfactual reward', () => {
+    const result = cloneResult();
+    result.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture({
+        grossSuppressedReward: 1_100,
+        replacementReward: 600,
+        causes: [
+          {
+            ruleId: 'reward-1',
+            capGroup: 'reward-group',
+            capType: 'monthly_category',
+            capAmount: 0,
+            rewardBeforeCap: 1_100,
+            rewardAfterCap: 0,
+          },
+        ],
+      }),
+    ];
+
+    expect(isAnalysisResultCoherent(result)).toBe(false);
+  });
+
+  test('rejects safe-integer overflow while summing cap causes', () => {
+    const result = cloneResult();
+    result.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture({
+        selectedCardId: null,
+        selectedCardName: null,
+        counterfactualReward: Number.MAX_SAFE_INTEGER,
+        selectedReward: 0,
+        grossSuppressedReward: Number.MAX_SAFE_INTEGER,
+        replacementReward: 0,
+        netLostReward: Number.MAX_SAFE_INTEGER,
+        causes: [
+          {
+            ruleId: 'reward-1',
+            capGroup: 'reward-group-1',
+            capType: 'monthly_category',
+            capAmount: 0,
+            rewardBeforeCap: Number.MAX_SAFE_INTEGER,
+            rewardAfterCap: 0,
+          },
+          {
+            ruleId: 'reward-2',
+            capGroup: 'reward-group-2',
+            capType: 'monthly_category',
+            capAmount: 0,
+            rewardBeforeCap: 1,
+            rewardAfterCap: 0,
+          },
+        ],
+      }),
+    ];
+
+    expect(isAnalysisResultCoherent(result)).toBe(false);
+  });
+
+  test('requires full-snapshot losses to identify a latest-month positive transaction', () => {
+    const priorMonth = cloneResult();
+    priorMonth.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture({ transactionId: 'tx-previous' }),
+    ];
+    expect(isAnalysisResultCoherent(priorMonth)).toBe(false);
+
+    const wrongCategory = cloneResult();
+    wrongCategory.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture({ category: 'grocery' }),
+    ];
+    expect(isAnalysisResultCoherent(wrongCategory)).toBe(false);
+
+    const missingOccurrence = cloneResult();
+    missingOccurrence.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture({ transactionOccurrence: 1 }),
+    ];
+    expect(isAnalysisResultCoherent(missingOccurrence)).toBe(false);
+  });
+
+  test('uses only the category witness when cap-loss transactions were truncated', () => {
+    const result = cloneResult();
+    result.transactions = undefined;
+    result.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture({ transactionId: 'omitted-transaction' }),
+    ];
+
+    expect(
+      isAnalysisResultCoherent(result, { truncatedTransactionCount: 2 }),
+    ).toBe(true);
+    result.optimization.portfolioCapLosses[0]!.category = 'grocery';
+    expect(
+      isAnalysisResultCoherent(result, { truncatedTransactionCount: 2 }),
+    ).toBe(false);
+  });
+
+  test('checks a counterfactual card against an explicit card selection', () => {
+    const result = cloneResult();
+    result.optimization.portfolioCapLosses = [
+      portfolioCapLossFixture({
+        counterfactualCardId: 'card-3',
+        counterfactualCardName: '카드 3',
+      }),
+    ];
+    expect(isAnalysisResultCoherent(result)).toBe(true);
+
+    result.cardIdsOption = ['card-1', 'card-2'];
+    expect(isAnalysisResultCoherent(result)).toBe(false);
+    result.cardIdsOption.push('card-3');
+    expect(isAnalysisResultCoherent(result)).toBe(true);
   });
 
   test.each([
@@ -722,12 +1041,6 @@ describe('analysis result coherence', () => {
       'savings comparison',
       (result: AnalysisResult) => {
         result.optimization.savingsVsSingleCard += 1;
-      },
-    ],
-    [
-      'duplicate transaction identity',
-      (result: AnalysisResult) => {
-        result.transactions![1]!.id = result.transactions![0]!.id;
       },
     ],
     [

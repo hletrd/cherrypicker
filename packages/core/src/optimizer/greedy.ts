@@ -11,11 +11,16 @@ import type {
   CategoryReward,
   CapInfo,
   CalculationIssue,
+  PortfolioCapLoss,
 } from '../models/result.js';
+import type { TransactionCapSuppression } from '../calculator/types.js';
 import type { OptimizationConstraints } from './constraints.js';
 import {
   buildCategoryKey,
   calculateRewardsWithPreparedCard,
+  getCounterfactualReservations,
+  getObservedCounterfactualStatefulReward,
+  getObservedStatefulReward,
   isRewardEligibleTransaction,
   prepareCardRuleForCalculation,
   type PreparedCardRule,
@@ -31,6 +36,11 @@ interface CardScore {
   cardName: string;
   reward: number;
   rate: number;
+  counterfactualReward: number;
+  counterfactualComplete: boolean;
+  actualStatefulReward: boolean;
+  counterfactualStatefulReward: boolean;
+  capSuppression?: TransactionCapSuppression;
 }
 
 interface CardScoringResult {
@@ -40,6 +50,7 @@ interface CardScoringResult {
 
 interface TxAssignment {
   tx: CategorizedTransaction;
+  transactionOccurrence: number;
   assignedCardId: string;
   assignedCardName: string;
   reward: number;
@@ -198,11 +209,17 @@ function calculateCardOutput(
   transactions: CategorizedTransaction[],
   previousMonthSpending: number,
   preparedCardRule: PreparedCardRule,
+  collectCapSuppressions = true,
+  capSuppressionStartIndex = 0,
+  observeStatefulRewardAtIndex?: number,
 ) {
   return calculateRewardsWithPreparedCard({
     transactions,
     previousMonthSpending,
     preparedCardRule,
+    collectCapSuppressions,
+    capSuppressionStartIndex,
+    observeStatefulRewardAtIndex,
   });
 }
 
@@ -211,6 +228,7 @@ function scoreCardsForTransaction(
   preparedCardRules: PreparedCardRule[],
   cardPreviousSpending: Map<string, number>,
   assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
+  collectPortfolioTelemetry: boolean,
 ): CardScoringResult {
   // Defensive guard: callers should pre-filter, but division by zero
   // would produce Infinity and corrupt sort ordering.
@@ -227,19 +245,35 @@ function scoreCardsForTransaction(
     const { cardRule: rule } = preparedCardRule;
     const currentTransactions = assignedTransactionsByCard.get(rule.card.id) ?? [];
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
-
     const before = calculateCardOutput(
       currentTransactions,
       previousMonthSpending,
       preparedCardRule,
+      false,
     ).totalReward;
+    const collectCapSuppressions =
+      collectPortfolioTelemetry && preparedCardRule.hasRewardCap;
+    const transactionIndex = currentTransactions.length;
     const after = calculateCardOutput(
       [...currentTransactions, transaction],
       previousMonthSpending,
       preparedCardRule,
+      collectCapSuppressions,
+      transactionIndex,
+      collectPortfolioTelemetry ? transactionIndex : undefined,
     );
     const reward = Math.max(0, after.totalReward - before);
     assertSafeNonnegativeInteger(reward, 'marginal reward');
+    const currentSuppressions = after.capSuppressions.filter(
+      (suppression) => suppression.transactionIndex === transactionIndex,
+    );
+    const candidateSuppression = currentSuppressions.length === 1
+      ? currentSuppressions[0]
+      : undefined;
+    const capSuppression =
+      candidateSuppression?.actualReward === reward
+        ? candidateSuppression
+        : undefined;
     // transaction.amount is guaranteed positive here (pre-filtered at line 198).
     const rate = reward / transaction.amount;
 
@@ -258,6 +292,13 @@ function scoreCardsForTransaction(
       cardName: getCardName(rule),
       reward,
       rate,
+      counterfactualReward:
+        capSuppression?.counterfactualReward ?? reward,
+      counterfactualComplete: after.capSuppressionsComplete,
+      actualStatefulReward: getObservedStatefulReward(after) ?? false,
+      counterfactualStatefulReward:
+        getObservedCounterfactualStatefulReward(after) ?? false,
+      capSuppression,
     });
   }
 
@@ -316,6 +357,7 @@ function buildAssignments(
           actualTransactions,
           previousMonthSpending,
           preparedCardRule,
+          false,
         ).totalReward,
       ] as const;
     }),
@@ -386,6 +428,7 @@ function buildAssignments(
           buildCanonicalRewardInput(actualTransactions, groupTransactions),
           previousMonthSpending,
           preparedCardRule,
+          false,
         ).totalReward;
         const reward = subtractSafeRewardTotals(
           after,
@@ -423,8 +466,16 @@ function buildCardResults(
   cardPreviousSpending: Map<string, number>,
   assignedTransactionsByCard: Map<string, CategorizedTransaction[]>,
   categoryLabels: Map<string, string>,
-): CardRewardResult[] {
+  txAssignments: TxAssignment[],
+  collectStatefulCapSuppressions: boolean,
+): {
+  cardResults: CardRewardResult[];
+  statefulPortfolioCapLosses: PortfolioCapLoss[];
+  capSuppressionsComplete: boolean;
+} {
   const cardResults: CardRewardResult[] = [];
+  const statefulPortfolioCapLosses: PortfolioCapLoss[] = [];
+  let capSuppressionsComplete = true;
 
   for (const preparedCardRule of preparedCardRules) {
     const { cardRule: rule } = preparedCardRule;
@@ -432,11 +483,53 @@ function buildCardResults(
     if (assignedTransactions.length === 0) continue;
 
     const previousMonthSpending = cardPreviousSpending.get(rule.card.id) ?? 0;
+    const collectCapSuppressions =
+      collectStatefulCapSuppressions &&
+      preparedCardRule.hasRewardCap &&
+      preparedCardRule.hasStatefulReward;
     const output = calculateCardOutput(
       assignedTransactions,
       previousMonthSpending,
       preparedCardRule,
+      collectCapSuppressions,
     );
+    if (!output.capSuppressionsComplete) {
+      capSuppressionsComplete = false;
+    }
+    const cardAssignments = txAssignments.filter(
+      (assignment) => assignment.assignedCardId === rule.card.id,
+    );
+    for (const suppression of output.capSuppressions) {
+      if (getCounterfactualReservations(suppression).length === 0) continue;
+      const assignment = cardAssignments[suppression.transactionIndex];
+      if (
+        !assignment ||
+        assignment.tx.id !== suppression.transactionId ||
+        buildCategoryKey(
+          assignment.tx.category,
+          assignment.tx.subcategory,
+        ) !== suppression.category ||
+        assignment.reward !== suppression.actualReward
+      ) {
+        capSuppressionsComplete = false;
+        continue;
+      }
+      statefulPortfolioCapLosses.push({
+        transactionId: suppression.transactionId,
+        transactionOccurrence: assignment.transactionOccurrence,
+        category: suppression.category,
+        counterfactualCardId: rule.card.id,
+        counterfactualCardName: getCardName(rule),
+        selectedCardId: rule.card.id,
+        selectedCardName: getCardName(rule),
+        counterfactualReward: suppression.counterfactualReward,
+        selectedReward: suppression.actualReward,
+        grossSuppressedReward: suppression.grossSuppressedReward,
+        replacementReward: suppression.replacementReward,
+        netLostReward: suppression.netSuppressedReward,
+        causes: suppression.causes,
+      });
+    }
     // Optimizer only assigns positive-amount transactions (filtered at line 271),
     // so Math.abs() is unnecessary — use tx.amount directly (C33-06).
     // IMPORTANT: buildCardResults requires pre-filtered positive-amount
@@ -465,7 +558,11 @@ function buildCardResults(
     });
   }
 
-  return cardResults;
+  return {
+    cardResults,
+    statefulPortfolioCapLosses,
+    capSuppressionsComplete,
+  };
 }
 
 /**
@@ -532,19 +629,153 @@ export function greedyOptimize(
 
   const txAssignments: TxAssignment[] = [];
   const candidateUnsupportedRules: CalculationIssue[] = [];
+  const portfolioCapLosses: PortfolioCapLoss[] = [];
+  let portfolioCapLossesComplete = true;
+  const transactionOccurrences = new Map<string, number>();
+  const transactionOrderByIdentity = new Map<string, number>();
   let unassignedSpending = 0;
   let unassignedTransactionCount = 0;
 
-  for (const transaction of sortedTransactions) {
+  for (const [transactionOrder, transaction] of sortedTransactions.entries()) {
+    const transactionCategory = buildCategoryKey(
+      transaction.category,
+      transaction.subcategory,
+    );
+    const transactionIdentity = JSON.stringify([
+      transaction.id,
+      transactionCategory,
+    ]);
+    const transactionOccurrence =
+      transactionOccurrences.get(transactionIdentity) ?? 0;
+    transactionOccurrences.set(
+      transactionIdentity,
+      transactionOccurrence + 1,
+    );
+    transactionOrderByIdentity.set(
+      JSON.stringify([
+        transaction.id,
+        transactionCategory,
+        transactionOccurrence,
+      ]),
+      transactionOrder,
+    );
     const scoring = scoreCardsForTransaction(
       transaction,
       preparedCardRules,
       cardPreviousSpending,
       assignedTransactionsByCard,
+      portfolioCapLossesComplete,
     );
     const { scores } = scoring;
+    const currentTelemetryComplete = scores.every(
+      ({ counterfactualComplete }) => counterfactualComplete,
+    );
+    if (!currentTelemetryComplete) {
+      portfolioCapLossesComplete = false;
+    }
     candidateUnsupportedRules.push(...scoring.unsupportedRules);
     const best = scores[0];
+    const selectedReward = best?.reward ?? 0;
+    const hasSelectedReward = best !== undefined && best.reward > 0;
+    const counterfactualWouldReplaceBest = (score: CardScore): boolean =>
+      score.counterfactualReward > selectedReward ||
+      (
+        hasSelectedReward &&
+        score.counterfactualReward === selectedReward &&
+        compareAscii(score.cardId, best.cardId) < 0
+      );
+    if (
+      scores.some((score) =>
+        score.capSuppression !== undefined &&
+        getCounterfactualReservations(score.capSuppression).length > 0 &&
+        counterfactualWouldReplaceBest(score) &&
+        (
+          !hasSelectedReward ||
+          score.cardId !== best.cardId
+        )
+      )
+    ) {
+      // A stateful maxUses/fixed-per-day opportunity on an unassigned or
+      // different-card transaction cannot be combined exactly with later
+      // actual uses using transaction-local positive rows. Preserve "unknown"
+      // instead of publishing a deceptively additive portfolio total.
+      portfolioCapLossesComplete = false;
+    }
+    const selectBestCounterfactual = (
+      candidates: readonly CardScore[],
+    ): CardScore | undefined =>
+      candidates.reduce<CardScore | undefined>(
+      (current, score) => {
+        if (!current) return score;
+        if (score.counterfactualReward > current.counterfactualReward) {
+          return score;
+        }
+        if (
+          score.counterfactualReward === current.counterfactualReward &&
+          compareAscii(score.cardId, current.cardId) < 0
+        ) {
+          return score;
+        }
+        return current;
+      },
+      undefined,
+    );
+    const winningCounterfactual = selectBestCounterfactual(scores);
+    const bestCounterfactual = selectBestCounterfactual(
+      scores.filter((score) =>
+        score.capSuppression === undefined ||
+        getCounterfactualReservations(score.capSuppression).length === 0
+      ),
+    );
+    if (
+      best &&
+      (
+        best.actualStatefulReward ||
+        best.counterfactualStatefulReward
+      ) &&
+      winningCounterfactual?.capSuppression &&
+      counterfactualWouldReplaceBest(winningCounterfactual) &&
+      winningCounterfactual.cardId !== best.cardId
+    ) {
+      // Moving this transaction to a different card would free a scarce
+      // maxUses/fixed-per-day opportunity on the selected card. A later
+      // negative offset may cancel this local gain, so positive rows alone
+      // cannot reconcile the portfolio exactly.
+      portfolioCapLossesComplete = false;
+    }
+    if (
+      currentTelemetryComplete &&
+      bestCounterfactual?.capSuppression &&
+      bestCounterfactual.counterfactualReward > selectedReward
+    ) {
+      const suppression = bestCounterfactual.capSuppression;
+      const netLostReward =
+        bestCounterfactual.counterfactualReward - selectedReward;
+      const replacementReward =
+        suppression.grossSuppressedReward - netLostReward;
+      if (
+        Number.isSafeInteger(netLostReward) &&
+        netLostReward > 0 &&
+        Number.isSafeInteger(replacementReward) &&
+        replacementReward >= 0
+      ) {
+        portfolioCapLosses.push({
+          transactionId: transaction.id,
+          transactionOccurrence,
+          category: suppression.category,
+          counterfactualCardId: bestCounterfactual.cardId,
+          counterfactualCardName: bestCounterfactual.cardName,
+          selectedCardId: hasSelectedReward ? best.cardId : null,
+          selectedCardName: hasSelectedReward ? best.cardName : null,
+          counterfactualReward: bestCounterfactual.counterfactualReward,
+          selectedReward,
+          grossSuppressedReward: suppression.grossSuppressedReward,
+          replacementReward,
+          netLostReward,
+          causes: suppression.causes,
+        });
+      }
+    }
     if (!best || best.reward === 0) {
       unassignedSpending = addSafeNonnegativeIntegers(
         unassignedSpending,
@@ -574,6 +805,7 @@ export function greedyOptimize(
 
     txAssignments.push({
       tx: transaction,
+      transactionOccurrence,
       assignedCardId: best.cardId,
       assignedCardName: best.cardName,
       reward: best.reward,
@@ -594,12 +826,65 @@ export function greedyOptimize(
     cardPreviousSpending,
     canonicalAssignedTransactionsByCard,
   );
-  const cardResults = buildCardResults(
+  const {
+    cardResults,
+    statefulPortfolioCapLosses,
+    capSuppressionsComplete: finalCapSuppressionsComplete,
+  } = buildCardResults(
     preparedCardRules,
     cardPreviousSpending,
     canonicalAssignedTransactionsByCard,
     constraints.categoryLabels,
+    txAssignments,
+    portfolioCapLossesComplete,
   );
+  if (!finalCapSuppressionsComplete) {
+    portfolioCapLossesComplete = false;
+  }
+  portfolioCapLosses.push(...statefulPortfolioCapLosses);
+  const bestLossByTransaction = new Map<string, PortfolioCapLoss>();
+  for (const loss of portfolioCapLosses) {
+    const identity = JSON.stringify([
+      loss.transactionId,
+      loss.category,
+      loss.transactionOccurrence,
+    ]);
+    const current = bestLossByTransaction.get(identity);
+    if (
+      !current ||
+      loss.netLostReward > current.netLostReward ||
+      (
+        loss.netLostReward === current.netLostReward &&
+        compareAscii(
+          loss.counterfactualCardId,
+          current.counterfactualCardId,
+        ) < 0
+      )
+    ) {
+      bestLossByTransaction.set(identity, loss);
+    }
+  }
+  portfolioCapLosses.splice(
+    0,
+    portfolioCapLosses.length,
+    ...bestLossByTransaction.values(),
+  );
+  portfolioCapLosses.sort((left, right) => {
+    const leftOrder = transactionOrderByIdentity.get(JSON.stringify([
+      left.transactionId,
+      left.category,
+      left.transactionOccurrence,
+    ])) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = transactionOrderByIdentity.get(JSON.stringify([
+      right.transactionId,
+      right.category,
+      right.transactionOccurrence,
+    ])) ?? Number.MAX_SAFE_INTEGER;
+    return (
+      leftOrder - rightOrder ||
+      compareAscii(left.counterfactualCardId, right.counterfactualCardId)
+    );
+  });
 
   const totalReward = cardResults.reduce(
     (sum, cardResult) => addSafeNonnegativeIntegers(
@@ -634,6 +919,7 @@ export function greedyOptimize(
       sortedTransactions,
       previousMonthSpending,
       preparedCardRule,
+      false,
     );
     if (output.totalReward === 0) continue;
 
@@ -681,5 +967,7 @@ export function greedyOptimize(
     bestSingleCard,
     cardResults,
     unsupportedRules,
+    portfolioCapLosses:
+      portfolioCapLossesComplete ? portfolioCapLosses : undefined,
   };
 }

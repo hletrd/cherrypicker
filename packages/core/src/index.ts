@@ -5,6 +5,8 @@ export type {
   CardRewardResult,
   CategoryReward,
   CapInfo,
+  CapSuppressionCause,
+  PortfolioCapLoss,
   OptimizationResult,
   CardAssignment,
   CalculationIssue,
@@ -60,6 +62,7 @@ export { calculateCashback } from './calculator/cashback.js';
 export type {
   CalculationInput,
   CalculationOutput,
+  TransactionCapSuppression,
   UnsupportedReason,
   UnsupportedRule,
 } from './calculator/types.js';

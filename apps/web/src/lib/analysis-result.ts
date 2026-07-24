@@ -1,4 +1,8 @@
-import type { OptimizationResult } from '@cherrypicker/core';
+import type {
+  CapSuppressionCause,
+  OptimizationResult,
+  PortfolioCapLoss,
+} from '@cherrypicker/core';
 import {
   isYearMonth,
   previousCalendarMonth,
@@ -227,6 +231,214 @@ function samePeriod(
   return actual?.start === expected.start && actual.end === expected.end;
 }
 
+function isNonemptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function isSafeNonnegativeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
+function isCapSuppressionCauseCoherent(
+  value: unknown,
+): value is CapSuppressionCause {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const cause = value as Partial<CapSuppressionCause>;
+  return (
+    isNonemptyString(cause.ruleId) &&
+    isNonemptyString(cause.capGroup) &&
+    (
+      cause.capType === 'monthly_category' ||
+      cause.capType === 'monthly_total' ||
+      cause.capType === 'per_transaction'
+    ) &&
+    isSafeNonnegativeInteger(cause.capAmount) &&
+    isSafeNonnegativeInteger(cause.rewardBeforeCap) &&
+    isSafeNonnegativeInteger(cause.rewardAfterCap) &&
+    cause.rewardBeforeCap > cause.rewardAfterCap &&
+    cause.rewardAfterCap <= cause.capAmount
+  );
+}
+
+function hasConsistentKnownCardName(
+  optimization: OptimizationResult,
+  cardId: string,
+  cardName: string,
+): boolean {
+  return (
+    !optimization.assignments.some(
+      ({ assignedCardId, assignedCardName, alternatives }) =>
+        (
+          assignedCardId === cardId &&
+          assignedCardName !== cardName
+        ) ||
+        alternatives.some(
+          (alternative) =>
+            alternative.cardId === cardId &&
+            alternative.cardName !== cardName,
+        ),
+    ) &&
+    !optimization.cardResults.some(
+      (card) => card.cardId === cardId && card.cardName !== cardName,
+    ) &&
+    (
+      optimization.bestSingleCard === null ||
+      optimization.bestSingleCard.cardId !== cardId ||
+      optimization.bestSingleCard.cardName === cardName
+    )
+  );
+}
+
+function isPortfolioCapLossCoherent(
+  value: unknown,
+  optimization: OptimizationResult,
+): value is PortfolioCapLoss {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const loss = value as Partial<PortfolioCapLoss>;
+  const hasSelectedCard =
+    isNonemptyString(loss.selectedCardId) &&
+    isNonemptyString(loss.selectedCardName);
+  const hasNoSelectedCard =
+    loss.selectedCardId === null && loss.selectedCardName === null;
+  if (
+    !isNonemptyString(loss.transactionId) ||
+    !isSafeNonnegativeInteger(loss.transactionOccurrence) ||
+    !isNonemptyString(loss.category) ||
+    !isNonemptyString(loss.counterfactualCardId) ||
+    !isNonemptyString(loss.counterfactualCardName) ||
+    (!hasSelectedCard && !hasNoSelectedCard) ||
+    !isSafeNonnegativeInteger(loss.counterfactualReward) ||
+    !isSafeNonnegativeInteger(loss.selectedReward) ||
+    !isSafeNonnegativeInteger(loss.grossSuppressedReward) ||
+    !isSafeNonnegativeInteger(loss.replacementReward) ||
+    !isSafeNonnegativeInteger(loss.netLostReward) ||
+    loss.counterfactualReward <= loss.selectedReward ||
+    loss.grossSuppressedReward <= 0 ||
+    loss.netLostReward <= 0 ||
+    loss.counterfactualReward - loss.selectedReward !== loss.netLostReward ||
+    addSafe(loss.replacementReward, loss.netLostReward) !==
+      loss.grossSuppressedReward ||
+    loss.grossSuppressedReward > loss.counterfactualReward ||
+    !Array.isArray(loss.causes) ||
+    loss.causes.length === 0 ||
+    !loss.causes.every(isCapSuppressionCauseCoherent) ||
+    !hasConsistentKnownCardName(
+      optimization,
+      loss.counterfactualCardId,
+      loss.counterfactualCardName,
+    )
+  ) {
+    return false;
+  }
+
+  let grossCauseDelta = 0;
+  const causeKeys = new Set<string>();
+  for (const cause of loss.causes) {
+    const causeKey = JSON.stringify([
+      cause.ruleId,
+      cause.capGroup,
+      cause.capType,
+    ]);
+    if (causeKeys.has(causeKey)) return false;
+    causeKeys.add(causeKey);
+    const next = addSafe(
+      grossCauseDelta,
+      cause.rewardBeforeCap - cause.rewardAfterCap,
+    );
+    if (next === null) return false;
+    grossCauseDelta = next;
+  }
+  if (grossCauseDelta !== loss.grossSuppressedReward) return false;
+
+  if (hasNoSelectedCard) {
+    return loss.selectedReward === 0;
+  }
+  if (
+    !isNonemptyString(loss.selectedCardId) ||
+    !isNonemptyString(loss.selectedCardName) ||
+    loss.selectedReward <= 0
+  ) {
+    return false;
+  }
+  if (
+    !hasConsistentKnownCardName(
+      optimization,
+      loss.selectedCardId,
+      loss.selectedCardName,
+    ) ||
+    !optimization.assignments.some(
+      ({ assignedCardId, assignedCardName, category }) =>
+        assignedCardId === loss.selectedCardId &&
+        assignedCardName === loss.selectedCardName &&
+        category === loss.category,
+    ) ||
+    !optimization.cardResults.some(
+      ({ cardId, cardName }) =>
+        cardId === loss.selectedCardId &&
+        cardName === loss.selectedCardName,
+    )
+  ) {
+    return false;
+  }
+  return (
+    loss.counterfactualCardId !== loss.selectedCardId ||
+    loss.counterfactualCardName === loss.selectedCardName
+  );
+}
+
+function hasCoherentPortfolioCapLosses(
+  optimization: OptimizationResult,
+): boolean {
+  const losses = optimization.portfolioCapLosses;
+  if (losses === undefined) return true;
+  if (!Array.isArray(losses)) return false;
+  const transactionIdentities = new Set<string>();
+  const selectedRewards = new Map<string, number>();
+  const assignmentRewards = new Map(
+    optimization.assignments.map(
+      ({ assignedCardId, category, reward }) => [
+        `${assignedCardId}\u0000${category}`,
+        reward,
+      ],
+    ),
+  );
+  for (const loss of losses) {
+    const transactionIdentity = JSON.stringify([
+      loss.transactionId,
+      loss.category,
+      loss.transactionOccurrence,
+    ]);
+    if (
+      !isPortfolioCapLossCoherent(loss, optimization) ||
+      transactionIdentities.has(transactionIdentity)
+    ) {
+      return false;
+    }
+    transactionIdentities.add(transactionIdentity);
+    if (loss.selectedCardId !== null) {
+      const key = `${loss.selectedCardId}\u0000${loss.category}`;
+      const selectedReward = addSafe(
+        selectedRewards.get(key) ?? 0,
+        loss.selectedReward,
+      );
+      const assignmentReward = assignmentRewards.get(key);
+      if (
+        selectedReward === null ||
+        assignmentReward === undefined ||
+        selectedReward > assignmentReward
+      ) {
+        return false;
+      }
+      selectedRewards.set(key, selectedReward);
+    }
+  }
+  return true;
+}
+
 function isOptimizationCoherent(optimization: OptimizationResult): boolean {
   const assignmentKeys = optimization.assignments.map(
     ({ assignedCardId, category }) => `${assignedCardId}\u0000${category}`,
@@ -280,6 +492,7 @@ function isOptimizationCoherent(optimization: OptimizationResult): boolean {
   ) {
     return false;
   }
+  if (!hasCoherentPortfolioCapLosses(optimization)) return false;
 
   for (const card of optimization.cardResults) {
     const cardAssignments = assignmentsByCard.get(card.cardId);
@@ -539,12 +752,12 @@ interface TransactionFacts {
     string,
     { spending: number; transactionCount: number }
   >;
+  latestPositiveTransactionCounts: Map<string, number>;
 }
 
 function collectTransactionFacts(
   transactions: readonly CategorizedTx[],
 ): TransactionFacts | null {
-  const ids = new Set<string>();
   const months = new Map<
     YearMonth,
     { spending: number; transactionCount: number }
@@ -555,9 +768,6 @@ function collectTransactionFacts(
   let fullEnd: string | undefined;
 
   for (const transaction of transactions) {
-    if (ids.has(transaction.id)) return null;
-    ids.add(transaction.id);
-
     const month = yearMonthOfDate(transaction.date);
     if (month === null) continue;
     validTransactionCount += 1;
@@ -597,6 +807,7 @@ function collectTransactionFacts(
     string,
     { spending: number; transactionCount: number }
   >();
+  const latestPositiveTransactionCounts = new Map<string, number>();
   let latestTransactionCount = 0;
   let latestSpending = 0;
   let latestStart: string | undefined;
@@ -619,6 +830,11 @@ function collectTransactionFacts(
     latestSpending = spending;
 
     const category = categoryKeyOf(transaction);
+    const transactionIdentity = JSON.stringify([transaction.id, category]);
+    latestPositiveTransactionCounts.set(
+      transactionIdentity,
+      (latestPositiveTransactionCounts.get(transactionIdentity) ?? 0) + 1,
+    );
     const current = latestCategories.get(category) ?? {
       spending: 0,
       transactionCount: 0,
@@ -646,7 +862,32 @@ function collectTransactionFacts(
     fullPeriod: { start: fullStart, end: fullEnd },
     months,
     latestCategories,
+    latestPositiveTransactionCounts,
   };
+}
+
+function hasCoherentPortfolioLossCategories(
+  result: AnalysisResult,
+  latestPositiveTransactionCounts?: ReadonlyMap<string, number>,
+): boolean {
+  const losses = result.optimization.portfolioCapLosses;
+  if (losses === undefined) return true;
+  const categories = new Set(
+    result.categoryBreakdown.map(({ category }) => category),
+  );
+  return losses.every(
+    ({ transactionId, transactionOccurrence, category }) =>
+      categories.has(category) &&
+      (
+        latestPositiveTransactionCounts === undefined ||
+        transactionOccurrence <
+          (
+            latestPositiveTransactionCounts.get(
+              JSON.stringify([transactionId, category]),
+            ) ?? 0
+          )
+      ),
+  );
 }
 
 function hasExactPreviousSpendingBasis(
@@ -770,6 +1011,14 @@ export function isAnalysisResultCoherent(
       result.optimization.cardResults.some(
         ({ cardId }) => !selectedCardIds.includes(cardId),
       ) ||
+      result.optimization.portfolioCapLosses?.some(
+        ({ counterfactualCardId, selectedCardId }) =>
+          !selectedCardIds.includes(counterfactualCardId) ||
+          (
+            selectedCardId !== null &&
+            !selectedCardIds.includes(selectedCardId)
+          ),
+      ) ||
       (
         result.optimization.bestSingleCard !== null &&
         !selectedCardIds.includes(result.optimization.bestSingleCard.cardId)
@@ -780,14 +1029,25 @@ export function isAnalysisResultCoherent(
   }
 
   if (!result.transactions) {
-    return hasCoherentTruncatedFacts(
-      result,
-      context?.truncatedTransactionCount,
+    return (
+      hasCoherentPortfolioLossCategories(result) &&
+      hasCoherentTruncatedFacts(
+        result,
+        context?.truncatedTransactionCount,
+      )
     );
   }
 
   const facts = collectTransactionFacts(result.transactions);
-  if (facts === null) return false;
+  if (
+    facts === null ||
+    !hasCoherentPortfolioLossCategories(
+      result,
+      facts.latestPositiveTransactionCounts,
+    )
+  ) {
+    return false;
+  }
   if (
     result.categoryBreakdown.length !== facts.latestCategories.size ||
     result.categoryBreakdown.some((summary) => {

@@ -16,6 +16,7 @@ import {
 import {
   formatCapOutcomeKo,
   formatCapPeriodKo,
+  formatPortfolioCapLossOutcomeKo,
 } from '../cap-disclosure.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -385,7 +386,10 @@ function buildCardComparison(result: OptimizationResult): string {
   `;
 }
 
-function buildAssignments(result: OptimizationResult): string {
+function buildAssignments(
+  result: OptimizationResult,
+  categoryLabels: ReadonlyMap<string, string>,
+): string {
   const assignmentRows = result.assignments
     .map((a) => {
       const alts = a.alternatives.length > 0
@@ -412,7 +416,21 @@ function buildAssignments(result: OptimizationResult): string {
     </tr>
   `;
 
-  // Caps hit warnings block
+  const portfolioLossBlock =
+    (result.portfolioCapLosses?.length ?? 0) > 0
+      ? `<div class="warn-box">
+          <strong>한도로 줄어든 최종 혜택</strong>
+          <p>다른 혜택 규칙과 카드를 적용한 뒤에도 남은 월간 혜택 감소분입니다.</p>
+          ${(result.portfolioCapLosses ?? [])
+            .map(
+              (loss) =>
+                `<p>[${esc(loss.counterfactualCardName)}] ${esc(categoryLabels.get(loss.category) ?? loss.category)}: ${formatPortfolioCapLossOutcomeKo(loss, formatWon)}</p>`,
+            )
+            .join('')}
+        </div>`
+      : '';
+
+  // Assigned-card cap reach events remain transaction-local.
   const allCaps = result.cardResults.flatMap((r) =>
     r.capsHit.map((c) => ({ cardName: r.cardName, ...c })),
   );
@@ -420,7 +438,8 @@ function buildAssignments(result: OptimizationResult): string {
   const capsBlock =
     allCaps.length > 0
       ? `<div class="warn-box">
-          <strong>⚠ 한도 도달 경고</strong>
+          <strong>혜택 한도 도달 내역</strong>
+          <p>한도에 도달한 거래별 적용 결과이며, 최종 혜택 감소분과는 별도입니다.</p>
           ${allCaps
             .map(
               (cap) =>
@@ -452,6 +471,7 @@ function buildAssignments(result: OptimizationResult): string {
       <tbody>${rowsHtml}</tbody>
     </table>
     ${unassignedBlock}
+    ${portfolioLossBlock}
     ${capsBlock}
   `;
 }
@@ -472,6 +492,6 @@ export function generateHTMLReport(
     SUMMARY: buildSummary(result),
     CATEGORY_TABLE: buildCategoryTable(transactions, categoryLabels),
     CARD_COMPARISON: buildCardComparison(result),
-    ASSIGNMENTS: buildAssignments(result),
+    ASSIGNMENTS: buildAssignments(result, categoryLabels),
   });
 }

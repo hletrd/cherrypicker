@@ -1,7 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import type { CardRuleSet, RewardRule } from '@cherrypicker/rules';
 import * as publicCore from '../src/index.js';
-import { calculateRewards } from '../src/calculator/reward.js';
+import {
+  calculateRewards,
+  calculateRewardsWithPreparedCard,
+  prepareCardRuleForCalculation,
+} from '../src/calculator/reward.js';
 import type { CategorizedTransaction } from '../src/models/transaction.js';
 import { greedyOptimize } from '../src/optimizer/greedy.js';
 
@@ -191,6 +195,79 @@ describe('Cycle 13 prepared cap validation', () => {
   test('keeps preparation and unchecked calculation outside the public barrel', () => {
     expect(publicCore).not.toHaveProperty('prepareCardRuleForCalculation');
     expect(publicCore).not.toHaveProperty('calculateRewardsWithPreparedCard');
+  });
+
+  test('telemetry-disabled internal replays preserve actual reward state', () => {
+    const capped = card('cycle13-capped', [
+      reward({
+        id: 'capped-reward',
+        rate: 10,
+        monthlyCap: 1_000,
+      }),
+    ]);
+    const transactions = [
+      transaction('cycle13-cap-first'),
+      transaction('cycle13-cap-second'),
+    ];
+    const direct = calculateRewards({
+      cardRule: capped,
+      transactions,
+      previousMonthSpending: 0,
+    });
+    const replay = calculateRewardsWithPreparedCard({
+      preparedCardRule: prepareCardRuleForCalculation(capped),
+      transactions,
+      previousMonthSpending: 0,
+      collectCapSuppressions: false,
+    });
+
+    expect(replay.totalReward).toBe(direct.totalReward);
+    expect(replay.rewards).toEqual(direct.rewards);
+    expect(replay.capsHit).toEqual(direct.capsHit);
+    expect(direct.capSuppressions).toHaveLength(1);
+    expect(replay.capSuppressions).toEqual([]);
+    expect(replay.capSuppressionsComplete).toBe(true);
+  });
+
+  test('append-only telemetry replays historical state without rebuilding old rows', () => {
+    const capped = card('cycle13-append-only', [
+      reward({
+        id: 'append-only-reward',
+        rate: 10,
+        monthlyCap: 500,
+      }),
+    ]);
+    const transactions = [
+      transaction('cycle13-append-first'),
+      transaction('cycle13-append-second'),
+    ];
+    const preparedCardRule = prepareCardRuleForCalculation(capped);
+    const full = calculateRewardsWithPreparedCard({
+      preparedCardRule,
+      transactions,
+      previousMonthSpending: 0,
+    });
+    const appendedOnly = calculateRewardsWithPreparedCard({
+      preparedCardRule,
+      transactions,
+      previousMonthSpending: 0,
+      capSuppressionStartIndex: 1,
+    });
+
+    expect(full.capSuppressions.map((row) => row.transactionIndex)).toEqual([
+      0,
+      1,
+    ]);
+    expect(appendedOnly.capSuppressions).toEqual([
+      full.capSuppressions[1],
+    ]);
+    expect(appendedOnly.capSuppressionsComplete).toBe(
+      full.capSuppressionsComplete,
+    );
+    expect({
+      ...appendedOnly,
+      capSuppressions: full.capSuppressions,
+    }).toEqual(full);
   });
 
   test('rejects a malformed executable card before an empty optimization can return', () => {

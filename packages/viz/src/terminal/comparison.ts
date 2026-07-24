@@ -5,7 +5,10 @@ import {
   GROSS_MONTHLY_REWARD_DISCLOSURE_KO,
   GROSS_MONTHLY_REWARD_LABEL_KO,
 } from '../reward-disclosure.js';
-import { formatCapOutcomeKo } from '../cap-disclosure.js';
+import {
+  formatCapOutcomeKo,
+  formatPortfolioCapLossOutcomeKo,
+} from '../cap-disclosure.js';
 
 function formatWon(amount: number): string {
   if (!Number.isFinite(amount)) return '0원';
@@ -74,13 +77,30 @@ export function printOptimizationResult(result: OptimizationResult): void {
     console.log('  단일 카드 대비 월간 혜택 차이: 비교할 양의 혜택 없음');
   }
 
-  // Caps hit warnings
+  if ((result.portfolioCapLosses?.length ?? 0) > 0) {
+    console.log('\n한도로 줄어든 최종 혜택:');
+    console.log(
+      '  다른 혜택 규칙과 카드를 적용한 뒤에도 남은 월간 혜택 감소분입니다.',
+    );
+    for (const loss of result.portfolioCapLosses ?? []) {
+      console.log(
+        `  [${sanitizeTerminalText(loss.counterfactualCardName)}] ` +
+        `${sanitizeTerminalText(loss.category)}: ` +
+        formatPortfolioCapLossOutcomeKo(loss, formatWon),
+      );
+    }
+  }
+
+  // Assigned-card cap reach events remain transaction-local.
   const allCaps = result.cardResults.flatMap((r) =>
     r.capsHit.map((c) => ({ cardName: r.cardName, ...c })),
   );
 
   if (allCaps.length > 0) {
-    console.log('\n한도 도달 경고:');
+    console.log('\n혜택 한도 도달 내역:');
+    console.log(
+      '  한도에 도달한 거래별 적용 결과이며, 최종 혜택 감소분과는 별도입니다.',
+    );
     for (const cap of allCaps) {
       console.log(
         `  [${sanitizeTerminalText(cap.cardName)}] ${sanitizeTerminalText(cap.category)}: 한도 ${formatWon(cap.capAmount)} 도달 — ${formatCapOutcomeKo(cap, formatWon)}`,

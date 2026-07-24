@@ -156,13 +156,43 @@ export function serializeAnalysis(data: AnalysisResult): SerializedAnalysis {
   }
 
   const truncatedTxCount = data.transactions?.length ?? 0;
+  if (truncatedTxCount <= 0) {
+    throw new Error(
+      'analysis exceeds the persistence budget without transactions to truncate',
+    );
+  }
   const withoutTransactions: PersistedAnalysisResult = {
     ...persisted,
     transactions: undefined,
     _truncatedTxCount: truncatedTxCount,
   };
+  const truncated = JSON.stringify(withoutTransactions);
+  if (new TextEncoder().encode(truncated).length <= MAX_PERSIST_SIZE) {
+    return {
+      serialized: truncated,
+      result: { kind: 'truncated', truncatedTxCount },
+    };
+  }
+
+  // A complete loss array is authoritative, while a partial array would
+  // understate the portfolio total. If telemetry itself prevents the honest
+  // truncated snapshot from fitting, omit the whole optional field so reload
+  // preserves the defined "unknown" state.
+  const withoutTelemetry: PersistedAnalysisResult = {
+    ...withoutTransactions,
+    optimization: {
+      ...withoutTransactions.optimization,
+      portfolioCapLosses: undefined,
+    },
+  };
+  const bounded = JSON.stringify(withoutTelemetry);
+  if (new TextEncoder().encode(bounded).length > MAX_PERSIST_SIZE) {
+    throw new Error(
+      'analysis exceeds the persistence budget after safe truncation',
+    );
+  }
   return {
-    serialized: JSON.stringify(withoutTransactions),
+    serialized: bounded,
     result: { kind: 'truncated', truncatedTxCount },
   };
 }
@@ -291,6 +321,72 @@ function validCapInfo(value: unknown): boolean {
     safeNonnegativeInteger(value.actualReward) &&
     safeNonnegativeInteger(value.appliedReward) &&
     value.appliedReward <= value.actualReward
+  );
+}
+
+function validCapSuppressionCause(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  return (
+    typeof value.ruleId === 'string' &&
+    value.ruleId.length > 0 &&
+    typeof value.capGroup === 'string' &&
+    value.capGroup.length > 0 &&
+    (
+      value.capType === 'monthly_category' ||
+      value.capType === 'monthly_total' ||
+      value.capType === 'per_transaction'
+    ) &&
+    safeNonnegativeInteger(value.capAmount) &&
+    safeNonnegativeInteger(value.rewardBeforeCap) &&
+    safeNonnegativeInteger(value.rewardAfterCap) &&
+    value.rewardBeforeCap > value.rewardAfterCap &&
+    value.rewardAfterCap <= value.capAmount
+  );
+}
+
+function validPortfolioCapLoss(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  const validSelectedIdentity =
+    (
+      value.selectedCardId === null &&
+      value.selectedCardName === null
+    ) ||
+    (
+      typeof value.selectedCardId === 'string' &&
+      value.selectedCardId.length > 0 &&
+      typeof value.selectedCardName === 'string' &&
+      value.selectedCardName.length > 0
+    );
+  return (
+    typeof value.transactionId === 'string' &&
+    value.transactionId.length > 0 &&
+    safeNonnegativeInteger(value.transactionOccurrence) &&
+    typeof value.category === 'string' &&
+    value.category.length > 0 &&
+    typeof value.counterfactualCardId === 'string' &&
+    value.counterfactualCardId.length > 0 &&
+    typeof value.counterfactualCardName === 'string' &&
+    value.counterfactualCardName.length > 0 &&
+    validSelectedIdentity &&
+    safeNonnegativeInteger(value.counterfactualReward) &&
+    safeNonnegativeInteger(value.selectedReward) &&
+    safeNonnegativeInteger(value.grossSuppressedReward) &&
+    value.grossSuppressedReward > 0 &&
+    safeNonnegativeInteger(value.replacementReward) &&
+    safeNonnegativeInteger(value.netLostReward) &&
+    value.netLostReward > 0 &&
+    Array.isArray(value.causes) &&
+    value.causes.length > 0 &&
+    value.causes.every(validCapSuppressionCause)
+  );
+}
+
+function validOptionalPortfolioCapLosses(value: unknown): boolean {
+  // Pre-telemetry v4 payloads and fresh calculations with an unresolved
+  // stateful counterfactual omit this field; absence means unknown, not zero.
+  return (
+    value === undefined ||
+    (Array.isArray(value) && value.every(validPortfolioCapLoss))
   );
 }
 
@@ -659,7 +755,8 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
     !validBestSingleCard(optimization.bestSingleCard) ||
     !Array.isArray(optimization.cardResults) ||
     !optimization.cardResults.every(validCardResult) ||
-    !validOptionalCalculationIssues(optimization.unsupportedRules)
+    !validOptionalCalculationIssues(optimization.unsupportedRules) ||
+    !validOptionalPortfolioCapLosses(optimization.portfolioCapLosses)
   ) {
     return invalidResult();
   }

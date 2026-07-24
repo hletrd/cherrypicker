@@ -34,6 +34,47 @@ export interface CapInfo {
   capGroup?: string;
 }
 
+/**
+ * A single cap stage that reduced an otherwise executable reward.
+ *
+ * Unlike CapInfo, this identifies the source rule even for a card-global cap:
+ * it is diagnostic input for same-card and cross-card reconciliation, not a
+ * reach event attached to an assigned card result.
+ */
+export interface CapSuppressionCause {
+  ruleId: string;
+  capGroup: string;
+  capType: CapInfo['capType'];
+  capAmount: number;
+  rewardBeforeCap: number;
+  rewardAfterCap: number;
+}
+
+/**
+ * One exactly reconciled cap loss after same-card fallbacks and executable
+ * card replacements. If stateful maxUses/fixed-per-day opportunities cannot
+ * be reconciled jointly, the enclosing collection is undefined instead.
+ */
+export interface PortfolioCapLoss {
+  transactionId: string;
+  /**
+   * Zero-based occurrence among reward-eligible transactions with the same
+   * transaction ID and category in canonical optimizer order.
+   */
+  transactionOccurrence: number;
+  category: string;
+  counterfactualCardId: string;
+  counterfactualCardName: string;
+  selectedCardId: string | null;
+  selectedCardName: string | null;
+  counterfactualReward: number;
+  selectedReward: number;
+  grossSuppressedReward: number;
+  replacementReward: number;
+  netLostReward: number;
+  causes: CapSuppressionCause[];
+}
+
 export interface CalculationIssue {
   cardId: string;
   transactionId: string;
@@ -62,6 +103,15 @@ export interface OptimizationResult {
   } | null;
   cardResults: CardRewardResult[];
   unsupportedRules?: CalculationIssue[];
+  /**
+   * Present on fresh optimizer output only when every loss is jointly
+   * reconcilable and exactly representable. Undefined means "unknown", not
+   * "no loss": it covers pre-telemetry v4 results, unsafe counterfactual
+   * arithmetic, and cross-card/unassigned stateful opportunities whose
+   * maxUses or fixed-per-day histories cannot be expressed by independent
+   * positive transaction rows.
+   */
+  portfolioCapLosses?: PortfolioCapLoss[];
 }
 
 export interface CardAssignment {

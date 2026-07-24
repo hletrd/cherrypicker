@@ -1,8 +1,13 @@
 const path = require('node:path');
+const { readFileSync } = require('node:fs');
 const { expect, test } = require('@playwright/test');
 
 const uploadFixture = path.join(__dirname, 'fixtures', 'regression-upload.csv');
 const homeUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173/cherrypicker/';
+const optimizerArtifact = JSON.parse(readFileSync(
+  path.join(__dirname, '../apps/web/public/data/cards-optimizer.json'),
+  'utf8',
+));
 
 async function submitAndOpenDashboard(page) {
   await page.getByRole('button', { name: /^분석 시작/ }).click();
@@ -82,6 +87,88 @@ test('browser flow classifies regression merchants and renders dashboard/results
   await expect(page.locator('#report-data-content')).toContainText('추천 카드 조합');
   await expect(page.locator('#report-data-content')).not.toContainText('아직 분석 결과가 없어요');
 
+  expect(pageErrors).toEqual([]);
+});
+
+test('exact cap exhaustion renders reconciled portfolio loss on every shared surface', async ({
+  page,
+}) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') pageErrors.push(message.text());
+  });
+  const card = optimizerArtifact.cards.find(
+    (candidate) => candidate.card.id === 'bc-baro-clear-plus',
+  );
+  expect(card).toBeTruthy();
+  await page.route(/\/data\/cards-optimizer\.json$/, (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        sourceHash: optimizerArtifact.sourceHash,
+        cards: [card],
+      }),
+    }));
+
+  await page.goto(homeUrl);
+  await page.waitForFunction(() =>
+    Boolean(document.querySelector('astro-island:not([ssr])')),
+  );
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name: 'cap-loss.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from(
+      '날짜,가맹점,금액\n' +
+      '2026-07-01,쿠팡,50000\n' +
+      '2026-07-02,쿠팡,50000\n',
+    ),
+  });
+  await page.getByRole('spinbutton').fill('150000');
+  await submitAndOpenDashboard(page);
+
+  for (const route of ['dashboard', 'results', 'report']) {
+    if (route !== 'dashboard') {
+      const linkName =
+        route === 'results' ? '추천 결과 보기' : '리포트 보기';
+      await page.getByRole('link', { name: linkName }).click();
+      await page.waitForURL(`**/${route}`, { timeout: 15_000 });
+    }
+
+    const portfolio = page.getByTestId('portfolio-cap-losses');
+    await expect(portfolio).toBeVisible();
+    await expect(page.getByTestId('portfolio-cap-loss-item')).toHaveCount(1);
+    await expect(portfolio).toContainText('한도로 줄어든 최종 혜택');
+    await expect(portfolio).toContainText(
+      '한도로 제한된 혜택 5,000원 · 대체 혜택 없음 · 최종 5,000원 감소',
+    );
+    const reach = page.getByTestId('cap-reach-events');
+    await expect(reach).toBeVisible();
+    await expect(page.getByTestId('cap-reach-event-item')).toHaveCount(1);
+    await expect(reach).toContainText('혜택 한도 도달 내역');
+    await expect(reach).toContainText(
+      '도달 거래 적용 혜택 5,000원 · 도달 거래에서 추가 차감 없음',
+    );
+    await expect(page.getByText('혜택 손실 없음')).toHaveCount(0);
+  }
+
+  const persisted = await page.evaluate(() =>
+    JSON.parse(sessionStorage.getItem('cherrypicker:analysis') || 'null'),
+  );
+  expect(persisted.optimization.totalReward).toBe(5_000);
+  expect(persisted.optimization.unassignedSpending).toBe(50_000);
+  expect(persisted.optimization.portfolioCapLosses).toEqual([
+    expect.objectContaining({
+      transactionId: expect.any(String),
+      transactionOccurrence: 0,
+      counterfactualCardId: 'bc-baro-clear-plus',
+      counterfactualReward: 5_000,
+      selectedReward: 0,
+      grossSuppressedReward: 5_000,
+      replacementReward: 0,
+      netLostReward: 5_000,
+    }),
+  ]);
   expect(pageErrors).toEqual([]);
 });
 

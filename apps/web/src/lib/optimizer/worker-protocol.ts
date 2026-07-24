@@ -1,7 +1,9 @@
 import type {
+  CapSuppressionCause,
   CardRuleSet,
   OptimizationConstraints,
   OptimizationResult,
+  PortfolioCapLoss,
 } from '@cherrypicker/core';
 
 export interface OptimizerWorkerRequest {
@@ -35,6 +37,14 @@ function isSafeNonnegativeInteger(value: unknown): value is number {
 
 function isSafeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value);
+}
+
+function addSafeNonnegativeIntegers(
+  left: number,
+  right: number,
+): number | null {
+  const sum = left + right;
+  return Number.isSafeInteger(sum) ? sum : null;
 }
 
 function isFiniteNonnegativeNumber(value: unknown): value is number {
@@ -158,6 +168,142 @@ function isBestSingleCard(value: unknown): boolean {
   );
 }
 
+function capSuppressionDelta(
+  value: unknown,
+): number | null {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.ruleId) ||
+    !isNonEmptyString(value.capGroup) ||
+    (
+      value.capType !== 'monthly_category' &&
+      value.capType !== 'monthly_total' &&
+      value.capType !== 'per_transaction'
+    ) ||
+    !isSafeNonnegativeInteger(value.capAmount) ||
+    !isSafeNonnegativeInteger(value.rewardBeforeCap) ||
+    !isSafeNonnegativeInteger(value.rewardAfterCap) ||
+    value.rewardBeforeCap <= value.rewardAfterCap ||
+    value.rewardAfterCap > value.capAmount
+  ) {
+    return null;
+  }
+
+  const delta = value.rewardBeforeCap - value.rewardAfterCap;
+  return Number.isSafeInteger(delta) && delta > 0 ? delta : null;
+}
+
+function isCapSuppressionCause(
+  value: unknown,
+): value is CapSuppressionCause {
+  return capSuppressionDelta(value) !== null;
+}
+
+function hasValidSelectedCardIdentity(
+  value: Record<string, unknown>,
+): boolean {
+  return (
+    (
+      value.selectedCardId === null &&
+      value.selectedCardName === null &&
+      value.selectedReward === 0
+    ) ||
+    (
+      isNonEmptyString(value.selectedCardId) &&
+      isNonEmptyString(value.selectedCardName) &&
+      isSafeNonnegativeInteger(value.selectedReward) &&
+      value.selectedReward > 0
+    )
+  );
+}
+
+function isPortfolioCapLoss(
+  value: unknown,
+): value is PortfolioCapLoss {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.transactionId) ||
+    !isSafeNonnegativeInteger(value.transactionOccurrence) ||
+    !isNonEmptyString(value.category) ||
+    !isNonEmptyString(value.counterfactualCardId) ||
+    !isNonEmptyString(value.counterfactualCardName) ||
+    !isSafeNonnegativeInteger(value.counterfactualReward) ||
+    !isSafeNonnegativeInteger(value.selectedReward) ||
+    !isSafeNonnegativeInteger(value.grossSuppressedReward) ||
+    value.grossSuppressedReward <= 0 ||
+    value.grossSuppressedReward > value.counterfactualReward ||
+    !isSafeNonnegativeInteger(value.replacementReward) ||
+    !isSafeNonnegativeInteger(value.netLostReward) ||
+    value.netLostReward <= 0 ||
+    !hasValidSelectedCardIdentity(value) ||
+    !Array.isArray(value.causes) ||
+    value.causes.length === 0 ||
+    !value.causes.every(isCapSuppressionCause)
+  ) {
+    return false;
+  }
+
+  let causeDeltaTotal = 0;
+  const causeIdentities = new Set<string>();
+  for (const cause of value.causes) {
+    const causeIdentity = JSON.stringify([
+      cause.ruleId,
+      cause.capGroup,
+      cause.capType,
+    ]);
+    if (causeIdentities.has(causeIdentity)) return false;
+    causeIdentities.add(causeIdentity);
+    const delta = capSuppressionDelta(cause);
+    if (delta === null) return false;
+    const nextTotal = addSafeNonnegativeIntegers(
+      causeDeltaTotal,
+      delta,
+    );
+    if (nextTotal === null) return false;
+    causeDeltaTotal = nextTotal;
+  }
+
+  const reconciledGross = addSafeNonnegativeIntegers(
+    value.replacementReward,
+    value.netLostReward,
+  );
+  const reconciledCounterfactual = addSafeNonnegativeIntegers(
+    value.selectedReward,
+    value.netLostReward,
+  );
+  return (
+    causeDeltaTotal === value.grossSuppressedReward &&
+    reconciledGross === value.grossSuppressedReward &&
+    reconciledCounterfactual === value.counterfactualReward
+  );
+}
+
+function arePortfolioCapLosses(
+  value: unknown,
+): value is PortfolioCapLoss[] | undefined {
+  if (value === undefined) return true;
+  if (!Array.isArray(value)) return false;
+
+  const transactionIdentities = new Set<string>();
+  for (const loss of value) {
+    const transactionIdentity = isRecord(loss)
+      ? JSON.stringify([
+          loss.transactionId,
+          loss.category,
+          loss.transactionOccurrence,
+        ])
+      : '';
+    if (
+      !isPortfolioCapLoss(loss) ||
+      transactionIdentities.has(transactionIdentity)
+    ) {
+      return false;
+    }
+    transactionIdentities.add(transactionIdentity);
+  }
+  return true;
+}
+
 function isOptimizationResult(value: unknown): value is OptimizationResult {
   return (
     isRecord(value) &&
@@ -172,7 +318,8 @@ function isOptimizationResult(value: unknown): value is OptimizationResult {
     isBestSingleCard(value.bestSingleCard) &&
     Array.isArray(value.cardResults) &&
     value.cardResults.every(isCardResult) &&
-    areOptionalCalculationIssues(value.unsupportedRules)
+    areOptionalCalculationIssues(value.unsupportedRules) &&
+    arePortfolioCapLosses(value.portfolioCapLosses)
   );
 }
 

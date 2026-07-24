@@ -1,4 +1,8 @@
-import type { CapInfo, CardRewardResult } from '@cherrypicker/core';
+import type {
+  CapInfo,
+  CardRewardResult,
+  PortfolioCapLoss,
+} from '@cherrypicker/core';
 import { formatWon } from './formatters.js';
 
 export interface BrowserCapDisclosure extends CapInfo {
@@ -7,6 +11,11 @@ export interface BrowserCapDisclosure extends CapInfo {
   categoryLabel: string;
   periodLabel: string;
   lostReward: number;
+}
+
+export interface BrowserPortfolioCapLossDisclosure
+  extends PortfolioCapLoss {
+  categoryLabel: string;
 }
 
 function formatCapPeriodKo(capType: CapInfo['capType']): string {
@@ -46,6 +55,32 @@ export function formatCapOutcomeKo(
   disclosure: Pick<BrowserCapDisclosure, 'lostReward'>,
 ): string {
   return disclosure.lostReward > 0
-    ? `${formatWon(disclosure.lostReward)} 혜택 손실`
-    : '혜택 손실 없음';
+    ? `도달 거래에서 ${formatWon(disclosure.lostReward)} 미적용`
+    : '도달 거래에서 추가 차감 없음';
+}
+
+export function collectPortfolioCapLossDisclosures(
+  losses: readonly PortfolioCapLoss[] | undefined,
+  categoryLabels: ReadonlyMap<string, string>,
+): BrowserPortfolioCapLossDisclosure[] {
+  return (losses ?? []).map((loss) => ({
+    ...loss,
+    categoryLabel: categoryLabels.get(loss.category) ?? loss.category,
+  }));
+}
+
+export function formatPortfolioCapLossOutcomeKo(
+  disclosure: Pick<
+    BrowserPortfolioCapLossDisclosure,
+    'grossSuppressedReward' | 'replacementReward' | 'netLostReward'
+  >,
+): string {
+  const replacement = disclosure.replacementReward > 0
+    ? `다른 혜택으로 대체 ${formatWon(disclosure.replacementReward)}`
+    : '대체 혜택 없음';
+  return (
+    `한도로 제한된 혜택 ${formatWon(disclosure.grossSuppressedReward)}` +
+    ` · ${replacement}` +
+    ` · 최종 ${formatWon(disclosure.netLostReward)} 감소`
+  );
 }

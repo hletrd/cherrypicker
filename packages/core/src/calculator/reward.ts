@@ -5,11 +5,16 @@ import type {
   RewardValue,
 } from '@cherrypicker/rules';
 import type { CategorizedTransaction } from '../models/transaction.js';
-import type { CategoryReward, CapInfo } from '../models/result.js';
+import type {
+  CapSuppressionCause,
+  CategoryReward,
+  CapInfo,
+} from '../models/result.js';
 import type {
   CalculationInput,
   CalculationOutput,
   SkippedTransaction,
+  TransactionCapSuppression,
   UnsupportedReason,
   UnsupportedRule,
 } from './types.js';
@@ -131,6 +136,10 @@ const preparedCardRuleToken = Symbol('prepared-card-rule');
  */
 export interface PreparedCardRule {
   readonly cardRule: CalculationInput['cardRule'];
+  /** Whether any executable reward can be reduced by a declared cap. */
+  readonly hasRewardCap: boolean;
+  /** Whether ordered reward selection carries maxUses/fixed-per-day state. */
+  readonly hasStatefulReward: boolean;
   readonly [preparedCardRuleToken]: true;
 }
 
@@ -146,8 +155,36 @@ export function prepareCardRuleForCalculation(
   cardRule: CalculationInput['cardRule'],
 ): PreparedCardRule {
   assertValidCardRuleStructure(cardRule);
+  let hasRewardCap =
+    cardRule.globalConstraints.monthlyTotalDiscountCap !== null;
+  let hasStatefulReward = false;
+  for (const rule of cardRule.rewards) {
+    if (rule.support?.status === 'unsupported') continue;
+    if (
+      rule.conditions?.maxUses !== undefined &&
+      rule.conditions.usePeriod !== undefined
+    ) {
+      hasStatefulReward = true;
+    }
+    for (const tier of rule.tiers) {
+      if (
+        tier.monthlyCap !== null ||
+        tier.perTransactionCap !== null
+      ) {
+        hasRewardCap = true;
+      }
+      if (
+        tier.value?.kind === 'fixed_per_day' ||
+        tier.unit === 'won_per_day'
+      ) {
+        hasStatefulReward = true;
+      }
+    }
+  }
   return Object.freeze({
     cardRule,
+    hasRewardCap,
+    hasStatefulReward,
     [preparedCardRuleToken]: true as const,
   });
 }
@@ -312,23 +349,93 @@ interface SelectedRule {
 interface RuleSelection {
   rules: SelectedRule[];
   unsupported: UnsupportedRule[];
+  counterfactualReward: number | null;
+  suppressionCauses: CapSuppressionCause[];
+  counterfactualReservations: CounterfactualEligibilityReservation[];
+}
+
+interface CounterfactualEligibilityReservation {
+  occurrenceKey?: string;
+  fixedPerDayKey?: string;
+}
+
+const counterfactualReservationsToken = Symbol(
+  'counterfactual-eligibility-reservations',
+);
+const observedStatefulRewardToken = Symbol(
+  'observed-stateful-reward',
+);
+interface ObservedStatefulReward {
+  actual: boolean;
+  counterfactual: boolean;
+}
+
+/** @internal */
+export function getCounterfactualReservations(
+  suppression: TransactionCapSuppression,
+): readonly CounterfactualEligibilityReservation[] {
+  return (
+    suppression as TransactionCapSuppression & {
+      [counterfactualReservationsToken]?:
+        readonly CounterfactualEligibilityReservation[];
+    }
+  )[counterfactualReservationsToken] ?? [];
+}
+
+/** @internal */
+export function getObservedStatefulReward(
+  output: CalculationOutput,
+): boolean | undefined {
+  return (
+    output as CalculationOutput & {
+      [observedStatefulRewardToken]?: ObservedStatefulReward;
+    }
+  )[observedStatefulRewardToken]?.actual;
+}
+
+/** @internal */
+export function getObservedCounterfactualStatefulReward(
+  output: CalculationOutput,
+): boolean | undefined {
+  return (
+    output as CalculationOutput & {
+      [observedStatefulRewardToken]?: ObservedStatefulReward;
+    }
+  )[observedStatefulRewardToken]?.counterfactual;
 }
 
 interface RuleSelectionState {
   tierId: string;
   capGroupMonthUsed: Map<string, number>;
   dayRewardTracker: Set<string>;
+  globalCap: number | null;
   globalRemaining: number | null;
 }
 
-type RuleAvailability =
-  | { status: 'executable' }
+type RuleProjection =
+  | {
+      status: 'reward';
+      uncappedReward: number;
+      appliedReward: number;
+      causes: CapSuppressionCause[];
+      capGroupKey: string;
+      projectedCapGroupMonthUsed: number | null;
+      fixedPerDayKey?: string;
+    }
   | { status: 'inapplicable' }
   | {
       status: 'unsupported';
       reason: UnsupportedReason;
       detail?: string;
     };
+
+function tryAddSafeNonnegativeIntegers(
+  left: number,
+  right: number,
+): number | null {
+  const sum = left + right;
+  return Number.isSafeInteger(sum) && sum >= 0 ? sum : null;
+}
 
 function compareRuleCandidates(
   a: SelectedRule,
@@ -343,40 +450,22 @@ function compareRuleCandidates(
   return a.ruleIndex - b.ruleIndex;
 }
 
-function previewRuleAvailability(
+function previewRuleExecution(
   candidate: SelectedRule,
   tx: CategorizedTransaction,
   state: RuleSelectionState,
-): RuleAvailability {
+  collectCauses = false,
+): RuleProjection {
   const { rule, ruleIndex } = candidate;
   const tierRate = findTierRate(rule, state.tierId);
   if (!tierRate) return { status: 'inapplicable' };
 
   const ruleExecutionKey = buildRuleExecutionKey(rule, ruleIndex);
   const capGroupKey = buildCapGroupKey(rule, ruleIndex);
-  const currentCapGroupMonthUsed =
-    state.capGroupMonthUsed.get(capGroupKey) ?? 0;
-  const monthlyCap = tierRate.monthlyCap;
-  const perTransactionCap = tierRate.perTransactionCap;
-  let capExhausted =
-    state.globalRemaining !== null && state.globalRemaining <= 0;
-  if (monthlyCap !== null) {
-    assertSafeNonnegativeInteger(monthlyCap, 'monthly reward cap');
-    if (currentCapGroupMonthUsed >= monthlyCap) {
-      capExhausted = true;
-    }
-  }
-  if (perTransactionCap !== null) {
-    assertSafeNonnegativeInteger(
-      perTransactionCap,
-      'per-transaction reward cap',
-    );
-    if (perTransactionCap === 0) capExhausted = true;
-  }
-
   const rewardValue = rewardValueForTier(tierRate);
   if (rewardValue.amount <= 0) return { status: 'inapplicable' };
 
+  let uncappedReward: number;
   if (rewardValue.kind === 'percentage') {
     if (tierRate.unit !== null && tierRate.unit !== undefined) {
       return {
@@ -391,33 +480,130 @@ function previewRuleAvailability(
       rewardValue.amount,
       100,
     );
-    // An invalid direct-call value must still reach the checked execution path
-    // and throw rather than being mistaken for an inapplicable zero benefit.
-    if (reward !== null && reward <= 0) return { status: 'inapplicable' };
-    return capExhausted
-      ? { status: 'inapplicable' }
-      : { status: 'executable' };
+    if (reward === null) {
+      throw new Error(
+        `calculated reward is not safely representable for percentage-point rate ${rewardValue.amount}`,
+      );
+    }
+    uncappedReward = reward;
+  } else {
+    // Preview fixed rewards against a copy because fixed-per-day evaluation
+    // records the day when it succeeds.
+    const fixed = calculateFixedReward(
+      tx,
+      rewardValue,
+      ruleExecutionKey,
+      new Set(state.dayRewardTracker),
+    );
+    if (fixed.unsupportedReason) {
+      return {
+        status: 'unsupported',
+        reason: fixed.unsupportedReason,
+        detail: fixed.detail,
+      };
+    }
+    uncappedReward = fixed.reward;
+  }
+  if (uncappedReward <= 0) return { status: 'inapplicable' };
+  assertSafeNonnegativeInteger(uncappedReward, 'uncapped reward preview');
+
+  const perTransactionCap = tierRate.perTransactionCap;
+  if (perTransactionCap !== null) {
+    assertSafeNonnegativeInteger(
+      perTransactionCap,
+      'per-transaction reward cap',
+    );
+  }
+  const afterPerTransaction = perTransactionCap === null
+    ? uncappedReward
+    : Math.min(uncappedReward, perTransactionCap);
+
+  const currentCapGroupMonthUsed =
+    state.capGroupMonthUsed.get(capGroupKey) ?? 0;
+  const monthlyProjection = tierRate.monthlyCap === null
+    ? null
+    : applyMonthlyCap(
+        afterPerTransaction,
+        tierRate.monthlyCap,
+        currentCapGroupMonthUsed,
+      );
+  const afterMonthly =
+    monthlyProjection?.reward ?? afterPerTransaction;
+  const appliedReward = state.globalRemaining === null
+    ? afterMonthly
+    : Math.min(afterMonthly, state.globalRemaining);
+
+  const causes: CapSuppressionCause[] = [];
+  if (collectCauses && uncappedReward > afterPerTransaction) {
+    causes.push({
+      ruleId: ruleExecutionKey,
+      capGroup: capGroupKey,
+      capType: 'per_transaction',
+      capAmount: perTransactionCap!,
+      rewardBeforeCap: uncappedReward,
+      rewardAfterCap: afterPerTransaction,
+    });
+  }
+  if (collectCauses && afterPerTransaction > afterMonthly) {
+    causes.push({
+      ruleId: ruleExecutionKey,
+      capGroup: capGroupKey,
+      capType: 'monthly_category',
+      capAmount: tierRate.monthlyCap!,
+      rewardBeforeCap: afterPerTransaction,
+      rewardAfterCap: afterMonthly,
+    });
+  }
+  if (collectCauses && afterMonthly > appliedReward) {
+    if (state.globalCap === null) {
+      throw new Error(
+        'calculator invariant violated: global reward clipped without a global cap',
+      );
+    }
+    causes.push({
+      ruleId: ruleExecutionKey,
+      capGroup: capGroupKey,
+      capType: 'monthly_total',
+      capAmount: state.globalCap,
+      rewardBeforeCap: afterMonthly,
+      rewardAfterCap: appliedReward,
+    });
   }
 
-  // Preview fixed rewards against a copy because fixed-per-day evaluation
-  // records the day when it succeeds.
-  const fixed = calculateFixedReward(
-    tx,
-    rewardValue,
-    ruleExecutionKey,
-    new Set(state.dayRewardTracker),
-  );
-  if (fixed.unsupportedReason) {
-    return {
-      status: 'unsupported',
-      reason: fixed.unsupportedReason,
-      detail: fixed.detail,
-    };
+  return {
+    status: 'reward',
+    uncappedReward,
+    appliedReward,
+    causes,
+    capGroupKey,
+    projectedCapGroupMonthUsed:
+      monthlyProjection === null
+        ? null
+        : monthlyProjection.newMonthUsed -
+          (monthlyProjection.reward - appliedReward),
+    fixedPerDayKey:
+      rewardValue.kind === 'fixed_per_day'
+        ? `${ruleExecutionKey}:${tx.date}`
+        : undefined,
+  };
+}
+
+function applyRuleProjection(
+  projection: Extract<RuleProjection, { status: 'reward' }>,
+  state: RuleSelectionState,
+): void {
+  if (projection.fixedPerDayKey !== undefined) {
+    state.dayRewardTracker.add(projection.fixedPerDayKey);
   }
-  if (fixed.reward <= 0) return { status: 'inapplicable' };
-  return capExhausted
-    ? { status: 'inapplicable' }
-    : { status: 'executable' };
+  if (projection.projectedCapGroupMonthUsed !== null) {
+    state.capGroupMonthUsed.set(
+      projection.capGroupKey,
+      projection.projectedCapGroupMonthUsed,
+    );
+  }
+  if (state.globalRemaining !== null) {
+    state.globalRemaining -= projection.appliedReward;
+  }
 }
 
 function projectRuleExecution(
@@ -463,18 +649,26 @@ function projectRuleExecution(
     : Math.min(uncappedReward, tierRate.perTransactionCap);
   const currentCapGroupMonthUsed =
     state.capGroupMonthUsed.get(capGroupKey) ?? 0;
-  const ruleResult = applyMonthlyCap(
-    perTransactionReward,
-    tierRate.monthlyCap,
-    currentCapGroupMonthUsed,
-  );
+  const ruleResult = tierRate.monthlyCap === null
+    ? {
+        reward: perTransactionReward,
+        newMonthUsed: currentCapGroupMonthUsed,
+        capReached: false,
+      }
+    : applyMonthlyCap(
+        perTransactionReward,
+        tierRate.monthlyCap,
+        currentCapGroupMonthUsed,
+      );
   const appliedReward = state.globalRemaining === null
     ? ruleResult.reward
     : Math.min(ruleResult.reward, state.globalRemaining);
-  state.capGroupMonthUsed.set(
-    capGroupKey,
-    ruleResult.newMonthUsed - (ruleResult.reward - appliedReward),
-  );
+  if (tierRate.monthlyCap !== null) {
+    state.capGroupMonthUsed.set(
+      capGroupKey,
+      ruleResult.newMonthUsed - (ruleResult.reward - appliedReward),
+    );
+  }
   if (state.globalRemaining !== null) {
     state.globalRemaining -= appliedReward;
   }
@@ -484,10 +678,15 @@ function findRules(
   cardId: string,
   rules: RewardRule[],
   tx: CategorizedTransaction,
-  occurrenceUses: Map<string, number>,
-  state: RuleSelectionState,
+  actualOccurrenceUses: Map<string, number>,
+  counterfactualOccurrenceUses: Map<string, number> | undefined,
+  counterfactualFixedPerDayUses: Set<string> | undefined,
+  actualState: RuleSelectionState,
+  collectCapSuppressions: boolean,
+  collectSuppressionCauses: boolean,
 ): RuleSelection {
-  const candidates: SelectedRule[] = [];
+  const actualCandidates: SelectedRule[] = [];
+  const counterfactualCandidates: SelectedRule[] = [];
   const unsupported: UnsupportedRule[] = [];
 
   for (const [ruleIndex, rule] of rules.entries()) {
@@ -508,60 +707,102 @@ function findRules(
     }
 
     const ruleId = buildRuleExecutionKey(rule, ruleIndex);
-    const condition = ruleConditionsMatch(rule, tx, ruleId, occurrenceUses);
-    if (condition.status === 'unsupported') {
+    const actualCondition = ruleConditionsMatch(
+      rule,
+      tx,
+      ruleId,
+      actualOccurrenceUses,
+    );
+    if (actualCondition.status === 'unsupported') {
       unsupported.push({
         cardId,
         transactionId: tx.id,
         ruleId,
         category: buildCategoryKey(rule.category, rule.subcategory),
-        reason: condition.reason ?? 'rule_marked_unsupported',
-        detail: condition.detail,
+        reason: actualCondition.reason ?? 'rule_marked_unsupported',
+        detail: actualCondition.detail,
       });
-      continue;
     }
-    if (condition.status === 'match') {
-      candidates.push({ rule, ruleIndex, occurrenceKey: condition.occurrenceKey });
+    if (actualCondition.status === 'match') {
+      actualCandidates.push({
+        rule,
+        ruleIndex,
+        occurrenceKey: actualCondition.occurrenceKey,
+      });
+    }
+
+    if (collectCapSuppressions) {
+      const hasOccurrenceLimit =
+        rule.conditions?.maxUses !== undefined &&
+        rule.conditions.usePeriod !== undefined;
+      const counterfactualCondition =
+        hasOccurrenceLimit && actualCondition.status !== 'unsupported'
+          ? ruleConditionsMatch(
+              rule,
+              tx,
+              ruleId,
+              counterfactualOccurrenceUses!,
+            )
+          : actualCondition;
+      if (counterfactualCondition.status === 'match') {
+        counterfactualCandidates.push({
+          rule,
+          ruleIndex,
+          occurrenceKey: counterfactualCondition.occurrenceKey,
+        });
+      }
     }
   }
 
-  if (candidates.length === 0) return { rules: [], unsupported };
+  if (
+    actualCandidates.length === 0 &&
+    counterfactualCandidates.length === 0
+  ) {
+    return {
+      rules: [],
+      unsupported,
+      counterfactualReward: 0,
+      suppressionCauses: [],
+      counterfactualReservations: [],
+    };
+  }
 
-  const projectedState: RuleSelectionState = {
-    tierId: state.tierId,
-    capGroupMonthUsed: new Map(state.capGroupMonthUsed),
-    dayRewardTracker: new Set(state.dayRewardTracker),
-    globalRemaining: state.globalRemaining,
+  const projectedActualState: RuleSelectionState = {
+    tierId: actualState.tierId,
+    capGroupMonthUsed: new Map(actualState.capGroupMonthUsed),
+    dayRewardTracker: new Set(actualState.dayRewardTracker),
+    globalCap: actualState.globalCap,
+    globalRemaining: actualState.globalRemaining,
   };
-  const groups = new Map<string, SelectedRule[]>();
-  for (const candidate of candidates) {
+  const actualGroups = new Map<string, SelectedRule[]>();
+  for (const candidate of actualCandidates) {
     const group = candidate.rule.stackingGroup ?? '__default__';
-    const members = groups.get(group) ?? [];
+    const members = actualGroups.get(group) ?? [];
     members.push(candidate);
-    groups.set(group, members);
+    actualGroups.set(group, members);
   }
 
   const selected: SelectedRule[] = [];
-  for (const group of [...groups.keys()].sort()) {
-    const members = groups.get(group)!;
+  for (const group of [...actualGroups.keys()].sort()) {
+    const members = actualGroups.get(group)!;
     const additive = members
       .filter(({ rule }) => rule.combination === 'additive')
       .sort(compareRuleCandidates);
     for (const candidate of additive) {
       selected.push(candidate);
-      projectRuleExecution(candidate, tx, projectedState);
+      projectRuleExecution(candidate, tx, projectedActualState);
     }
 
     const exclusive = members
       .filter(({ rule }) => rule.combination !== 'additive')
       .sort(compareRuleCandidates);
     for (const candidate of exclusive) {
-      const availability = previewRuleAvailability(
+      const projection = previewRuleExecution(
         candidate,
         tx,
-        projectedState,
+        projectedActualState,
       );
-      if (availability.status === 'unsupported') {
+      if (projection.status === 'unsupported') {
         const ruleId = candidate.rule.id ??
           `${buildCategoryKey(
             candidate.rule.category,
@@ -575,20 +816,122 @@ function findRules(
             candidate.rule.category,
             candidate.rule.subcategory,
           ),
-          reason: availability.reason,
-          detail: availability.detail,
+          reason: projection.reason,
+          detail: projection.detail,
         });
         continue;
       }
-      if (availability.status === 'executable') {
+      if (projection.status === 'inapplicable') continue;
+
+      if (projection.appliedReward > 0) {
         selected.push(candidate);
-        projectRuleExecution(candidate, tx, projectedState);
+        applyRuleProjection(projection, projectedActualState);
         break;
       }
     }
   }
 
-  return { rules: selected, unsupported };
+  if (!collectCapSuppressions) {
+    return {
+      rules: selected,
+      unsupported,
+      counterfactualReward: 0,
+      suppressionCauses: [],
+      counterfactualReservations: [],
+    };
+  }
+
+  const counterfactualGroups = new Map<string, SelectedRule[]>();
+  for (const candidate of counterfactualCandidates) {
+    const group = candidate.rule.stackingGroup ?? '__default__';
+    const members = counterfactualGroups.get(group) ?? [];
+    members.push(candidate);
+    counterfactualGroups.set(group, members);
+  }
+
+  let counterfactualReward: number | null = 0;
+  const suppressionCauses: CapSuppressionCause[] = [];
+  const counterfactualReservations: CounterfactualEligibilityReservation[] =
+    [];
+  const projectedCounterfactualState: RuleSelectionState = {
+    tierId: actualState.tierId,
+    capGroupMonthUsed: new Map(actualState.capGroupMonthUsed),
+    dayRewardTracker: new Set(counterfactualFixedPerDayUses!),
+    globalCap: actualState.globalCap,
+    globalRemaining: actualState.globalRemaining,
+  };
+  const retainCounterfactual = (
+    candidate: SelectedRule,
+    projection: Extract<RuleProjection, { status: 'reward' }>,
+  ): void => {
+    if (counterfactualReward !== null) {
+      counterfactualReward = tryAddSafeNonnegativeIntegers(
+        counterfactualReward,
+        projection.uncappedReward,
+      );
+    }
+    suppressionCauses.push(...projection.causes);
+    const reservation: CounterfactualEligibilityReservation = {};
+    if (candidate.occurrenceKey) {
+      reservation.occurrenceKey = candidate.occurrenceKey;
+    }
+    const tierRate = findTierRate(candidate.rule, actualState.tierId);
+    if (
+      tierRate &&
+      rewardValueForTier(tierRate).kind === 'fixed_per_day'
+    ) {
+      reservation.fixedPerDayKey =
+        `${buildRuleExecutionKey(candidate.rule, candidate.ruleIndex)}:${tx.date}`;
+    }
+    if (
+      reservation.occurrenceKey !== undefined ||
+      reservation.fixedPerDayKey !== undefined
+    ) {
+      counterfactualReservations.push(reservation);
+    }
+    applyRuleProjection(projection, projectedCounterfactualState);
+  };
+
+  for (const group of [...counterfactualGroups.keys()].sort()) {
+    const members = counterfactualGroups.get(group)!;
+    const additive = members
+      .filter(({ rule }) => rule.combination === 'additive')
+      .sort(compareRuleCandidates);
+    for (const candidate of additive) {
+      const projection = previewRuleExecution(
+        candidate,
+        tx,
+        projectedCounterfactualState,
+        collectSuppressionCauses,
+      );
+      if (projection.status === 'reward') {
+        retainCounterfactual(candidate, projection);
+      }
+    }
+
+    const exclusive = members
+      .filter(({ rule }) => rule.combination !== 'additive')
+      .sort(compareRuleCandidates);
+    for (const candidate of exclusive) {
+      const projection = previewRuleExecution(
+        candidate,
+        tx,
+        projectedCounterfactualState,
+        collectSuppressionCauses,
+      );
+      if (projection.status !== 'reward') continue;
+      retainCounterfactual(candidate, projection);
+      break;
+    }
+  }
+
+  return {
+    rules: selected,
+    unsupported,
+    counterfactualReward,
+    suppressionCauses,
+    counterfactualReservations,
+  };
 }
 
 function assertKnownRewardType(type: string): void {
@@ -785,6 +1128,12 @@ export function calculateRewardsWithPreparedCard(input: {
   transactions: CategorizedTransaction[];
   previousMonthSpending: number;
   preparedCardRule: PreparedCardRule;
+  /** @internal Skip diagnostics for optimizer replays that only need totals. */
+  collectCapSuppressions?: boolean;
+  /** @internal Emit rows only at or after this original transaction index. */
+  capSuppressionStartIndex?: number;
+  /** @internal Observe actual maxUses/fixed-per-day consumption at one index. */
+  observeStatefulRewardAtIndex?: number;
 }): CalculationOutput {
   assertSafeNonnegativeInteger(
     input.previousMonthSpending,
@@ -793,14 +1142,41 @@ export function calculateRewardsWithPreparedCard(input: {
   if (input.preparedCardRule[preparedCardRuleToken] !== true) {
     throw new Error('prepared card rule proof is invalid');
   }
+  const capSuppressionStartIndex = input.capSuppressionStartIndex ?? 0;
+  if (
+    !Number.isSafeInteger(capSuppressionStartIndex) ||
+    capSuppressionStartIndex < 0
+  ) {
+    throw new Error(
+      `capSuppressionStartIndex must be a non-negative safe integer, got ${capSuppressionStartIndex}`,
+    );
+  }
+  if (
+    input.observeStatefulRewardAtIndex !== undefined &&
+    (
+      !Number.isSafeInteger(input.observeStatefulRewardAtIndex) ||
+      input.observeStatefulRewardAtIndex < 0
+    )
+  ) {
+    throw new Error(
+      'observeStatefulRewardAtIndex must be a non-negative safe integer, ' +
+      `got ${input.observeStatefulRewardAtIndex}`,
+    );
+  }
   return calculateRewardsKernel({
     transactions: input.transactions,
     previousMonthSpending: input.previousMonthSpending,
     cardRule: input.preparedCardRule.cardRule,
-  });
+  }, input.collectCapSuppressions ?? true, capSuppressionStartIndex,
+  input.observeStatefulRewardAtIndex);
 }
 
-function calculateRewardsKernel(input: CalculationInput): CalculationOutput {
+function calculateRewardsKernel(
+  input: CalculationInput,
+  collectCapSuppressions = true,
+  capSuppressionStartIndex = 0,
+  observeStatefulRewardAtIndex?: number,
+): CalculationOutput {
   const { transactions, previousMonthSpending, cardRule } = input;
 
   const { card, performanceTiers, rewards: rewardRules, globalConstraints } = cardRule;
@@ -823,23 +1199,35 @@ function calculateRewardsKernel(input: CalculationInput): CalculationOutput {
   const capGroupMonthUsed = new Map<string, number>();
   const dayRewardTracker = new Set<string>();
   const occurrenceUses = new Map<string, number>();
+  const counterfactualOccurrenceUses = collectCapSuppressions
+    ? new Map<string, number>()
+    : undefined;
+  const counterfactualFixedPerDayUses = collectCapSuppressions
+    ? new Set<string>()
+    : undefined;
   let globalMonthUsed = 0;
   const globalCap = globalConstraints.monthlyTotalDiscountCap;
   if (globalCap !== null) {
     assertSafeNonnegativeInteger(globalCap, 'global monthly reward cap');
   }
-
   const categoryRewards = new Map<string, CategoryReward>();
   const capsHit: CapInfo[] = [];
+  const capSuppressions: TransactionCapSuppression[] = [];
+  let capSuppressionsComplete = true;
   const skippedTransactions: SkippedTransaction[] = [];
   const unsupportedRules: UnsupportedRule[] = [];
+  let observedStatefulReward = false;
+  let observedCounterfactualStatefulReward = false;
 
   // Track cumulative reward per rewardType within each category bucket,
   // so the dominant type (highest cumulative reward) is reported rather
   // than the type of the last transaction processed.
   const rewardTypeAccum = new Map<string, Map<string, number>>();
 
-  for (const tx of transactions) {
+  for (const [transactionIndex, tx] of transactions.entries()) {
+    const emitCapSuppression =
+      collectCapSuppressions &&
+      transactionIndex >= capSuppressionStartIndex;
     // Public calculator boundary: statement amounts are Won integers and must
     // be representable exactly. Reject invalid numeric input instead of
     // allowing NaN/Infinity/unsafe integers to corrupt reward totals.
@@ -860,15 +1248,40 @@ function calculateRewardsKernel(input: CalculationInput): CalculationOutput {
 
     const categoryKey = buildCategoryKey(tx.category, tx.subcategory);
     const selection: RuleSelection = tierId === 'none'
-      ? { rules: [], unsupported: [] as UnsupportedRule[] }
-      : findRules(card.id, rewardRules, tx, occurrenceUses, {
-          tierId,
-          capGroupMonthUsed,
-          dayRewardTracker,
-          globalRemaining:
-            globalCap === null ? null : Math.max(0, globalCap - globalMonthUsed),
-        });
+      ? {
+          rules: [],
+          unsupported: [] as UnsupportedRule[],
+          counterfactualReward: 0,
+          suppressionCauses: [],
+          counterfactualReservations: [],
+        }
+      : findRules(
+          card.id,
+          rewardRules,
+          tx,
+          occurrenceUses,
+          counterfactualOccurrenceUses,
+          counterfactualFixedPerDayUses,
+          {
+            tierId,
+            capGroupMonthUsed,
+            dayRewardTracker,
+            globalCap,
+            globalRemaining:
+              globalCap === null
+                ? null
+                : Math.max(0, globalCap - globalMonthUsed),
+          },
+          collectCapSuppressions,
+          emitCapSuppression,
+        );
     unsupportedRules.push(...selection.unsupported);
+    if (
+      transactionIndex === observeStatefulRewardAtIndex &&
+      selection.counterfactualReservations.length > 0
+    ) {
+      observedCounterfactualStatefulReward = true;
+    }
     const firstRule = selection.rules[0]?.rule;
     // Register the bucket in the Map immediately after creation so that it is
     // always present before any mutations. Prior code deferred .set() until
@@ -895,10 +1308,7 @@ function calculateRewardsKernel(input: CalculationInput): CalculationOutput {
       `category spending for ${categoryKey}`,
     );
 
-    if (selection.rules.length === 0) {
-      continue;
-    }
-
+    let transactionAppliedReward = 0;
     for (const selectedRule of selection.rules) {
       const { rule, ruleIndex, occurrenceKey } = selectedRule;
       const ruleExecutionKey = buildRuleExecutionKey(rule, ruleIndex);
@@ -991,6 +1401,17 @@ function calculateRewardsKernel(input: CalculationInput): CalculationOutput {
       assertSafeNonnegativeInteger(uncappedReward, 'uncapped reward');
       assertSafeNonnegativeInteger(rawReward, 'per-transaction reward');
 
+      if (
+        transactionIndex === observeStatefulRewardAtIndex &&
+        uncappedReward > 0 &&
+        (
+          occurrenceKey !== undefined ||
+          rewardValue.kind === 'fixed_per_day'
+        )
+      ) {
+        observedStatefulReward = true;
+      }
+
       // Consume an occurrence only after the tier and reward facts have produced
       // an executable reward. Cap clipping happens later and still counts.
       if (occurrenceKey && uncappedReward > 0) {
@@ -1063,6 +1484,13 @@ function calculateRewardsKernel(input: CalculationInput): CalculationOutput {
         appliedReward,
         `category reward for ${categoryKey}`,
       );
+      if (collectCapSuppressions) {
+        transactionAppliedReward = addSafeNonnegativeIntegers(
+          transactionAppliedReward,
+          appliedReward,
+          `transaction reward for ${tx.id}`,
+        );
+      }
       // Accumulate reward per rewardType so we can determine the dominant
       // type (highest cumulative reward) at the end of the loop, rather than
       // unconditionally overwriting with the last transaction's type.
@@ -1095,6 +1523,108 @@ function calculateRewardsKernel(input: CalculationInput): CalculationOutput {
       }
       // No need for categoryRewards.set() here — the bucket was registered
       // immediately after creation and mutations are reflected by reference (C8-02).
+    }
+
+    if (collectCapSuppressions) {
+      const committedCounterfactualReservations = new Set<string>();
+      const commitCounterfactualReservation = (
+        reservation: CounterfactualEligibilityReservation,
+      ): void => {
+        const identity = JSON.stringify([
+          reservation.occurrenceKey,
+          reservation.fixedPerDayKey,
+        ]);
+        if (committedCounterfactualReservations.has(identity)) return;
+        committedCounterfactualReservations.add(identity);
+        if (reservation.occurrenceKey !== undefined) {
+          const current =
+            counterfactualOccurrenceUses!.get(reservation.occurrenceKey) ?? 0;
+          const next = tryAddSafeNonnegativeIntegers(current, 1);
+          if (next !== null) {
+            counterfactualOccurrenceUses!.set(
+              reservation.occurrenceKey,
+              next,
+            );
+          } else {
+            capSuppressionsComplete = false;
+          }
+        }
+        if (reservation.fixedPerDayKey !== undefined) {
+          counterfactualFixedPerDayUses!.add(
+            reservation.fixedPerDayKey,
+          );
+        }
+      };
+      for (const reservation of selection.counterfactualReservations) {
+        // Advance the deterministic cap-free path even when an executable
+        // fallback made this transaction an equal replacement. Deferring the
+        // scarce opportunity would allow a later row to reuse it and publish
+        // a loss that no ordered replay can realize.
+        commitCounterfactualReservation(reservation);
+      }
+
+      if (selection.counterfactualReward === null) {
+        capSuppressionsComplete = false;
+      } else if (selection.counterfactualReward < transactionAppliedReward) {
+        // Positive transaction rows cannot express the negative offset created
+        // when an earlier cap-free stateful choice displaces a stronger later
+        // actual fallback. Preserve unknown rather than overstate the sum.
+        capSuppressionsComplete = false;
+      } else if (
+        emitCapSuppression &&
+        selection.counterfactualReward > transactionAppliedReward
+      ) {
+        let grossSuppressedReward: number | null = 0;
+        for (const cause of selection.suppressionCauses) {
+          grossSuppressedReward = tryAddSafeNonnegativeIntegers(
+            grossSuppressedReward,
+            cause.rewardBeforeCap - cause.rewardAfterCap,
+          );
+          if (grossSuppressedReward === null) break;
+        }
+        const netSuppressedReward =
+          selection.counterfactualReward - transactionAppliedReward;
+        if (
+          grossSuppressedReward !== null &&
+          (
+            !Number.isSafeInteger(netSuppressedReward) ||
+            netSuppressedReward <= 0 ||
+            selection.suppressionCauses.length === 0 ||
+            grossSuppressedReward < netSuppressedReward
+          )
+        ) {
+          grossSuppressedReward = null;
+        }
+        if (grossSuppressedReward === null) {
+          capSuppressionsComplete = false;
+        }
+        if (grossSuppressedReward !== null) {
+          const replacementReward =
+            grossSuppressedReward - netSuppressedReward;
+          const suppression: TransactionCapSuppression = {
+            transactionId: tx.id,
+            transactionIndex,
+            category: categoryKey,
+            actualReward: transactionAppliedReward,
+            counterfactualReward: selection.counterfactualReward,
+            grossSuppressedReward,
+            replacementReward,
+            netSuppressedReward,
+            causes: selection.suppressionCauses,
+          };
+          Object.defineProperty(
+            suppression,
+            counterfactualReservationsToken,
+            {
+              value: selection.counterfactualReservations,
+              enumerable: false,
+              configurable: false,
+              writable: false,
+            },
+          );
+          capSuppressions.push(suppression);
+        }
+      }
     }
   }
 
@@ -1136,14 +1666,28 @@ function calculateRewardsKernel(input: CalculationInput): CalculationOutput {
     0,
   );
 
-  return {
+  const output: CalculationOutput = {
     cardId: card.id,
     performanceTier: tierId,
     rewards: categoryRewardList,
     totalReward,
     totalSpending,
     capsHit,
+    capSuppressions,
+    capSuppressionsComplete,
     skippedTransactions,
     unsupportedRules,
   };
+  if (observeStatefulRewardAtIndex !== undefined) {
+    Object.defineProperty(output, observedStatefulRewardToken, {
+      value: {
+        actual: observedStatefulReward,
+        counterfactual: observedCounterfactualStatefulReward,
+      } satisfies ObservedStatefulReward,
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
+  }
+  return output;
 }
