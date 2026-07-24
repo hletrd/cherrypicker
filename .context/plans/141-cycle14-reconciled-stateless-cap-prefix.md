@@ -1,7 +1,7 @@
 # Plan 141: Cycle 14 Reconciled Stateless Cap Prefix
 
 **Finding:** C14-001 (`RPF14-PERF-001`, Medium/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -80,24 +80,24 @@ unknown, known-zero, and known-positive cap telemetry remain exact.
 
 ## Acceptance
 
-- [ ] A proven stateless prefix performs no counterfactual grouping,
+- [x] A proven stateless prefix performs no counterfactual grouping,
       projection, applied-reward accumulation, or reconciliation work.
-- [ ] Actual history and the appended row remain fully evaluated.
-- [ ] `maxUses` and fixed-per-day cards retain complete ordered
+- [x] Actual history and the appended row remain fully evaluated.
+- [x] `maxUses` and fixed-per-day cards retain complete ordered
       counterfactual histories.
-- [ ] An ordinary/direct prepared call with a nonzero start index keeps its
+- [x] An ordinary/direct prepared call with a nonzero start index keeps its
       current full completeness semantics.
-- [ ] The unsafe capped-priority/uncapped-fallback fixture remains incomplete
+- [x] The unsafe capped-priority/uncapped-fallback fixture remains incomplete
       without the optimizer claim.
-- [ ] The claim rejects or falls back for a non-append boundary and cannot be
+- [x] The claim rejects or falls back for a non-append boundary and cannot be
       enabled when suppression collection is disabled.
-- [ ] Only optimizer append scoring supplies the claim, and only while the
+- [x] Only optimizer append scoring supplies the claim, and only while the
       portfolio completeness latch is true.
-- [ ] Public `calculateRewards()` and package exports do not gain an unchecked
+- [x] Public `calculateRewards()` and package exports do not gain an unchecked
       mode.
-- [ ] Full optimizer results preserve assignments, totals, diagnostics,
+- [x] Full optimizer results preserve assignments, totals, diagnostics,
       losses, ordering, and `undefined` versus present-array knownness.
-- [ ] No incremental optimizer, cross-invocation cache, or public schema
+- [x] No incremental optimizer, cross-invocation cache, or public schema
       change is introduced.
 
 ## Verification
@@ -109,10 +109,34 @@ presentation, and CLI tests, then `bun run lint`, `bun run typecheck`,
 `bun scripts/run-e2e.ts status --assert-clean`, TCP 4173, isolated browser
 session, exact owned-process, and temporary-profile cleanup checks.
 
+## Completion evidence
+
+- Signed implementation commit
+  `5edff677a3da0c7fa08152adb59320ce530ef6be` added the private,
+  default-off append-prefix proof, callee-owned stateless gate, row-local
+  counterfactual gate, optimizer-only opt-in, and deterministic regression
+  suite.
+- The regression was genuinely red against parent
+  `c1f9d40a40a4a97de169da14eff46ccdfaf99968`: 2 tests passed and 3 failed
+  across 22 assertions. It observed the old stateless grouping counts
+  `[2, 2, 2]` instead of `[1, 1, 2]`, accepted a collection-disabled claim
+  instead of rejecting it, and produced optimizer counts `[11, 8, 5]`
+  instead of `[9, 7, 5]`. Stateful and unsafe-direct controls already passed.
+- The implemented focused matrix passed 80 tests with 267 assertions,
+  including stateless operation counts, invalid-claim guards, `maxUses`,
+  fixed-per-day history, unsafe direct/public knownness, and optimizer
+  completeness. An independent code audit passed its 44-test matrix plus core
+  lint and typecheck.
+- Final gates passed: lint, typecheck, all seven workspace builds, all
+  repository tests, 1,641 Bun tests with 3,319 expectations, 127 Vitest files
+  with 3,110 tests, the full `verify` chain, and all 97 E2E tests.
+- E2E cleanup finished clean: no owned runs, no TCP 4173 listener, no isolated
+  browser session, and no repository/profile process remained. No gate fix or
+  deployment was required.
+
 ## Execution note
 
-The requested `ralph` capability is unavailable. Prompt 3 will use the
-approved manual disciplined fallback: add the deterministic failing
-regressions, implement the smallest proof-gated row-local change, run focused
-green and exact parity checks, then run every repository gate. No deployment
-is permitted.
+The requested `ralph` capability was unavailable. Prompt 3 used the approved
+manual disciplined fallback: it added deterministic failing regressions,
+implemented the smallest proof-gated row-local change, ran focused green and
+exact parity checks, then ran every repository gate. No deployment occurred.

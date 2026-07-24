@@ -1,7 +1,7 @@
 # Plan 142: Cycle 14 Cap Suppression Completeness Documentation
 
 **Finding:** C14-002 (`C14-DOC-001`, Low/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -43,13 +43,13 @@ user-facing copy remain unchanged.
 
 ## Acceptance
 
-- [ ] The public field comment defines false as an incomplete/partial exact
+- [x] The public field comment defines false as an incomplete/partial exact
       diagnostic rather than overflow alone.
-- [ ] The wording covers ordered stateful effects and unsafe arithmetic
+- [x] The wording covers ordered stateful effects and unsafe arithmetic
       without claiming an exhaustive cause list.
-- [ ] The comment warns that a false result may still contain rows.
-- [ ] Existing negative-offset and overflow controls remain green.
-- [ ] No runtime, schema, presentation, README, or generated-document behavior
+- [x] The comment warns that a false result may still contain rows.
+- [x] Existing negative-offset and overflow controls remain green.
+- [x] No runtime, schema, presentation, README, or generated-document behavior
       changes.
 
 ## Verification
@@ -58,9 +58,25 @@ Run the focused cap-loss and prepared-card tests, documentation/data checks,
 lint, typecheck, build, all unit-test gates, full verification, and E2E with
 the same exact cleanup checks as Plan 141.
 
+## Completion evidence
+
+- Signed implementation commit
+  `c1f9d40a40a4a97de169da14eff46ccdfaf99968` replaced the
+  overflow-only comment with consequence-based TSDoc: an unrepresentable or
+  unreconciled ordered cap-free result is partial, may retain rows, and must
+  not be treated as a complete suppression total.
+- The existing Cycle 13 cap-telemetry controls passed 33 tests with 131
+  assertions, including ordered negative-offset and safe-integer overflow
+  cases; core typecheck also passed.
+- Final lint, typecheck, build, unit, Vitest, verification, and 97-test E2E
+  gates passed without a source, runtime, schema, presentation, README, or
+  generated-document change beyond the intended TSDoc.
+- Exact post-E2E ownership cleanup passed and no gate fix or deployment was
+  required.
+
 ## Execution note
 
-The requested `ralph` capability is unavailable. Prompt 3 will use the
-approved manual disciplined fallback: update the smallest public TSDoc
-surface, verify both existing behavioral controls, then run every repository
-gate. No deployment is permitted.
+The requested `ralph` capability was unavailable. Prompt 3 used the approved
+manual disciplined fallback: it updated the smallest public TSDoc surface,
+verified both existing behavioral controls, then ran every repository gate.
+No deployment occurred.
