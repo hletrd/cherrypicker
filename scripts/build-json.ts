@@ -13,6 +13,7 @@ import { readFile, readdir, writeFile, mkdir, unlink } from 'fs/promises';
 import { basename, dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { parse } from 'yaml';
+import { buildFallbackCategoryLabelsModule } from './category-label-publication.js';
 import { MerchantMatcher } from '../packages/core/src/categorizer/matcher.js';
 import {
   categoriesFileSchema,
@@ -448,17 +449,9 @@ console.log(`   ${detailDir} (${expectedDetailNames.size} issuer detail shards)`
 // Generate fallback category labels TypeScript module for web app (C7-04)
 // This eliminates the hardcoded duplication anti-pattern by generating the
 // fallback directly from the canonical categories.yaml source.
-const fallbackEntries: string[] = [];
-for (const node of categoriesRaw.categories as Array<{ id: string; labelKo: string; subcategories?: Array<{ id: string; labelKo: string }> }>) {
-  fallbackEntries.push(`    ['${node.id}', '${node.labelKo}'],`);
-  if (node.subcategories) {
-    for (const sub of node.subcategories) {
-      fallbackEntries.push(`    ['${sub.id}', '${sub.labelKo}'],`);
-      fallbackEntries.push(`    ['${node.id}.${sub.id}', '${sub.labelKo}'],`);
-    }
-  }
-}
-const fallbackModule = `/** Auto-generated from categories.yaml by scripts/build-json.ts\n *  Do not edit manually — run 'bun run data:build' to regenerate.\n */\nexport const FALLBACK_CATEGORY_LABELS: ReadonlyMap<string, string> = new Map([\n${fallbackEntries.join('\n')}\n  ]);\n`;
+const fallbackModule = buildFallbackCategoryLabelsModule(
+  categoriesRaw.categories,
+);
 const fallbackPath = join(ROOT, 'apps/web/src/lib/category-labels-fallback.ts');
 await publish(fallbackPath, fallbackModule);
 console.log(`   ${fallbackPath} (auto-generated fallback labels)`);
