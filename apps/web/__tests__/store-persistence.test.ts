@@ -666,6 +666,25 @@ describe('production persistence parser', () => {
     });
   });
 
+  test('rejects a truncated current-version zero-count monthly bucket', () => {
+    const payload = JSON.parse(
+      persistedFixture(),
+    ) as Record<string, unknown>;
+    delete payload.transactions;
+    payload._truncatedTxCount = 1;
+    payload.monthlyBreakdown = [
+      { month: '2026-06', spending: 777_777, transactionCount: 0 },
+      { month: '2026-07', spending: 10_000, transactionCount: 1 },
+    ];
+
+    expect(deserializeAnalysis(JSON.stringify(payload))).toEqual({
+      data: null,
+      warningKind: 'corrupted',
+      truncatedTxCount: null,
+      shouldRemove: true,
+    });
+  });
+
   test('rejects isolated and coordinated current-version basis deletion', () => {
     const isolated = JSON.parse(persistedFixture()) as Record<string, unknown>;
     delete isolated.previousSpendingBasis;
@@ -946,7 +965,7 @@ describe('production persistence parser', () => {
     }
   });
 
-  test('accepts real, ordered statement periods', () => {
+  test('accepts real periods and a zero-spending month with positive count', () => {
     const statementPeriod = {
       start: '2026-07-01',
       end: '2026-07-31',
@@ -1012,6 +1031,11 @@ describe('production persistence parser', () => {
     expect(result.data?.fullStatementPeriod).toEqual({
       start: '2026-06-01',
       end: '2026-07-31',
+    });
+    expect(result.data?.monthlyBreakdown?.[0]).toEqual({
+      month: '2026-06',
+      spending: 0,
+      transactionCount: 1,
     });
   });
 

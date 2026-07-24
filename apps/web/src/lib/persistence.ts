@@ -828,7 +828,8 @@ export function deserializeAnalysis(raw: string): DeserializedAnalysis {
           typeof item.month === 'string' &&
           isYearMonth(item.month) &&
           safeNonnegativeInteger(item.spending) &&
-          safeNonnegativeInteger(item.transactionCount),
+          safeNonnegativeInteger(item.transactionCount) &&
+          item.transactionCount > 0,
       )
     ) {
       return invalidResult();
