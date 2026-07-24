@@ -1132,6 +1132,12 @@ export function calculateRewardsWithPreparedCard(input: {
   collectCapSuppressions?: boolean;
   /** @internal Emit rows only at or after this original transaction index. */
   capSuppressionStartIndex?: number;
+  /**
+   * @internal Optimizer-only proof that the ordered prefix before
+   * `capSuppressionStartIndex` was reconciled while the optimizer's live,
+   * monotonic portfolio-completeness latch was still true.
+   */
+  prefixCounterfactualAlreadyReconciled?: boolean;
   /** @internal Observe actual maxUses/fixed-per-day consumption at one index. */
   observeStatefulRewardAtIndex?: number;
 }): CalculationOutput {
@@ -1151,6 +1157,26 @@ export function calculateRewardsWithPreparedCard(input: {
       `capSuppressionStartIndex must be a non-negative safe integer, got ${capSuppressionStartIndex}`,
     );
   }
+  const collectCapSuppressions = input.collectCapSuppressions ?? true;
+  const prefixCounterfactualAlreadyReconciled =
+    input.prefixCounterfactualAlreadyReconciled ?? false;
+  if (
+    prefixCounterfactualAlreadyReconciled &&
+    !collectCapSuppressions
+  ) {
+    throw new Error(
+      'prefixCounterfactualAlreadyReconciled requires cap suppression collection',
+    );
+  }
+  if (
+    prefixCounterfactualAlreadyReconciled &&
+    capSuppressionStartIndex !== input.transactions.length - 1
+  ) {
+    throw new Error(
+      'prefixCounterfactualAlreadyReconciled requires ' +
+        'capSuppressionStartIndex to identify the appended transaction',
+    );
+  }
   if (
     input.observeStatefulRewardAtIndex !== undefined &&
     (
@@ -1167,8 +1193,10 @@ export function calculateRewardsWithPreparedCard(input: {
     transactions: input.transactions,
     previousMonthSpending: input.previousMonthSpending,
     cardRule: input.preparedCardRule.cardRule,
-  }, input.collectCapSuppressions ?? true, capSuppressionStartIndex,
-  input.observeStatefulRewardAtIndex);
+  }, collectCapSuppressions, capSuppressionStartIndex,
+  input.observeStatefulRewardAtIndex,
+  prefixCounterfactualAlreadyReconciled &&
+    input.preparedCardRule.hasStatefulReward === false);
 }
 
 function calculateRewardsKernel(
@@ -1176,6 +1204,7 @@ function calculateRewardsKernel(
   collectCapSuppressions = true,
   capSuppressionStartIndex = 0,
   observeStatefulRewardAtIndex?: number,
+  skipReconciledStatelessCounterfactualPrefix = false,
 ): CalculationOutput {
   const { transactions, previousMonthSpending, cardRule } = input;
 
@@ -1225,8 +1254,14 @@ function calculateRewardsKernel(
   const rewardTypeAccum = new Map<string, Map<string, number>>();
 
   for (const [transactionIndex, tx] of transactions.entries()) {
-    const emitCapSuppression =
+    const collectTransactionCounterfactual =
       collectCapSuppressions &&
+      !(
+        skipReconciledStatelessCounterfactualPrefix &&
+        transactionIndex < capSuppressionStartIndex
+      );
+    const emitCapSuppression =
+      collectTransactionCounterfactual &&
       transactionIndex >= capSuppressionStartIndex;
     // Public calculator boundary: statement amounts are Won integers and must
     // be representable exactly. Reject invalid numeric input instead of
@@ -1272,7 +1307,7 @@ function calculateRewardsKernel(
                 ? null
                 : Math.max(0, globalCap - globalMonthUsed),
           },
-          collectCapSuppressions,
+          collectTransactionCounterfactual,
           emitCapSuppression,
         );
     unsupportedRules.push(...selection.unsupported);
@@ -1484,7 +1519,7 @@ function calculateRewardsKernel(
         appliedReward,
         `category reward for ${categoryKey}`,
       );
-      if (collectCapSuppressions) {
+      if (collectTransactionCounterfactual) {
         transactionAppliedReward = addSafeNonnegativeIntegers(
           transactionAppliedReward,
           appliedReward,
@@ -1525,7 +1560,7 @@ function calculateRewardsKernel(
       // immediately after creation and mutations are reflected by reference (C8-02).
     }
 
-    if (collectCapSuppressions) {
+    if (collectTransactionCounterfactual) {
       const committedCounterfactualReservations = new Set<string>();
       const commitCounterfactualReservation = (
         reservation: CounterfactualEligibilityReservation,

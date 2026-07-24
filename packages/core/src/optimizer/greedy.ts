@@ -212,6 +212,7 @@ function calculateCardOutput(
   collectCapSuppressions = true,
   capSuppressionStartIndex = 0,
   observeStatefulRewardAtIndex?: number,
+  prefixCounterfactualAlreadyReconciled = false,
 ) {
   return calculateRewardsWithPreparedCard({
     transactions,
@@ -220,6 +221,7 @@ function calculateCardOutput(
     collectCapSuppressions,
     capSuppressionStartIndex,
     observeStatefulRewardAtIndex,
+    prefixCounterfactualAlreadyReconciled,
   });
 }
 
@@ -254,6 +256,10 @@ function scoreCardsForTransaction(
     const collectCapSuppressions =
       collectPortfolioTelemetry && preparedCardRule.hasRewardCap;
     const transactionIndex = currentTransactions.length;
+    // Only this exact append-scoring path may assert the prefix proof. The
+    // input latch is monotonic for the current optimizer invocation, and
+    // collection additionally proves this capped card participates.
+    const prefixCounterfactualAlreadyReconciled = collectCapSuppressions;
     const after = calculateCardOutput(
       [...currentTransactions, transaction],
       previousMonthSpending,
@@ -261,6 +267,7 @@ function scoreCardsForTransaction(
       collectCapSuppressions,
       transactionIndex,
       collectPortfolioTelemetry ? transactionIndex : undefined,
+      prefixCounterfactualAlreadyReconciled,
     );
     const reward = Math.max(0, after.totalReward - before);
     assertSafeNonnegativeInteger(reward, 'marginal reward');
