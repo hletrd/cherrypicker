@@ -1,7 +1,7 @@
 # Plan 149: Cycle 19 YearMonth Validation Totality
 
 **Finding:** C19-001 (Low / High confidence)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Outcome
@@ -54,59 +54,87 @@ The correctness/reliability root is not deferred.
 
 ### 1. Make previous-spending-basis coherence basis-aware
 
-- [ ] Refactor `hasExactPreviousSpendingBasis()` so it validates
+- [x] Refactor `hasExactPreviousSpendingBasis()` so it validates
       `user-total` and its redundant option before any calendar calculation.
-- [ ] Pass a month-membership callback or equivalent facts collection into
+- [x] Pass a month-membership callback or equivalent facts collection into
       the helper instead of precomputing a boolean for one predecessor.
-- [ ] For statement/missing bases, derive the predecessor through a narrow
+- [x] For statement/missing bases, derive the predecessor through a narrow
       validation helper that returns no value only for exact `0000-01`.
-- [ ] Remove the unconditional predecessor calculation from
+- [x] Remove the unconditional predecessor calculation from
       `hasCoherentTruncatedFacts()`.
-- [ ] Remove the duplicate unconditional predecessor calculation from the
+- [x] Remove the duplicate unconditional predecessor calculation from the
       full transaction-backed return path.
 
 ### 2. Keep persistence fail-closed
 
-- [ ] Wrap only the final coherence admission in `deserializeAnalysis()` and
+- [x] Wrap only the final coherence admission in `deserializeAnalysis()` and
       return `invalidResult()` if validation throws.
-- [ ] Preserve all existing warning/truncation semantics for successfully
+- [x] Preserve all existing warning/truncation semantics for successfully
       validated current payloads.
-- [ ] Do not broaden types, suppress diagnostics, or alter the store's outer
+- [x] Do not broaden types, suppress diagnostics, or alter the store's outer
       recovery policy to mask the root.
 
 ### 3. Add deterministic regressions
 
-- [ ] Strengthen the direct helper test to require both the `RangeError` class
+- [x] Strengthen the direct helper test to require both the `RangeError` class
       and exact lower-bound message.
-- [ ] Add an `isAnalysisResultCoherent()` truncated `user-total` witness at
+- [x] Add an `isAnalysisResultCoherent()` truncated `user-total` witness at
       `0000-01`; it must not derive a predecessor and must remain coherent
       when all other facts agree.
-- [ ] Add truncated statement/missing basis witnesses at `0000-01`; they must
+- [x] Add truncated statement/missing basis witnesses at `0000-01`; they must
       return `false` without throwing.
-- [ ] Add a valid `0000-02 -> 0000-01` truncated control.
-- [ ] Add a full-transaction year-0000 control that returns `false` before
+- [x] Add a valid `0000-02 -> 0000-01` truncated control.
+- [x] Add a full-transaction year-0000 control that returns `false` before
       predecessor derivation.
-- [ ] Add a current-version persistence witness proving
+- [x] Add a current-version persistence witness proving
       `deserializeAnalysis()` returns
       `{ data: null, warningKind: 'corrupted', truncatedTxCount: null,
       shouldRemove: true }` without throwing.
-- [ ] Add a defensive persistence test whose coherence phase throws for an
+- [x] Add a defensive persistence test whose coherence phase throws for an
       admitted malformed value only if it can be constructed without a test
       suppression; otherwise rely on the exact lower-bound witness.
 
 ### 4. Validate and close
 
-- [ ] Run focused web calendar, coherence, and persistence tests.
-- [ ] Run `bun run lint`.
-- [ ] Run `bun run typecheck`.
-- [ ] Run `bun run build`.
-- [ ] Run `bun run test`.
-- [ ] Run `bun run test:bun`.
-- [ ] Run `bunx vitest run`.
-- [ ] Run one owned `bun run test:e2e` attempt with exact pre/post process,
+- [x] Run focused web calendar, coherence, and persistence tests.
+- [x] Run `bun run lint`.
+- [x] Run `bun run typecheck`.
+- [x] Run `bun run build`.
+- [x] Run `bun run test`.
+- [x] Run `bun run test:bun`.
+- [x] Run `bunx vitest run`.
+- [x] Run one owned `bun run test:e2e` attempt with exact pre/post process,
       profile, session, PID/PGID, and port cleanup proof.
-- [ ] Update this plan to completed with exact focused/full-gate evidence.
-- [ ] Archive this plan after closure.
+- [x] Update this plan to completed with exact focused/full-gate evidence.
+- [x] Archive this plan after closure.
+
+## Completion evidence
+
+- Implementation used the documented disciplined manual fallback because
+  `ralph` was unavailable.
+- `e1ec22db7a817e2b96d680afd79b97b67c44d547` makes the persistence boundary
+  fail closed and adds the current-version `0000-01` corruption witness.
+- `8bf91d2739524d9b0bdc6951938c7992a8a03c7c` makes basis validation lazy and
+  total while retaining the direct helper's exact lower-bound `RangeError`.
+- Focused calendar, coherence, and persistence tests passed: 234 tests and
+  579 expectations. The persistence suite also passed independently with
+  155 tests and 445 expectations.
+- `bun run lint` passed with zero errors, warnings, or hints.
+- `bun run typecheck` passed with zero errors, warnings, or hints.
+- `bun run build` passed all 7 workspace tasks and built all 5 Astro pages.
+- `bun run test` passed all 12 Turbo tasks; the web suite reported 935 tests
+  and 4,361 expectations, and script tests reported 96 tests and 1,032
+  expectations.
+- `bun run test:bun` passed 1,641 tests with 3,319 expectations.
+- `bunx vitest run` passed 128 files and 3,143 tests.
+- The single owned E2E run
+  `1784871729968-ced69b3a-d446-44d7-9c11-7767d906f138` selected port 4173
+  and passed all 97 tests. Exact preflight and postflight checks found no
+  owned run metadata, profiles, sessions, or process trees; ports 4173–4175
+  were free afterward, and unrelated Chrome PID/PGID 1368/1368 remained
+  running.
+- No gate required a corrective commit, and no deployment, release,
+  publication, or deploy workflow was invoked.
 
 ## Acceptance
 
