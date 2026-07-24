@@ -16,6 +16,11 @@ import { parseDateCell } from '../shared/date-cell.js';
 import {
   createSheetMergeIndex,
   resolveSheetCell,
+  validateWorkbookSheetMetadata,
+  validateWorksheetMetadata,
+  WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+  WORKSHEET_METADATA_REJECTED_MESSAGE,
+  WorksheetMetadataValidationError,
 } from '../shared/sheet-cells.js';
 import {
   AMBIGUOUS_AMOUNT_ERROR_CODE,
@@ -63,7 +68,19 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
   let workbook: xlsx.WorkBook;
   try {
     workbook = xlsx.read(Buffer.from(normalized, 'utf-8'), { type: 'buffer', cellDates: false });
+    validateWorkbookSheetMetadata(workbook);
   } catch (err) {
+    if (err instanceof WorksheetMetadataValidationError) {
+      return {
+        bank: resolvedBank,
+        format: 'html',
+        transactions: [],
+        errors: [new ParseError(WORKSHEET_METADATA_REJECTED_MESSAGE, {
+          code: WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+          format: 'html',
+        })],
+      };
+    }
     return {
       bank: resolvedBank,
       format: 'html',
@@ -98,6 +115,23 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
 
 /** Parse a single HTML sheet (table) for transactions. */
 export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult {
+  try {
+    validateWorksheetMetadata(sheet);
+  } catch (err) {
+    if (err instanceof WorksheetMetadataValidationError) {
+      return {
+        bank,
+        format: 'html',
+        transactions: [],
+        errors: [new ParseError(WORKSHEET_METADATA_REJECTED_MESSAGE, {
+          code: WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+          format: 'html',
+        })],
+      };
+    }
+    throw err;
+  }
+
   const rows: unknown[][] = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
   const errors = createParseErrorCollector();
   const transactions: RawTransaction[] = [];

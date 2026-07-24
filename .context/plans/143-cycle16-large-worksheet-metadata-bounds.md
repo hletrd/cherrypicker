@@ -1,7 +1,7 @@
 # Plan 143: Cycle 16 Large Worksheet Metadata Bounds
 
 **Finding:** C16-001 (Medium/High)
-**Status:** planned
+**Status:** completed
 **Deploy mode:** none
 
 ## Evidence
@@ -100,27 +100,27 @@ Use stable parser code `worksheet_metadata_rejected` and Korean message
 
 ## Acceptance
 
-- [ ] Every workbook path validates all named sheets before the first
+- [x] Every workbook path validates all named sheets before the first
       `sheet_to_json()` call.
-- [ ] Direct server/browser `parseHTMLSheet()` calls enforce the same
+- [x] Direct server/browser `parseHTMLSheet()` calls enforce the same
       per-sheet contract.
-- [ ] Exact supported limits pass and one-over values fail for every exported
+- [x] Exact supported limits pass and one-over values fail for every exported
       limit.
-- [ ] Missing metadata remains compatible with empty-sheet behavior.
-- [ ] Malformed A1 values and invalid numeric merge endpoints fail with the
+- [x] Missing metadata remains compatible with empty-sheet behavior.
+- [x] Malformed A1 values and invalid numeric merge endpoints fail with the
       typed shared exception.
-- [ ] All parser entry points return code `worksheet_metadata_rejected` and
+- [x] All parser entry points return code `worksheet_metadata_rejected` and
       the same Korean message, with no transactions.
-- [ ] A valid first sheet cannot hide an out-of-bounds later sheet.
-- [ ] Merge indexing stores row intervals rather than one entry per covered
+- [x] A valid first sheet cannot hide an out-of-bounds later sheet.
+- [x] Merge indexing stores row intervals rather than one entry per covered
       cell and independently enforces its direct-call bounds.
-- [ ] Overlap order, anchor resolution, source identity, ordinary blanks,
+- [x] Overlap order, anchor resolution, source identity, ordinary blanks,
       merged-value inheritance, and duplicate suppression remain unchanged.
-- [ ] The shared policy remains usable through
+- [x] The shared policy remains usable through
       `@cherrypicker/parser/browser` without a Node-only import.
-- [ ] Existing spreadsheet, HTML, archive, worker, statement-router, and
+- [x] Existing spreadsheet, HTML, archive, worker, statement-router, and
       server/browser conformance suites remain green.
-- [ ] No deferred item, schema change, dependency update, generated-data
+- [x] No deferred item, schema change, dependency update, generated-data
       change, or deployment is introduced.
 
 ## Verification
@@ -144,10 +144,27 @@ clean only the exact owned resources, and finish with
 `bun scripts/run-e2e.ts status --assert-clean`, TCP 4173 free, and no
 repository-owned process tree.
 
-## Execution note
+## Completion evidence
 
-The requested `ralph` capability is unavailable. Prompt 3 will use the
-approved disciplined manual fallback: add and record a deterministic bounded
-red regression, implement the smallest shared root fix, run focused green and
-parity checks, then run every required repository gate. No deployment will
-occur.
+The requested `ralph` capability was unavailable, so Prompt 3 used the
+approved disciplined manual fallback. The bounded pre-fix regression recorded
+4 failing tests and 7 expectations before implementation. The completed Cycle
+16 regression passed 17 tests and 123 expectations, and the focused
+spreadsheet, HTML, archive, worker, routing, and conformance matrix passed 174
+tests and 596 expectations.
+
+The completed tree passed every required repository gate:
+
+- `bun run lint`
+- `bun run typecheck`
+- `bun run build`
+- `bun run test` (12/12 tasks; scripts: 83 tests, 997 expectations)
+- `bun run test:bun` (1,641 tests, 3,319 expectations)
+- `bunx vitest run` (128 files, 3,127 tests)
+- `bun run test:e2e` (97 tests)
+
+The exact E2E preflight and postflight checks both reported a clean harness,
+no active session, TCP 4173 free, no repository-owned process tree, and the
+unrelated Chrome PID/PGID `1368/1368` unchanged. No gate-triggered fix,
+dependency update, generated-data change, schema change, or deployment
+occurred.

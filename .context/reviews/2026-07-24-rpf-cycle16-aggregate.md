@@ -7,7 +7,7 @@
 **Deploy mode:** none
 **Prompt 1 status:** complete
 **Prompt 2 status:** complete
-**Prompt 3 status:** pending
+**Prompt 3 status:** complete
 
 ## Executive summary
 
@@ -174,6 +174,32 @@ HTML-sheet entry points, browser exports, error parity, existing merge
 semantics, small-fixture TDD, focused checks, and every required repository
 gate. No finding was deferred, rejected, downgraded, or silently dropped.
 
-Prompt 3 remains pending. It must use the approved disciplined manual fallback
-because the requested `ralph` capability is unavailable. Deployment remains
-none.
+## Prompt 3 completion
+
+Plan 143 completed through the approved disciplined manual fallback because
+the requested `ralph` capability was unavailable. The shared browser-safe
+helper now owns the typed worksheet metadata policy, checked totals, stable
+parser result, and ordered row-interval merge lookup. All server/browser XLSX
+and HTML adapters validate every named sheet before logical-table conversion,
+and both direct HTML-sheet entry points apply the same contract.
+
+The bounded pre-fix regression recorded 4 failing tests and 7 expectations.
+After implementation, the Cycle 16 regression passed 17 tests and 123
+expectations. The focused spreadsheet, HTML, archive, worker, routing, and
+conformance matrix passed 174 tests and 596 expectations.
+
+The completed tree passed the required full-repository gates:
+
+- `bun run lint`
+- `bun run typecheck`
+- `bun run build`
+- `bun run test` (12/12 tasks; scripts: 83 tests, 997 expectations)
+- `bun run test:bun` (1,641 tests, 3,319 expectations)
+- `bunx vitest run` (128 files, 3,127 tests)
+- `bun run test:e2e` (97 tests)
+
+The exact E2E preflight and postflight checks both reported a clean harness,
+no active session, TCP 4173 free, no repository-owned process tree, and the
+unrelated Chrome PID/PGID `1368/1368` unchanged. No gate-triggered fix,
+dependency update, generated-data change, schema change, deferred item, or
+deployment was introduced.

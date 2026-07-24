@@ -24,6 +24,10 @@ import {
 import {
   createSheetMergeIndex,
   resolveSheetCell,
+  validateWorkbookSheetMetadata,
+  WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+  WORKSHEET_METADATA_REJECTED_MESSAGE,
+  WorksheetMetadataValidationError,
 } from '../shared/sheet-cells.js';
 import {
   preflightXLSXArchive,
@@ -117,8 +121,20 @@ export function parseXLSXBuffer(buffer: Uint8Array, bank?: BankId): ParseResult 
       preflightXLSXArchive(buffer);
       workbook = xlsx.read(Buffer.from(buffer), { type: 'buffer', cellDates: false });
     }
+    validateWorkbookSheetMetadata(workbook);
   } catch (err) {
     if (err instanceof UnsupportedTextEncodingError) throw err;
+    if (err instanceof WorksheetMetadataValidationError) {
+      return {
+        bank: bank ?? null,
+        format: 'xlsx',
+        transactions: [],
+        errors: [new ParseError(WORKSHEET_METADATA_REJECTED_MESSAGE, {
+          code: WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+          format: 'xlsx',
+        })],
+      };
+    }
     if (err instanceof XLSXArchiveValidationError) {
       return {
         bank: bank ?? null,

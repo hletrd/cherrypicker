@@ -23,6 +23,11 @@ import {
   REQUIRED_MERCHANT_ERROR_MESSAGE,
   resolveAmountField,
   resolveSheetCell,
+  validateWorkbookSheetMetadata,
+  validateWorksheetMetadata,
+  WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+  WORKSHEET_METADATA_REJECTED_MESSAGE,
+  WorksheetMetadataValidationError,
 } from '@cherrypicker/parser/browser';
 import {
   findColumn,
@@ -48,7 +53,19 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
   try {
     const encoder = new TextEncoder();
     workbook = xlsx.read(encoder.encode(normalized), { type: 'array', cellDates: false });
+    validateWorkbookSheetMetadata(workbook);
   } catch (err) {
+    if (err instanceof WorksheetMetadataValidationError) {
+      return {
+        bank: resolvedBank,
+        format: 'html',
+        transactions: [],
+        errors: [new ParseError(WORKSHEET_METADATA_REJECTED_MESSAGE, {
+          code: WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+          format: 'html',
+        })],
+      };
+    }
     return {
       bank: resolvedBank,
       format: 'html',
@@ -84,6 +101,23 @@ export function parseHTML(content: string, bank?: BankId): ParseResult {
  *  Includes forward-fill for merged cells — Korean bank HTML exports
  *  commonly merge cells across rows (C100-01, parity with server-side). */
 export function parseHTMLSheet(sheet: xlsx.WorkSheet, bank: BankId | null): ParseResult {
+  try {
+    validateWorksheetMetadata(sheet);
+  } catch (err) {
+    if (err instanceof WorksheetMetadataValidationError) {
+      return {
+        bank,
+        format: 'html',
+        transactions: [],
+        errors: [new ParseError(WORKSHEET_METADATA_REJECTED_MESSAGE, {
+          code: WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+          format: 'html',
+        })],
+      };
+    }
+    throw err;
+  }
+
   const rows: unknown[][] = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: '' });
   const errors = createParseErrorCollector();
   const transactions: RawTransaction[] = [];

@@ -21,6 +21,10 @@ import {
   type ColumnConfig,
   type StatementTextPrefixDecoder,
   UnsupportedTextEncodingError,
+  validateWorkbookSheetMetadata,
+  WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+  WORKSHEET_METADATA_REJECTED_MESSAGE,
+  WorksheetMetadataValidationError,
   XLSX_ARCHIVE_REJECTED_ERROR_CODE,
   XLSX_ARCHIVE_REJECTED_MESSAGE,
   XLSXArchiveValidationError,
@@ -125,8 +129,20 @@ export function parseXLSX(buffer: ArrayBuffer, bank?: BankId): ParseResult {
       preflightXLSXArchive(bytes);
       workbook = XLSX.read(bytes, { type: 'array', cellDates: false });
     }
+    validateWorkbookSheetMetadata(workbook);
   } catch (error) {
     if (error instanceof UnsupportedTextEncodingError) throw error;
+    if (error instanceof WorksheetMetadataValidationError) {
+      return {
+        bank: bank ?? null,
+        format: 'xlsx',
+        transactions: [],
+        errors: [new ParseError(WORKSHEET_METADATA_REJECTED_MESSAGE, {
+          code: WORKSHEET_METADATA_REJECTED_ERROR_CODE,
+          format: 'xlsx',
+        })],
+      };
+    }
     if (error instanceof XLSXArchiveValidationError) {
       return {
         bank: bank ?? null,
