@@ -187,6 +187,90 @@ export function publicationRewardIndexValue(
   };
 }
 
+type PublicationRewardTier =
+  CardRuleSet['rewards'][number]['tiers'][number];
+
+export interface PublicationRewardComparison {
+  amount: number;
+  comparisonGroup: string;
+  valueKind: PublicationRewardTier['value']['kind'];
+  legacyKind: PublicationRewardValueKind;
+  unit: Exclude<PublicationRewardTier['unit'], undefined>;
+}
+
+export interface PublicationRewardTierProjection {
+  tier: PublicationRewardTier;
+  comparison: PublicationRewardComparison;
+}
+
+export function publicationRewardComparison(
+  tier: PublicationRewardTier,
+): PublicationRewardComparison {
+  const legacy = publicationRewardIndexValue(tier);
+  const unit = tier.unit ?? null;
+  return {
+    amount: legacy.amount,
+    comparisonGroup: `${tier.value.kind}:${unit ?? 'none'}`,
+    valueKind: tier.value.kind,
+    legacyKind: legacy.kind,
+    unit,
+  };
+}
+
+export function bestRewardTiersByComparisonGroup(
+  tiers: readonly PublicationRewardTier[],
+): PublicationRewardTierProjection[] {
+  const bestByGroup = new Map<string, PublicationRewardTierProjection>();
+
+  for (const tier of tiers) {
+    const comparison = publicationRewardComparison(tier);
+    const current = bestByGroup.get(comparison.comparisonGroup);
+    if (current === undefined || comparison.amount > current.comparison.amount) {
+      bestByGroup.set(comparison.comparisonGroup, { tier, comparison });
+    }
+  }
+
+  return [...bestByGroup.values()].sort((a, b) =>
+    compareAscii(a.comparison.comparisonGroup, b.comparison.comparisonGroup)
+  );
+}
+
+export function sortAndLimitRewardComparisons<T>(
+  values: readonly T[],
+  comparisonOf: (value: T) => Pick<
+    PublicationRewardComparison,
+    'amount' | 'comparisonGroup'
+  >,
+  limitPerGroup = Number.POSITIVE_INFINITY,
+): T[] {
+  if (
+    limitPerGroup !== Number.POSITIVE_INFINITY &&
+    (!Number.isSafeInteger(limitPerGroup) || limitPerGroup < 0)
+  ) {
+    throw new Error('limitPerGroup must be a nonnegative safe integer');
+  }
+
+  const groups = new Map<
+    string,
+    Array<{ value: T; amount: number; position: number }>
+  >();
+  values.forEach((value, position) => {
+    const comparison = comparisonOf(value);
+    const group = groups.get(comparison.comparisonGroup) ?? [];
+    group.push({ value, amount: comparison.amount, position });
+    groups.set(comparison.comparisonGroup, group);
+  });
+
+  return [...groups.entries()]
+    .sort(([a], [b]) => compareAscii(a, b))
+    .flatMap(([, group]) =>
+      group
+        .sort((a, b) => b.amount - a.amount || a.position - b.position)
+        .slice(0, limitPerGroup)
+        .map(({ value }) => value)
+    );
+}
+
 /**
  * Project the canonically validated catalog into the three browser payloads.
  * All collections have explicit stable ordering and runtime JSON stays flat

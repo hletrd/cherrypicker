@@ -1,12 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  bestRewardTiersByComparisonGroup,
   buildIdentityFreeWebCatalogArtifacts,
   buildWebCatalogArtifacts,
   computePublicationSourceHash,
   injectPublicationIdentity,
   isIndexableReward,
   parsePublicationCard,
+  publicationRewardComparison,
   publicationRewardIndexValue,
+  sortAndLimitRewardComparisons,
   staleGeneratedShardNames,
 } from '../catalog-publication.js';
 
@@ -52,6 +55,48 @@ function cardWithUrl(url: string) {
       minimumAnnualSpending: null,
     },
   };
+}
+
+type PublicationRewardTier =
+  ReturnType<typeof parsePublicationCard>['rewards'][number]['tiers'][number];
+
+function parsedRewardTier(
+  valueKind: PublicationRewardTier['value']['kind'],
+  amount: number,
+  mileageUnit: 'mile_per_1500won' | 'miles' = 'mile_per_1500won',
+): PublicationRewardTier {
+  const raw = cardWithUrl('https://example.com/card');
+  const tier = raw.rewards[0]!.tiers[0]!;
+  if (valueKind === 'percentage') {
+    Object.assign(tier, { rate: amount });
+  } else if (valueKind === 'fixed_per_transaction') {
+    Object.assign(tier, { rate: null, fixedAmount: amount });
+  } else if (valueKind === 'fixed_per_day') {
+    Object.assign(tier, {
+      rate: null,
+      fixedAmount: amount,
+      unit: 'won_per_day',
+    });
+  } else if (valueKind === 'mileage_per_spend') {
+    Object.assign(
+      tier,
+      mileageUnit === 'miles'
+        ? { rate: amount, unit: 'miles' }
+        : {
+            rate: null,
+            fixedAmount: amount,
+            unit: 'mile_per_1500won',
+          },
+    );
+  } else {
+    Object.assign(tier, {
+      rate: null,
+      fixedAmount: amount,
+      unit: 'won_per_liter',
+    });
+  }
+  return parsePublicationCard(raw, `${valueKind}.yaml`)
+    .rewards[0]!.tiers[0]!;
 }
 
 describe('catalog publication boundary', () => {
@@ -169,6 +214,108 @@ describe('catalog publication boundary', () => {
       amount: 1_500,
       kind: 'fixedAmount',
     });
+  });
+
+  test('selects best tiers only inside exact canonical kind-and-unit groups', () => {
+    const percentageOne = parsedRewardTier('percentage', 1);
+    const percentageThree = parsedRewardTier('percentage', 3);
+    const percentageThreeTie = parsedRewardTier('percentage', 3);
+    const tiers = [
+      parsedRewardTier('percentage', 0),
+      percentageOne,
+      parsedRewardTier('fixed_per_transaction', 1_500),
+      parsedRewardTier('fixed_per_day', 10_000),
+      parsedRewardTier('mileage_per_spend', 2),
+      parsedRewardTier('mileage_per_spend', 1, 'miles'),
+      parsedRewardTier('fuel_per_liter', 100),
+      percentageThree,
+      percentageThreeTie,
+    ];
+
+    const projections = bestRewardTiersByComparisonGroup(tiers);
+
+    expect(
+      projections.map(({ comparison }) => comparison.comparisonGroup),
+    ).toEqual([
+      'fixed_per_day:won_per_day',
+      'fixed_per_transaction:none',
+      'fuel_per_liter:won_per_liter',
+      'mileage_per_spend:mile_per_1500won',
+      'mileage_per_spend:miles',
+      'percentage:none',
+    ]);
+    expect(projections.map(({ comparison }) => comparison.valueKind)).toEqual([
+      'fixed_per_day',
+      'fixed_per_transaction',
+      'fuel_per_liter',
+      'mileage_per_spend',
+      'mileage_per_spend',
+      'percentage',
+    ]);
+    expect(projections.at(-1)?.tier).toBe(percentageThree);
+    expect(publicationRewardComparison(percentageThree)).toEqual({
+      amount: 3,
+      comparisonGroup: 'percentage:none',
+      valueKind: 'percentage',
+      legacyKind: 'rate',
+      unit: null,
+    });
+  });
+
+  test('orders and limits rewards independently inside each comparison group', () => {
+    const values = [
+      ...Array.from({ length: 6 }, (_, index) => ({
+        id: `percentage-${index + 1}`,
+        amount: index + 1,
+        comparisonGroup: 'percentage:none',
+      })),
+      ...Array.from({ length: 6 }, (_, index) => ({
+        id: `fixed-${index + 1}`,
+        amount: (index + 1) * 1_000,
+        comparisonGroup: 'fixed_per_transaction:none',
+      })),
+      {
+        id: 'mileage-1',
+        amount: 2,
+        comparisonGroup: 'mileage_per_spend:mile_per_1500won',
+      },
+    ];
+
+    const ordered = sortAndLimitRewardComparisons(
+      values,
+      ({ amount, comparisonGroup }) => ({ amount, comparisonGroup }),
+      5,
+    );
+
+    expect(ordered).toHaveLength(11);
+    expect(
+      ordered
+        .filter(({ comparisonGroup }) =>
+          comparisonGroup.startsWith('fixed_per_transaction')
+        )
+        .map(({ amount }) => amount),
+    ).toEqual([6_000, 5_000, 4_000, 3_000, 2_000]);
+    expect(
+      ordered
+        .filter(({ comparisonGroup }) =>
+          comparisonGroup.startsWith('percentage')
+        )
+        .map(({ amount }) => amount),
+    ).toEqual([6, 5, 4, 3, 2]);
+    expect(ordered.some(({ id }) => id === 'mileage-1')).toBe(true);
+    expect(
+      sortAndLimitRewardComparisons(
+        [
+          { id: 'first', amount: 0, comparisonGroup: 'percentage:none' },
+          { id: 'second', amount: 0, comparisonGroup: 'percentage:none' },
+          { id: 'negative', amount: -1, comparisonGroup: 'percentage:none' },
+        ],
+        (value) => value,
+      ).map(({ id }) => id),
+    ).toEqual(['first', 'second', 'negative']);
+    expect(() =>
+      sortAndLimitRewardComparisons(values, (value) => value, -1)
+    ).toThrow(/nonnegative safe integer/);
   });
 
   test('excludes unsupported rewards only from summary categories', () => {

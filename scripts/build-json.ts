@@ -28,10 +28,11 @@ import type {
   IssuerMeta,
 } from '../packages/rules/src/index.js';
 import {
+  bestRewardTiersByComparisonGroup,
   buildWebCatalogArtifacts,
   isIndexableReward,
   parsePublicationCard,
-  publicationRewardIndexValue,
+  sortAndLimitRewardComparisons,
   staleGeneratedShardNames,
 } from './catalog-publication.js';
 
@@ -41,10 +42,15 @@ type RewardIndexValueKind = 'rate' | 'fixedAmount';
 
 interface IndexedReward {
   cardId: string;
+  rewardId: string;
   issuer: string;
   type: string;
   rewardValue: number;
   rewardValueKind: RewardIndexValueKind;
+  valueKind:
+    CardEntry['rewards'][number]['tiers'][number]['value']['kind'];
+  comparisonGroup: string;
+  performanceTier: string;
   unit: string | null;
   monthlyCap: number | null;
   subcategory?: string;
@@ -75,16 +81,6 @@ interface OrganizedOutput {
     byType: { credit: string[]; check: string[]; prepaid: string[] };
     noMinSpend: string[];
   };
-}
-
-function getTierComparableValue(tier: CardEntry['rewards'][number]['tiers'][number]): number {
-  return publicationRewardIndexValue(tier).amount;
-}
-
-function pickBestTier(tiers: CardEntry['rewards'][number]['tiers']) {
-  return tiers.reduce((best, tier) => {
-    return getTierComparableValue(tier) > getTierComparableValue(best) ? tier : best;
-  }, tiers[0]!);
 }
 
 // ── Helpers ──
@@ -253,23 +249,36 @@ for (const card of cards) {
     if (!isIndexableReward(reward)) continue;
     const cat = reward.subcategory ? `${reward.category}.${reward.subcategory}` : reward.category;
     if (!byCategoryIndex[cat]) byCategoryIndex[cat] = [];
-    const bestTier = pickBestTier(reward.tiers);
-    byCategoryIndex[cat]!.push({
-      cardId: card.card.id,
-      issuer: card.card.issuer,
-      type: reward.type,
-      rewardValue: getTierComparableValue(bestTier),
-      rewardValueKind: publicationRewardIndexValue(bestTier).kind,
-      unit: bestTier.unit,
-      monthlyCap: bestTier.monthlyCap,
-      subcategory: reward.subcategory,
-    });
+    for (const { tier, comparison } of bestRewardTiersByComparisonGroup(
+      reward.tiers,
+    )) {
+      byCategoryIndex[cat]!.push({
+        cardId: card.card.id,
+        rewardId: reward.id,
+        issuer: card.card.issuer,
+        type: reward.type,
+        rewardValue: comparison.amount,
+        rewardValueKind: comparison.legacyKind,
+        valueKind: comparison.valueKind,
+        comparisonGroup: comparison.comparisonGroup,
+        performanceTier: tier.performanceTier,
+        unit: comparison.unit,
+        monthlyCap: tier.monthlyCap,
+        subcategory: reward.subcategory,
+      });
+    }
   }
 }
 
-// Sort each category by comparable value descending
+// Sort only inside canonical kind-and-unit comparison groups.
 for (const cat of Object.keys(byCategoryIndex)) {
-  byCategoryIndex[cat]!.sort((a, b) => b.rewardValue - a.rewardValue);
+  byCategoryIndex[cat] = sortAndLimitRewardComparisons(
+    byCategoryIndex[cat]!,
+    (reward) => ({
+      amount: reward.rewardValue,
+      comparisonGroup: reward.comparisonGroup,
+    }),
+  );
 }
 
 // Build type index
@@ -281,7 +290,9 @@ const prepaidCards = cards.filter((c) => c.card.type === 'prepaid').map((c) => c
 const noMinSpend = cards.filter((c) => {
   return c.rewards.some((r) =>
     isIndexableReward(r) &&
-    r.tiers.some((t) => t.performanceTier === 'tier0' && getTierComparableValue(t) > 0)
+    r.tiers.some(
+      (t) => t.performanceTier === 'tier0' && t.value.amount > 0,
+    )
   );
 }).map((c) => c.card.id);
 
@@ -386,19 +397,32 @@ const compactOutput = {
       nameKo: c.card.nameKo,
       type: c.card.type,
       annualFee: c.card.annualFee.domestic,
-      topRewards: c.rewards
-        .filter(isIndexableReward)
-        .map((r) => ({
-          category: r.subcategory ? `${r.category}.${r.subcategory}` : r.category,
-          type: r.type,
-          bestValue: getTierComparableValue(pickBestTier(r.tiers)),
-          bestValueKind: publicationRewardIndexValue(
-            pickBestTier(r.tiers),
-          ).kind,
-          unit: pickBestTier(r.tiers).unit,
-        }))
-        .sort((a, b) => b.bestValue - a.bestValue)
-        .slice(0, 5),
+      topRewards: sortAndLimitRewardComparisons(
+        c.rewards
+          .filter(isIndexableReward)
+          .flatMap((reward) =>
+            bestRewardTiersByComparisonGroup(reward.tiers).map(
+              ({ tier, comparison }) => ({
+                rewardId: reward.id,
+                category: reward.subcategory
+                  ? `${reward.category}.${reward.subcategory}`
+                  : reward.category,
+                type: reward.type,
+                bestValue: comparison.amount,
+                bestValueKind: comparison.legacyKind,
+                valueKind: comparison.valueKind,
+                comparisonGroup: comparison.comparisonGroup,
+                performanceTier: tier.performanceTier,
+                unit: comparison.unit,
+              }),
+            )
+          ),
+        (reward) => ({
+          amount: reward.bestValue,
+          comparisonGroup: reward.comparisonGroup,
+        }),
+        5,
+      ),
     })),
   })),
   index: output.index,
