@@ -1652,6 +1652,40 @@ describe('production persistence parser', () => {
     }
   });
 
+  // TE-42-02: effectiveRate is a ratio (finiteNonnegativeNumber), so fractional
+  // and large values are legal — only non-finite or negative rates must fail.
+  test.each([Number.NaN, Number.POSITIVE_INFINITY, -0.1])(
+    'rejects non-finite optimization effectiveRate %s',
+    (rate) => {
+      const result = deserializeAnalysis(
+        persistedFixture({
+          optimization: optimizationFixture({ effectiveRate: rate }),
+        }),
+      );
+      expect(result.data).toBeNull();
+      expect(result.shouldRemove).toBe(true);
+    },
+  );
+
+  // TE-42-03: NaN in monthlyBreakdown numeric fields must be rejected, not just
+  // the fractional / out-of-range values covered above.
+  test('rejects NaN in monthlyBreakdown numeric fields', () => {
+    for (const overrides of [
+      {
+        monthlyBreakdown: [
+          { month: '2026-07', spending: Number.NaN, transactionCount: 1 },
+        ],
+      },
+      {
+        monthlyBreakdown: [
+          { month: '2026-07', spending: 10_000, transactionCount: Number.NaN },
+        ],
+      },
+    ]) {
+      expect(deserializeAnalysis(persistedFixture(overrides)).data).toBeNull();
+    }
+  });
+
   test('accepts safe-integer monetary boundaries with coherent counts', () => {
     const result = deserializeAnalysis(
       persistedFixture({
