@@ -943,7 +943,7 @@ function hasCoherentTruncatedFacts(
       !Number.isSafeInteger(entry.spending) ||
       entry.spending < 0 ||
       !Number.isSafeInteger(entry.transactionCount) ||
-      entry.transactionCount < 0
+      entry.transactionCount <= 0
     ) {
       return false;
     }

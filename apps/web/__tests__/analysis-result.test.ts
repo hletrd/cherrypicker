@@ -712,6 +712,44 @@ describe('analysis result coherence', () => {
     ).toBe(false);
   });
 
+  test('rejects a positive-spending zero-count bucket in truncated facts', () => {
+    const result = cloneResult();
+    result.transactions = undefined;
+    result.monthlyBreakdown![0] = {
+      month: parseYearMonth('2026-06'),
+      spending: 777_777,
+      transactionCount: 0,
+    };
+    result.totalTransactionCount = 1;
+    result.previousSpendingBasis = {
+      kind: 'missing-calendar-month',
+      month: parseYearMonth('2026-06'),
+      assumedAmount: 0,
+    };
+
+    expect(
+      isAnalysisResultCoherent(result, { truncatedTransactionCount: 1 }),
+    ).toBe(false);
+  });
+
+  test('accepts zero spending with a positive previous-month count', () => {
+    const result = cloneResult();
+    result.transactions = undefined;
+    result.monthlyBreakdown![0] = {
+      month: parseYearMonth('2026-06'),
+      spending: 0,
+      transactionCount: 1,
+    };
+    result.previousSpendingBasis = {
+      kind: 'statement-month',
+      month: parseYearMonth('2026-06'),
+    };
+
+    expect(
+      isAnalysisResultCoherent(result, { truncatedTransactionCount: 2 }),
+    ).toBe(true);
+  });
+
   test('accepts a truncated user-total at the lower calendar bound', () => {
     const result = truncatedResultAt('0000-01');
     result.previousMonthSpendingOption = 300_000;
