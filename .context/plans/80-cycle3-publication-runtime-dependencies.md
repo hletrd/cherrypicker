@@ -2,7 +2,7 @@
 
 **Findings:** C3-008, C3-009, C3-010, C3-011, C3-012, C3-013, C3-014
 **Deploy mode:** none
-**Status:** completed
+**Status:** reopened for the Cycle 18 C3-008 regression
 
 ## Outcome
 
@@ -88,3 +88,67 @@ remove every runtime dependency.
 - The required repository lint, typecheck, build, Bun test, Vitest, and E2E
   gates passed; dependency policy, data check, and scoped diff checks passed.
 - No deployment was performed.
+
+## Cycle 18 reopening — legacy catalog identity
+
+The split browser publication remains correct, but the broader C3-008 outcome
+has regressed for supported legacy outputs:
+
+- `scripts/catalog-publication.ts:113-132` hashes browser summary, optimizer,
+  detail-shard, and category projections.
+- `scripts/build-json.ts:245-329,375-438` builds separate legacy full and
+  compact projections, then copies the browser-only hash into both.
+- Cycle 17 changed the legacy byte sets, fields, ordering, and compact
+  cardinality while version `1.0.0` and source hash
+  `ad1edfe624495c7380b86255de27a29091eacc09e325d82a9533034ad2279b58`
+  remained unchanged.
+
+This is a confirmed Low / High-confidence regression of C3-008, not a new
+Cycle 18 root. Active browser readers remain pinned to the complete split
+set, which bounds current impact.
+
+### Reopened tasks
+
+- [ ] Extend the publication identity with a canonical keyed supplemental
+      payload set.
+- [ ] Construct identity-free legacy full and compact projections before
+      computing or injecting `sourceHash`.
+- [ ] Include both legacy projections under stable, distinct keys.
+- [ ] Keep the browser schema at `1.0.0` and mark the changed legacy contract
+      as `2.0.0`.
+- [ ] Add regressions proving a legacy-full-only or compact-only mutation
+      changes identity while supplemental key reordering does not.
+- [ ] Regenerate all affected JSON through `bun run data:build`; never edit
+      generated catalogs by hand.
+- [ ] Prove every browser and legacy artifact carries one complete-publication
+      hash and that active readers/bundle budgets remain unchanged.
+
+### Reopened acceptance
+
+- [ ] Every supported published byte set contributes to its advertised
+      identity.
+- [ ] No identity input contains an already injected `sourceHash`.
+- [ ] Legacy full and compact artifacts advertise version `2.0.0`.
+- [ ] Browser summary, optimizer, categories, all detail shards, and both
+      legacy catalogs carry the same new hash.
+- [ ] Canonical generation, drift checking, focused publication tests, and
+      every required repository gate pass.
+
+### Cycle 18 implementation protocol
+
+The requested `ralph` capability is unavailable. Prompt 3 will use the
+approved disciplined manual plan-to-test fallback: add focused failing
+legacy-mutation regressions, implement the two-phase generator repair, run
+the publication suite, run `bun run data:build` and `bun run data:check`,
+inspect generated invariants, then run:
+
+- `bun run lint`
+- `bun run typecheck`
+- `bun run build`
+- `bun run test`
+- `bun run test:bun`
+- `bunx vitest run`
+- `bun run test:e2e`
+
+Use the repository E2E ownership preflight and postflight checks. Do not
+deploy.

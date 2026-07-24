@@ -1,7 +1,7 @@
 # Plan 147: Cycle 17 Test Dependency Ownership
 
 **Finding:** C17-004 (Low/High)
-**Status:** completed
+**Status:** reopened for Cycle 18 preventive completion
 **Deploy mode:** none
 
 ## Evidence
@@ -70,6 +70,66 @@ and 241 expectations, and the standalone dependency policy passed.
 
 Run the dependency-policy fixture suite, the repository dependency checker,
 and the web parser parity test, then run:
+
+- `bun run lint`
+- `bun run typecheck`
+- `bun run build`
+- `bun run test`
+- `bun run test:bun`
+- `bunx vitest run`
+- `bun run test:e2e`
+
+Use the repository E2E ownership preflight and postflight checks. Do not
+deploy.
+
+## Cycle 18 reopening — module-TypeScript admission
+
+The completed production-versus-test/config ownership policy is correct for
+every tracked source. Its file-admission contract nevertheless has a dormant
+gap:
+
+- `scripts/check-dependencies.ts:11-21` recognizes `.mts` and `.cts` config
+  names but omits both extensions from `SOURCE_EXTENSIONS`.
+- Recursive production/test discovery and top-level config discovery filter
+  on that set before import parsing.
+- The tracked tree contains no `.mts` or `.cts` source, so this is preventive
+  completion under Plan 147 rather than a new current finding.
+
+### Reopened tasks
+
+- [ ] Add `.mts` and `.cts` to the shared source-extension inventory.
+- [ ] Replace the separate config-name grammar with an
+      `isConfigSourceFile()` decision derived from the admitted extension and
+      a `config` / `*.config` stem.
+- [ ] Parameterize production, nested-test, and config fixture filenames
+      while preserving their current defaults.
+- [ ] Add exact `.mts` and `.cts` fixtures for all three source kinds,
+      undeclared-package rejection, and correct direct ownership acceptance.
+- [ ] Preserve deterministic diagnostics, the narrow root Vitest exception,
+      builtins, relative imports, workspace aliases, vendor integrity, and
+      peer checks.
+- [ ] Avoid manifest or lockfile churn unless the expanded current-tree scan
+      demonstrates a real ownership failure.
+
+### Reopened acceptance
+
+- [ ] `.mts` and `.cts` production, nested-test, and config files all reach
+      import classification.
+- [ ] Undeclared imports produce exact deterministic diagnostics.
+- [ ] Runtime ownership satisfies production and runtime/development
+      ownership satisfies test/config.
+- [ ] The current tree remains clean without unrelated manifest or lockfile
+      changes.
+- [ ] The focused policy suite, standalone dependency check, and all required
+      repository gates pass.
+
+### Cycle 18 implementation protocol
+
+The requested `ralph` capability is unavailable. Prompt 3 will use the
+approved disciplined manual plan-to-test fallback: add focused failing
+module-extension fixtures, implement the shared discovery contract, run
+`bun test scripts/__tests__/check-dependencies.test.ts`, run
+`bun run dependencies:check`, then run:
 
 - `bun run lint`
 - `bun run typecheck`

@@ -3,6 +3,7 @@
 **Finding:** C17-002 (Medium/High)
 **Status:** completed
 **Deploy mode:** none
+**Archived:** 2026-07-24 after Cycle 18 verification
 
 ## Evidence
 

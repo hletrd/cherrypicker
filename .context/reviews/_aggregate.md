@@ -5,7 +5,7 @@
 **Branch:** `codex/review-plan-fix-no-deploy-20260723`
 **Deploy mode:** none
 **Prompt 1:** complete
-**Prompt 2:** pending
+**Prompt 2:** complete
 **Prompt 3:** pending
 
 ## Deduplicated result
@@ -36,8 +36,19 @@ Two additional High-confidence obligations are confirmed but do not inflate
   No current tracked file is affected; discovery and fixtures must still be
   made coherent before adoption.
 
-Nothing is deferred or silently dropped. Prompt 2 will schedule all three
+Nothing is deferred or silently dropped. Prompt 2 schedules all three
 repairs.
+
+## Planning result
+
+Prompt 2 created Plan 148 for C18-001, moved archived Plan 80 back to the
+active directory and reopened C3-008, and materially reopened active Plan 147
+for module-TypeScript admission. Completed Plans 144–146 moved to `_archive/`.
+No item was deferred. The requested `ralph` capability is unavailable, so all
+three active plans record the approved disciplined manual fallback and the
+complete gate/E2E requirements.
+
+Prompt 2 final count: **3 created or materially reopened plans**.
 
 ## Agreement and provenance
 
