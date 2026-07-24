@@ -25,8 +25,11 @@ interface WorkspaceImportFixture {
   devDependencies?: Record<string, string>;
   rootDevDependencies?: Record<string, string>;
   productionSource?: string;
+  productionFileName?: string;
   testSource?: string;
+  testFileName?: string;
   configSource?: string;
+  configFileName?: string;
 }
 
 async function workspaceImportFixture(
@@ -60,19 +63,30 @@ async function workspaceImportFixture(
       }),
     ),
     writeFile(
-      join(workspacePath, 'src', 'index.ts'),
+      join(
+        workspacePath,
+        'src',
+        fixture.productionFileName ?? 'index.ts',
+      ),
       fixture.productionSource ?? 'export {};\n',
     ),
   ]);
   if (fixture.testSource !== undefined) {
     await writeFile(
-      join(workspacePath, '__tests__', 'fixture.test.ts'),
+      join(
+        workspacePath,
+        '__tests__',
+        fixture.testFileName ?? 'fixture.test.ts',
+      ),
       fixture.testSource,
     );
   }
   if (fixture.configSource !== undefined) {
     await writeFile(
-      join(workspacePath, 'fixture.config.ts'),
+      join(
+        workspacePath,
+        fixture.configFileName ?? 'fixture.config.ts',
+      ),
       fixture.configSource,
     );
   }
@@ -223,6 +237,63 @@ describe('workspace import ownership policy', () => {
       },
     ]);
   });
+
+  test.each(['mts', 'cts'] as const)(
+    'discovers undeclared imports in every .%s source kind',
+    async (extension) => {
+      const root = await workspaceImportFixture({
+        productionFileName: `index.${extension}`,
+        productionSource: "import 'production-only-package';\n",
+        testFileName: `fixture.test.${extension}`,
+        testSource: "import 'test-only-package';\n",
+        configFileName: `fixture.config.${extension}`,
+        configSource: "import 'config-only-package';\n",
+      });
+
+      expect(await findUndeclaredWorkspaceImports(root)).toEqual([
+        {
+          workspace: '@fixture/app',
+          sourceFile:
+            `apps/fixture/__tests__/fixture.test.${extension}`,
+          specifier: 'test-only-package',
+          packageName: 'test-only-package',
+          sourceKind: 'test',
+        },
+        {
+          workspace: '@fixture/app',
+          sourceFile: `apps/fixture/fixture.config.${extension}`,
+          specifier: 'config-only-package',
+          packageName: 'config-only-package',
+          sourceKind: 'config',
+        },
+        {
+          workspace: '@fixture/app',
+          sourceFile: `apps/fixture/src/index.${extension}`,
+          specifier: 'production-only-package',
+          packageName: 'production-only-package',
+          sourceKind: 'production',
+        },
+      ]);
+    },
+  );
+
+  test.each(['mts', 'cts'] as const)(
+    'accepts direct ownership in every .%s source kind',
+    async (extension) => {
+      const root = await workspaceImportFixture({
+        dependencies: { 'runtime-package': '1.0.0' },
+        devDependencies: { 'development-package': '1.0.0' },
+        productionFileName: `index.${extension}`,
+        productionSource: "import 'runtime-package';\n",
+        testFileName: `fixture.test.${extension}`,
+        testSource: "import 'development-package';\n",
+        configFileName: `config.${extension}`,
+        configSource: "import 'development-package';\n",
+      });
+
+      expect(await findUndeclaredWorkspaceImports(root)).toEqual([]);
+    },
+  );
 });
 
 describe('Bun lock peer dependency policy', () => {

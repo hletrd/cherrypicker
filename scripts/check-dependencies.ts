@@ -11,14 +11,15 @@ const TEST_SOURCE_DIRECTORIES = ['__tests__', 'test', 'tests'] as const;
 const SOURCE_EXTENSIONS = new Set([
   '.astro',
   '.cjs',
+  '.cts',
   '.js',
   '.jsx',
   '.mjs',
+  '.mts',
   '.svelte',
   '.ts',
   '.tsx',
 ]);
-const CONFIG_SOURCE_PATTERN = /(?:^|\.)config\.[cm]?[jt]sx?$/u;
 const ROOT_OWNED_TEST_RUNNERS = new Set(['vitest']);
 const EXPECTED_VENDOR_DIGESTS = new Map<string, {
   sha256: string;
@@ -489,6 +490,13 @@ async function listSourceFilesIfPresent(path: string): Promise<string[]> {
   }
 }
 
+function isConfigSourceFile(fileName: string): boolean {
+  const extension = extname(fileName);
+  if (!SOURCE_EXTENSIONS.has(extension)) return false;
+  const stem = fileName.slice(0, -extension.length);
+  return stem === 'config' || stem.endsWith('.config');
+}
+
 async function listWorkspaceConfigFiles(
   workspacePath: string,
 ): Promise<string[]> {
@@ -496,8 +504,7 @@ async function listWorkspaceConfigFiles(
     .filter(
       (entry) =>
         entry.isFile() &&
-        SOURCE_EXTENSIONS.has(extname(entry.name)) &&
-        CONFIG_SOURCE_PATTERN.test(entry.name),
+        isConfigSourceFile(entry.name),
     )
     .map((entry) => join(workspacePath, entry.name))
     .sort();
