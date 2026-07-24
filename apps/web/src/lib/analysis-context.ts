@@ -2,6 +2,7 @@ export {
   buildAnalysisContext,
   isValidIsoDate,
   isYearMonth,
+  parseYearMonth,
   previousCalendarMonth,
   sumMonthlySpending,
   yearMonthOfDate,

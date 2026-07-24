@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildConstraints,
   greedyOptimize,
+  parseYearMonth,
   type CategorizedTransaction,
 } from '@cherrypicker/core';
 import { loadCardRule } from '@cherrypicker/rules';
@@ -114,12 +115,20 @@ function coherentResult(): AnalysisResult {
       },
     },
     monthlyBreakdown: [
-      { month: '2026-06', spending: 2_000, transactionCount: 1 },
-      { month: '2026-07', spending: 10_000, transactionCount: 1 },
+      {
+        month: parseYearMonth('2026-06'),
+        spending: 2_000,
+        transactionCount: 1,
+      },
+      {
+        month: parseYearMonth('2026-07'),
+        spending: 10_000,
+        transactionCount: 1,
+      },
     ],
     previousSpendingBasis: {
       kind: 'statement-month',
-      month: '2026-06',
+      month: parseYearMonth('2026-06'),
     },
   };
 }
@@ -689,11 +698,15 @@ describe('analysis result coherence', () => {
     result.totalTransactionCount = 1;
     result.fullStatementPeriod = result.statementPeriod;
     result.monthlyBreakdown = [
-      { month: '2026-07', spending: 10_000, transactionCount: 1 },
+      {
+        month: parseYearMonth('2026-07'),
+        spending: 10_000,
+        transactionCount: 1,
+      },
     ];
     result.previousSpendingBasis = {
       kind: 'missing-calendar-month',
-      month: '2026-06',
+      month: parseYearMonth('2026-06'),
       assumedAmount: 0,
     };
     result.optimization = {
@@ -768,13 +781,13 @@ describe('analysis result coherence', () => {
       bestSingleCard: null,
     };
     result.monthlyBreakdown = [{
-      month: '2026-07',
+      month: parseYearMonth('2026-07'),
       spending: transactionCount,
       transactionCount,
     }];
     result.previousSpendingBasis = {
       kind: 'missing-calendar-month',
-      month: '2026-06',
+      month: parseYearMonth('2026-06'),
       assumedAmount: 0,
     };
 
@@ -868,13 +881,17 @@ describe('analysis result coherence', () => {
     result.totalTransactionCount = 2;
     result.fullStatementPeriod = result.statementPeriod;
     result.monthlyBreakdown = [
-      { month: '2026-07', spending: 15_000, transactionCount: 2 },
+      {
+        month: parseYearMonth('2026-07'),
+        spending: 15_000,
+        transactionCount: 2,
+      },
     ];
     result.categoryBreakdown[0]!.spending = 15_000;
     result.categoryBreakdown[0]!.transactionCount = 2;
     result.previousSpendingBasis = {
       kind: 'missing-calendar-month',
-      month: '2026-06',
+      month: parseYearMonth('2026-06'),
       assumedAmount: 0,
     };
     result.optimization = {

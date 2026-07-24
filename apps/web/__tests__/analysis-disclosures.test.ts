@@ -5,6 +5,7 @@ import {
   GROSS_MONTHLY_REWARD_DISCLOSURE,
   summarizeUnsupportedRules,
 } from '../src/lib/analysis-disclosures.js';
+import { parseYearMonth } from '../src/lib/analysis-context.js';
 
 test('states the gross monthly reward and card-access assumptions', () => {
   expect(GROSS_MONTHLY_REWARD_DISCLOSURE).toContain('월간 총혜택');
@@ -32,7 +33,7 @@ describe('previous-spending provenance disclosure', () => {
     expect(
       describePreviousSpendingBasis({
         kind: 'statement-month',
-        month: '2025-12',
+        month: parseYearMonth('2025-12'),
       }),
     ).toEqual({
       kind: 'statement-month',
@@ -44,7 +45,7 @@ describe('previous-spending provenance disclosure', () => {
   test('exposes a January-plus-March gap as a missing-February zero assumption', () => {
     const disclosure = describePreviousSpendingBasis({
       kind: 'missing-calendar-month',
-      month: '2026-02',
+      month: parseYearMonth('2026-02'),
       assumedAmount: 0,
     });
 

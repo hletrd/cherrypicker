@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   buildConstraints,
   greedyOptimize,
+  parseYearMonth,
   type CategorizedTransaction,
 } from '@cherrypicker/core';
 import type { CardRuleSet, RewardRule } from '@cherrypicker/rules';
@@ -248,11 +249,15 @@ function analysisFixture(merchant = '테스트 식당'): AnalysisResult {
       cardResults: [],
     },
     monthlyBreakdown: [
-      { month: '2026-07', spending: 10_000, transactionCount: 1 },
+      {
+        month: parseYearMonth('2026-07'),
+        spending: 10_000,
+        transactionCount: 1,
+      },
     ],
     previousSpendingBasis: {
       kind: 'missing-calendar-month',
-      month: '2026-06',
+      month: parseYearMonth('2026-06'),
       assumedAmount: 0,
     },
   };

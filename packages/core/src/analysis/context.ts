@@ -1,6 +1,15 @@
 import { addSafeNonnegativeIntegers } from '../numeric.js';
 
-export type YearMonth = `${number}-${string}`;
+declare const YEAR_MONTH_BRAND: unique symbol;
+
+/**
+ * A runtime-refined calendar month in exact `YYYY-MM` form.
+ *
+ * Use `parseYearMonth()` or `isYearMonth()` to construct/narrow values.
+ */
+export type YearMonth = string & {
+  readonly [YEAR_MONTH_BRAND]: true;
+};
 
 export type PreviousSpendingBasis =
   | { kind: 'user-total'; amount: number }
@@ -72,9 +81,16 @@ export function isYearMonth(value: string): value is YearMonth {
   return month >= 1 && month <= 12;
 }
 
+export function parseYearMonth(value: string): YearMonth {
+  if (!isYearMonth(value)) {
+    throw new Error(`Invalid YearMonth: ${value}`);
+  }
+  return value;
+}
+
 export function yearMonthOfDate(value: string): YearMonth | null {
   if (!isValidIsoDate(value)) return null;
-  return value.slice(0, 7) as YearMonth;
+  return parseYearMonth(value.slice(0, 7));
 }
 
 export function previousCalendarMonth(month: YearMonth): YearMonth {
@@ -85,9 +101,16 @@ export function previousCalendarMonth(month: YearMonth): YearMonth {
   const year = Number(yearText);
   const monthNumber = Number(monthText);
   if (monthNumber === 1) {
-    return `${year - 1}-12` as YearMonth;
+    if (year === 0) {
+      throw new RangeError(
+        'YearMonth 0000-01 has no representable previous month',
+      );
+    }
+    return parseYearMonth(`${String(year - 1).padStart(4, '0')}-12`);
   }
-  return `${year}-${String(monthNumber - 1).padStart(2, '0')}` as YearMonth;
+  return parseYearMonth(
+    `${yearText}-${String(monthNumber - 1).padStart(2, '0')}`,
+  );
 }
 
 function dateRange<T extends DatedAmount>(

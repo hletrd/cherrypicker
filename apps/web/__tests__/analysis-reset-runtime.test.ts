@@ -11,6 +11,7 @@ import {
   STORAGE_KEY,
 } from '../src/lib/persistence.js';
 import type { AnalysisResult } from '../src/lib/analysis-result.js';
+import { parseYearMonth } from '../src/lib/analysis-context.js';
 
 function analysisFixture(): AnalysisResult {
   return {
@@ -53,11 +54,15 @@ function analysisFixture(): AnalysisResult {
       cardResults: [],
     },
     monthlyBreakdown: [
-      { month: '2026-07', spending: 10_000, transactionCount: 1 },
+      {
+        month: parseYearMonth('2026-07'),
+        spending: 10_000,
+        transactionCount: 1,
+      },
     ],
     previousSpendingBasis: {
       kind: 'missing-calendar-month',
-      month: '2026-06',
+      month: parseYearMonth('2026-06'),
       assumedAmount: 0,
     },
   };

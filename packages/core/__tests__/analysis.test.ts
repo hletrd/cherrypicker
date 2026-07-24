@@ -123,6 +123,29 @@ describe('analysis calendar context', () => {
       amount: 300_000,
     });
   });
+
+  test('selects December 0999 for a January 1000 context', () => {
+    const december = { id: 'december', date: '0999-12-31', amount: 20_000 };
+    const january = { id: 'january', date: '1000-01-02', amount: 30_000 };
+
+    const context = buildAnalysisContext([january, december])!;
+
+    expect(context.validTransactions).toEqual([december, january]);
+    expect(context.validTransactions[0]).toBe(december);
+    expect(context.validTransactions[1]).toBe(january);
+    expect(context.latestMonth).toBe('1000-01');
+    expect(context.latestTransactions).toEqual([january]);
+    expect(context.previousTransactions).toEqual([december]);
+    expect(context.previousTransactions[0]).toBe(december);
+    expect(context.previousSpendingBasis).toEqual({
+      kind: 'statement-month',
+      month: '0999-12',
+    });
+    expect(context.monthlyBreakdown).toEqual([
+      { month: '0999-12', spending: 20_000, transactionCount: 1 },
+      { month: '1000-01', spending: 30_000, transactionCount: 1 },
+    ]);
+  });
 });
 
 describe('analysis money boundaries', () => {
